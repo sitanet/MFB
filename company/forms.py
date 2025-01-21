@@ -16,11 +16,11 @@ class BranchForm(forms.ModelForm):
 
 
 from django import forms
-from .models import Company
+from .models import Company, Branch
 
 class EndSession(forms.ModelForm):
     class Meta:
-        model = Company
+        model = Branch  # Change this to the Branch model
         fields = ['session_date', 'session_status']
 
     SESSION_STATUS_CHOICES = (

@@ -122,19 +122,28 @@ def branch_delete(request, id):
 
 from .forms import EndSession
 
+
+from django.utils import timezone
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
-def session_mgt(request, branch_id):
-    branch = Branch.objects.get(pk=branch_id)
+@login_required
+
+def session_mgt(request):
+    # Access the branch associated with the logged-in user
+    branch = request.user.branch  # Assuming the 'branch' field is part of the User model
+
     if request.method == 'POST':
         form = EndSession(request.POST, instance=branch)
         if form.is_valid():
-            form.save()
+            # Check if session_status is "Open" and update system_date
+            session_status = form.cleaned_data.get('session_status')
+            if session_status == 'Open':
+                branch.system_date_date = timezone.now()
+            
+            form.save()  # Save the branch instance
             messages.success(request, 'Session Change Successfully')
-            return redirect('session_mgt', branch_id=branch.id)  # Redirect to company detail page
+            return redirect('session_mgt')  # Redirect to the same page after successful update
     else:
         form = EndSession(instance=branch)
     
     return render(request, 'company/session_mgt.html', {'form': form})
-
-

@@ -18,24 +18,38 @@ from django.shortcuts import render
 
 
 @login_required
+
 def chart_of_accounts(request):
+    # Retrieve accounts specific to the user's branch company
     accounts = Account.objects.filter(
-    header=None,
-    branch__company__company_name=request.user.branch.company.company_name
-).order_by('gl_no')
+        header=None,
+        branch__company__company_name=request.user.branch.company.company_name
+    ).order_by('gl_no')
+    
     if request.method == 'POST':
         form = AccountForm(request.POST)
         if form.is_valid():
             account = form.save(commit=False)
-            # Assuming the user has a branch attribute
+            # Assign the logged-in user's branch to the new account
             account.branch = request.user.branch
-            account.save()
-            messages.success(request, 'Added successfully!')
-            return redirect('chart_of_accounts')
+
+            # Check for duplicate gl_no within the same branch
+            if Account.objects.filter(gl_no=account.gl_no, branch=account.branch).exists():
+                form.add_error('gl_no', 'An account with this GL number already exists in your branch.')
+            else:
+                account.save()
+                messages.success(request, 'Account added successfully!')
+                return redirect('chart_of_accounts')
     else:
         form = AccountForm()
+
+    # Retrieve accounts for the logged-in user's branch
     account = Account.objects.filter(branch=request.user.branch).order_by('gl_no')
-    return render(request, 'accounts_admin/chart_of_accounts.html', {'account': account, 'accounts': accounts, 'form': form})
+    return render(request, 'accounts_admin/chart_of_accounts.html', {
+        'account': account,
+        'accounts': accounts,
+        'form': form,
+    })
 
 
 # views.py

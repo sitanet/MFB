@@ -357,9 +357,13 @@ def choose_to_create_loan(request):
 
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
+
 def choose_create_another_account(request):
+    user_branch = request.user.branch  # Get the branch of the logged-in user
     data = Memtrans.objects.all().order_by('-id').first()
-    customers = Customer.objects.filter(label='C').order_by('-id')
+    
+    # Fetch only customers belonging to the logged-in user's branch
+    customers = Customer.objects.filter(label='C', branch=user_branch).order_by('-id')
     
     total_amounts = []
 
@@ -370,24 +374,36 @@ def choose_create_another_account(request):
             'customer': customer,
             'total_amount': total_amount or 0.0,
         })
-    return render(request, 'file/customer/choose_create_another_account.html',{'data': data, 'total_amounts': total_amounts})
 
-
+    return render(request, 'file/customer/choose_create_another_account.html', {
+        'data': data,
+        'total_amounts': total_amounts,
+    })
 
 
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
-
 def create_another_account(request, id):
+    # Get the logged-in user's branch
+    user_branch = request.user.branch
     customer = get_object_or_404(Customer, id=id)
-    loan_account = Account.objects.filter(Q(gl_no__startswith='104') | Q(gl_no__startswith='20')).exclude(gl_no='20000')
+    
+    # Filter accounts for loan accounts, excluding specific GL numbers
+    loan_account = Account.objects.filter(
+        (Q(gl_no__startswith='104') | Q(gl_no__startswith='20')),
+        branch=user_branch
+    ).exclude(gl_no='20000')
+    
+    # Set initial values for the form
     initial_values = {'gl_no_cust': customer.gl_no, 'ac_no_cust': customer.ac_no}
+    
+    # Fetch required data for the form
     id_card = Id_card_type.objects.all()
     category = Category.objects.all()
     region = Region.objects.all()
     credit_officer = Account_Officer.objects.all()
-
-    # Initialize gl_no with a default value
+    
+    # Initialize GL number variable
     gl_no = None
 
     if request.method == 'POST':
@@ -397,11 +413,14 @@ def create_another_account(request, id):
                 new_customer = form.save(commit=False)
                 
                 # Automatically assign the logged-in user's branch to the new customer account
-                new_customer.branch = request.user.branch
+                new_customer.branch = user_branch  # Set the user's branch explicitly
 
+                # Assign form data to the new customer
                 new_customer.ac_no = form.cleaned_data.get('ac_no')
                 new_customer.photo = form.cleaned_data.get('photo')
                 new_customer.save()
+                
+                # Success message and redirect to account number display
                 messages.success(request, 'Account saved successfully!')
                 ac_no = new_customer.ac_no
                 gl_no = new_customer.gl_no
@@ -411,13 +430,17 @@ def create_another_account(request, id):
                     'gl_no': gl_no,
                 })
             else:
+                # Error if account number is missing
                 messages.error(request, 'Invalid form data. Please provide a valid account number.')
         else:
+            # Error if the form is invalid
             messages.error(request, 'Form is not valid. Please check the entered data.')
 
     else:
+        # Initialize the form with initial values
         form = CustomerForm(initial=initial_values)
 
+    # Render the account creation page
     return render(request, 'file/customer/create_another_account.html', {
         'form': form,
         'category': category,
@@ -426,7 +449,8 @@ def create_another_account(request, id):
         'customer': customer,
         'id_card': id_card,
         'region': region,
-        'credit_officer': credit_officer
+        'credit_officer': credit_officer,
+        'user_branch': user_branch,  # Pass user_branch to the template if needed
     })
 
 
