@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+
+
+{% block content %}
+
+
+
+<div class="container-fluid">
+  <div class="row">
+ 
+        
+
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="page_title">
+                        <h2>Confirm Account Number</h2>
+                    </div>
+                </div>
+                <div class="col-md-12 m-auto pb-5 bg-white rounded-3 shadow-sm">
+                    <div class="text-center mt-4">
+                        <h1 style="color: blue; font-weight: bold;">Account Number</h1>
+                        <p style="font-weight: bold; font-size: 25px; color: red;"> {{ gl_no }}{{ ac_no }}</p>
+                        <p> <a href="{% url 'customers' %}" style="color: green; font-weight: bold;">Create New Customer</a></p>
+                       <p> <a href="{% url 'customer_list' %}" style="color: green; font-weight: bold;">Display List of Customers</a></p>
+                        
+                        <!-- <form method="post">
+                            {% csrf_token %}
+                        <button type="submit" class="btn btn-success mt-2 shadow-sm">Confirm</button>
+                        </form> -->
+                    </div>
+                </div>
+
+
+            </div>
+            <!-- footer -->
+            <!-- <div class="container-fluid">
+       <div class="footer">
+          <p>Copyright &copy; 2023 The CityGate Church. All rights reserved.
+          </p>
+       </div>
+    </div> -->
+        </div>
+    
+
+        <div>
+              <!-- Chart of Accoutwill come here -->
+        </div>
+
+
+  </div>
+
+</div>
+<!-- <h1>Chart of Account</h1> -->
+
+
+
+</div>
+  
+  {% endblock %}

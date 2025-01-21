@@ -1,0 +1,148 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block content %}
+      
+           
+                                    
+           
+              
+            <div class="midde_cont">
+                <div class="container-fluid">
+                   <div class="row column_title">
+                      <div class="col-md-12">
+                         <div class="page_title">
+                            <h2>Profile</h2>
+                         </div>
+                      </div>
+                   </div>
+                   <!-- row -->
+                   <div class="row column1">
+                      <div class="col-md-2"></div>
+                      <div class="col-md-8">
+                         <div class="white_shd full margin_bottom_30">
+                            <div class="full graph_head">
+                               <div class="heading1 margin_0">
+                                  <h2>User profile</h2>
+                               </div>
+                            </div>
+                            <div class="full price_table padding_infor_info">
+                               <div class="row">
+                                  <!-- profile image -->
+                                  <div class="col-lg-12">
+                                     <div>
+                                         <!-- Passport photo will be displayed here -->
+                                        <!-- <div class="m-auto text-center" id="passport-display">
+                                         
+                                        </div> -->
+                                        {% include 'includes/alerts.html' %}
+                                        {{ form.errors }}
+                                     
+                                        <form id="upload-form" enctype="multipart/form-data">
+                                          
+                                        </form>
+                                     </div>
+ 
+                                     <style>
+                                        #passport-display img {
+                                           border-radius: 20%;
+                                           width: 100px;
+                                        }
+ 
+                                        .profile-img {
+                                           width: 39%;
+                                        }
+                                     </style>
+ 
+                                     <!-- <div class="profile_img"><img width="150" class="rounded-circle"
+                                           src="images/layout_img/user_img.jpg" alt="User Passport" /></div> -->
+                                     <div class="profile_contant">
+                                        <div class="contact_inner">
+ 
+                                           <!-- form -->
+                                         
+                                        
+                                             <form method="POST" enctype="multipart/form-data" class="mt-4">
+                                                {% csrf_token %}
+
+                                                <div class="profile-img form-group m-auto text-center">
+                                                   <label for="passport" class="ps-4">Upload Passport Photo: <img class="img-responsive" src="{{ user.profile_picture.url }}" alt="#" onerror="this.src='{% static 'images/avatar.jpg' %}'"/></label>
+                                                   <input type="file" class="form-control-file text-danger" id="passport"
+                                                      name="profile_picture" >
+                                                      <!-- {{form.profile_picture}} -->
+                                                </div>
+ 
+                                              <div class="form-row">
+                                                 <div class="form-group col-md-6">
+                                                    <label for="fName">Staff Fullname</label>
+                                                    <input type="text" class="form-control bg-light" name="first_name" value="{{ user.first_name}} {{ user.last_name}}">
+                                                    
+                                                    
+                                                   </div>
+                                                  
+ 
+                                                 <div class="form-group col-md-6">
+                                                    <label for="address">Email Address</label>
+                                                    <input type="email" class="form-control bg-light"
+                                                       placeholder="Email Address" value="{{ user.email}}">
+                                                 </div>
+                                                 <div class="form-group col-md-6">
+                                                    <label for="Phone">Phone Number</label>
+                                                    <input type="tel" class="form-control bg-light"
+                                                       placeholder="Phone Number" value="{{ user.phone_number}}">
+                                                 </div>
+                                               
+ 
+                                                
+                                             
+                                                
+                                                <div class="form-group col-md-6">
+                                                    <label for="id">Username</label>
+                                                    <input type="text" class="form-control bg-light"
+                                                       placeholder="Country" value="{{ user.username}}">
+                                                 </div> 
+
+                                                 <!-- <div class="form-group col-md-6">
+                                                   <label for="id">Address</label>
+                                                   <input type="text" name="address" class="form-control bg-light"
+                                                      placeholder="address" value="{{ user.address}}">
+                                                </div> 
+                                                <div class="form-group col-md-6">
+                                                   <label for="id">Country</label>
+                                                   <input type="text" name="country" class="form-control bg-light"
+                                                      placeholder="country" value="{{ user.country}}">
+                                                </div> 
+                                                <div class="form-group col-md-6">
+                                                   <label for="id">State</label>
+                                                   <input type="text" name="state" class="form-control bg-light"
+                                                      placeholder="state" value="{{ user.state}}">
+                                                </div> -->
+
+                                                 <!-- <div class="form-group col-md-6">
+                                                    <label for="email">State</label>
+                                                    <input type="email" class="form-control bg-light"
+                                                       placeholder="State">
+                                                 </div>  -->
+                                              </div>
+                                              <button type="submit"
+                                                 class="btn w-100 btn-danger mt-4 shadow-sm">Submit</button>
+                                           </form>
+ 
+                                        </div>
+                                     </div>
+                                  </div>
+ 
+                               </div>
+ 
+                               <!-- end dashboard inner -->
+                            </div>
+                         </div>
+                      </div>
+                   </div>
+            
+         
+            
+                 
+            
+                  {% endblock %}

@@ -1,0 +1,283 @@
+
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block content %}
+            
+                    
+                       
+
+                
+                       
+                        {% include 'includes/alerts.html' %}
+                        
+                            {{ form.errors }}
+                        
+                        <!-- dashboard inner -->
+            
+                        
+                        <div class="container-fluid">
+                               <div class="row column_title">
+                                  <div class="col-md-12">
+                                     <div class="page_title">
+                                        <h2>Create Category</h2>
+                                     </div>
+                                  </div>
+                               </div>
+             
+             
+                               <h6 style="color: red;">{{ form.cleaned_data }}</h6>
+
+                               <!-- table -->
+
+  <form method="POST" class="chart_of_account p-5 shadow-lg rounded rounded-5" action="{% url 'update_product_type' %}">
+                                    {% csrf_token %}
+                                    {% if messages %}
+                            <ul class="messages">
+                                {% for message in messages %}
+                                    <li style="font-size: 30px; color: brown; font-weight: bold;"  {% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+                                {% endfor %}
+                            </ul>
+                                {% endif %}
+                                <h6 style="color: red;" >{{ form.errors }}</h6>
+                                <div class="form-group col-md-3">
+                                    <label for="gl_no">Select Account (gl_no):</label>
+                                    <select name="gl_no" id="id_gl_no"> 
+                                        {% for account in accounts %}
+                                            <option value="{{ account.gl_no }}">{{ account.gl_no }} - {{ account.gl_name}} </option>
+                                        {% endfor %}
+                                    </select>
+                              
+                                    
+                                </div>
+                              <div class="form-row">
+                                
+                                    
+                                          <div class="form-group col-md-3">
+                                             <label for="general_ledger_accout_name">Interest Income Gl No </label>
+                                             <input type="text" class="form-control bg-light"
+                                                   id="general_ledger_accout_name"
+                                                   name="interest_gl" value="{{ form.interest_gl.value|default:''}}">
+                                       </div>
+
+                                       <div class="form-group col-md-3">
+                                        <label for="general_ledger_accout_name">Interest Income AC No </label>
+                                        <input type="text" class="form-control bg-light"
+                                              id="general_ledger_accout_name"
+                                              name="interest_ac">
+                                  </div>
+                                  <div class="form-group col-md-3">
+                                    <label for="general_ledger_accout_name">Penalty Gl No </label>
+                                    <input type="text" class="form-control bg-light"
+                                          id="general_ledger_accout_name"
+                                          name="pen_gl_no">
+                              </div>
+
+                              <div class="form-group col-md-3">
+                               <label for="general_ledger_accout_name">Penalty AC No </label>
+                               <input type="text" class="form-control bg-light"
+                                     id="general_ledger_accout_name"
+                                     name="pen_ac_no">
+                         </div>
+                                </div>
+                          
+                        <div class="form-row">
+                                
+                                    
+                            <div class="form-group col-md-3">
+                               <label for="general_ledger_accout_name">Provision Liability bad debts  (Cr) </label>
+                               <input type="text" class="form-control bg-light"
+                                     id="general_ledger_accout_name"
+                                     name="prov_cr_gl_no">
+                         </div>
+
+                         <div class="form-group col-md-3">
+                          <label for="general_ledger_accout_name">Provision Liability for bad debts</label>
+                          <input type="text" class="form-control bg-light"
+                                id="general_ledger_accout_name"
+                                name="prov_cr_ac_no">
+                    </div>
+                    <div class="form-group col-md-3">
+                        <label for="general_ledger_accout_name">Provision Expense on bad debts (Dr) </label>
+                        <input type="text" class="form-control bg-light"
+                              id="general_ledger_accout_name"
+                              name="prov_dr_gl_no">
+                  </div>
+ 
+                  <div class="form-group col-md-3">
+                   <label for="general_ledger_accout_name">Provision Expense on bad debts </label>
+                   <input type="text" class="form-control bg-light"
+                         id="general_ledger_accout_name"
+                         name="prov_dr_ac_no">
+             </div>
+                  </div>
+
+          
+
+          <div class="form-row">
+                                
+                                    
+            <div class="form-group col-md-3">
+               <label for="general_ledger_accout_name">Loans Written-off (Debit) </label>
+               <input type="text" class="form-control bg-light"
+                     id="general_ledger_accout_name"
+                     name="writ_off_dr_gl_no">
+         </div>
+
+         <div class="form-group col-md-3">
+          <label for="general_ledger_accout_name">Loans Written-off  </label>
+          <input type="text" class="form-control bg-light"
+                id="general_ledger_accout_name"
+                name="writ_off_dr_ac_no">
+    </div>
+    <div class="form-group col-md-3">
+        <label for="general_ledger_accout_name">Loans Written-off  (Credit) </label>
+        <input type="text" class="form-control bg-light"
+              id="general_ledger_accout_name"
+              name="writ_off_cr_gl_no">
+  </div>
+ 
+  <div class="form-group col-md-3">
+   <label for="general_ledger_accout_name">Loans Written-off  </label>
+   <input type="text" class="form-control bg-light"
+         id="general_ledger_accout_name"
+         name="writ_off_cr_ac_no">
+ </div>
+  </div>
+
+
+
+  <div class="form-row">
+                                
+                                    
+    <div class="form-group col-md-3">
+       <label for="general_ledger_accout_name">Loans Commision   </label>
+       <input type="text" class="form-control bg-light"
+             id="general_ledger_accout_name"
+             name="loan_com_gl_no">
+ </div>
+
+ <div class="form-group col-md-3">
+  <label for="general_ledger_accout_name">Loans Commision  </label>
+  <input type="text" class="form-control bg-light"
+        id="general_ledger_accout_name"
+        name="loan_com_ac_no">
+</div>
+<div class="form-group col-md-3">
+    <label for="general_ledger_accout_name">Int to be received (Debit)  </label>
+    <input type="text" class="form-control bg-light"
+          id="general_ledger_accout_name"
+          name="int_to_recev_gl_dr">
+</div>
+
+<div class="form-group col-md-3">
+<label for="general_ledger_accout_name">Interest to be received  </label>
+<input type="text" class="form-control bg-light"
+     id="general_ledger_accout_name"
+     name="int_to_recev_ac_dr">
+</div>
+</div>
+
+
+<div class="form-row">
+                                
+                                    
+    <div class="form-group col-md-3">
+       <label for="general_ledger_accout_name">Unearned Int Income (CR)   </label>
+       <input type="text" class="form-control bg-light"
+             id="general_ledger_accout_name"
+             name="unearned_int_inc_gl">
+ </div>
+
+ <div class="form-group col-md-3">
+  <label for="general_ledger_accout_name">Unearned Int Income  </label>
+  <input type="text" class="form-control bg-light"
+        id="general_ledger_accout_name"
+        name="unearned_int_inc_ac">
+</div>
+<div class="form-group col-md-3">
+    <label for="general_ledger_accout_name">Loans Commission - VAT   </label>
+    <input type="text" class="form-control bg-light"
+          id="general_ledger_accout_name"
+          name="loan_com_gl_vat">
+</div>
+
+<div class="form-group col-md-3">
+<label for="general_ledger_accout_name">Loans Commission - VAT  </label>
+<input type="text" class="form-control bg-light"
+     id="general_ledger_accout_name"
+     name="loan_com_ac_vat">
+</div>
+</div>
+
+
+
+<div class="form-row">
+                                
+                                    
+    <div class="form-group col-md-3">
+       <label for="general_ledger_accout_name">Loan Processing Fee - VAT   </label>
+       <input type="text" class="form-control bg-light"
+             id="general_ledger_accout_name"
+             name="loan_proc_gl_vat">
+ </div>
+
+ <div class="form-group col-md-3">
+  <label for="general_ledger_accout_name">Loan Processing Fee - VAT  </label>
+  <input type="text" class="form-control bg-light"
+        id="general_ledger_accout_name"
+        name="loan_proc_ac_vat">
+</div>
+<div class="form-group col-md-3">
+    <label for="general_ledger_accout_name">Loan Application Fee - VAT   </label>
+    <input type="text" class="form-control bg-light"
+          id="general_ledger_accout_name"
+          name="loan_appl_gl_vat">
+</div>
+
+<div class="form-group col-md-3">
+<label for="general_ledger_accout_name">Loan Application Fee - VAT  </label>
+<input type="text" class="form-control bg-light"
+     id="general_ledger_accout_name"
+     name="loan_appl_ac_vat">
+</div>
+</div>
+
+
+
+<div class="form-row">
+                                
+                                    
+    <div class="form-group col-md-3">
+       <label for="general_ledger_accout_name">Loan Commission Fee - VAT  </label>
+       <input type="text" class="form-control bg-light"
+             id="general_ledger_accout_name"
+             name="loan_commit_gl_vat">
+ </div>
+
+ <div class="form-group col-md-3">
+  <label for="general_ledger_accout_name">Loan Commission Fee - VAT  </label>
+  <input type="text" class="form-control bg-light"
+        id="general_ledger_accout_name"
+        name="loan_commit_ac_vat">
+</div>
+</div>
+                                <button type="submit"
+                                            class="btn w- btn-success mt-4 shadow-sm">Add</button>
+                                     <div></div>
+                                      <a href="{% url 'category_list' %}" style="color: green; font-weight: bold;">Back to Category List</a>
+                                </form>
+                            </div>
+                     
+                         </div>
+                     
+                         
+                    
+
+
+                    
+     
+
+
+{% endblock %}

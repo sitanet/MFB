@@ -1,0 +1,135 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row column_title">
+        <div class="col-md-12">
+            <div class="page_title">
+                <h2>Portfolio At Risk Report</h2>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form Card (Displayed if no report) -->
+    <div class="card p-4 shadow-sm" id="reportFormCard" style="{% if report.loans|length == 0 and not reporting_date %}display:block;{% else %}display:none;{% endif %}">
+        <div class="card-body">
+            <form id="reportingForm" method="get" action="{% url 'portfolio_at_risk_report_view' %}">
+                {% csrf_token %}
+                <div class="form-row">
+                    <!-- Reporting Date Field -->
+                    <div class="form-group col-md-3">
+                        <label for="reporting_date">Reporting Date:</label>
+                        <input type="date" class="form-control" name="reporting_date" id="reporting_date" value="{{ reporting_date|date:'Y-m-d' }}">
+                    </div>
+
+                    <!-- Product (GL No) Field -->
+                    <div class="form-group col-md-3">
+                        <label for="gl_no">Product (GL No):</label>
+                        <select class="form-control" name="gl_no" id="gl_no">
+                            <option value="">All Products</option>
+                            {% for gl_account in report.gl_nos %}
+                                <option value="{{ gl_account.gl_no }}" {% if selected_product == gl_account.gl_no %}selected{% endif %}>
+                                    {{ gl_account.gl_no }} - {{ gl_account.gl_name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Account Officer Field -->
+                    <div class="form-group col-md-3">
+                        <label for="account_officer">Account Officer:</label>
+                        <select class="form-control" name="account_officer" id="account_officer">
+                            <option value="">All Account Officers</option>
+                            {% for officer in report.account_officers %}
+                                <option value="{{ officer.id }}" {% if selected_officer == officer.id %}selected{% endif %}>
+                                    {{ officer.user }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Exclude Internal Account Checkbox -->
+                    <div class="form-group col-md-3">
+                        <div class="form-check mt-4">
+                            <input type="checkbox" class="form-check-input" id="exclude_ac_no_one" name="exclude_ac_no_one" {% if exclude_ac_no_one %}checked{% endif %}>
+                            <label class="form-check-label" for="exclude_ac_no_one">Exclude Internal Accounts</label>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary mt-4">Generate Report</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Report Card (Displayed after form submission) -->
+    {% if report.loans|length > 0 or reporting_date %}
+    <div class="card mt-4 p-4 shadow-sm" id="reportCard">
+        <div class="card-body">
+            <!-- Back to Form Button -->
+            <div class="text-right">
+                <button class="btn btn-secondary mb-3" id="backToFormButton">Back to Form</button>
+            </div>
+
+            <div class="card-body text-center">
+                <h3 style="color: blue;">Portfolio At Risk</h3>
+                <h5>Reporting Date: {{ reporting_date|date:"F j, Y" }}</h5>
+                <p>Total Loans: <strong>{{ report.total_loans }}</strong></p>
+                <p>Total Outstanding Balance: <strong>{{ report.total_outstanding|floatformat:2 }}</strong></p>
+            </div>
+            
+            <!-- Beautified Table -->
+            <table class="table table-hover table-bordered table-striped text-center mt-3">
+                <thead class="thead-dark">
+                    <tr>
+                        <th>GL No</th>
+                        <th>Account No</th>
+                        <th>Cycle</th>
+                        <th>Branch</th>
+                        <th>Days in Arrears</th>
+                        <th>Outstanding Balance</th>
+                        <th>Pass & Watch</th>
+                        <th>Sub-standard</th>
+                        <th>Doubtful</th>
+                        <th>Loss</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for loan in report.loans %}
+                    <tr>
+                        <td>{{ loan.gl_no }}</td>
+                        <td>{{ loan.ac_no }}</td>
+                        <td>{{ loan.cycle }}</td>
+                        <td>{{ loan.branch }}</td>
+                        <td>{{ loan.days_in_arrears }}</td>
+                        <td>{{ loan.outstanding_balance|floatformat:2 }}</td>
+                        <td class="{% if loan.category == 'Pass & Watch' %}text-success font-weight-bold{% endif %}">
+                            {% if loan.category == 'Pass & Watch' %}{{ loan.provision_amount|floatformat:2 }}{% else %}0{% endif %}
+                        </td>
+                        <td class="{% if loan.category == 'Sub-standard' %}text-warning font-weight-bold{% endif %}">
+                            {% if loan.category == 'Sub-Standard' %}{{ loan.provision_amount|floatformat:2 }}{% else %}0{% endif %}
+                        </td>
+                        <td class="{% if loan.category == 'Doubtful' %}text-danger font-weight-bold{% endif %}">
+                            {% if loan.category == 'Doubtful' %}{{ loan.provision_amount|floatformat:2 }}{% else %}0{% endif %}
+                        </td>
+                        <td class="{% if loan.category == 'Loss' %}text-danger font-weight-bold{% endif %}">
+                            {% if loan.category == 'Loss' %}{{ loan.provision_amount|floatformat:2 }}{% else %}0{% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    document.getElementById('backToFormButton').addEventListener('click', function() {
+        // Hide the report card and show the form card
+        document.getElementById('reportCard').style.display = 'none';
+        document.getElementById('reportFormCard').style.display = 'block';
+    });
+</script>
+
+{% endblock %}

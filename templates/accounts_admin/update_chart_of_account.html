@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+
+<!-- <form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Update</button>
+</form> -->
+
+
+
+
+
+
+{% block content %}
+
+
+
+<div class="container-fluid">
+  <div class="row">
+        <div class="col-md-12">
+              <div class="page_title">
+                    <h2>Chart of Account</h2>
+              </div>
+        </div>
+        <!-- form -->
+        <form method="POST" class="chart_of_account p-5 shadow-lg rounded rounded-5">
+            {% csrf_token %}
+            <h6 style="color: red;" >{{ form.errors }}</h6>
+
+            {% if messages %}
+            <ul class="messages">
+                {% for message in messages %}
+                    <li style="font-size: 50px; color: brown;"  {% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+              <div class="form-row">
+                    <div class="form-group col-md-6">
+                          <label for="general_ledger_accout_no">General Ledger Account
+                                No.</label>
+                          <input type="text"  class="form-control bg-light" id="general_ledger_accout_no" name="gl_no" value="{{ form.gl_no.value }}">
+                    </div>
+                    <div class="form-group col-md-6">
+                          <label for="general_ledger_accout_name">General Ledger Account
+                                Name</label>
+                     
+                                <input type="text" class="form-control bg-light"
+                                    id="general_ledger_account_name"
+                                    name="gl_name" value="{{ form.gl_name.value }}">
+
+                    </div>
+
+                    <div class="form-group col-md-4">
+                        <label for="currency_code">Currency Code</label>
+                        <select class="form-control bg-light" id="account_type" name="account_type">
+                            {% for choice in form.account_type.field.choices %}
+                                <option value="{{ choice.0 }}" {% if choice.0 == form.account_type.value %}selected{% endif %}>
+                                    {{ choice.1 }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                  </div>
+
+
+                    <div class="form-group col-md-4">
+                          <label for="currency_code">Currency Code</label>
+                          <select class="form-control bg-light" id="currency" name="currency">
+                              {% for choice in form.currency.field.choices %}
+                                  <option value="{{ choice.0 }}" {% if choice.0 == form.currency.value %}selected{% endif %}>
+                                      {{ choice.1 }}
+                                  </option>
+                              {% endfor %}
+                          </select>
+                    </div>
+
+                    <div class="form-group col-md-4">
+                          <label for="">Debit/Credit Type</label>
+                          <select class="form-control bg-light" id="double_entry_type" name="double_entry_type">
+                              {% for choice in form.double_entry_type.field.choices %}
+                                  <option value="{{ choice.0 }}" {% if choice.0 == form.double_entry_type.value %}selected{% endif %}>
+                                      {{ choice.1 }}
+                                  </option>
+                              {% endfor %}
+                          </select>
+                    </div>
+                    <div class="form-group col-md-4">
+                        <label for="">Header</label>
+                        <select class="form-control bg-light" id="header" name="header">
+                              <option value="">---------</option>  <!-- Add a default empty option -->
+                              {% for choice in form.header.field.choices %}
+                                  <option value="{{ choice.0 }}" {% if choice.0 == form.header.value %}selected{% endif %}>
+                                      {{ choice.1 }}
+                                  </option>
+                              {% endfor %}
+                          </select>
+                  </div>
+                  <div class=" col-md-12 mt-3 ms-5">
+
+                        <label for="non-financial">Non-Financial Account</label>
+                        <input type="checkbox" id="is_non_financial" name="is_non_financial" {% if form.is_non_financial.value %}checked{% endif %}>
+                    </div>
+
+                   
+                    <button type="submit"
+                          class="btn w- btn-success mt-4 shadow-sm">Update</button>
+                          <a class="btn w- btn-success mt-4 mx-3 shadow-sm" href="{% url 'chart_of_accounts' %}">Back</a>
+                    <!-- <button type="submit"
+                          class="btn w- btn-success mt-4 shadow-sm">Delete</button> -->
+              </div>
+        </form>
+
+        <div>
+              <!-- Chart of Accoutwill come here -->
+        </div>
+
+
+  </div>
+
+</div>
+<!-- <h1>Chart of Account</h1> -->
+
+<ul id="account-tree">
+    {% for account in accounts %}
+      <li>
+        {{ account.gl_no }} {{ account.gl_name }}
+        <a href="{% url 'update_chart_of_account' account.id %}">Edit</a>
+              <a href="{% url 'delete_chart_of_account' account.id %}">Delete</a>
+        <ul>
+          {% for child in account.account_set.all %}
+            <li class="child">
+              {{ child.gl_no }} {{ child.gl_name }}
+              <a href="{% url 'update_chart_of_account' child.id %}">Edit</a>
+              <a href="{% url 'delete_chart_of_account' child.id %}">Delete</a>
+              <ul>
+                {% for grandchild in child.account_set.all %}
+                  <li class="grandchild">
+                    {{ grandchild.gl_no }} {{ grandchild.gl_name }}
+                    <a href="{% url 'update_chart_of_account' grandchild.id %}">Edit</a>
+                    <a class="submit" href="{% url 'delete_chart_of_account' grandchild.id %}">Delete</a>
+                  </li>
+                {% endfor %}
+              </ul>
+            </li>
+          {% endfor %}
+        </ul>
+      </li>
+    {% endfor %}
+  </ul>
+
+
+</div>
+  
+  {% endblock %}

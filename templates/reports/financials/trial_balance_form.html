@@ -1,0 +1,76 @@
+
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block content %}
+            
+                    
+                       
+
+                
+                       
+                        {% include 'includes/alerts.html' %}
+                        
+                            {{ form.errors }}
+                        
+                        <!-- dashboard inner -->
+            
+                        
+                        <div class="container-fluid">
+                               <div class="row column_title">
+                                  <div class="col-md-12">
+                                     <div class="page_title">
+                                        <h2>Trial Balance</h2>
+                                     </div>
+                                  </div>
+                               </div>
+             
+             <form id="generateForm" method="post" action="{% url 'trial_balance' %}" class="chart_of_account p-5 shadow-lg rounded rounded-5">
+                                        {% csrf_token %}
+                                 <div class="form-row">
+                                        <div class="form-group col-md-3">
+                                            <label for="general_ledger_accout_name">Select Start Date </label>
+                                            <input type="date" class="form-control bg-light"
+                                                  
+                                                  name="start_date"  id="ses_date" value="{{company_date}}">
+                                      </div>
+                                      <div class="form-group col-md-3">
+                                        <label for="general_ledger_accout_name">Select End Date </label>
+                                        <input type="date" class="form-control bg-light"
+                                              name="end_date" id="ses_date" value="{{company_date}}">
+                                    </div>
+                                  
+                                  
+                                    </div>
+                                        <input type="hidden" id="pageInput" name="page" value="">
+                                        <button type="submit"  class="btn w- btn-success mt-4 shadow-sm">Submit</button>
+                                    </form>
+
+                                
+                            </div>
+                 
+                     
+                         
+                    
+
+
+                    
+     <script>
+        document.addEventListener('DOMContentLoaded', function() {
+        var sessionDateInput = document.getElementById('ses_date');
+        var companyDate = '{{ company_date }}'; // Assuming company_date is in the 'YYYY-MM-DD' format
+                            
+        sessionDateInput.addEventListener('change', function() {
+            var selectedDate = new Date(sessionDateInput.value);
+            var companyDateObj = new Date(companyDate);
+                            
+            if (selectedDate > companyDateObj) {
+            alert('Please select a date not greater than the session date.');
+                sessionDateInput.value = '{{ company_date }}'; // Clear the input value
+                }
+            });
+           });
+         </script>
+
+{% endblock %}

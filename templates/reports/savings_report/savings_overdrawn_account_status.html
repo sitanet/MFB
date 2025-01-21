@@ -1,0 +1,265 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    .total-row {
+        border-bottom: 3px solid #000;
+        border-top: 3px solid #000;
+        background-color: #f8f9fa; /* Light background color for total rows */
+        color: #212529; /* Dark text color for total rows */
+        font-weight: bold;
+    }
+
+    .subtotal-row {
+        background-color: #e9ecef; /* Light gray background for subtotals */
+        color: #0370dd;
+    }
+
+    .count-row {
+        background-color: #d4edda; /* Light green background for row counts */
+        color: #155724; /* Dark green text color for row counts */
+    }
+
+    .info-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+    }
+
+    .info-table td {
+        padding: 5px;
+        border: none; /* Hide table borders */
+        vertical-align: top;
+    }
+
+    .info-section {
+        margin-bottom: 20px;
+    }
+
+    .info-table tr:nth-child(even) {
+        background-color: #f9f9f9; /* Optional: alternate row color for readability */
+    }
+
+    .blue-text {
+        color: blue;
+    }
+
+    .print-button {
+        margin-top: 20px;
+        margin-bottom: 20px;
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    /* Print specific styles */
+    @media print {
+        body * {
+            visibility: hidden; /* Hide everything outside the print section */
+        }
+        
+        .print-area, .print-area * {
+            visibility: visible; /* Only show the print section */
+        }
+        
+        .print-area {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            margin: auto;
+        }
+    }
+    .date-time {
+        text-align: right;
+    }
+
+    .date-time-item {
+        margin: 0;
+        padding: 0;
+        display: inline-block;
+        line-height: 1.2;
+    }
+</style>
+
+<div class="container-fluid">
+    <!-- Page Title -->
+    <div class="row column_title">
+        <div class="col-md-12">
+            <div class="page_title">
+                <h2>Savings Account Overdrawn</h2>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form for input -->
+    {% if not customer_data %}
+    <form id="customerForm" method="post" action="{% url 'savings_account_overdrawn' %}" class="p-5 shadow-lg rounded rounded-5 mt-4 bg-light">
+        {% csrf_token %}
+        <div class="form-row">
+            <!-- Reporting Date Field -->
+            <div class="form-group col-md-3">
+                <label for="reporting_date">Reporting Date:</label>
+                <input type="date" class="form-control bg-white" name="reporting_date" id="reporting_date" value="{{ reporting_date|date:'Y-m-d' }}">
+            </div>
+            <!-- Existing Filters -->
+            <div class="form-group col-md-3">
+                <label for="branch">Branch:</label>
+                <select class="form-control bg-white" name="branch" id="branch">
+                    <option value="">All Branches</option>
+                    {% for branch in branches %}
+                        <option value="{{ branch.id }}" {% if selected_branch and selected_branch.id == branch.id %}selected{% endif %}>
+                            {{ branch.branch_name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group col-md-3">
+                <label for="gl_no">Product:</label>
+                <select class="form-control bg-white" name="gl_no" id="gl_no">
+                    <option value="">All Products</option>
+                    {% for gl_account in gl_accounts %}
+                        <option value="{{ gl_account.gl_no }}" {% if selected_gl_no == gl_account.gl_no %}selected{% endif %}>
+                            {{ gl_account.gl_no }} - {{ gl_account.gl_name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group col-md-3">
+                <label for="region">Region:</label>
+                <select class="form-control bg-white" name="region" id="region">
+                    <option value="">All Regions</option>
+                    {% for region in regions %}
+                        <option value="{{ region.id }}" {% if selected_region and selected_region.id == region.id %}selected{% endif %}>
+                            {{ region.region_name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group col-md-3">
+                <label for="credit_officer">Account Officer:</label>
+                <select class="form-control bg-white" name="credit_officer" id="credit_officer">
+                    <option value="">All Account Officers</option>
+                    {% for officer in account_officers %}
+                        <option value="{{ officer.id }}" {% if selected_officer and selected_officer.id == officer.id %}selected{% endif %}>
+                            {{ officer.user }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group col-md-3">
+                <label for="exclude_ac_no_one">Exclude Internal Account:</label>
+                <input type="checkbox" id="exclude_ac_no_one" name="exclude_ac_no_one" {% if exclude_ac_no_one %}checked{% endif %}>
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary mt-4 shadow-sm">Generate Report</button>
+    </form>
+    {% endif %}
+
+    {% if customer_data %}
+    <!-- Print Button -->
+    <div class="print-button">
+        <button class="btn btn-primary" onclick="window.print()">Print Report</button>
+    </div>
+
+    <!-- Report Card -->
+    <div class="card mt-5 shadow-sm print-area">
+        <div class="card-body">
+            <!-- Date and Time -->
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="date-time">
+                        <p class="date-time-item">{{ current_datetime|date:"d/m/Y" }}</p><br>
+                        <p class="date-time-item">{{ current_datetime|date:"h:i:s A" }}</p>
+                    </div>
+                </div>
+            </div>
+            <!-- Report Header -->
+            <div class="card-header bg-white text-center">
+                <h4>
+                    {% if selected_branch %}
+                        {{ selected_branch.branch_name }}
+                    {% else %}
+                        All Branches
+                    {% endif %}
+                </h4>
+                <p>
+                    {% if selected_branch %}
+                        {{ selected_branch.address }}
+                    {% else %}
+                        Address Not Available
+                    {% endif %}
+                </p>
+                <h5 style="color: #1115f0;">Savings Account Overdrawn</h5>
+                <div class="row justify-content-center">
+                    <div class="col-md-6 text-center">
+                        <p>Reporting Date: <strong>{{ reporting_date|date:"d/m/Y" }}</strong></p>
+                        {% if selected_gl_no %}
+                            <p>GL No: <strong>{{ selected_gl_no }}</strong></p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <!-- Table -->
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead class="thead-dark">
+                        <tr>
+                            <th>GL No</th>
+                            <th>AC No</th>
+                            <th>Names</th>
+                            <th>Address</th>
+                            <th>Account Balance</th>
+                            <th>Last Transaction Date</th>
+                            <!-- <th>Days Without Activity</th> -->
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for gl_no, data in customer_data.items %}
+                            <tr class="subtotal-row">
+                                <td colspan="6"><strong>{{ gl_no }} - {{ data.gl_name }}</strong></td>
+                            </tr>
+                            {% for customer in data.customers %}
+                            <tr>
+                                <td>{{ customer.gl_no }}</td>
+                                <td>{{ customer.ac_no }}</td>
+                                <td>{{ customer.first_name }} {{ customer.middle_name }} {{ customer.last_name }}</td>
+                                <td>{{ customer.address }}</td>
+                                <td class="text-right">{{ customer.account_balance|floatformat:2 }}</td>
+                                <td>
+                                    {% if customer.last_trx_date %}
+                                        {{ customer.last_trx_date|date:"d/m/Y" }}
+                                    {% else %}
+                                        No transaction exists
+                                    {% endif %}
+                                </td>
+                                <!-- <td class="text-right">
+                                    {% if customer.days_without_activity is not None %}
+                                        {{ customer.days_without_activity }}
+                                    {% else %}
+                                        N/A
+                                    {% endif %}
+                                </td> -->
+                            </tr>
+                            {% endfor %}
+                            <tr class="total-row">
+                                <td colspan="3" class="text-right">Subtotal:</td>
+                                <td class="text-right">{{ data.subtotal|floatformat:2 }}</td>
+                                <td colspan="2"></td>
+                            </tr>
+                        {% endfor %}
+                        <tr class="total-row">
+                            <td colspan="3" class="text-right">Grand Total:</td>
+                            <td class="text-right">{{ grand_total|floatformat:2 }}</td>
+                            <td colspan="3"></td>
+                        </tr>
+                        <tr class="count-row">
+                            <td colspan="7">Total Customers: {{ customer_count }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

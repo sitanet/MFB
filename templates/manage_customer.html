@@ -1,0 +1,169 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+   <!-- Page Title -->
+   <div class="row mb-4">
+      <div class="col-md-12">
+         <div class="page_title">
+            <h2>Customer Details</h2>
+         </div>
+      </div>
+   </div>
+
+   <div class="card shadow-sm p-4">
+      <div class="form-container">
+     
+         <h2>Customer Information</h2>
+         <div class="photo-box" id="photoBox"></div>
+         <form>
+            <!-- Row for Name, Email, and Phone No -->
+            <div class="form-row">
+               <div class="form-group col-md-4">
+                  <label for="name">Name:</label>
+                  <input type="text" id="name" placeholder="Enter name" class="form-control">
+               </div>
+
+               <div class="form-group col-md-4">
+                  <label for="email">Email:</label>
+                  <input type="email" id="email" placeholder="Enter email" class="form-control">
+               </div>
+
+               <div class="form-group col-md-4">
+                  <label for="phone">Phone No:</label>
+                  <input type="tel" id="phone" placeholder="Enter phone number" class="form-control">
+               </div>
+            </div>
+
+            <!-- Address Field -->
+            <div class="form-group">
+               <label for="address">Address:</label>
+               <input type="text" id="address" placeholder="Enter address" class="form-control">
+            </div>
+
+            <!-- Table for Account Info -->
+            <table class="form-table table table-bordered mt-3">
+               <thead class="thead-dark">
+                  <tr>
+                     <th>Account No</th>
+                     <th>Account No</th>
+                     <th>Balance</th>
+                  </tr>
+               </thead>
+               <tbody>
+                  <tr>
+                     <td>
+                        <input type="text" id="account-number-1" placeholder="Enter account number" class="form-control">
+                     </td>
+                     <td>
+                        <input type="text" id="account-number-2" placeholder="Enter account number" class="form-control">
+                     </td>
+                     <td>
+                        <input type="text" id="balance" placeholder="Enter balance" class="form-control">
+                     </td>
+                  </tr>
+               </tbody>
+            </table>
+
+            <!-- Button Group -->
+            <div class="button-group mt-4 d-flex justify-content-between">
+               <a href="#" class="btn btn-success">View Loan Information</a>
+               <div class="d-flex justify-content-center flex-grow-1">
+                  <a href="#" class="btn btn-primary mx-3">Manage SMS</a>
+               </div>
+               <a href="#" class="btn btn-warning">View Recent Transaction</a>
+            </div>
+         </form>
+      </div>
+   </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+   .page_title h2 {
+      text-align: center;
+      font-size: 2rem;
+      color: #333;
+   }
+
+   .form-container {
+      background-color: white;
+      max-width: 100%;
+      padding: 2rem 1.5rem;
+      border-radius: 10px;
+   }
+
+   .form-container h1 {
+      text-align: center;
+      color: #333;
+      font-size: 2.5rem;
+      margin-bottom: 2rem;
+   }
+
+   .form-container h2 {
+      text-align: center;
+      color: #555;
+      font-size: 1.5rem;
+      margin-bottom: 1.5rem;
+   }
+
+   .form-group label {
+      font-weight: bold;
+      font-size: 1rem;
+   }
+
+   .photo-box {
+      position: absolute;
+      top: 0.5rem;
+      right: 1rem;
+      width: 120px;
+      height: 120px;
+      border: 1px solid #ccc;
+      background-color: #f8f9fa;
+      background-size: cover;
+      border-radius: 50%;
+   }
+
+   .button-group .btn {
+      font-weight: bold;
+   }
+
+   .button-group .btn-warning {
+      margin-left: auto; /* Aligns this button to the right */
+   }
+
+   .table thead th {
+      text-align: center;
+   }
+
+   .form-control {
+      font-size: 0.9rem;
+      padding: 0.75rem;
+   }
+
+   .card {
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+   }
+
+   @media screen and (max-width: 768px) {
+      .form-container {
+         padding: 1rem;
+      }
+
+      .photo-box {
+         position: relative;
+         margin-bottom: 1.5rem;
+         width: 100px;
+         height: 100px;
+      }
+
+      .button-group .btn {
+         margin-bottom: 10px;
+         font-size: 0.9rem;
+      }
+   }
+</style>
+{% endblock %}

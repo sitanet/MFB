@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block content %}
+{% include 'includes/alerts.html' %}
+<div class="container-fluid">
+      <div class="row">
+          <div class="col-md-12">
+              <div class="page_title">
+                  <h2>Reverse Transaction</h2>
+              </div>
+          </div>
+          <!-- ................. -------------------------------->
+          <div class="containered ">
+
+          
+ 
+
+
+  <form method="post" class="chart_of_account p-5 shadow-lg rounded rounded-5">
+    {% csrf_token %}
+    
+    <!-- Search button -->
+   
+     
+                   
+  
+                 
+    <div class="form-row">
+    
+     
+      <div class="col-md-4">
+    <input type="text" class="form-control bg-light" placeholder="Enter Transaction No" value="{% if form.trx_no.value %}{{ form.trx_no.value }}{% endif %}" name="trx_no"  required>
+      </div>
+    </div>
+    
+    <!-- Update button -->
+   
+  
+    {% if updated_records %}
+
+  <ul>
+    {% for record in updated_records %}
+        <div class="form-row">
+        <div class="col-md-3">
+          <label class="fw-bold" for="branch">General Ledger No:</label>
+          <input type="text" class="form-control bg-light"  name="branch" value="{{ record.gl_no }}" readonly>
+      </div>
+      <div class="col-md-3">
+        <label class="fw-bold" for="branch">Account No:</label>
+        <input type="text" class="form-control bg-light"  name="branch" value=" {{ record.ac_no }}" readonly>
+    </div>
+    <div class="col-md-3">
+      <label class="fw-bold" for="branch">Transaction No:</label>
+      <input type="text" class="form-control bg-light"  name="branch" value=" {{ record.trx_no }}" readonly>
+    </div>
+    <div class="col-md-3">
+      <label class="fw-bold" for="branch">Amount:</label>
+      <input type="text" class="form-control bg-light"  name="branch" value=" {{ record.amount }}" readonly>
+    </div>
+
+</div>
+
+      
+    {% endfor %}
+  </ul>
+{% else %}
+  {% if form.is_bound and not form.is_valid %}
+    <p class="error">Invalid form submission. Please check the input.</p>
+  {% endif %}
+{% endif %}
+
+<button type="submit" name="action"
+class="btn w- btn-success mt-4 shadow-sm" value="search">Search</button>
+
+<button type="submit" class="btn w- btn-success mt-4 shadow-sm" name="action" value="update">Reverse Transaction</button>
+  </form>
+
+                     
+
+  <div class="containered ">
+               
+
+
+
+              </div>
+          </div>
+          <!-- ------------------- -->
+
+      </div>
+  </div>
+  
+
+{% endblock %}

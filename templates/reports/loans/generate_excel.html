@@ -1,0 +1,69 @@
+{% load humanize %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loan Repayment Schedule</title>
+</head>
+
+<body>
+    <div class="third mx-auto text-center">
+        <h5> {{ company.company_name }}</h5>
+        <h6>Loan No: {{ loan_instance.gl_no }} {{ loan_instance.ac_no }}</h6>
+        <h6>Account No: N{{ loan_instance.loan_amount|floatformat:2|intcomma  }} </h6>
+        <h6>Name: {{ customers.first_name }} {{ customers.middle_name }} {{ customers.last_name }}</h6>
+   
+    </div>
+    <table>
+        <div class="third mx-auto text-center">
+            <h5> {{ company.company_name }}</h5>
+            <h6>Loan No: {{ loan_instance.gl_no }} {{ loan_instance.ac_no }}</h6>
+            <h6>Account No: N{{ loan_instance.loan_amount|floatformat:2|intcomma  }} </h6>
+            <h6>Name: {{ customers.first_name }} {{ customers.middle_name }} {{ customers.last_name }}</h6>
+       
+        </div>
+        <thead>
+            <tr>
+                <th>Period</th>
+                <th>Payment Date</th>
+                <th>Principal Payment</th>
+                <th>Interest Payment</th>
+                <th>Total Payment</th>
+                <th>Principal Remaining</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>0</td>
+                <td>{{ loan_instance.appli_date|date:"d-m-Y" }}</td>
+                <td>0.00</td>
+                <td>0.00</td>
+                <td>0.00</td>
+                <td>{{ customer.loan_amount }}</td>
+            </tr>
+            {% for payment in loan_schedule %}
+            <tr>
+                <td>{{ payment.period }}</td>
+                <td>{{ payment.payment_date|date:"d-m-Y" }}</td>
+                <td>{{ payment.principal_payment|floatformat:2}}</td>
+                <td>{{ payment.interest_payment|floatformat:2}}</td>
+                <td>{{ payment.total_payment|floatformat:2 }}</td>
+                <td>{{ payment.principal_remaining|floatformat:2 }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="2"><strong>Total</strong></td>
+                <td><strong>{{ total_principal_sum|floatformat:2}}</strong></td>
+                <td><strong>{{ total_interest_sum|floatformat:2}}</strong></td>
+                <td><strong>{{ total_payments_sum|floatformat:2}}</strong></td>
+            </tr>
+        </tfoot>
+    </table>
+</body>
+
+</html>

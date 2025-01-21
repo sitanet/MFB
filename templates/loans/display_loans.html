@@ -1,0 +1,66 @@
+<!-- templates/loans/display_loans.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Loans</title>
+</head>
+<body>
+    <h1>Loans</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Customer</th>
+                <th>Customer GL Number</th>
+                <th>GL Number</th>
+                <th>Account Number</th>
+                <th>Cycle</th>
+                <th>payment_freq</th>
+                <th>num_install</th>
+                <th>interest_calculation_method</th>
+                <th>Trx Type</th>
+                <th>Approval status</th>
+                <th>Disburse status</th>
+                <th>Application date</th>
+                <th>Approve date</th>
+                <th>Disbursement Date</th>
+                <th>Loan Amount</th>
+                <th>Total Loan</th>
+                <th>Total Interest</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for loan in loans %}
+            <tr>
+                <td>{{ loan.id }}</td>
+                <td>{{ loan.customer }}</td>
+                <td>{{ loan.cust_gl_no }}</td>
+                <td>{{ loan.gl_no }}</td>
+                <td>{{ loan.ac_no }}</td>
+                <td>{{ loan.cycle }}</td>
+                <td>{{ loan.payment_freq }}</td>
+                <td>{{ loan.num_install }}</td>
+                <td>{{ loan.interest_calculation_method }}</td>
+                <td>{{ loan.trx_type }}</td>
+                <td>{{ loan.approval_status}}</td>
+                <td>{{ loan.disb_status }}</td>
+                <td>{{ loan.appli_date }}</td>
+                <td>{{ loan.approval_date }}</td>
+                <td>{{ loan.disbursement_date }}</td>
+                <td>{{ loan.loan_amount }}</td>
+                <td>{{ loan.total_loan }}</td>
+                <td>{{ loan.total_interest }}</td>
+                <td>
+                    <form method="post" action="{% url 'display_loans' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="id" value="{{ loan.id }}">
+                        <button type="submit">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

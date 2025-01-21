@@ -1,0 +1,170 @@
+{% load static %}
+
+<nav id="sidebar">
+    <div class="sidebar_blog_1">
+          <div class="sidebar-header">
+                <div class="logo_section">
+                      <img class="logo_icon img-responsive" src="{% static 'images/logo/logo.png' %}" alt="LOGO" />
+                </div>
+          </div>
+          <div class="sidebar_user_info">
+                <div class="icon_setting"></div>
+                <div class="user_profle_side">
+                  
+                      <div class="user_img">
+                            <img class="img-responsive rounded-circle" src="{{ user.profile_picture.url }}" alt="Profile Picture" onerror="this.onerror=null; this.src='{{ default_image }}';">
+                        </div>
+                      <div class="user_info">
+                            <h6>{{ user.get_role}}</h6>
+                            <p><span class="online_animation"></span> Online</p>
+                      </div>
+                </div>
+          </div>
+    </div>
+    <div class="sidebar_blog_2">
+          <ul class="list-unstyled components">
+                <li class="active">
+                      <a href="#dashboard" data-toggle="collapse" aria-expanded="false"
+                            class="dropdown-toggle"><i class="fas fa-file" style="color: yellow;"></i>
+                            <span>File</span></a>
+                      <ul class="collapse list-unstyled" id="dashboard">
+                            <li>
+                                  <a href="{% url 'new_accounts' %}">> <span>Create Account</span></a>
+                            </li>
+                      </ul>
+                </li>
+
+                <li>
+                      <a href="#transactions" data-toggle="collapse" aria-expanded="false"
+                            class="dropdown-toggle">
+                            <i class="fas fa-exchange-alt" style="color: purple;"></i></i><span>Transactions</span>
+                      </a>
+                      <ul class="collapse list-unstyled" id="transactions">
+                            <li><a href="{% url 'choose_deposit' %}">><span>Deposit</span></a></li>
+                            <li><a href="{% url 'choose_withdrawal' %}">><span>Withdrawal</span></a>
+                            </li>
+                            <li><a href="{% url 'choose_income' %}">><span>Income Entry</span></a></li>
+                            <li><a href="{% url 'choose_expense' %}">><span>Expenses Entry</span></a>
+                            </li>
+                            <li><a href="{% url 'choose_general_journal' %}">><span>General
+                                              Journal</span></a></li>
+                              <li><a href="{% url 'upload_file' %}">><span>Bulk Transactions</span></a></li>
+                            <li><a href="{% url 'loans' %}">><span>Loans</span></a></li>
+                            <li><a href="sales_transactions.html">><span>Fixed Deposit</span></a>
+                            </li>
+                            <li><a href="{% url 'seek_and_update' %}"><span>Error Correction</span></a></li>
+                            <li><a href="invoice_history.html">><span>Browser Chart</span></a></li>
+                            <li><a href="sales_transactions.html">><span>Bank Placement</span></a>
+                            </li>
+                            <li><a href="purchase_transactions.html">><span>Delete Error Corrected
+                                              Transaction</span></a>
+                            </li>
+                            <li><a href="invoice_history.html">><span>Fixed Assets</span></a></li>
+                            <li><a href="invoice_history.html">><span>Transaction
+                                              Autorization</span></a></li>
+
+                      </ul>
+                </li>
+                
+           
+                <li>
+                      <a href="#endofperiod" data-toggle="collapse" aria-expanded="false"
+                            class="dropdown-toggle">
+                            <i class="fas fa-calendar-alt"></i> <span>End of Period</span>
+                      </a>
+                      <ul class="collapse list-unstyled" id="endofperiod">
+                            <li><a href="{% url 'end_of_periods' %}">><span>Savings</span></a></li>
+                            <li><a href="{% url 'eop_loans' %}">><span>Loan</span></a></li>
+                            <li><a href="financial_snapshot.html">><span>Account</span></a></li>
+                            <li><a href="summary_report.html">><span>Genral</span></a></li>
+                            <li><a href="financial_snapshot.html">><span>Stock</span></a></li>
+
+                      </ul>
+                </li>
+
+
+                <!-- <li>
+                      <a href="#stock" data-toggle="collapse" aria-expanded="false"
+                            class="dropdown-toggle">
+                            <i class="fa fa-cubes orange_color"></i> <span>Stock</span>
+                      </a>
+                      <ul class="collapse list-unstyled" id="stock">
+                            <li><a href="view_stock.html"><span>View Stock</span></a></li>
+                            <li><a href="add_stock.html"><span>Add Stock</span></a></li>
+                            <li><a href="manage_stock.html"><span>Manage Stock</span></a></li>
+                      </ul>
+                </li> -->
+
+                <li>
+                      <a href="#reports" data-toggle="collapse" aria-expanded="false"
+                            class="dropdown-toggle">
+                            <i class="fas fa-chart-bar" style="color: blue;"></i><span>Reports</span>
+                      </a>
+                      <ul class="collapse list-unstyled" id="reports">
+                            <li><a href="{% url 'front_office_report' %}"><span>Front Office Report</span></a></li>
+                            <li><a href="{% url 'back_office_report' %}"><span>Back Office Report</span></a>
+                            </li>
+                            
+                            </li>
+                      </ul>
+                </li>
+
+                <li>
+                  <a href="{% url 'customer_list' %}">
+                    <i class="fas fa-user" style="color: orange;"></i> 
+                    <span>Browse Customer</span>
+                  </a>
+                </li>
+                
+                
+
+                <li>
+                      <a href="#admin" data-toggle="collapse" aria-expanded="false"
+                            class="dropdown-toggle">
+                            <i class="fas fa-cogs" style="color: orangered;"></i> <span>Admin</span>
+                      </a>
+                      <ul class="collapse list-unstyled" id="admin">
+                            <li><a href="manage_users.html">><span>Section</span></a></li>
+                            <li><a href="{% url 'utilities' %}">><span>Utility</span></a></li>
+                            <li><a href="audit_logs.html">><span>General Configuration</span></a>
+                            </li>
+                            <li><a href="{% url 'user_admin' %}">><span>Users Administration</span></a>
+                            </li>
+                            <li><a href="{% url 'account_settings' %}"><span>Account Setting</span></a>
+                            </li>
+                            <li><a href="{% url 'product_settings'%}">><span>Product Setting</span></a></li>
+                            <li><a href="{% url 'user_define' %}">><span>User Define</span></a></li>
+                            <li><a href="permissions.html">><span>Customize Files and
+                                              Charge</span></a></li>
+                            <li><a href="{% url 'software_reg' %}">><span>Software Registration</span></a>
+                            </li>
+                      </ul>
+                </li>
+
+
+                <li>
+                      <a href="{% url 'profile' %}" 
+                            >
+                            <i class="fas fa-sign-out-alt" style="color: rgb(10, 235, 21);"></i> <span>My Profile</span>
+                      </a>
+                  
+                </li>
+
+
+
+                
+                <li>
+                      <a href="{% url 'logout' %}" 
+                            >
+                            <i class="fas fa-user-circle" style="color: rgb(241, 226, 8);"></i> <span>Logout</span>
+                      </a>
+                  
+                </li>
+                
+                
+
+
+          </ul>
+    </div>
+</nav>
+<!-- end sidebar -->

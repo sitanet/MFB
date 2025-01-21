@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+            
+    {% include 'includes/alerts.html' %}
+
+    <style>
+
+           /* Add your CSS styles here */
+           .container-fluid {
+            padding: 20px;
+        }
+
+        .column_title {
+            margin-bottom: 20px;
+        }
+
+        .page_title h2 {
+            margin: 0;
+            color: #333;
+        }
+
+        h5 {
+            margin: 10px 0;
+            color: #555;
+        }
+
+        .table-section {
+            margin-top: 20px;
+        }
+
+        p {
+            margin-bottom: 5px;
+            color: #666;
+        }
+
+        .table {
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #333;
+            color: #fff;
+        }
+
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+
+        .total-row {
+            border-bottom: 3px solid #000;
+            border-top: 3px solid #000;
+        }
+
+        .total-row td {
+            font-weight: bold;
+            color: #333;
+        }
+        .office-address {
+        margin-bottom: 20px; /* Adjust the value as needed */
+    }
+    .totals-left {
+            float: left;
+        }
+        .totals-right {
+            float: right;
+        }
+    </style>
+
+    <div class="container-fluid">
+        <div class="row column_title">
+            <div class="col-md-12">
+                <div class="page_title">
+                    <h2>Profit and Loss Statement</h2>
+                </div>
+            </div>
+        </div>
+
+        <!-- Full Name Section -->
+       
+
+        <!-- Profit and Loss Statement Form -->
+        <div class="col-md-12">
+         
+            <div class="white_shd full margin_bottom_30">
+                <div class="table_section padding_infor_info">
+                    <div class="row">
+                        <div class="col-md-12 text-center">
+                            <h4>{{ company.company_name }}</h4>
+                            <p>{{ company.branch_name }}</p>
+                            <p class="office-address">{{ company.office_address }}</p>
+                            
+                        </div>
+                     
+                    </div>
+                    <form id="generateForm" method="post" action="{% url 'profit_and_loss' %}" class="chart_of_account p-5 shadow-lg rounded rounded-5">
+                        {% csrf_token %}
+                        <div class="form-row">
+                            <div class="form-group col-md-3">
+                                <label for="start_date">Select Start Date </label>
+                                <input type="date" class="form-control bg-light" name="start_date" id="start_date" value="{{ company_date }}">
+                            </div>
+                            <div class="form-group col-md-3">
+                                <label for="end_date">Select End Date </label>
+                                <input type="date" class="form-control bg-light" name="end_date" id="end_date" value="{{ company_date }}">
+                            </div>
+                        </div>
+                        <input type="hidden" id="pageInput" name="page" value="">
+                        <button type="submit" class="btn btn-success mt-4 shadow-sm">Submit</button>
+                    </form>
+                </div>
+            </div>
+            <!-- End of Profit and Loss Statement Form -->
+        </div>
+    </div>
+
+{% endblock %}

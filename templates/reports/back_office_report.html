@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container-fluid">
+  <div class="row"></div>
+
+  <div>
+    <!-- Chart of Account will come here -->
+  </div>
+
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-md-12">
+        <div class="page_title">
+          <h2>Back Office Report</h2>
+        </div>
+      </div>
+
+      <div class="col-md-3 mb-3">
+        <div class="account_setting py-5 fs-1 bg-white">
+          <div class="couter_icon col-md-12">
+            <i class="fa fa-piggy-bank" style="color: #ff6347;"></i> <!-- Tomato -->
+          </div>
+          <a href="{% url 'savings_report' %}" class="text-center">
+            <h5 class="my-2">Savings Report</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-3 mb-3">
+        <div class="account_setting py-5 fs-1 bg-white">
+          <div class="couter_icon col-md-12">
+            <i class="fa fa-handshake" style="color: #4682b4;"></i> <!-- Steel Blue -->
+          </div>
+          <a href="{% url 'loan_report' %}" class="text-center">
+            <h5 class="my-2">Loans Report</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="account_setting py-5 fs-1 bg-white rounded rounded-5">
+          <div class="couter_icon col-md-12">
+            <i class="fa fa-chart-line" style="color: #32cd32;"></i> <!-- Lime Green -->
+          </div>
+          <a href="{% url 'financial_report' %}" class="text-center">
+            <h5 class="my-2">Financial Report</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="account_setting py-5 fs-1 bg-white shadow-lg rounded rounded-5">
+          <div class="couter_icon col-md-12">
+            <i class="fa fa-file-alt" style="color: #ff4500;"></i> <!-- Orange Red -->
+          </div>
+          <a href="{% url 'customer_list' %}" class="text-center">
+            <h5 class="my-2">General Report</h5>
+          </a>
+        </div>
+      </div>
+
+      <!-- Additional Back Office Reports can be added here -->
+    </div>
+
+    <!-- footer -->
+    <!-- <div class="container-fluid">
+        <div class="footer">
+          <p>Copyright &copy; 2023 The CityGate Church. All rights reserved.</p>
+        </div>
+      </div> -->
+  </div>
+
+  <!-- <h1>Chart of Account</h1> -->
+
+</div>
+
+{% endblock %}

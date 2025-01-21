@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    Loans List
+{% endblock %}
+
+{% block content %}
+    <h1>Loans List</h1>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Customer</th>
+                <th>Branch</th>
+                <th>Loan Amount</th>
+                <th>Interest Rate</th>
+                <th>Cycle</th>
+                <th>Application Date</th>
+                <th>Approval Status</th>
+                <!-- Add other desired fields here -->
+            </tr>
+        </thead>
+        <tbody>
+            {% for loan in loans_list %}
+            <tr>
+                <td>{{ loan.customer.first_name }}</td>
+                <td>{{ loan.branch }}</td>
+                <td>{{ loan.loan_amount }}</td>
+                <td>{{ loan.interest_rate }}</td>
+                <td>{{ loan.cycle }}</td>
+                <td>{{ loan.appli_date }}</td>
+                <td>{{ loan.approval_status }}</td>
+                <!-- Add other desired fields here -->
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

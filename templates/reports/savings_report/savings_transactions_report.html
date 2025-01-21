@@ -1,0 +1,299 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<style>
+        .total-row {
+        border-bottom: 3px solid #000;
+        border-top: 3px solid #000;
+        background-color: #f8f9fa; /* Light background color for total rows */
+        color: #212529; /* Dark text color for total rows */
+        font-weight: bold;
+    }
+
+    .subtotal-row {
+        background-color: #e9ecef; /* Light gray background for subtotals */
+        color: #0370dd;
+    }
+
+    .count-row {
+        background-color: #d4edda; /* Light green background for row counts */
+        color: #155724; /* Dark green text color for row counts */
+    }
+
+    .info-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+    }
+
+    .info-table td {
+        padding: 5px;
+        border: none; /* Hide table borders */
+        vertical-align: top;
+    }
+
+    .info-table .info-label {
+        font-weight: bold;
+    }
+
+    .info-section {
+        margin-bottom: 20px;
+    }
+
+    .info-table tr:nth-child(even) {
+        background-color: #f9f9f9; /* Optional: alternate row color for readability */
+    }
+
+    .blue-text {
+        color: blue;
+    }
+
+    .print-button {
+        margin-top: 20px;
+        margin-bottom: 20px;
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    /* Print specific styles */
+/* Print specific styles */
+@media print {
+    body * {
+        visibility: hidden; /* Hide everything outside the print section */
+    }
+    
+    .print-area, .print-area * {
+        visibility: visible; /* Only show the print section */
+        color: #000;
+    }
+    
+    .print-area {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        margin: auto;
+        color: #000;
+    }
+
+    /* Ensure the heading and any content within the print-area are displayed */
+    .print-area h4, .print-area h5, .print-area p, .print-area .card-header {
+        visibility: visible;
+    }
+}
+
+    .date-time {
+        text-align: right;
+    }
+
+    .date-time-item {
+        margin: 0;
+        padding: 0;
+        display: inline-block;
+        line-height: 1.2;
+    }
+</style>
+
+
+<div class="container-fluid">
+    <!-- Page Title -->
+    <div class="row column_title">
+        <div class="col-md-12">
+            <div class="page_title">
+                <h2>Savings Transaction Report</h2>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form for input -->
+    <form id="customerForm" method="post" action="{% url 'savings_transaction_report' %}" class="p-5 shadow-lg rounded rounded-5 mt-4 bg-light" onsubmit="hideForm()">
+        {% csrf_token %}
+        <div class="form-row">
+            <!-- Start Date -->
+            <div class="form-group col-md-3">
+                <label for="start_date">Start Date:</label>
+                <input type="date" class="form-control bg-white" name="start_date" id="start_date" value="{{ start_date|date:'Y-m-d' }}">
+            </div>
+            <!-- End Date -->
+            <div class="form-group col-md-3">
+                <label for="end_date">End Date:</label>
+                <input type="date" class="form-control bg-white" name="end_date" id="end_date" value="{{ end_date|date:'Y-m-d' }}">
+            </div>
+            <!-- Branch -->
+            <div class="form-group col-md-3">
+                <label for="branch">Branch:</label>
+                <select class="form-control" name="branch" id="branch">
+                    <option value="">Select Branch</option>
+                    {% for branch in branches %}
+                        <option value="{{ branch.id }}" {% if selected_branch and selected_branch.id == branch.id %}selected{% endif %}>{{ branch.branch_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <!-- GL Number -->
+            <div class="form-group col-md-3">
+                <label for="gl_no">GL Number:</label>
+                <select class="form-control" name="gl_no" id="gl_no">
+                    <option value="">Select GL Number</option>
+                    {% for gl in gl_accounts %}
+                        <option value="{{ gl.gl_no }}" {% if selected_gl_no == gl.gl_no %}selected{% endif %}>{{ gl.gl_name }} ({{ gl.gl_no }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <!-- Region -->
+            <div class="form-group col-md-3">
+                <label for="region">Region:</label>
+                <select class="form-control" name="region" id="region">
+                    <option value="">Select Region</option>
+                    {% for region in regions %}
+                        <option value="{{ region.id }}" {% if selected_region and selected_region.id == region.id %}selected{% endif %}>{{ region.region_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <!-- Account Officer -->
+            <div class="form-group col-md-3">
+                <label for="credit_officer">Account Officer:</label>
+                <select class="form-control" name="credit_officer" id="credit_officer">
+                    <option value="">Select Account Officer</option>
+                    {% for officer in account_officers %}
+                        <option value="{{ officer.id }}" {% if selected_officer and selected_officer.id == officer.id %}selected{% endif %}>
+                            {{ officer.user }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <!-- Include Non-Zero Balances -->
+            <div class="form-group col-md-3">
+                <label for="include_non_zero">Include Non-Zero Balances:</label>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="include_non_zero" id="include_non_zero" {% if include_non_zero %}checked{% endif %}>
+                </div>
+            </div>
+            <!-- Exclude Account Number 1 -->
+            <div class="form-group col-md-3">
+                <label for="exclude_ac_no_one">Exclude Account No. 1:</label>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="exclude_ac_no_one" id="exclude_ac_no_one" {% if exclude_ac_no_one %}checked{% endif %}>
+                </div>
+            </div>
+        </div>
+        <button type="submit" class="btn btn-success mt-4 shadow-sm">Filter</button>
+    </form>
+
+    <!-- Report Card -->
+    <div id="report-container" class="{% if not transaction_data %}hidden{% endif %}">
+        <div class="print-button">
+            <button class="btn btn-primary" onclick="window.print()">Print Transaction</button>
+        </div>
+
+        <div class="card mt-5 shadow-sm print-area">
+            <div class="card-body">
+                <!-- Date and Time -->
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="date-time">
+                            <p class="date-time-item">{{ current_datetime|date:"d/m/Y" }}</p><br>
+                            <p class="date-time-item">{{ current_datetime|date:"h:i:s A" }}</p>
+                        </div>
+                    </div>
+                </div>
+                <!-- Report Header -->
+                <div class="card-header bg-white text-center">
+                    <h4>
+                        {% if selected_branch %}
+                            {{ selected_branch.branch_name }}
+                        {% else %}
+                            {{ branches.first.branch_name }}  <!-- Display the first branch name if no specific branch is selected -->
+                        {% endif %}
+                    </h4>
+                    <p>{{ selected_branch.office_address }}</p>
+                    <h5 style="color: #1115f0;">Savings Transaction Report</h5>
+                    <div class="row justify-content-center">
+                        <div class="col-md-6 text-center">
+                            <p>From: <strong>{{ start_date|date:"d/m/Y" }}</strong> To: <strong>{{ end_date|date:"d/m/Y" }}</strong></p>
+                            {% if selected_gl_no %}
+                                <p>GL No: <strong>{{ selected_gl_no }}</strong></p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <!-- Table -->
+               <!-- Table -->
+<!-- Table -->
+<div class="table-responsive-sm">
+    <table class="table table-bordered">
+        <thead class="thead-dark">
+            <tr>
+                <th>GL No</th>
+                <th>AC No</th>
+                <th>Transaction No</th>
+                <th>Session Date</th>
+                <th>Transaction Date</th>
+                <th>Description</th>
+                <th>Debit</th>
+                <th>Credit</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for gl_no, data in transaction_data.items %}
+                <tr class="count-row">
+                    <td colspan="7">
+                        {{ gl_no }} - {{ data.gl_name }}
+                        <span style="float: right; font-weight: normal;">
+                            ({{ data.count }} Items)
+                        </span>
+                    </td>
+                </tr>
+                {% for transaction in data.transactions %}
+                <tr>
+                    <td>{{ gl_no }}</td>
+                    <td>{{ transaction.ac_no }}</td>
+                    <td>{{ transaction.trx_no }}</td>
+                    <td>{{ transaction.ses_date }}</td>
+                    <td>{{ transaction.app_date }}</td>
+                    <td>{{ transaction.description }}</td>
+                    <td>{{ transaction.debit }}</td>
+                    <td>{{ transaction.credit }}</td>
+                </tr>
+                {% endfor %}
+                <tr class="subtotal-row">
+                    <td colspan="6"><strong>Subtotal:</strong></td>
+                    <td><strong>{{ data.subtotal_debit }}</strong></td>
+                    <td><strong>{{ data.subtotal_credit }}</strong></td>
+                </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr class="total-row">
+                <td colspan="6"><strong>Grand Total:</strong></td>
+                <td><strong>{{ grand_total_debit }}</strong></td>
+                <td><strong>{{ grand_total_credit }}</strong></td>
+            </tr>
+        </tfoot>
+    </table>
+</div>
+
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function hideForm() {
+        // Hide the form container
+        document.getElementById("customerForm").style.display = "none";
+        // Show the report container
+        document.getElementById("report-container").classList.remove("hidden");
+    }
+
+    // On page load, show or hide the form and report based on transaction data
+    document.addEventListener('DOMContentLoaded', function() {
+        const hasTransactionData = {{ transaction_data|length }} > 0;
+        document.getElementById('report-container').classList.toggle('hidden', !hasTransactionData);
+        document.getElementById('customerForm').style.display = hasTransactionData ? 'none' : 'block';
+    });
+</script>
+
+{% endblock content %}

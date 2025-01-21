@@ -1,0 +1,368 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block content %}
+      
+           
+                                    
+     
+            <div class="container-fluid">
+                <div class="row column_title">
+                    <div class="col-md-12">
+                          <div class="page_title">
+                                  <h2>Loan Repayment</h2>
+                          </div>
+                    </div>
+                </div>
+      
+                <div class="container">
+                        <!-- <header>Customer Account</header> -->
+
+                        <a href="{% url 'loans' %}" style="color: green; font-weight: bold; text-align: right; display: block;">Loans Menu</a>
+                        <form method="POST" enctype="multipart/form-data">
+                         {% csrf_token %}
+                         <!-- {% if messages %}
+                         <ul class="messages">
+                             {% for message in messages %}
+                                 <li style="font-size: 30px; color: brown; font-weight: bold;"  {% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+                             {% endfor %}
+                        
+                         </ul>
+                     {% endif %} -->
+                     <h6 style="color: red;" >{{ form.errors }}</h6>
+                     {% include 'includes/alerts.html' %}
+                 
+                  
+                           <div class="form first">
+                               <div class="details personal">
+                            
+                              
+          
+                                   <div class="fields">
+                                      
+                                           <input type="hidden"  value="{{ member.team_sup.username}}" name="user" required>
+                                         
+                                    
+                                      
+                                        <input type="text" name="branch" value="{{ user.branch }}" hidden>
+                                        
+                                       <div class="input-field">
+                                           <label>First Name*</label>
+                                           <input type="text" class="form-control bg-light" name="first_name" value="{{customers.first_name}}" readonly>
+                                         
+                                       </div>
+                                        <div class="input-field">
+                                           <label>Middle Name</label>
+                                           <input type="text" class="form-control bg-light" name="middle_name" value="{{customers.middle_name}}" readonly>
+                                       </div>
+                                        <div class="input-field">
+                                           <label>Last Name*</label>
+                                           <input type="text" class="form-control bg-light" name="last_name" value="{{customers.last_name}}" readonly>
+                                        
+                                       </div>
+                                       <div class="input-field">
+                                        <label>Loan Product</label>
+                                    
+                                        <input type="text" class="form-control bg-light"  id="accountNoInput1" name="gl_no"
+                                        value="{{customer.gl_no}}" readonly>
+                                    
+                                    </div>
+                                    <div class="input-field">
+                                          <label for="accountNoInput">Account No.:</label>
+                                          <input type="text" class="form-control bg-light"  id="accountNoInput1" name="ac_no_cashier"
+                                          value="{{customer.ac_no}}" readonly>
+                                        
+                                      </div>
+
+                                      <div class="input-field">
+                                        <label for="accountNoInput">Cycle.:</label>
+                                        <input type="text" class="form-control bg-light"  id="accountNoInput1" name="cycle"
+                                        value="{{customer.cycle}}" readonly>
+                                      
+                                    </div>
+
+                                      <!-- <div class="input-field">
+                                        <label>Repayment Date</label>
+                                        <input type="date" name="appli_date" value="{% now ;Y-m-d' %}" required disabled>
+                                        
+                                    </div>
+
+                                       <div class="input-field">
+                                        <label>Approve Date</label>
+                                        <input type="date" name="approval_date"   value="{% now ;Y-m-d' %}" required disabled>
+
+                                    </div> -->
+
+                                    <div class="input-field">
+                                        <label>Last Repayment Date</label>
+                                        <input type="text" name="disbursement_date" id="ses_date"  value="{{last_lp_date}}" readonly>
+                                       
+                                    </div>
+
+                                    <div class="input-field">
+                                        <label>Repayment Date</label>
+                                        <input type="date" name="app_date" id="ses_date"  value="{{company_date}}" required>
+
+                                    </div>
+                                 
+                                  
+                                        <input type="date" name="ses_date"   value="{{company_date}}" required hidden>
+
+                                   
+                                       <div class="input-field">
+                                        <label for="deposit_description">Loan Amount:</label>
+                                        <!-- <input type="number"  class="form-control bg-light"
+                                            placeholder="0.00" name="loan_amount"> -->
+                                            <!-- {{form.loan_amount}} -->
+                                            <input type="text" class="form-control bg-light"  id="accountNoInput1" name="amount" value="{{ form.loan_amount.value|default:'' }}" readonly>
+                                           
+                                        </div>
+                                        <div class="input-field">
+                                            <label for="deposit_description">Principal Balance:</label>
+                                           
+                                               
+                                                <input type="text" class="form-control bg-light"  id="accountNoInput1"  value="{{ total_principal }}" readonly>
+                                            </div>
+                                            <div class="input-field">
+                                                <label for="deposit_description">Interest Balance:</label>
+                                               
+                                                   
+                                                    <input type="text" class="form-control bg-light"  id="accountNoInput1"  value="{{ total_interest }}" readonly>
+                                                </div>
+                                        <div class="input-field">
+                                            <label for="deposit_description">Principal Due:</label>
+ 
+                                              
+                                                <input type="number" class="form-control bg-light"  id="accountNoInput1"  value="{{ total_principal_between_dates }}" readonly>
+
+                                            </div>
+                                           
+
+                                            <div class="input-field">
+                                                <label for="deposit_description">Interest Due:</label>
+                                               
+                                                   
+                                                    <input type="text" class="form-control bg-light"  id="accountNoInput1"  value="{{ total_interest_between_dates }}" readonly>
+                                                </div>
+                                                
+                                                <div class="input-field">
+                                                    <label for="total_paid">Total Paid:</label>
+                                                    <input type="number" class="form-control bg-light" id="total_paid" name="total_paid" placeholder="0.00" readonly>
+                                                </div>
+                                                
+                                                <div class="input-field">
+                                                    <label for="principal_paid">Principal Paid:</label>
+                                                    <input type="text" class="form-control bg-light payment" id="principal_paid" name="principal" value="0.00">
+                                                    
+                                                </div>
+                                                
+                                                <div class="input-field">
+                                                    <label for="interest_paid">Interest Paid:</label>
+                                                    <input type="text" class="form-control bg-light payment" id="interest_paid" name="interest" value="0.00">
+                                                </div>
+                                                
+                                                <div class="input-field">
+                                                    <label for="penalty_paid">Penalty Paid:</label>
+                                                    <input type="text" class="form-control bg-light payment" id="penalty_paid" name="penalty" value="0.00">
+                                                </div>
+                                                
+                             
+
+
+                                    <div class="input-field">
+                                        <label for="gl_no">Debit Account:</label>
+                                        <select name="gl_no_cashier" id="gl_no">
+                                            {% for record in amounts %}
+                                                <option value="{{ record.gl_no }}">GL No: {{ record.gl_no }} - Total Amount: {{ record.total_amount }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                 
+                                 
+                                       
+                 
+                                    <!-- <button class="button" style="color: white;">
+                                       <a href="{% url 'loan_schedule' customer.id %}" class="btnText">View Repayment Plan</a>
+                                    </button> -->
+
+                                
+                                     
+
+                                    
+                                        <!-- <label for="accountNoInput">Account No.:</label> -->
+                                        <input type="text" class="form-control bg-light"  id="accountNoInput1" name="ac_no"
+                                        value="{{customer.ac_no}}" hidden>
+                                      
+                                          <!-- <label for="accountNoInput">Account No.:</label> -->
+                                          <input type="text" class="form-control bg-light" id="accountNoInput1" name="int_to_recev_gl_dr" value="{{ account.int_to_recev_gl_dr }}" hidden>
+                                          <input type="text" class="form-control bg-light" id="accountNoInput1" name="int_to_recev_ac_dr" value="{{ account.int_to_recev_ac_dr }}" hidden>
+                                          <input type="text" class="form-control bg-light" id="accountNoInput1" name="unearned_int_inc_gl" value="{{ account.unearned_int_inc_gl }}" hidden>
+                                          <input type="text" class="form-control bg-light" id="accountNoInput1" name="unearned_int_inc_ac" value="{{ account.unearned_int_inc_ac }}" hidden>
+                                          
+                                       
+
+<!--                                     
+                                        <div class="input-field">
+                                           <label>Status*</label>
+                                          {{form.status}}
+                                       </div> -->
+
+                                       <button class="sumbit">
+                                        <span class="btnText">Approve</span>
+                                        <i class="uil uil-navigator"></i>
+                                    </button>
+                                 
+
+        
+                                    
+                                   </div>
+                               </div>
+                 
+                             
+                 
+                               <!-- <button class="sumbit">
+                                           <span class="btnText">Submit</span>
+                                           <i class="uil uil-navigator"></i>
+                                       </button> -->
+
+                                       <!-- <button type="submit" class="btn w-100 btn-danger mt-4 shadow-sm">Submit</button> -->
+                               </div> 
+                           </div>
+                 
+                        
+                       </form>
+                </div>
+      
+                      
+             </div>
+         
+             <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    var sessionDateInput = document.getElementById('ses_date');
+                    var companyDate = '{{ company_date }}'; // Assuming company_date is in the 'YYYY-MM-DD' format
+            
+                    sessionDateInput.addEventListener('change', function() {
+                        var selectedDate = new Date(sessionDateInput.value);
+                        var companyDateObj = new Date(companyDate);
+            
+                        if (selectedDate > companyDateObj) {
+                            alert('Please select a date not greater than the session date.');
+                            sessionDateInput.value = '{{ company_date }}'; // Clear the input value
+                        }
+                    });
+                });
+
+
+
+
+
+
+                        // Select all elements with the class "payment"
+        const paymentInputs = document.querySelectorAll('.payment');
+
+        // Function to calculate and update total paid
+        function updateTotalPaid() {
+            let total = 0;
+            // Loop through each payment input
+            paymentInputs.forEach(function(input) {
+                // Convert input value to a floating-point number
+                const value = parseFloat(input.value) || 0;
+                // Add the value to the total
+                total += value;
+            });
+            // Update the Total Paid input field with the calculated total
+            document.getElementById('total_paid').value = total.toFixed(2);
+        }
+
+        // Attach event listeners to each payment input to update total paid when values change
+        paymentInputs.forEach(function(input) {
+            input.addEventListener('input', updateTotalPaid);
+        });
+
+        // Calculate and update total paid on page load
+        updateTotalPaid();
+
+
+
+
+
+        document.addEventListener('DOMContentLoaded', function() {
+    var sessionDateInput = document.getElementById('ses_date');
+    var companyDate = '{{ company_date }}'; // Assuming company_date is in the 'YYYY-MM-DD' format
+
+    sessionDateInput.addEventListener('change', function() {
+        var selectedDate = new Date(sessionDateInput.value);
+        var companyDateObj = new Date(companyDate);
+
+        if (selectedDate > companyDateObj) {
+            alert('Please select a date not greater than the session date.');
+            sessionDateInput.value = '{{ company_date }}'; // Clear the input value
+        }
+    });
+
+    // Select all elements with the class "payment"
+    const paymentInputs = document.querySelectorAll('.payment');
+    const totalPaidInput = document.getElementById('total_paid');
+    const form = document.querySelector('form');
+    const glNoCashierSelect = document.getElementById('gl_no');
+
+    // Function to calculate and update total paid
+    function updateTotalPaid() {
+        let total = 0;
+        // Loop through each payment input
+        paymentInputs.forEach(function(input) {
+            // Convert input value to a floating-point number
+            const value = parseFloat(input.value) || 0;
+            // Add the value to the total
+            total += value;
+        });
+        // Update the Total Paid input field with the calculated total
+        totalPaidInput.value = total.toFixed(2);
+    }
+
+    // Attach event listeners to each payment input to update total paid when values change
+    paymentInputs.forEach(function(input) {
+        input.addEventListener('input', updateTotalPaid);
+    });
+
+    // Calculate and update total paid on page load
+    updateTotalPaid();
+
+    // Add form submit event listener to prevent submission if total_paid > gl_no_cashier amount
+    form.addEventListener('submit', function(event) {
+        const totalPaid = parseFloat(totalPaidInput.value) || 0;
+        const selectedOption = glNoCashierSelect.options[glNoCashierSelect.selectedIndex];
+        const totalAmount = parseFloat(selectedOption.textContent.split('Total Amount: ')[1]) || 0;
+
+        if (totalPaid > totalAmount) {
+            event.preventDefault();
+            alert('Insufficient Fund, Total paid cannot be greater than the Customer Available Balance.');
+        }
+    });
+});
+
+
+
+
+
+document.addEventListener('DOMContentLoaded', function() {
+    var form = document.querySelector('form');
+    var principalPaidInput = document.getElementById('principal_paid');
+    var loanAmountInput = document.querySelector('input[name="amount"]');
+
+    form.addEventListener('submit', function(event) {
+        var principalPaid = parseFloat(principalPaidInput.value) || 0;
+        var loanAmount = parseFloat(loanAmountInput.value) || 0;
+
+        if (principalPaid > loanAmount) {
+            alert('Principal paid cannot be greater than the loan amount.');
+            event.preventDefault(); // Prevent form submission
+        }
+    });
+});
+
+            </script>    
+                 
+            
+                  {% endblock %}

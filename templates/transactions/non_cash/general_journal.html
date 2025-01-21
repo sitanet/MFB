@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+{% block content %}
+
+{% include 'includes/alerts.html' %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="page_title text-start">
+                <h2>General Journal</h2>
+            </div>
+        </div>
+
+        <div class="container deposit p-5 shadow-lg rounded rounded-5">
+            <div class="mb-5">
+                <form method="POST">
+                    {% csrf_token %}
+                    {% if messages %}
+                    <ul class="messages">
+                        {% for message in messages %}
+                        <li style="font-size: 20px; color: brown; font-weight: bold;" {% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                    {{ form.errors }}
+                    <div class="form-row">
+                        <div class="col-md-3">
+                            <label class="fw-bold text-start" for="branch">Branch:</label>
+                            <input type="text" class="form-control bg-light" id="branch" name="branch" value="{{ user.branch }}" readonly>
+                        </div>
+                      
+                        <div class="col-md-3">
+                            <label class="fw-bold text-start" for="branch">Transaction No:</label>
+                            <input type="text" class="form-control bg-light" id="branch" value="{{ data.trx_no }}" readonly>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="fw-bold text-start" for="branch">Session Date:</label>
+                            <input type="date" class="form-control bg-light" id="ses_date" name="ses_date" value="{{ company_date }}" readonly> 
+                        </div>
+                        <div class="col-md-3">
+                            <label class="fw-bold text-start" for="ses_date">Transaction Date:</label>
+                            <input type="date" class="form-control {% if form.app_date.errors %}is-invalid{% endif %}" id="app_date" name="app_date" value="{{ form.app_date.value }}">
+                            {% if form.app_date.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.app_date.errors %}
+                                    <p>{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        </div>
+
+                        <div class="col-md-12 mb-2"></div>
+
+                        <!-- Searchable Dropdown for Customers -->
+                        <div class="col-md-6">
+                            <label class="text-start" for="customerDropdown">Select Customer:</label>
+                            <input type="text" id="searchInput" class="form-control mb-2" placeholder="Search for a customer...">
+                            <select id="customerDropdown" class="form-control bg-light">
+                                <option value="" disabled selected>Select a Customer</option>
+                                {% for customer in customers %}
+                                <option value="{{ customer.id }}" 
+                                        data-name="{{ customer.first_name }} {{ customer.middle_name }} {{ customer.last_name }} {{ customer.label }}" 
+                                        data-current-balance="{{ customer.current_balance }}" 
+                                        data-available-balance="{{ customer.available_balance }}" 
+                                        data-gl-no="{{ customer.gl_no }}" 
+                                        data-ac-no="{{ customer.ac_no }}"
+                                        data-label="{{ customer.label }}"> <!-- Include the label here -->
+                                    {{ customer.first_name }} {{ customer.middle_name }} {{ customer.last_name }} {{ customer.label }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-md-12 mt-3 mb-2"></div>
+                
+                        <div class="col-md-6">
+                            <label class="text-start" for="glNoInput">GL No.:</label>
+                            <input type="text" class="form-control bg-light" id="glNoInput1" name="gl_no" value="" readonly>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="text-start" for="accountNoInput">Account No.:</label>
+                            <input type="text" class="form-control bg-light" id="accountNoInput1" name="ac_no" value="" readonly>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="text-start" for="tellerGlNo">GL No.:</label>
+                            <input type="text" class="form-control bg-light"  name="gl_no_cashier" value="{{ customer.gl_no }}" >
+                        </div>
+                        <div class="col-md-6">
+                            <label class="text-start" for="tellerAccountNo">Account No.:</label>
+                            <input type="text" class="form-control bg-light" id="tellerAccountNo" name="ac_no_cashier" value="{{ customer.ac_no }}">
+                        </div>
+
+                        <!-- Input for the Label -->
+                        
+                           
+                            <input type="text" class="form-control bg-light" id="labelInput" name="label_select" value="" hidden>
+                            <input type="text" class="form-control bg-light" id="ses_date" name="label_there" value="{{ customer.label }}" hidden>
+                       
+
+                        <div class="col-md-6 mt-3">
+                            <label class="text-start" for="deposit_description">Amount:</label>
+                            <input type="number" class="form-control bg-light" id="deposit_description" placeholder="0.00" name="amount">
+                        </div>
+                        <div class="col-md-6 mt-3">
+                            <label class="text-start" for="deposit_description">Description:</label>
+                            <textarea id="deposit_description" class="form-control bg-light" cols="30" rows="2" name="description"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="row mt-4">
+                        <div class="col-md-6">
+                            <strong style="color: red; font-weight: bold;">DEBIT:</strong>
+                            <span class="fw-bold text-start" id="teller_fullName2">{{ user.full_name }} </span>
+                            <div>
+                                <label class="mt-2 text-start">Available Balance:</label>
+                                <span id="customer_available_balance"></span>
+                            </div>
+                            <div>
+                                <label class="text-start">Total Balance:</label>
+                                <span id="customer_total_balance"></span>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <span class="fw-bold text-start" id="customerName2">CREDIT:</span>
+                            <strong style="color: green; font-weight: bold;">{{ customer.first_name }} {{ customer.middle_name }} {{ customer.last_name }} </strong>
+                            <div>
+                                <label class="mt-2 text-start">Current Balance:</label>
+                                <span id="teller_available_balance"><strong style="color: green; font-weight: bold;"> {{ formatted_balance }}</strong></span>
+                            </div>
+                            <div>
+                                <label class="text-start">Available Balance:</label>
+                                <span id="teller_balance"><strong style="color: black; font-weight: bold;"> {{ formatted_balance }} </strong></span>
+                            </div>
+                            <div>
+                                <label class="text-start">Last Transaction Amount:</label>
+                                <strong style="color: green; font-weight: bold;">{{ last_transaction.amount|default:"0.00" }}</strong>
+                            </div>
+                            <div>
+                                <label class="text-start">Last Transaction ID:</label>
+                                <strong style="color: green; font-weight: bold;">{{ last_transaction.trx_no }}</strong>
+                            </div>
+                            <div>
+                                <label class="text-start">Last Transaction Date:</label>
+                                <strong style="color: green; font-weight: bold;">{{ last_transaction.sys_date }}</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-8">
+                        <button class="btn btn-success shadow-sm" type="submit">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var sessionDateInput = document.getElementById('ses_date');
+    var companyDate = '{{ company_date }}';
+    var submitButton = document.querySelector('button[type="submit"]'); // Select the submit button
+    var customerDropdown = document.getElementById('customerDropdown');
+    var fullNameSpan = document.getElementById('teller_fullName2');
+    var availableBalanceSpan = document.getElementById('customer_available_balance');
+    var totalBalanceSpan = document.getElementById('customer_total_balance');
+    var searchInput = document.getElementById('searchInput');
+    var glNoInput = document.getElementById('glNoInput1');
+    var acNoInput = document.getElementById('accountNoInput1');
+    var labelInput = document.getElementById('labelInput'); // Input field for label
+
+    sessionDateInput.addEventListener('change', function() {
+        var selectedDate = new Date(sessionDateInput.value);
+        var companyDateObj = new Date(companyDate);
+
+        if (selectedDate > companyDateObj) {
+            alert('Please select a date not greater than the session date.');
+            sessionDateInput.value = companyDate;  // Reset to company date
+            submitButton.disabled = true;  // Disable the submit button
+        } else {
+            submitButton.disabled = false;  // Enable the submit button if the date is valid
+        }
+    });
+
+    customerDropdown.addEventListener('change', function() {
+        var selectedOption = customerDropdown.options[customerDropdown.selectedIndex];
+        var fullName = selectedOption.getAttribute('data-name');
+        var availableBalance = selectedOption.getAttribute('data-available-balance');
+        var totalBalance = selectedOption.getAttribute('data-current-balance');
+        var glNo = selectedOption.getAttribute('data-gl-no');
+        var acNo = selectedOption.getAttribute('data-ac-no');
+        var label = selectedOption.getAttribute('data-label'); // Get the label
+
+        fullNameSpan.textContent = fullName;
+        availableBalanceSpan.textContent = availableBalance;
+        totalBalanceSpan.textContent = totalBalance;
+        glNoInput.value = glNo;
+        acNoInput.value = acNo;
+        labelInput.value = label; // Set the label in the input field
+    });
+
+    searchInput.addEventListener('keyup', function() {
+        var filter = searchInput.value.toLowerCase();
+        var options = customerDropdown.options;
+
+        for (var i = 0; i < options.length; i++) {
+            var option = options[i];
+            var optionText = option.textContent.toLowerCase();
+
+            if (optionText.indexOf(filter) > -1) {
+                option.style.display = "";
+            } else {
+                option.style.display = "none";
+            }
+        }
+    });
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container-fluid">
+  <div class="row"></div>
+
+  <div>
+    <!-- Chart of Account will come here -->
+  </div>
+
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-md-12">
+        <div class="page_title">
+          <h2>Savings Report</h2>
+        </div>
+      </div>
+
+      <div class="col-md-3 mb-2">
+        <div class="account_setting py-3 fs-2 bg-white">
+          <div class="couter_icon col-md-10">
+            <i class="fa fa-file-alt" style="color: #ff4500;"></i> <!-- Orange Red -->
+          </div>
+          <a href="{% url 'generate_statement' %}" class="text-center">
+            <h5 class="my-1">Account Statement</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-3 mb-2">
+        <div class="account_setting py-3 fs-2 bg-white">
+          <div class="couter_icon col-md-10">
+            <i class="fa fa-file-invoice" style="color: #4682b4;"></i> <!-- Steel Blue -->
+          </div>
+          <a href="{% url 'account_statement' %}" class="text-center">
+            <h5 class="my-1">Detail Account Statement</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-3 mb-2">
+        <div class="account_setting py-3 fs-2 bg-white rounded rounded-3">
+          <div class="couter_icon col-md-10">
+            <i class="fa fa-balance-scale" style="color: #32cd32;"></i> <!-- Lime Green -->
+          </div>
+          <a href="{% url 'all_customers_account_balances' %}" class="text-center">
+            <h5 class="my-1">Account Balance Report</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-3 mb-2">
+        <div class="account_setting py-3 fs-2 bg-white">
+          <div class="couter_icon col-md-10">
+            <i class="fa fa-list" style="color: #ffa500;"></i> <!-- Orange -->
+          </div>
+          <a href="{% url 'savings_account_listing' %}" class="text-center">
+            <h5 class="my-1">Account Listing</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-3 mb-2">
+        <div class="account_setting py-3 fs-2 bg-white shadow-sm rounded rounded-3">
+          <div class="couter_icon col-md-10">
+            <i class="fa fa-info-circle" style="color: #6a5acd;"></i> <!-- Slate Blue -->
+          </div>
+          <a href="{% url 'savings_account_status' %}" class="text-center">
+            <h5 class="my-1">Savings Account Status</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-3 mb-2">
+        <div class="account_setting py-3 fs-2 bg-white shadow-sm rounded rounded-3">
+          <div class="couter_icon col-md-10">
+            <i class="fa fa-circle" style="color: #dc143c;"></i> <!-- Crimson -->
+          </div>
+          <a href="{% url 'savings_account_with_zero_balance' %}" class="text-center">
+            <h5 class="my-1">Zero Balance Report</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-3 mb-2">
+        <div class="account_setting py-3 fs-2 bg-white shadow-sm rounded rounded-3">
+          <div class="couter_icon col-md-10">
+            <i class="fa fa-exclamation-triangle" style="color: #ff6347;"></i> <!-- Tomato -->
+          </div>
+          <a href="{% url 'savings_overdrawn_account_status' %}" class="text-center">
+            <h5 class="my-1">Account Overdrawn Report</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-3 mb-2">
+        <div class="account_setting py-3 fs-2 bg-white shadow-sm rounded rounded-3">
+          <div class="couter_icon col-md-10">
+            <i class="fa fa-piggy-bank" style="color: #20b2aa;"></i> <!-- Light Sea Green -->
+          </div>
+          <a href="{% url 'savings_interest_paid' %}" class="text-center">
+            <h5 class="my-1">Savings Interest Paid Report</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-3 mb-2">
+        <div class="account_setting py-3 fs-2 bg-white shadow-sm rounded rounded-3">
+          <div class="couter_icon col-md-10">
+            <i class="fa fa-exchange-alt" style="color: #ff1493;"></i> <!-- Deep Pink -->
+          </div>
+          <a href="{% url 'savings_transaction_report' %}" class="text-center">
+            <h5 class="my-1">Transactions Report</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-3 mb-2">
+        <div class="account_setting py-3 fs-2 bg-white shadow-sm rounded rounded-3">
+          <div class="couter_icon col-md-10">
+            <i class="fa fa-hand-holding-usd" style="color: #008080;"></i> <!-- Teal -->
+          </div>
+          <a href="{% url 'savings_account_credit_balance' %}" class="text-center">
+            <h5 class="my-1">Account with Credit Balance Report</h5>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

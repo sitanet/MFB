@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container-fluid">
+  <div class="row">
+  </div>
+
+  <div>
+    <!-- Chart of Account will come here -->
+  </div>
+
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-md-12">
+        <div class="page_title">
+          <h2>New Account</h2>
+        </div>
+      </div>
+
+      <div class="col-md-3 mb-3">
+        <div class="account_setting py-5 fs-1 bg-white">
+          <div class="couter_icon col-md-12">
+            <i class="couter_icon fa fa-users text-primary"></i>
+          </div>
+          <a href="{% url 'customers' %}" class="text-center">
+            <h5 class="my-2">Customer Account</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-3 mb-3">
+        <div class="account_setting py-5 fs-1 bg-white">
+          <div class="couter_icon col-md-12">
+            <i class="couter_icon fa fa-suitcase text-success"></i>
+          </div>
+          <a href="{% url 'choose_create_another_account' %}" class="text-center">
+            <h5 class="my-2">Another Account</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-3 mb-3">
+        <div class="account_setting py-5 fs-1 bg-white">
+          <div class="couter_icon col-md-12">
+            <i class="couter_icon fa fa-hand-holding-usd text-warning"></i>
+          </div>
+          <a href="{% url 'choose_to_create_loan' %}" class="text-center">
+            <h5 class="my-2">Loan Account</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="account_setting py-5 fs-1 bg-white rounded rounded-5">
+          <div class="couter_icon col-md-12">
+            <i class="couter_icon fa fa-building text-secondary"></i>
+          </div>
+          <a href="{% url 'internal_accounts' %}" class="text-center">
+            <h5 class="my-2">Internal Account</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="account_setting py-5 fs-1 bg-white shadow-lg rounded rounded-5">
+          <div class="couter_icon col-md-12">
+            <i class="couter_icon fa fa-list text-danger"></i>
+          </div>
+          <a href="{% url 'customer_list_account' %}" class="text-center">
+            <h5 class="my-2">Display All Customers</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="account_setting py-5 fs-1 bg-white shadow-lg rounded rounded-5">
+          <div class="couter_icon col-md-12">
+            <i class="couter_icon fa fa-list-alt text-info"></i>
+          </div>
+          <a href="{% url 'internal_list' %}" class="text-center">
+            <h5 class="my-2">Display All Internal Accounts</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="account_setting py-5 fs-1 bg-white shadow-lg rounded rounded-5">
+          <div class="couter_icon col-md-12">
+            <i class="couter_icon fa fa-cogs text-dark"></i>
+          </div>
+          <a href="#" class="text-center">
+            <h5 class="my-2">User Define</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-3 mb-3">
+        <div class="account_setting py-5 fs-1 bg-white shadow-lg rounded rounded-5">
+          <div class="couter_icon col-md-12">
+            <i class="couter_icon fa fa-exchange-alt text-primary"></i>
+          </div>
+          <a href="#" class="text-center">
+            <h5 class="my-2">Define Cash/Bank/Transfer</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="account_setting py-5 fs-1 bg-white rounded rounded-5">
+          <div class="couter_icon col-md-12">
+            <i class="couter_icon fa fa-calculator text-success"></i>
+          </div>
+          <a href="#" class="text-center">
+            <h5 class="my-2">Define Fixed Assets Depreciation</h5>
+          </a>
+        </div>
+      </div>
+
+      <!-- Additional duplicate sections -->
+
+      <div class="col-md-3">
+        <div class="account_setting py-5 fs-1 bg-white rounded rounded-5">
+          <div class="couter_icon col-md-12">
+            <i class="couter_icon fa fa-calculator text-warning"></i>
+          </div>
+          <a href="#" class="text-center">
+            <h5 class="my-2">Define Fixed Assets Depreciation</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="account_setting py-5 fs-1 bg-white rounded rounded-5">
+          <div class="couter_icon col-md-12">
+            <i class="couter_icon fa fa-calculator text-danger"></i>
+          </div>
+          <a href="#" class="text-center">
+            <h5 class="my-2">Define Fixed Assets Depreciation</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="account_setting py-5 fs-1 bg-white rounded rounded-5">
+          <div class="couter_icon col-md-12">
+            <i class="couter_icon fa fa-calculator text-info"></i>
+          </div>
+          <a href="#" class="text-center">
+            <h5 class="my-2">Define Fixed Assets Depreciation</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="account_setting py-5 fs-1 bg-white rounded rounded-5">
+          <div class="couter_icon col-md-12">
+            <i class="couter_icon fa fa-calculator text-secondary"></i>
+          </div>
+          <a href="#" class="text-center">
+            <h5 class="my-2">Define Fixed Assets Depreciation</h5>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- footer -->
+    <!-- <div class="container-fluid">
+      <div class="footer">
+        <p>Copyright &copy; 2023 The CityGate Church. All rights reserved.</p>
+      </div>
+    </div> -->
+  </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,9 @@
+<!-- result.html -->
+<h2>Search Results:</h2>
+<ul>
+    {% for transaction in transactions %}
+        <li>{{ transaction.trx_no }} - {{ transaction.description }} - {{ transaction.amount }}</li>
+    {% endfor %}
+</ul>
+
+<p>Total Amount: {{ sum_amount }}</p>

@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row column_title">
+        <div class="col-md-12">
+            <div class="page_title">
+                <h2>List of Transactions</h2>
+            </div>
+        </div>
+    </div>
+
+    <div class="row justify-content-center mt-4">
+        <div class="col-md-10">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Transactions</h3>
+                </div>
+                <div class="card-body">
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>Transaction No</th>
+                                <th>GL No</th>
+                                <th>Account No</th>
+                                <th>Amount</th>
+                                <th>Description</th>
+                                <th>Date</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for transaction in transactions %}
+                            <tr>
+                                <td>{{ transaction.trx_no }}</td>
+                                <td>{{ transaction.gl_no }}</td>
+                                <td>{{ transaction.ac_no }}</td>
+                                <td>{{ transaction.amount }}</td>
+                                <td>{{ transaction.description }}</td>
+                                <td>{{ transaction.app_date }}</td>
+                                <td>
+                                    <a href="{% url 'loan_repayment_reversal_new' transaction.trx_no %}" class="btn btn-danger">Reverse</a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="7">No transactions found.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

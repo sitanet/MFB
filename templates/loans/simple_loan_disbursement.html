@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row column_title">
+        <div class="col-md-12">
+            <div class="page_title">
+                <h2>Loan Approval</h2>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <a href="{% url 'loans' %}" style="color: green; font-weight: bold; text-align: right; display: block;">Loans Menu</a>
+        <form method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+            {% if messages %}
+            <ul class="messages">
+                {% for message in messages %}
+                <li style="font-size: 30px; color: brown; font-weight: bold;" {% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+            <h6 style="color: red;">{{ form.errors }}</h6>
+            {% include 'includes/alerts.html' %}
+
+            <div class="form first">
+                <div class="details personal">
+                    <div class="fields">
+                        <input type="hidden" value="{{ member.team_sup.username }}" name="user" required>
+                        <input type="hidden" name="branch" value="{{ user.branch }}" required>
+
+                        <div class="input-field">
+                            <label>First Name*</label>
+                            <input type="text" class="form-control bg-light" name="first_name" value="{{ loan.customer.first_name }}" readonly>
+                        </div>
+                        <div class="input-field">
+                            <label>Middle Name</label>
+                            <input type="text" class="form-control bg-light" name="middle_name" value="{{ loan.customer.middle_name }}" readonly>
+                        </div>
+                        <div class="input-field">
+                            <label>Last Name*</label>
+                            <input type="text" class="form-control bg-light" name="last_name" value="{{ loan.customer.last_name }}" readonly>
+                        </div>
+                        <div class="input-field">
+                            <label>Account Type</label>
+                            <input type="text" class="form-control bg-light" name="gl_no" value="{{ loan.gl_no }}" readonly>
+                        </div>
+                        <div class="input-field">
+                            <label for="accountNoInput">Account No.:</label>
+                            <input type="text" class="form-control bg-light" name="ac_no_cashier" value="{{ loan.ac_no }}" readonly>
+                            <input type="text" class="form-control bg-light" name="customer" value="{{ loan.customer.id }}" readonly>
+                            <input type="text" class="form-control bg-light" name="cycle" value="{{ loan.cycle }}" readonly>
+                        </div>
+
+                        <div class="input-field">
+                            <label>Application Date</label>
+                            <input type="date" name="appli_date" value="{{appli_date}}" required disabled>
+                        </div>
+                        <div class="input-field">
+                            <label>Approve Date</label>
+                            <!-- <input type="date" name="approval_date" value="{{ form.approve_date.value}}" required disabled> -->
+                            {{ form.approval_date}}
+                        </div>
+                        <div class="input-field">
+                            <label>Disbursement Date</label>
+                            <input type="date" name="disbursement_date" id="ses_date" value="{{ company_date }}" required>
+                        </div>
+
+                        <input type="date" name="ses_date" value="{% now 'Y-m-d' %}" required >
+
+                        <div class="input-field">
+                            <label for="deposit_description">Loan Amount:</label>
+                            <input type="text" class="form-control bg-light" name="amount" value="{{ loan.loan_amount }}" readonly>
+                        </div>
+                        <div class="input-field">
+                            <label for="deposit_description">Annual Int Rate:</label>
+                            <input type="text" class="form-control bg-light" name="interest_rate" value="{{ loan.interest_rate }}" readonly>
+                        </div>
+                        <div class="input-field">
+                            <label for="deposit_description">No. of Frequency:</label>
+                            {{ form.payment_freq }}
+                        </div>
+                        <div class="input-field">
+                            <label for="deposit_description">Interest Method:</label>
+                            {{ form.interest_calculation_method }}
+                        </div>
+                        <div class="input-field">
+                            <label for="deposit_description">Loan Officers:</label>
+                            {{ form.loan_officer }}
+                        </div>
+                        <div class="input-field">
+                            <label for="deposit_description">Business Sector:</label>
+                            {{ form.business_sector }}
+                        </div>
+                        <div class="input-field">
+                            <label for="deposit_description">No of Installment:</label>
+                            {{ form.num_install }}
+                        </div>
+
+                        <div class="input-field">
+                            <label for="gl_no">Funding Account:</label>
+                            <select name="gl_no_cashier" id="gl_no">
+                                {% for record in amounts %}
+                                <option value="{{ record.gl_no }}">GL No: {{ record.gl_no }} - Total Amount: {{ record.total_amount }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                      
+
+                        <input type="hidden" name="ac_no" value="{{ loan.ac_no }}">
+                        <input type="hidden" name="int_to_recev_gl_dr" value="{{ account.int_to_recev_gl_dr }}">
+                        <input type="hidden" name="int_to_recev_ac_dr" value="{{ account.int_to_recev_ac_dr }}">
+                        <input type="hidden" name="unearned_int_inc_gl" value="{{ account.unearned_int_inc_gl }}">
+                        <input type="hidden" name="unearned_int_inc_ac" value="{{ account.unearned_int_inc_ac }}">
+
+                        <button class="submit">
+                            <span class="btnText">Disburse</span>
+                            <i class="uil uil-navigator"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var sessionDateInput = document.getElementById('ses_date');
+        var companyDate = '{{ company_date }}'; // Assuming company_date is in the 'YYYY-MM-DD' format
+
+        sessionDateInput.addEventListener('change', function() {
+            var selectedDate = new Date(sessionDateInput.value);
+            var companyDateObj = new Date(companyDate);
+
+            if (selectedDate > companyDateObj) {
+                alert('Please select a date not greater than the session date.');
+                sessionDateInput.value = '{{ company_date }}'; // Reset the input value
+            }
+        });
+    });
+</script>
+{% endblock %}

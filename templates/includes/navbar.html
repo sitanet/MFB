@@ -1,0 +1,98 @@
+{% load static %}
+  
+  <!-- Sidebar  -->
+  <nav id="sidebar">
+   <div class="sidebar_blog_1">
+      <div class="sidebar-header">
+         <div class="logo_section">
+            <img class="logo_icon img-responsive" src="{% static 'images/logo/logo.png' %}" alt="LOGO" />
+         </div>
+      </div>
+      <div class="sidebar_user_info">
+         <div class="icon_setting"></div>
+         <div class="user_profle_side">
+            <div class="user_img"><img class="img-responsive" src="{{ user.profile_picture.url }}" alt="#" onerror="this.src='{% static 'images/avatar.jpg' %}'"/>
+            </div>
+            <div class="user_info">
+               <h6>{{ user.get_role}}</h6>
+               <p><span class="online_animation"></span> Online</p>
+            </div>
+         </div>
+      </div>
+   </div>
+   <div class="sidebar_blog_2">
+      <h4>General</h4>
+      <ul class="list-unstyled components">
+         <li><a href="{% url 'myAccount' %}"><i class="fa fa-dashboard"></i> <span>Dashboard</span></a>
+         </li>
+         <!-- <li><a href="{% url 'register_member' %}"><i class="fa fa-user"></i> <span>Register
+                  Member</span></a>
+         </li> -->
+         <li><a href="{% url 'display_comment' %}"><i class="fa fa-user"></i> <span>Comments</span></a>
+   </li>
+
+         <li>
+            <li>
+               <a href="#element" data-toggle="collapse" aria-expanded="false" class="dropdown-toggle"><i
+                       class="fa fa-diamond purple_color"></i>
+                   <span>Report</span></a>
+               <ul class="collapse list-unstyled" id="element">
+                   <li><a href="{% url 'display_all_member' %}">> <span>Display All Member</span></a></li>
+                   <li><a href="{% url 'all_comment' %}">> <span>Display All Comment</span></a></li>
+                   
+               </ul>
+           </li>
+            <ul class="collapse list-unstyled" id="element">
+              
+               <li><a href="displaySingleMember.html">> <span>Single Member</span></a></li>
+               <li><a href="displayComment.html">> <span>Comments</span></a></li>
+            </ul>
+         </li>
+         <li><a href="{% url 'registeruser' %}"><i class="fa fa-users"></i> <span>Registered
+                  Staffs</span></a></li>
+
+         <li><a href="{% url 'logout' %}"><i class="fa fa-sign-out"></i> <span>Log Out</span></a>
+         </li>
+   </div>
+</nav>
+
+
+
+
+<div id="content">
+  
+   <div class="topbar">
+      <nav class="navbar navbar-expand-lg navbar-light">
+         <div class="full">
+            <button type="button" id="sidebarCollapse" class="sidebar_toggle"><i
+                  class="fa fa-bars"></i></button>
+            <div class="logo_section">
+               <img class="img-responsive" src="{% static 'images/logo/logo.png' %}"
+                  alt="LOGO" />
+            </div>
+            <div class="right_topbar">
+               <div class="icon_info">
+                  <!-- <ul>
+                     <li><a href="#"><i class="fa fa-bell-o"></i><span class="badge">2</span></a></li>
+                     <li><a href="#"><i class="fa fa-question-circle"></i></a></li>
+                     <li><a href="#"><i class="fa fa-envelope-o"></i><span class="badge">3</span></a></li>
+                  </ul> -->
+                  <ul class="user_profile_dd">
+                     <li>
+                        <a class="dropdown-toggle" data-toggle="dropdown"><img
+                              class="img-responsive rounded-circle" src="{{ user.profile_picture.url }}" onerror="this.src='{% static 'images/avatar.jpg' %}'"
+                              alt="Image" /> <b style="color: #fff;">{{ user.first_name}} {{ user.last_name}}</b><span class="name_user"></span></a>
+                        <div class="dropdown-menu">
+                           <a class="dropdown-item" href="{% url 'profile' %}">My Profile</a>
+                           <a class="dropdown-item" href="{% url 'change_password' %}">Change Password</a>
+                           <a class="dropdown-item" href="{% url 'logout' %}"><span>Log Out</span> <i
+                                 class="fa fa-sign-out"></i></a>
+                        </div>
+                     </li>
+                  </ul>
+               </div>
+            </div>
+         </div>
+      </nav>
+   </div>
+    <!-- end topbar -->

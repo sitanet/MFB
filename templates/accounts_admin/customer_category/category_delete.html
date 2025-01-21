@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+
+
+{% block content %}
+
+
+
+<div class="container-fluid">
+  <div class="row">
+ 
+        
+
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="page_title">
+                        <h2>Confirm Delete</h2>
+                    </div>
+                </div>
+                <div class="col-md-12 m-auto pb-5 bg-white rounded-3 shadow-sm">
+                    <div class="text-center mt-4">
+                        <h1>Confirm Delete</h1>
+                        <p class="fs-5">Are you sure of this operation?</p>
+                     
+                        <form method="post">
+                            {% csrf_token %}
+                           
+                        <button type="submit" class="btn btn-success mt-2 shadow-sm">Confirm</button>
+                        </form>
+                        <a href="{% url 'id_type_list' %}" style="color: green; font-weight: bold;">Back to ID Card Type List</a>
+                    </div>
+                </div>
+
+
+            </div>
+            <!-- footer -->
+            <!-- <div class="container-fluid">
+       <div class="footer">
+          <p>Copyright &copy; 2023 The CityGate Church. All rights reserved.
+          </p>
+       </div>
+    </div> -->
+        </div>
+    
+
+        <div>
+              <!-- Chart of Accoutwill come here -->
+        </div>
+
+
+  </div>
+
+</div>
+<!-- <h1>Chart of Account</h1> -->
+
+
+
+</div>
+  
+  {% endblock %}

@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="page_title">
+                <h2>Edit Branch</h2>
+            </div>
+        </div>
+
+        <!-- Edit Branch Form -->
+        <form method="POST" class="branch-edit-form p-5 shadow-lg rounded rounded-5">
+            {% csrf_token %}
+            
+            <!-- Display messages -->
+            {% if messages %}
+            <ul class="messages">
+                {% for message in messages %}
+                <li style="font-size: 20px; color: brown; font-weight: bold;" {% if message.tags %} class="{{ message.tags }}"{% endif %}>
+                    {{ message }}
+                </li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+
+            <!-- Display form errors -->
+            <h6 style="color: red;">{{ form.errors }}</h6>
+            
+            <!-- Form fields -->
+            <div class="form-row">
+                <!-- Branch Code -->
+                <div class="form-group col-md-4">
+                    <label for="branch_code">Branch Code</label>
+                    <input type="text" class="form-control bg-light" id="branch_code" name="branch_code" value="{{ branch.branch_code }}">
+                </div>
+
+                <!-- Company Dropdown -->
+                <div class="form-group col-md-4">
+                  <label for="company">Company</label>
+                  <select class="form-control bg-light" id="company" name="company">
+                      {% for company in companies %}
+                      <option value="{{ company.id }}" {% if branch.company.id == company.id %}selected{% endif %}>
+                          {{ company.company_name }}
+                      </option>
+                      {% endfor %}
+                  </select>
+              </div>
+              
+
+                <!-- Branch Name -->
+                <div class="form-group col-md-4">
+                    <label for="branch_name">Branch Name</label>
+                    <input type="text" class="form-control bg-light" id="branch_name" name="branch_name" value="{{ branch.branch_name }}">
+                </div>
+
+                <!-- Session Date -->
+                <div class="form-group col-md-4">
+                    <label for="session_date">Session Date</label>
+                    <input type="date" class="form-control bg-light" id="session_date" name="session_date" value="{{ branch.session_date|date:'Y-m-d' }}">
+                </div>
+
+                <!-- System Date -->
+                <div class="form-group col-md-4">
+                  <label for="system_date">System Date</label>
+                  <input type="date" class="form-control bg-light" id="system_date" 
+                         name="system_date_date" value="{{ branch.system_date_date|date:'Y-m-d' }}">
+              </div>
+
+                <!-- Session Status -->
+                <div class="form-group col-md-4">
+                  <label for="session_status">Session Status</label>
+                  <input type="text" class="form-control bg-light" id="session_status" 
+                         value="{{ branch.session_status }}" disabled>
+                  <input type="hidden" name="session_status" value="{{ branch.session_status }}">
+              </div>
+              
+              
+            </div>
+
+            <!-- Submit Button -->
+            <div class="form-row">
+                <button type="submit" class="btn btn-success mt-4 shadow-sm">Save Changes</button>
+            </div>
+
+            <!-- Back Link -->
+            <a href="{% url 'branch_list' %}" style="color: green; font-weight: bold;">Back to Branch List</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

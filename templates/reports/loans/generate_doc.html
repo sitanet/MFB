@@ -1,0 +1,25 @@
+{% load humanize %}
+
+Loan Repayment Schedule
+
+Loan Product: {{ customers.first_name }} {{ customers.middle_name }} {{ customers.last_name }}
+Loan No: {{ customers.gl_no }}
+Account No: {{ customers.ac_no }}
+Name: {{ customers.first_name }} {{ customers.middle_name }} {{ customers.last_name }}
+Physical/Postal Address: {{ customers.address }}
+Disbursement Date: {{ customer.appli_date|date:"d-m-Y" }}
+Ref: {{ loan_instance.num_install }}
+
+                                                                                    Loan Period: {{ customers.first_name }} {{ customers.middle_name }} {{ customers.last_name }}
+                                                                                    No. of Installments: {{ loan_instance.gl_no }} {{ loan_instance.ac_no }}
+                                                                                    Annual Int. Rate: N{{ loan_instance.loan_amount|floatformat:2|intcomma }}
+                                                                                    Loan Officer: {{ loan_instance.num_install }}
+                                                                                    Loan Fund: {{ loan_instance.num_install }}
+
+Period    Payment Date    Principal Payment    Interest Payment    Total Payment    Principal Remaining
+0         {{ loan_instance.appli_date|date:"d-m-Y" }}    0.00    0.00    0.00    {{ customer.loan_amount }}
+{% for payment in loan_schedule %}
+{{ payment.period }}         {{ payment.payment_date|date:"d-m-Y" }}    {{ payment.principal_payment|floatformat:2 }}    {{ payment.interest_payment|floatformat:2 }}    {{ payment.total_payment|floatformat:2 }}    {{ payment.principal_remaining|floatformat:2 }}
+{% endfor %}
+
+Total                {{ total_principal_sum|floatformat:2 }}    {{ total_interest_sum|floatformat:2 }}    {{ total_payments_sum|floatformat:2 }}

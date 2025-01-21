@@ -1,0 +1,267 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block content %}
+      
+    {% include 'includes/alerts.html' %}
+                                    
+    <div class="container-fluid">
+        <div class="row column_title">
+            <div class="col-md-12">
+                <div class="page_title">
+                    <h2>Customer Account</h2>
+                </div>
+            </div>
+        </div>
+      
+        <div class="container">
+            <form method="POST" enctype="multipart/form-data">
+                {% csrf_token %}
+                {% if messages %}
+                <ul class="messages">
+                    {% for message in messages %}
+                    <li style="font-size: 30px; color: brown; font-weight: bold;"  {% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+                <h6 style="color: red;">{{ form.errors }}</h6>
+
+                <div class="form first">
+                    <div class="details personal">
+                              
+                        <div align="right">
+                            <div align="right" style="color: firebrick;font-weight: bold;">
+                                Account No: {{ customer.gl_no }}{{ customer.ac_no }}
+                            </div>
+                            <img src="{{ customer.photo.url }}" alt="{{ customer.first_name }} Image" width="90" height="80">
+                            <img src="{{ customer.sign.url }}" alt="{{ customer.first_name }} Sign" width="90" height="80">
+                        </div>
+                        
+                        <div class="image-container">
+                            <div class="image-preview-container" style="float: left; width: 48%; margin-right: 4%;">
+                                <div class="preview">
+                                    <img id="preview-selected-image" />
+                                </div>
+                                <label for="file-upload">Choose Photo</label>
+                                <input type="file" id="file-upload" name="photo" accept="image/*" onchange="previewImage(event);" />
+                            </div>
+
+                            <div class="image-preview-container2" style="float: left; width: 48%;">
+                                <div class="preview2">
+                                    <img id="preview-selected-image2" />
+                                </div>
+                                <label for="file-upload2">Choose Signature</label>
+                                <input type="file" id="file-upload2" name="sign" accept="image/*" onchange="previewImage2(event);" />
+                            </div>
+                        </div>
+                        <div style="clear: both;"></div>
+
+                        <div class="fields">
+                            <input type="hidden" value="{{ member.team_sup.username }}" name="user" required>
+
+                            <div class="input-field">
+                                <label for="fName">Branch</label>
+                                <span class="form-control bg-light">{{ user.branch }}</span>
+                                <input type="hidden" name="branch" value="{{ user.branch }}">
+                            </div>
+                            
+                            <div class="input-field">
+                                <label>GL Number</label>
+                                <input type="text" name="gl_no" value="{{ form.gl_no.value|default:'' }}" readonly>
+                            </div>
+                            
+                            <div class="input-field">
+                                <label>Account Number</label>
+                                <input type="text" name="ac_no" value="{{ form.ac_no.value|default:'' }}" readonly>
+                            </div>
+                            
+                            <div class="input-field">
+                                <label>First Name*</label>
+                                <input type="text" placeholder="Enter First Name" name="first_name" value="{{ form.first_name.value|default:'' }}" required>
+                            </div>
+                            
+                            <div class="input-field">
+                                <label>Middle Name</label>
+                                <input type="text" placeholder="Enter Middle Name" name="middle_name" value="{{ form.middle_name.value|default:'' }}">
+                            </div>
+                            
+                            <div class="input-field">
+                                <label>Last Name*</label>
+                                <input type="text" placeholder="Enter Last Name" name="last_name" value="{{ form.last_name.value|default:'' }}">
+                            </div>
+                            
+                            <div class="input-field">
+                                <label>Date of Birth*</label>
+                                <input type="date" placeholder="Enter birth date" name="dob" value="{{ customer.dob|date:'Y-m-d' }}">
+                            </div>
+                            
+                            <div class="input-field">
+                                <label>Email*</label>
+                                <input type="Email" placeholder="Enter your Email" name="email" value="{{ form.email.value|default:'' }}">
+                            </div>
+                            
+                            <div class="input-field">
+                                <label>Gender*</label>
+                                {{ form.cust_sex }}
+                            </div>
+                            
+                            <div class="input-field">
+                                <label>Marital Status*</label>
+                                {{ form.marital_status }}
+                            </div>
+
+                            <div class="input-field">
+                                <label>Address*</label>
+                                <textarea name="address" id="comments" rows="3" cols="50">{{ form.address.value }}</textarea>
+                            </div>
+
+                            <div class="input-field">
+                                <label>Nationality*</label>
+                                <input type="text" placeholder="Enter Nationality" name="nationality" value="{{ form.nationality.value|default:'' }}">
+                            </div>
+                            
+                            <div class="input-field">
+                                <label>State*</label>
+                                <input type="text" placeholder="Enter State" name="state" value="{{ form.state.value|default:'' }}">
+                            </div>
+
+                            <div class="input-field">
+                                <label>Phone Number*</label>
+                                <input type="number" placeholder="Enter mobile number" name="phone_no" value="{{ form.phone_no.value|default:'' }}">
+                            </div>
+                            
+                            <div class="input-field">
+                                <label>Mobile Number*</label>
+                                <input type="number" placeholder="Enter mobile number" name="mobile" value="{{ form.mobile.value|default:'' }}">
+                            </div>
+
+                            <div class="input-field">
+                                <label>ID Card*</label>
+                                <input type="text" placeholder="Enter your ID card number" name="id_card" value="{{ form.id_card.value|default:'' }}">
+                            </div>
+
+                            <div class="input-field">
+                                <label>Type of ID Card</label>
+                                {{ form.id_type }}
+                            </div>
+
+                            <div class="input-field">
+                                <label>Ref No*</label>
+                                <input type="text" name="ref_no" value="{{ form.ref_no.value|default:'' }}">
+                            </div>
+
+                            <div class="input-field">
+                                <label>Occupation*</label>
+                                <input type="text" placeholder="Enter your occupation" name="occupation" value="{{ form.occupation.value|default:'' }}">
+                            </div>
+                            
+                            <div class="input-field">
+                                <label>Customer Category</label>
+                                {{ form.cust_cat }}
+                            </div>
+
+                            <div class="input-field">
+                                <label>Region</label>
+                                {{ form.region }}
+                            </div>
+
+                            <div class="input-field">
+                                <label>Credit Officer</label>
+                                {{ form.credit_officer }}
+                            </div>
+                           
+                                        
+                            <input type="text"  name="label" value="C" hidden>
+                            
+                            
+                            <!-- <div class="input-field">
+                                <label>Account Type</label>
+                                <select id="general_ledger_type" name="gl_no">
+                                    <option value="">-- Select Account Type --</option>
+                                    {% for cust_data in cust_data %}
+                                        <option value="{{ cust_data.gl_no }}" {% if cust_data.gl_no == form.gl_no.value %}selected{% endif %}>{{ cust_data.gl_name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div> -->
+
+                            <div class="input-field">
+                                <label>Registration Date</label>
+                                <input type="date" name="reg_date" value="{{ customer.reg_date|date:'Y-m-d' }}">
+                            </div>
+
+                            <div class="input-field">
+                                <label>Status*</label>
+                                {{ form.status }}
+                            </div>
+
+                            <button class="submit">
+                                <span class="btnText">Submit</span>
+                                <i class="uil uil-navigator"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+{% endblock %}
+
+<style>
+    .image-preview-container, .image-preview-container2 {
+        display: inline-block;
+        width: 48%;
+        vertical-align: top;
+    }
+    .preview, .preview2 {
+        width: 100%;
+        height: auto;
+        max-width: 200px;
+        margin-bottom: 10px;
+    }
+    .preview img, .preview2 img {
+        width: 100%;
+        height: auto;
+    }
+    .input-field {
+        margin-bottom: 15px;
+    }
+    .input-field label {
+        display: block;
+        margin-bottom: 5px;
+    }
+    .input-field input, .input-field select, .input-field textarea {
+        width: 100%;
+        padding: 8px;
+        box-sizing: border-box;
+    }
+    .submit {
+        display: block;
+        width: 100%;
+        padding: 10px;
+        background-color: green;
+        color: white;
+        border: none;
+        cursor: pointer;
+    }
+</style>
+
+<script>
+    function previewImage(event) {
+        const reader = new FileReader();
+        reader.onload = function() {
+            const output = document.getElementById('preview-selected-image');
+            output.src = reader.result;
+        }
+        reader.readAsDataURL(event.target.files[0]);
+    }
+
+    function previewImage2(event) {
+        const reader = new FileReader();
+        reader.onload = function() {
+            const output = document.getElementById('preview-selected-image2');
+            output.src = reader.result;
+        }
+        reader.readAsDataURL(event.target.files[0]);
+    }
+</script>

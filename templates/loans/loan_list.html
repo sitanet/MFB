@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    Memtrans List
+{% endblock %}
+
+{% block content %}
+    <h1>Memtrans List</h1>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Branch</th>
+                <th>gl_no</th>
+                <th>Ac_No</th>
+                <th>customer</th>
+                <th>cycle/th>
+                <th>Anount</th>
+          
+            </tr>
+        </thead>
+        <tbody>
+            {% for loan in loan_list %}
+            <tr>
+            
+                <td>{{ loan.branch }}</td>
+                <td>{{ loan.gl_no }}</td>
+                <td>{{ loan.ac_no }} {{ memtrans.customer.last_name }}</td>
+                <td>{{ loan.customer.first_name }}</td>
+                <td>{{ loan.cycle }}</td>
+                <td>{{ loan.loan_amount }}</td>
+               
+               
+                <td>
+                    <form action="{% url 'delete_loan' loan.id %}" method="post" style="display:inline;">
+                        {% csrf_token %}
+                        <button type="submit" onclick="return confirm('Are you sure you want to delete all transactions with this trx_no?');">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

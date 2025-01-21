@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trial Balance</title>
+</head>
+<body>
+    <h1>Trial Balance</h1>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>GL No</th>
+                <th>GL Name</th>
+                <th>Debit</th>
+                <th>Credit</th>
+                <th>Balance</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for balance_data in trial_balance_data %}
+                <tr>
+                    <td>{{ balance_data.gl_no }}</td>
+                    <td>{{ balance_data.gl_name }}</td>
+                    
+                    <td>{% if balance_data.credit %}{{ balance_data.credit }}{% endif %}</td>
+                    <td>{% if balance_data.debit %}{{ balance_data.debit }}{% endif %}</td>
+                    <td>{{ balance_data.balance }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="2"><strong>Total</strong></td>
+                <td>{{ total_credit }}</td>
+                <td>{{ total_debit }}</td>
+                
+                <td>{{ total_balance }}</td>
+            </tr>
+        </tfoot>
+    </table>
+</body>
+</html>

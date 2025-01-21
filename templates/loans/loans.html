@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container-fluid">
+  <div class="row">
+  </div>
+
+  <div>
+    <!-- Chart of Account will come here -->
+  </div>
+
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-md-12">
+        <div class="page_title">
+          <h2>Loans Account</h2>
+        </div>
+      </div>
+
+      <!-- Loan Application -->
+      <div class="col-md-3 mb-3">
+        <div class="account_setting py-5 fs-1 bg-white">
+          <div class="couter_icon col-md-12">
+            <i class="fa fa-file-alt text-primary"></i>
+          </div>
+          <a href="{% url 'choose_to_apply_loan' %}" class="text-center">
+            <h5 class="my-2">Loan Application</h5>
+          </a>
+        </div>
+      </div>
+
+      <!-- Modify Loan Application -->
+      <div class="col-md-3 mb-3">
+        <div class="account_setting py-5 fs-1 bg-white">
+          <div class="couter_icon col-md-12">
+            <i class="fa fa-edit text-success"></i>
+          </div>
+          <a href="{% url 'choose_to_modify_loan' %}" class="text-center">
+            <h5 class="my-2">Modify Loan Application</h5>
+          </a>
+        </div>
+      </div>
+
+      <!-- Loan Approval/Reject -->
+      <div class="col-md-3 mb-3">
+        <div class="account_setting py-5 fs-1 bg-white rounded rounded-5">
+          <div class="couter_icon col-md-12">
+            <i class="fa fa-check-circle text-warning"></i>
+          </div>
+          <a href="{% url 'choose_loan_approval' %}" class="text-center">
+            <h5 class="my-2">Loan Approval/Reject</h5>
+          </a>
+        </div>
+      </div>
+
+      <!-- Reverse Loan Approval -->
+      <div class="col-md-3 mb-3">
+        <div class="account_setting py-5 fs-1 bg-white rounded rounded-5">
+          <div class="couter_icon col-md-12">
+            <i class="fa fa-undo-alt text-danger"></i>
+          </div>
+          <a href="{% url 'choose_approved_loan' %}" class="text-center">
+            <h5 class="my-2">Reverse Loan Approval</h5>
+          </a>
+        </div>
+      </div>
+
+      <!-- Loan Disbursement -->
+      <div class="col-md-3 mb-3">
+        <div class="account_setting py-5 fs-1 bg-white shadow-lg rounded rounded-5">
+          <div class="couter_icon col-md-12">
+            <i class="fa fa-money-bill-wave text-info"></i>
+          </div>
+          <a href="{% url 'choose_to_disburse' %}" class="text-center">
+            <h5 class="my-2">Loan Disbursement</h5>
+          </a>
+        </div>
+      </div>
+
+      <!-- Reverse Loan Disbursement -->
+      <div class="col-md-3 mb-3">
+        <div class="account_setting py-5 fs-1 bg-white shadow-lg rounded rounded-5">
+          <div class="couter_icon col-md-12">
+            <i class="fa fa-undo text-secondary"></i>
+          </div>
+          <a href="{% url 'display_loan_disbursements' %}" class="text-center">
+            <h5 class="my-2">Reverse Loan Disbursement</h5>
+          </a>
+        </div>
+      </div>
+
+      <!-- Write Off a Loan -->
+      <div class="col-md-3 mb-3">
+        <div class="account_setting py-5 fs-1 bg-white shadow-lg rounded rounded-5">
+          <div class="couter_icon col-md-12">
+            <i class="fa fa-trash-alt text-dark"></i>
+          </div>
+          <a href="{% url 'choose_loan_written_off' %}" class="text-center">
+            <h5 class="my-2">Write Off a Loan</h5>
+          </a>
+        </div>
+      </div>
+
+      <!-- Post Repayment -->
+      <div class="col-md-3 mb-3">
+        <div class="account_setting py-5 fs-1 bg-white shadow-lg rounded rounded-5">
+          <div class="couter_icon col-md-12">
+            <i class="fa fa-credit-card text-primary"></i>
+          </div>
+          <a href="{% url 'choose_loan_repayment' %}" class="text-center">
+            <h5 class="my-2">Post Repayment</h5>
+          </a>
+        </div>
+      </div>
+
+      <!-- Reverse Repayment -->
+      <!-- <div class="col-md-3 mb-3">
+        <div class="account_setting py-5 fs-1 bg-white shadow-lg rounded rounded-5">
+          <div class="couter_icon col-md-12">
+            <i class="fa fa-exchange-alt text-success"></i>
+          </div>
+          <a href="{% url 'loan_repayment_reversal' %}" class="text-center">
+            <h5 class="my-2">Reverse Repayment</h5>
+          </a>
+        </div>
+      </div> -->
+
+      <!-- Loan Simulation -->
+      <div class="col-md-3 mb-3">
+        <div class="account_setting py-5 fs-1 bg-white shadow-lg rounded rounded-5">
+          <div class="couter_icon col-md-12">
+            <i class="fa fa-calculator text-warning"></i>
+          </div>
+          <a href="{% url 'loan_schedule_demo' %}" class="text-center">
+            <h5 class="my-2">Loan Simulation</h5>
+          </a>
+        </div>
+      </div>
+
+    </div>
+    <!-- footer -->
+    <!-- 
+    <div class="container-fluid">
+      <div class="footer">
+        <p>Copyright &copy; 2023 The CityGate Church. All rights reserved.</p>
+      </div>
+    </div> 
+    -->
+  </div>
+
+</div>
+
+{% endblock %}

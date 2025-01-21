@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row column_title">
+        <div class="col-md-12">
+            <div class="page_title">
+                <h2>Loan Approval</h2>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <a href="{% url 'loans' %}" style="color: green; font-weight: bold; text-align: right; display: block;">Loans Menu</a>
+        <form method="POST" enctype="multipart/form-data" id="loanApprovalForm">
+            {% csrf_token %}
+            {% if messages %}
+            <ul class="messages">
+                {% for message in messages %}
+                <li style="font-size: 30px; color: brown; font-weight: bold;" {% if message.tags %} class="{{ message.tags }}"{% endif %}>
+                    {{ message }}
+                </li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+            <h6 style="color: red;">{{ form.errors }}</h6>
+            {% include 'includes/alerts.html' %}
+
+            <div class="form first">
+                <div class="details personal">
+                    <input type="hidden" value="{{ member.team_sup.username}}" name="user" required>
+                    <input type="text" name="branch" value="{{ user.branch }}" hidden>
+                    
+                    <div class="fields">
+                        <div class="input-field">
+                            <label>First Name*</label>
+                            <input type="text" class="form-control bg-light" name="first_name" value="{{customers.first_name}}" readonly>
+                        </div>
+                        <div class="input-field">
+                            <label>Middle Name</label>
+                            <input type="text" class="form-control bg-light" name="middle_name" value="{{customers.middle_name}}" readonly>
+                        </div>
+                        <div class="input-field">
+                            <label>Last Name*</label>
+                            <input type="text" class="form-control bg-light" name="last_name" value="{{customers.last_name}}" readonly>
+                        </div>
+                        <div class="input-field">
+                            <label>Account Type</label>
+                            <input type="text" class="form-control bg-light" id="accountNoInput1" name="gl_no" value="{{customer.gl_no}}" readonly>
+                        </div>
+                        <div class="input-field">
+                            <label for="accountNoInput">Account No.:</label>
+                            <input type="text" class="form-control bg-light" id="accountNoInput1" name="ac_no" value="{{customer.ac_no}}" readonly>
+                        </div>
+
+                        <div class="input-field">
+                            <label>Application Date</label>
+                            <input type="date" value="{{ appli_date }}" disabled>
+                        </div>
+                        <div class="input-field">
+                            <label>Approval Date</label>
+                            <input type="date" name="approval_date" id="approvalDate" value="{{ company_date }}" required>
+                            <input type="date" name="ses_date" id="sesDate" value="{{ company_date }}" hidden>
+                        </div>
+                        <div class="input-field">
+                            <label for="loanAmount">Loan Amount:</label>
+                            <input type="text" class="form-control bg-light" id="loanAmount" name="loan_amount" value="{{ form.loan_amount.value }}" >
+                        </div>
+                        <div class="input-field">
+                            <label for="interestRate">Annual Int Rate:</label>
+                            <input type="text" class="form-control bg-light" id="interestRate" name="interest_rate" value="{{ form.interest_rate.value }}" readonly>
+                        </div>
+                        <div class="input-field">
+                            <label for="paymentFreq">No. of Frequency:</label>
+                            {{ form.payment_freq }}
+                        </div>
+                        <div class="input-field">
+                            <label for="interestMethod">Interest Method:</label>
+                            {{ form.interest_calculation_method }}
+                        </div>
+                        <div class="input-field">
+                            <label for="loanOfficer">Loan Officers:</label>
+                            {{ form.loan_officer }}
+                        </div>
+                        <div class="input-field">
+                            <label for="businessSector">Business Sector:</label>
+                            {{ form.business_sector }}
+                        </div>
+                        <div class="input-field">
+                            <label for="numInstall">No of Installment:</label>
+                            {{ form.num_install }}
+                        </div>
+
+                        <button class="submit">
+                            <span class="btnText">Approve</span>
+                            <i class="uil uil-navigator"></i>
+                        </button>
+
+                        <a href="{% url 'loan_schedule' customer.id %}">View Repayment Plan</a>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    document.getElementById('loanApprovalForm').addEventListener('submit', function(event) {
+        var approvalDate = new Date(document.getElementById('approvalDate').value);
+        var sesDate = new Date(document.getElementById('sesDate').value);
+
+        if (approvalDate > sesDate) {
+            alert("Approval Date cannot be greater than Session Date.");
+            event.preventDefault();
+        }
+    });
+</script>
+
+{% endblock %}

@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block content %}
+            
+                    
+                       
+
+                
+                       
+                        {% include 'includes/alerts.html' %}
+                        
+                        <h6 style="color: red;" >{{ form.errors }}</h6>
+                        
+                        <!-- dashboard inner -->
+            
+                        <div class="midde_cont">
+                            <div class="container-fluid">
+                               <div class="row column_title">
+                                  <div class="col-md-12">
+                                     <div class="page_title">
+                                        <h2>Display Customers</h2>
+                                     </div>
+                                  </div>
+                               </div>
+         
+             
+             
+                               <!-- table -->
+                               <div class="col-md-12">
+                                  <div class="white_shd full margin_bottom_30">
+                                    <div class="table_section padding_infor_info">
+                                     
+                                       
+                                       <div align="right">
+                                          <div align="right" style="color: firebrick;font-weight: bold;">
+                                              <a href="{% url 'internal_accounts' %}" style="color: green; font-weight: bold;">Create New Internal Account</a>
+                                           </div>
+                                       
+                                     
+                                      </div><div
+                                        <div class="table-responsive-sm">
+                                           <div class="input-group mb-1">
+                                             
+                                              <input type="text" class="form-control bg-light" placeholder="Search..."
+                                                 id="searchInput">
+                                              <div class="">
+                                                 <button class="btn" style="background-color: #FF4500;" type="button" onclick="searchTable()">Search</button>
+                                              </div>
+                                           </div>
+                                           
+                                           <table class="table">
+                                              <thead class="thead-dark">
+                                                 <tr>
+                                                    <th>Account No.</th>
+                                                    
+                                                    <th>First Name</th>
+                                                    <th>Middle Name</th>
+                                                    <th>Last Name</th>
+                                                
+                                                    <th>Phone Number</th>
+                                                    
+                                                 
+                                              
+                                                    
+                                                    <th>Status</th>
+                                                    <th>Action</th>
+                                                   
+                                                    
+                                                 </tr>
+                                              </thead>
+                                              <tbody>
+                                                {% for account in account %}
+                                                   <tr>
+                                                      <!-- <td><img style="width: 40px; height: 50px;" class="img-responsive rounded-circle" src="{{ member.image.url }}" 
+                                                         onerror="this.src='{% static 'images/avatar.jpg' %}'"  alt="#" /></td> -->
+                                                         <td>{{ account.gl_no }}{{ account.ac_no }}</td>
+                                                        
+                                                         <td>{{ account.first_name }}</td>
+                                                         <td>{{ account.middle_name }}</td>
+                                                      <td>{{ account.last_name }}</td>
+                                                      <td>{{ account.phone_no }}</td>
+                                                      
+                                                      
+                                                      <td>{{ account.status }}</td>
+                                                      <!-- <td>{{ user.get_role_display }}</td> -->
+
+                                                      <td> <a href="{% url 'edit_internal_account' account.id %}" style="font-weight: bold; color: blue;">Edit</a>
+                                                         <a href="{% url 'delete_internal_account' account.pk %}" style="font-weight: bold; color: red;" >Delete</a>
+                                                      </td>
+                                                      
+                                                      
+                                                      
+                                                      
+                                                   </tr>
+                                                   {% endfor %}
+                                            
+             
+                                              </tbody>
+                                           </table>
+                                           
+                                        </div>
+                                     </div>
+                                  </div>
+                               </div>
+                            </div>
+                         </div>
+
+             
+                               <!-- footer -->
+                             
+                            </div>
+                            <!-- end dashboard inner -->
+                         </div>
+                    
+
+
+                    
+     
+
+
+{% endblock %}

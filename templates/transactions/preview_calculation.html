@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Preview Calculation{% endblock %}
+
+{% block content %}
+<h1>Preview Calculation</h1>
+<table>
+    <thead>
+        <tr>
+            <th>GL Number</th>
+            <th>Account Number</th>
+            <th>Interest Rate</th>
+            <th>Total Amount</th>
+            <th>Total Interest</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for result in results %}
+        <tr>
+            <td>{{ result.gl_no }}</td>
+            <td>{{ result.ac_no }}</td>
+            <td>{{ result.interest_rate }}%</td>
+            <td>{{ result.total_amount|floatformat:2 }}</td>
+            <td>{{ result.total_interest|floatformat:2 }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+<form method="post" action="{% url 'calculate_interest' %}">
+    {% csrf_token %}
+    <input type="hidden" name="gl_no" value="{{ results.0.gl_no }}">
+    <input type="hidden" name="start_date" value="{{ results.0.start_date }}">
+    <input type="hidden" name="end_date" value="{{ results.0.end_date }}">
+    <button type="submit" name="action" value="save">Save Calculation</button>
+    <a href="{% url 'calculate_interest' %}">Back to Calculation</a>
+</form>
+{% endblock %}

@@ -1,0 +1,27 @@
+{% if messages %}
+    <!-- {% for message in messages %} -->
+    {% if message.tags == 'success' %}
+
+
+                 <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
+
+                  <script>
+                            var m = "{{message.tags}}";
+                            swal("Thank You!", "Operation Successfully!", "success");
+
+                  </script>
+   {% else %}
+
+                  <div style="color: green; font-size: 16px; font-family: Arial, Helvetica, sans-serif;" class="alert alert-{{message.tags}}" role="alert">
+                                 <strong>{{ message }}</strong>
+                  </div>
+                          <div style="color: green; font-size: 25px; background-color: azure; font-family: Arial, Helvetica, sans-serif;" >
+                        
+                  </div>  
+  {% endif %}
+
+
+
+    <!-- {% endfor %} -->
+
+{% endif %}

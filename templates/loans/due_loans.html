@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="page_title">
+                <h2>Due Loan Repayments</h2>
+            </div>
+        </div>
+
+        <div class="container deposit p-5 shadow-lg rounded rounded-5">
+            <div class="row mt-3 table-row1">
+                <a href="{% url 'loans' %}" style="color: green; font-weight: bold; text-align: right; display: block;">Loans Menu</a>
+                
+                <div class="col-md-3 mb-3">
+                    <div class="account_setting py-5 fs-1 bg-white shadow-lg rounded rounded-5">
+                       <div class="couter_icon col-md-3">
+                          <i class="couter_icon fa fa-user yellow_color"></i>
+                       </div>
+                       <a href="{% url 'loans' %}" class="text-center">
+                          <h5 class="my-2">Loan Simulation</h5>
+                       </a>
+                    </div>
+                 </div>
+                 <div class="col-md-3 mb-3">
+                    <div class="account_setting py-5 fs-1 bg-white shadow-lg rounded rounded-5">
+                       <div class="couter_icon col-md-3">
+                          <i class="couter_icon fa fa-user yellow_color"></i>
+                       </div>
+                       <a href="{% url 'loans' %}" class="text-center">
+                          <h5 class="my-2">Loan Simulation</h5>
+                       </a>
+                    </div>
+                 </div>
+                 <div class="col-md-3 mb-3">
+                    <div class="account_setting py-5 fs-1 bg-white shadow-lg rounded rounded-5">
+                       <div class="couter_icon col-md-3">
+                          <i class="couter_icon fa fa-user yellow_color"></i>
+                       </div>
+                       <a href="{% url 'loans' %}" class="text-center">
+                          <h5 class="my-2">Loan Simulation</h5>
+                       </a>
+                    </div>
+                 </div>
+                 <div class="col-md-3 mb-3">
+                    <div class="account_setting py-5 fs-1 bg-white shadow-lg rounded rounded-5">
+                       <div class="couter_icon col-md-3">
+                          <i class="couter_icon fa fa-user yellow_color"></i>
+                       </div>
+                       <a href="{% url 'loans' %}" class="text-center">
+                          <h5 class="my-2">Loan Simulation</h5>
+                       </a>
+                    </div>
+                 </div>
+                 
+                <div class="col-md-12 justify-content-center text-center m-auto">
+                    <!-- <form method="GET" action="{% url 'due_loans' %}">
+                        <div class="input-group mb-3">
+                            <input type="text" class="form-control form-control-lg bg-white border" placeholder="GL No" id="gl_no" name="gl_no" value="{{ gl_no }}">
+                            <input type="text" class="form-control form-control-lg bg-white border" placeholder="Account No" id="ac_no" name="ac_no" value="{{ ac_no }}">
+                            <input type="text" class="form-control form-control-lg bg-white border" placeholder="Cycle" id="cycle" name="cycle" value="{{ cycle }}">
+                            <div class="">
+                                <button class="btn btn-success py-3" type="submit">Filter</button>
+                            </div>
+                        </div>
+                    </form> -->
+
+                    <form method="POST" action="{% url 'process_repayments' %}" id="repaymentForm">
+                        {% csrf_token %}
+                        <table class="table table-responsive table-hover">
+                            <thead class="thead-dark">
+                                <tr>
+                                    <th>Loan Amount</th>
+                                    <th>Due Date</th>
+                                    <th>Principal Between Dates</th>
+                                    <th>Interest Between Dates</th>
+                                    <th>Last LP Date</th>
+                                    <th>Customer GL No</th>
+                                    <th>Loan Customer GL No</th>
+                                    <th>Phone No</th>
+                                    <th>Account No</th>
+                                    <th>Customer Balance</th>
+                                    <th>Select</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for loan_data in loans_data %}
+                                <tr>
+                                    <td>{{ loan_data.loan_amount }}</td>
+                                    <td>{{ loan_data.due_date }}</td>
+                                    <td>{{ loan_data.total_principal_between_dates }}</td>
+                                    <td>{{ loan_data.total_interest_between_dates }}</td>
+                                    <td>{{ loan_data.last_lp_date }}</td>
+                                    <td>{{ loan_data.customer_gl_no }}</td>
+                                    <td>{{ loan_data.loan_cust_gl_no }}</td>
+                                    <td>{{ loan_data.customer_phone }}</td>
+                                    <td>{{ loan_data.customer_ac_no }}</td>
+                                    <td>N{{ loan_data.customer_balance|default:"0.00"|floatformat:2 }}</td>
+                                    <td><input type="checkbox" name="loans_data" value="{{ loan_data.loan.id }}"></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        <button class="btn btn-success py-3" type="submit">Process Repayments</button>
+                    </form>
+
+                    <!-- Loading spinner -->
+                    <div id="loadingSpinner" class="spinner-border text-success" role="status" style="display: none;">
+                        <span class="sr-only">Processing...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('repaymentForm').addEventListener('submit', function() {
+        document.getElementById('loadingSpinner').style.display = 'block';
+    });
+</script>
+
+<style>
+    .spinner-border {
+        width: 3rem;
+        height: 3rem;
+        border-width: .3rem;
+        margin: 1rem auto;
+    }
+</style>
+{% endblock %}

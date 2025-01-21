@@ -1,0 +1,223 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block title %}
+    LoanHist List
+{% endblock %}
+
+{% block content %}
+            
+    {% include 'includes/alerts.html' %}
+
+    <style>
+        .container-fluid {
+            padding: 20px;
+        }
+
+        .column_title {
+            margin-bottom: 20px;
+        }
+
+        .page_title h2 {
+            margin: 0;
+            color: #333;
+        }
+
+        h5 {
+            margin: 10px 0;
+            color: #555;
+        }
+
+        .table-section {
+            margin-top: 20px;
+        }
+
+        p {
+            margin-bottom: 5px;
+            color: #666;
+        }
+
+        .table {
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #333;
+            color: #fff;
+        }
+
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+
+        .total-row {
+            border-bottom: 3px solid #000;
+            border-top: 3px solid #000;
+        }
+
+        .total-row td {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .office-address {
+            margin-bottom: 20px;
+        }
+
+        .totals-left {
+            float: left;
+        }
+
+        .totals-right {
+            float: right;
+        }
+
+        .form-container {
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .btn-success {
+            background-color: #28a745;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            color: #fff;
+            cursor: pointer;
+        }
+
+        .btn-success:hover {
+            background-color: #218838;
+        }
+    </style>
+
+    <div class="container-fluid">
+        <div class="row column_title">
+            <div class="col-md-12">
+                <div class="page_title">
+                    <h2>LoanHist List</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-12">
+            <div class="white_shd full margin_bottom_30">
+                <div class="table_section padding_infor_info">
+                    <div class="row">
+                        <div class="col-md-12 text-center">
+                            <h4>{{ company.company_name }}</h4>
+                            <p>{{ company.branch_name }}</p>
+                            <p class="office-address">{{ company.office_address }}</p>
+                            <h5 style="color: #1115f0;">LoanHist List</h5> 
+                        </div>
+                    </div>
+                    <div class="row" style="padding: 10px; border-radius: 5px;">
+                        <div class="col-md-12 text-center">
+                            <h5 style="color: #336699; text-align: center;">{{ full_name }}</h5>
+                        </div>
+                        <div class="col-md-12">
+                            <div class="form-container">
+                                <p>Filter by:</p>
+                                <form method="GET" action="{% url 'loan_hist' %}">
+                                    <div class="form-row">
+                                        <div class="form-group col-md-4">
+                                            <label for="gl_no">GL No:</label>
+                                            <input type="text" class="form-control" id="gl_no" name="gl_no" value="{{ gl_no }}">
+                                        </div>
+                                        <div class="form-group col-md-4">
+                                            <label for="ac_no">Account No:</label>
+                                            <input type="text" class="form-control" id="ac_no" name="ac_no" value="{{ ac_no }}">
+                                        </div>
+                                        <div class="form-group col-md-4">
+                                            <label for="cycle">Cycle:</label>
+                                            <input type="text" class="form-control" id="cycle" name="cycle" value="{{ cycle }}">
+                                        </div>
+                                    </div>
+                                    <button type="submit" class="btn btn-success mt-4">Filter</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="table-responsive-sm">
+                        <table class="table">
+                            <thead class="thead-dark">
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Branch</th>
+                                    <th>GL No</th>
+                                    <th>AC No</th>
+                                    <th>Cycle</th>
+                                    <th>Trx Date</th>
+                                    <th>Trx Type</th>
+                                    <th>Trx No</th>
+                                    <th>Principal</th>
+                                    <th>Interest</th>
+                                    <th>Period</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for entry in loan_hist %}
+                                <tr>
+                                    <td>{{ entry.id }}</td>
+                                    <td>{{ entry.branch }}</td>
+                                    <td>{{ entry.gl_no }}</td>
+                                    <td>{{ entry.ac_no }}</td>
+                                    <td>{{ entry.cycle }}</td>
+                                    <td>{{ entry.trx_date }}</td>
+                                    <td>{{ entry.trx_type }}</td>
+                                    <td>{{ entry.trx_no }}</td>
+                                    <td>{{ entry.principal }}</td>
+                                    <td>{{ entry.interest }}</td>
+                                    <td>{{ entry.period }}</td>
+                                    <td>
+                                        <form method="post" action="{% url 'loan_hist' %}">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="id" value="{{ entry.id }}">
+                                            <button type="submit" class="btn btn-danger">Delete</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        <div class="totals-left">
+                            <p>Total Principal: {{ total_principal }}</p>
+                            <p>Total Interest: {{ total_interest }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}

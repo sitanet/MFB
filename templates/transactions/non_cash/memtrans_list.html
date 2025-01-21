@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    Memtrans List
+{% endblock %}
+
+{% block content %}
+    <h1>Memtrans List</h1>
+    <table border="1" >
+        <thead>
+            <tr>
+                <th>Branch</th>
+                <th>Account</th>
+                <!-- <th>Customer</th>
+                <th>Loans</th> -->
+                <th>GL No</th>
+                <th>Ac No</th>
+                <th>Cycle</th>
+                <th>Transaction No</th>
+                <th>Session Date</th>
+                <th>Approval Date</th>
+                <th>Amount</th>
+                <th>Description</th>
+                <th>Error</th>
+                <th>Type</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for memtrans in memtrans_list %}
+            <tr>
+                <td>{{ memtrans.branch }}</td>
+                <td>{{ memtrans.account }}</td>
+                <!-- <td>{{ memtrans.customer.first_name }} {{ memtrans.customer.last_name }}</td>
+                <td>{{ memtrans.customer }}</td> -->
+                <td>{{ memtrans.gl_no }}</td>
+                <td>{{ memtrans.ac_no }}</td>
+                <td>{{ memtrans.cycle }}</td>
+                <td>{{ memtrans.trx_no }}</td>
+                <td>{{ memtrans.ses_date }}</td>
+                <td>{{ memtrans.app_date }}</td>
+                <td>{{ memtrans.amount }}</td>
+                <td>{{ memtrans.description }}</td>
+                <td>{{ memtrans.error }}</td>
+                <td>{{ memtrans.type }}</td>
+                <td>
+                    <form action="{% url 'delete_memtrans' memtrans.id %}" method="post" style="display:inline;">
+                        {% csrf_token %}
+                        <button type="submit" onclick="return confirm('Are you sure you want to delete all transactions with this trx_no?');">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

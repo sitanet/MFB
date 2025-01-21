@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container-fluid">
+  <div class="row">
+  </div>
+
+  <div>
+    <!-- Chart of Account will come here -->
+  </div>
+
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-md-12">
+        <div class="page_title">
+          <h2>Account Setting</h2>
+        </div>
+      </div>
+
+      <div class="col-md-4">
+        <div class="account_setting py-4 fs-5 bg-white">
+          <div class="couter_icon col-md-12">
+            <i class="couter_icon fa fa-list-alt text-primary"></i>
+          </div>
+          <a href="{% url 'chart_of_accounts' %}" class="text-center">
+            <h5 class="my-3">Chart of Account</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-4">
+        <div class="account_setting py-4 fs-5 bg-white rounded rounded-5">
+          <div class="couter_icon col-md-12">
+            <i class="couter_icon fa fa-briefcase text-success"></i>
+          </div>
+          <a href="{% url 'create_bus_sector' %}" class="text-center">
+            <h5 class="my-3">Create Business Sector</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-4">
+        <div class="account_setting py-4 fs-5 bg-white rounded rounded-5">
+          <div class="couter_icon col-md-12">
+            <i class="couter_icon fa fa-user-tie text-warning"></i>
+          </div>
+          <a href="{% url 'create_account_officer' %}" class="text-center">
+            <h5 class="my-3">Create Account Officer</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-4">
+        <div class="account_setting py-4 fs-5 bg-white shadow-lg rounded rounded-5">
+          <div class="couter_icon col-md-12">
+            <i class="couter_icon fa fa-map-marker-alt text-danger"></i>
+          </div>
+          <a href="{% url 'create_region' %}" class="text-center">
+            <h5 class="my-2">Create Region</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-4">
+        <div class="account_setting py-4 fs-5 bg-white shadow-lg rounded rounded-5">
+          <div class="couter_icon col-md-12">
+            <i class="couter_icon fa fa-university text-info"></i>
+          </div>
+          <a href="{% url 'create_id_type' %}" class="text-center">
+            <h5 class="my-2">Define Cash/Bank/Transfer</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-4">
+        <div class="account_setting py-4 fs-5 bg-white shadow-lg rounded rounded-5">
+          <div class="couter_icon col-md-12">
+            <i class="couter_icon fa fa-coins text-success"></i>
+          </div>
+          <a href="#" class="text-center">
+            <h5 class="my-2">Define Cash/Bank/Transfer</h5>
+          </a>
+        </div>
+      </div>
+
+   
+
+   
+
+  
+
+    </div>
+    <!-- footer -->
+    <!-- <div class="container-fluid">
+    <div class="footer">
+       <p>Copyright &copy; 2023 The CityGate Church. All rights reserved.
+       </p>
+    </div>
+ </div> -->
+  </div>
+
+<!-- <h1>Chart of Account</h1> -->
+
+</div>
+
+{% endblock %}

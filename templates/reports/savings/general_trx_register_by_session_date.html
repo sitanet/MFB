@@ -1,0 +1,416 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block content %}
+{% include 'includes/alerts.html' %}
+
+<style>
+    /* Add your CSS styles here */
+    .container-fluid {
+        padding: 20px;
+    }
+
+    .column_title {
+        margin-bottom: 20px;
+    }
+
+    .page_title h2 {
+        margin: 0;
+        color: #333;
+    }
+
+    h5 {
+        margin: 10px 0;
+        color: #555;
+    }
+
+    .table-section {
+        margin-top: 20px;
+    }
+
+    p {
+        margin-bottom: 5px;
+        color: #666;
+    }
+
+    .table {
+        width: 100%;
+        margin-top: 10px;
+    }
+
+    th,
+    td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+    }
+
+    th {
+        background-color: #333;
+        color: #fff;
+    }
+
+    tr:hover {
+        background-color: #f5f5f5;
+    }
+
+    .total-row {
+        border-bottom: 3px solid #000;
+        border-top: 3px solid #000;
+    }
+
+    .total-row td {
+        font-weight: bold;
+        color: #333;
+    }
+
+    .office-address {
+        margin-bottom: 20px;
+    }
+
+    .totals-section {
+        font-weight: bold;
+        margin-top: 20px;
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+    }
+
+    .totals-card {
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 15px;
+        background-color: #f8f9fa;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        width: 48%;
+        margin-bottom: 20px;
+    }
+
+    .totals-card p {
+        margin: 0;
+        font-size: 16px;
+        color: #333;
+    }
+
+    .totals-card p strong {
+        color: #007bff;
+    }
+
+    .print-btn {
+        margin: 20px 0;
+        text-align: right;
+    }
+
+    .hidden {
+        display: none;
+    }
+
+    @media print {
+        body * {
+            visibility: hidden;
+        }
+
+        .printable-area,
+        .printable-area * {
+            visibility: visible;
+        }
+
+        .printable-area {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .print-btn {
+            display: none;
+        }
+
+        /* Ensure all styles are included in the print version */
+        .container-fluid,
+        .column_title,
+        .page_title,
+        h5,
+        .table-section,
+        p,
+        .table,
+        th,
+        td,
+        .total-row,
+        .office-address,
+        .totals-section,
+        .totals-card,
+        .totals-card p,
+        .totals-card p strong {
+            visibility: visible;
+        }
+
+        /* Add specific styles for printing the table header */
+        .table thead th {
+            background-color: #333 !important;
+            color: #fff !important;
+            -webkit-print-color-adjust: exact; /* Ensures colors are printed as specified */
+            print-color-adjust: exact; /* Ensures colors are printed as specified */
+        }
+
+        /* Reset styles for table */
+        .table, .table th, .table td {
+            border: 1px solid #ddd;
+            border-collapse: collapse;
+            padding: 8px;
+            text-align: left;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .totals-card {
+            width: 100%;
+        }
+    }
+
+    .totals-card {
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 15px;
+        background-color: #f8f9fa;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        width: 100%;
+        margin-bottom: 20px;
+    }
+
+    .totals-row {
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+    }
+
+    .totals-item {
+        flex: 1;
+        margin-right: 10px;
+        font-size: 16px;
+        color: #333;
+    }
+
+    .total-debits {
+        color: #007bff;
+        /* Blue color */
+    }
+
+    .total-credits {
+        color: #28a745;
+        /* Green color */
+    }
+    .date-time {
+        font-size: 12px;
+        margin-bottom: 20px;
+       
+        text-align: right; /* Aligns text to the right */
+        width: 100%; /* Ensures the div takes up the full width */
+    }
+</style>
+
+<div class="container-fluid">
+    <div class="row column_title">
+        <div class="col-md-12">
+            <div class="page_title">
+                <h2>General trx Register By Session Date</h2>
+            </div>
+        </div>
+    </div>
+
+    <!-- Print Button -->
+    <div class="row print-btn">
+        <div class="col-md-12 text-right">
+            <button onclick="window.print()" class="btn btn-primary">Print</button>
+        </div>
+    </div>
+
+    <!-- Form for input -->
+    <form id="generateForm" method="post" action="{% url 'general_trx_register_by_session_date' %}" class="chart_of_account p-5 shadow-lg rounded rounded-5 {% if report_data %}hidden{% endif %}">
+        {% csrf_token %}
+        <div class="form-row">
+            <div class="form-group col-md-3">
+                <label for="start_date">Select Start Date</label>
+                <input type="date" class="form-control bg-light" name="start_date" id="start_date" value="{{ start_date }}">
+            </div>
+            <div class="form-group col-md-3">
+                <label for="end_date">Select End Date</label>
+                <input type="date" class="form-control bg-light" name="end_date" id="end_date" value="{{ end_date }}">
+            </div>
+            <div class="form-group col-md-3">
+                <label for="branch">Select Branch</label>
+                <select class="form-control bg-light" name="branch" id="branch">
+                    <option value="">All Branches</option>
+                    {% for company in companies %}
+                    <option value="{{ company.id }}" {% if company.id|stringformat:"s" == selected_branch %}selected{% endif %}>{{ company.branch_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group col-md-3">
+                <label for="user">Select User</label>
+                <select class="form-control bg-light" name="user" id="user">
+                    <option value="">All Users</option>
+                    {% for user in users %}
+                    <option value="{{ user.id }}" {% if user.id|stringformat:"s" == selected_user %}selected{% endif %}>{{ user.username }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group col-md-3">
+                <label for="code">Transaction Type</label>
+                <select class="form-control bg-light" name="code" id="code">
+                    <option value="">Select Transaction Type</option>
+                    <option value="DP" {% if code == 'DP' %}selected{% endif %}>Deposit</option>
+                    <option value="WD" {% if code == 'WD' %}selected{% endif %}>Withdrawal</option>
+                    <option value="GJ" {% if code == 'GJ' %}selected{% endif %}>General Journal</option>
+                    <option value="LD" {% if code == 'LD' %}selected{% endif %}>Loan Disbursement</option>
+                </select>
+            </div>
+        </div>
+        <button type="submit" class="btn w- btn-success mt-4 shadow-sm">Submit</button>
+    </form>
+    
+
+    <!-- Transaction Report Results -->
+    <div class="col-md-12 printable-area {% if not report_data %}hidden{% endif %}">
+        <div class="white_shd full margin_bottom_30">
+            <div class="table_section padding_infor_info">
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="date-time">
+                            {{ current_datetime|date:"d/m/Y" }} <!-- YYYY-MM-DD format -->
+                            <br>
+                            {{ current_datetime|date:"h:i A" }} <!-- HH:MM:SS format -->
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-12 text-center">
+                        <h4>
+                            {% if selected_company %}
+                                {{ selected_company.company_name }}
+                            {% else %}
+                                Company Overview
+                            {% endif %}
+                        </h4>
+                        <p>{{ selected_company.branch_name }}</p>
+                        <p class="office-address">{{ selected_company.office_address }}</p>
+                        
+                        <h5 style="color: #1115f0;">General trx Register By Session Date</h5>
+                        <div class="row justify-content-center">
+                            <div class="col-md-6 text-center">
+                                <p>Reporting from <strong>{{ start_date }}</strong> To <strong>{{ end_date }}</strong></p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                </div>
+                <div class="row" style="padding: 10px; border-radius: 5px;">
+                    <div class="row">
+                        <div class="col-md-12 text-center">
+                            <h5 style="color: #336699; text-align: center;">{{ full_name }}</h5>
+                        </div>
+                    </div>
+                    <!-- <div class="col-md-6">
+                        <p>Reporting from <strong>{{ start_date }}</strong> To <strong>{{ end_date }}</strong></p>
+                    </div> -->
+                </div>
+
+                <div class="table-responsive-sm">
+                    <table class="table">
+                        <thead class="thead-dark">
+                            <tr>
+                                <th>Transaction No.</th>
+                                <th>GL No.</th>
+                                <th>Account No.</th>
+                                <th>Name</th>
+                                
+                                <th>Code</th>
+                                <th>Session Date</th>
+                                <th>Transaction Date</th>
+                                
+                                <th>Debit</th>
+                                <th>Credit</th>
+                                <th>User Name</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for transaction in report_data %}
+                            <tr>
+                                <td>{{ transaction.trx_no }}</td>
+                                <td>{{ transaction.gl_no }}</td>
+                                <td>{{ transaction.ac_no }}</td>
+                                <td>{{ transaction.customer_name }}</td>
+                               
+                                <td>{{ transaction.code }}</td>
+                               
+                                <td>{{ transaction.ses_date }}</td>
+                                <td>{{ transaction.app_date }}</td>
+                                <td>{% if transaction.type == 'D' %}{{ transaction.amount }}{% else %}0{% endif %}</td>
+                                <td>{% if transaction.type == 'C' %}{{ transaction.amount }}{% else %}0{% endif %}</td>
+                                <td>{{ transaction.user.first_name }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr class="total-row">
+                                <td colspan="7" style="text-align: right;"><strong>Total:</strong></td>
+                                <td style="font-weight: bold;">{{ total_debit }}</td>
+                                <td style="font-weight: bold;">{{ total_credit }}</td>
+                                <td style="font-weight: bold;"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                    <div class="totals-section">
+                        <div class="totals-card">
+                            <div class="totals-row">
+                                <p class="totals-item total-debits"><strong>Total Debits:</strong> {{ total_debit }}</p>
+                                <p class="totals-item total-credits"><strong>Total Credits:</strong> {{ total_credit }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var startDateInput = document.getElementById('start_date');
+        var endDateInput = document.getElementById('end_date');
+        var generateForm = document.getElementById('generateForm');
+        var resultsArea = document.querySelector('.printable-area');
+        var companyDate = '{{ company_date }}'; // Assuming company_date is in the 'YYYY-MM-DD' format
+
+        // Hide the results area if there is no data
+        {% if report_data %}
+        resultsArea.classList.remove('hidden');
+        generateForm.classList.add('hidden');
+        {% endif %}
+
+        startDateInput.addEventListener('change', function() {
+            var selectedDate = new Date(startDateInput.value);
+            var companyDateObj = new Date(companyDate);
+
+            if (selectedDate > companyDateObj) {
+                alert('Please select a date not greater than the session date.');
+                startDateInput.value = '{{ company_date }}'; // Clear the input value
+            }
+        });
+
+        endDateInput.addEventListener('change', function() {
+            var selectedDate = new Date(endDateInput.value);
+            var companyDateObj = new Date(companyDate);
+
+            if (selectedDate > companyDateObj) {
+                alert('Please select a date not greater than the session date.');
+                endDateInput.value = '{{ company_date }}'; // Clear the input value
+            }
+        });
+    });
+</script>
+{% endblock %}

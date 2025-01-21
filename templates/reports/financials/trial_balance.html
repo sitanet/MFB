@@ -1,0 +1,375 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block content %}
+{% include 'includes/alerts.html' %}
+
+<style>
+    /* Add your CSS styles here */
+    .container-fluid {
+        padding: 20px;
+    }
+
+    .column_title {
+        margin-bottom: 20px;
+    }
+
+    .page_title h2 {
+        margin: 0;
+        color: #333;
+    }
+
+    h5 {
+        margin: 10px 0;
+        color: #555;
+    }
+
+    .table-section {
+        margin-top: 20px;
+    }
+
+    p {
+        margin-bottom: 5px;
+        color: #666;
+    }
+
+    .table {
+        width: 100%;
+        margin-top: 10px;
+    }
+
+    th,
+    td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+    }
+
+    th {
+        background-color: #333;
+        color: #fff;
+    }
+
+    tr:hover {
+        background-color: #f5f5f5;
+    }
+
+    .total-row {
+        border-bottom: 3px solid #000;
+        border-top: 3px solid #000;
+    }
+
+    .total-row td {
+        font-weight: bold;
+        color: #333;
+    }
+
+    .office-address {
+        margin-bottom: 20px;
+    }
+
+    .totals-section {
+        font-weight: bold;
+        margin-top: 20px;
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+    }
+
+    .totals-card {
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 15px;
+        background-color: #f8f9fa;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        width: 48%;
+        margin-bottom: 20px;
+    }
+
+    .totals-card p {
+        margin: 0;
+        font-size: 16px;
+        color: #333;
+    }
+
+    .totals-card p strong {
+        color: #007bff;
+    }
+
+    .print-btn {
+        margin: 20px 0;
+        text-align: right;
+    }
+
+    .hidden {
+        display: none;
+    }
+
+    @media print {
+        body * {
+            visibility: hidden;
+        }
+
+        .printable-area,
+        .printable-area * {
+            visibility: visible;
+        }
+
+        .printable-area {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .print-btn {
+            display: none;
+        }
+
+        /* Ensure all styles are included in the print version */
+        .container-fluid,
+        .column_title,
+        .page_title,
+        h5,
+        .table-section,
+        p,
+        .table,
+        th,
+        td,
+        .total-row,
+        .office-address,
+        .totals-section,
+        .totals-card,
+        .totals-card p,
+        .totals-card p strong {
+            visibility: visible;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .totals-card {
+            width: 100%;
+        }
+    }
+
+    .totals-card {
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 15px;
+        background-color: #f8f9fa;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        width: 100%;
+        margin-bottom: 20px;
+    }
+
+    .totals-row {
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+    }
+
+    .totals-item {
+        flex: 1;
+        margin-right: 10px;
+        font-size: 16px;
+        color: #333;
+    }
+
+    .total-assets {
+        color: #007bff;
+        /* Blue color */
+    }
+
+    .total-liabilities {
+        color: #28a745;
+        /* Green color */
+    }
+
+    .total-equities {
+        color: #ffc107;
+        /* Yellow color */
+    }
+
+    .total-incomes {
+        color: #dc3545;
+        /* Red color */
+    }
+
+    .total-expenses {
+        color: #17a2b8;
+        /* Teal color */
+    }
+</style>
+
+<div class="container-fluid">
+    <div class="row column_title">
+        <div class="col-md-12">
+            <div class="page_title">
+                <h2>Trial Balance</h2>
+            </div>
+        </div>
+    </div>
+
+    <!-- Print Button -->
+    <div class="row print-btn">
+        <div class="col-md-12 text-right">
+            <button onclick="window.print()" class="btn btn-primary">Print</button>
+        </div>
+    </div>
+
+    <!-- Form for input -->
+    <form id="generateForm" method="post" action="{% url 'trial_balance' %}" class="chart_of_account p-5 shadow-lg rounded rounded-5">
+        {% csrf_token %}
+        <div class="form-row">
+            <div class="form-group col-md-3">
+                <label for="start_date">Select Start Date</label>
+                <input type="date" class="form-control bg-light" name="start_date" id="start_date" value="{{ start_date }}">
+            </div>
+            <div class="form-group col-md-3">
+                <label for="end_date">Select End Date</label>
+                <input type="date" class="form-control bg-light" name="end_date" id="end_date" value="{{ end_date }}">
+            </div>
+            <div class="form-group col-md-3">
+                <label for="branch">Select Branch</label>
+                <select class="form-control bg-light" name="branch" id="branch">
+                    <option value="">All Branches</option>
+                    {% for company in companies %}
+                    <option value="{{ company.id }}" {% if company.id|stringformat:"s" == selected_branch %}selected{% endif %}>{{ company.branch_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <button type="submit" class="btn w- btn-success mt-4 shadow-sm">Submit</button>
+    </form>
+
+    <!-- Trial Balance Results (Initially hidden) -->
+    <div class="col-md-12 printable-area hidden">
+        <div class="white_shd full margin_bottom_30">
+            <div class="table_section padding_infor_info">
+                <div class="row">
+                    <div class="col-md-12 text-center">
+                        <h4>{{ company.company_name }}</h4>
+                        <p>{{ company.branch_name }}</p>
+                        <p class="office-address">{{ company.office_address }}</p>
+                        <h5 style="color: #1115f0;">Trial Balance</h5>
+                    </div>
+                </div>
+                <div class="row" style="padding: 10px; border-radius: 5px;">
+                    <div class="row">
+                        <div class="col-md-12 text-center">
+                            <h5 style="color: #336699; text-align: center;">{{ full_name }}</h5>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <p>Reporting from <strong>{{ start_date }}</strong> To <strong>{{ end_date }}</strong></p>
+                    </div>
+                </div>
+
+                <div class="table-responsive-sm">
+                    <table class="table">
+                        <thead class="thead-dark">
+                            <tr>
+                                <th>GL No.</th>
+                                <th>Account Name</th>
+                                <th>Debit</th>
+                                <th>Credit</th>
+                                <th>Balance</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for entry in trial_balance_data %}
+                            <tr>
+                                <td>{{ entry.gl_no }}</td>
+                                <td>{{ entry.gl_name }}</td>
+                                <td>{{ entry.credit }}</td>
+                                <td>{{ entry.debit }}</td>
+                                
+                                <td>{% if entry.balance < 0 %}<span style="color: red;">{{ entry.balance }}</span>{% else %}{{ entry.balance }}{% endif %}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr class="total-row">
+                                <td colspan="2" style="text-align: right;"><strong></strong></td>
+                                <td style="font-weight: bold;">{{ total_debit }}</td>
+                                <td style="font-weight: bold;">{{ total_credit }}</td>
+                                <td style="font-weight: bold; {% if total_balance < 0 %}color: red;{% endif %}">{{ total_balance }}</td>
+                            </tr>
+                            <!-- <tr class="total-row">
+                                    <td colspan="2" style="text-align: right;"><strong>Total Credit:</strong></td>
+                                    <td></td>
+                                    <td style="font-weight: bold;">{{ total_credit }}</td>
+                                    <td></td>
+                                </tr> -->
+                            <!-- <tr class="total-row">
+                                    <td colspan="4" style="text-align: right;"><strong>Total Balance:</strong></td>
+                                    <td style="font-weight: bold; {% if total_balance < 0 %}color: red;{% endif %}">{{ total_balance }}</td>
+                                </tr> -->
+                        </tfoot>
+                    </table>
+                    <div class="totals-section">
+                        <div class="totals-card">
+                            <div class="totals-row">
+                                {% if subtotal_1 %}
+                                <p class="totals-item total-assets"><strong>Total Assets:</strong> {{ subtotal_1 }}</p>
+                                {% endif %}
+                                {% if subtotal_2 %}
+                                <p class="totals-item total-liabilities"><strong>Total Liabilities:</strong> {{ subtotal_2 }}</p>
+                                {% endif %}
+                                {% if subtotal_3 %}
+                                <p class="totals-item total-equities"><strong>Total Equities:</strong> {{ subtotal_3 }}</p>
+                                {% endif %}
+                                {% if subtotal_4 %}
+                                <p class="totals-item total-incomes"><strong>Total Incomes:</strong> {{ subtotal_4 }}</p>
+                                {% endif %}
+                                {% if subtotal_5 %}
+                                <p class="totals-item total-expenses"><strong>Total Expenses:</strong> {{ subtotal_5 }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var startDateInput = document.getElementById('start_date');
+        var endDateInput = document.getElementById('end_date');
+        var generateForm = document.getElementById('generateForm');
+        var resultsArea = document.querySelector('.printable-area');
+        var companyDate = '{{ company_date }}'; // Assuming company_date is in the 'YYYY-MM-DD' format
+
+        // Hide the results area if there is no data
+        {% if trial_balance_data %}
+        resultsArea.classList.remove('hidden');
+        generateForm.classList.add('hidden');
+        {% endif %}
+
+        startDateInput.addEventListener('change', function() {
+            var selectedDate = new Date(startDateInput.value);
+            var companyDateObj = new Date(companyDate);
+
+            if (selectedDate > companyDateObj) {
+                alert('Please select a date not greater than the session date.');
+                startDateInput.value = '{{ company_date }}'; // Clear the input value
+            }
+        });
+
+        endDateInput.addEventListener('change', function() {
+            var selectedDate = new Date(endDateInput.value);
+            var companyDateObj = new Date(companyDate);
+
+            if (selectedDate > companyDateObj) {
+                alert('Please select a date not greater than the session date.');
+                endDateInput.value = '{{ company_date }}'; // Clear the input value
+            }
+        });
+    });
+</script>
+{% endblock %}

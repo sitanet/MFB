@@ -1,0 +1,136 @@
+<!-- templates/loans/add_loan_provision.html -->
+
+{% extends 'base.html' %}
+
+{% block title %}Add Loan Provision{% endblock %}
+
+{% block content %}
+    <!-- Container for Page Title -->
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="page_title mb-4">
+                    <h2>Add Loan Provision</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Page Header and Back Button -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3">Add Loan Provision</h1>
+        <a href="{% url 'loan_provision_list' %}" class="btn btn-secondary">Back to List</a>
+    </div>
+
+    <!-- Bootstrap Card to contain the form -->
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">New Loan Provision</h5>
+            <!-- Form -->
+            <form method="POST" id="loan-provision-form">
+                {% csrf_token %}
+                
+                <!-- Container for dynamic rows -->
+                <div id="provision-rows">
+                    <!-- Existing row (if any) -->
+                    {% if provision_rows %}
+                        {% for provision in provision_rows %}
+                            <div class="row mb-3 provision-row">
+                                <div class="col-md-3">
+                                    <label class="form-label">Name</label>
+                                    <input type="text" name="name[]" class="form-control" value="{{ provision.name }}">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Min Days</label>
+                                    <input type="number" name="min_days[]" class="form-control" value="{{ provision.min_days }}">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Max Days</label>
+                                    <input type="number" name="max_days[]" class="form-control" value="{{ provision.max_days }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Rate</label>
+                                    <input type="text" name="rate[]" class="form-control" value="{{ provision.rate }}">
+                                </div>
+                                <div class="col-md-1 d-flex align-items-center">
+                                    <button type="button" class="btn btn-danger btn-sm remove-row-btn">Remove</button>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <!-- Default empty row -->
+                        <div class="row mb-3 provision-row">
+                            <div class="col-md-3">
+                                <label class="form-label">Name</label>
+                                <input type="text" name="name[]" class="form-control" placeholder="Provision Name">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Min Days</label>
+                                <input type="number" name="min_days[]" class="form-control" placeholder="Min Days">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Max Days</label>
+                                <input type="number" name="max_days[]" class="form-control" placeholder="Max Days">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Rate</label>
+                                <input type="text" name="rate[]" class="form-control" placeholder="Rate">
+                            </div>
+                            <div class="col-md-1 d-flex align-items-center">
+                                <button type="button" class="btn btn-danger btn-sm remove-row-btn">Remove</button>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="d-flex justify-content-between mb-3">
+                    <button type="button" id="add-row-btn" class="btn btn-info">Add Row</button>
+                    <button type="submit" class="btn btn-success ml-auto">Save Provisions</button>
+                </div>
+                
+            </form>
+        </div>
+    </div>
+
+    <!-- JavaScript for Dynamic Rows -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const addRowBtn = document.getElementById('add-row-btn');
+            const provisionRowsContainer = document.getElementById('provision-rows');
+
+            addRowBtn.addEventListener('click', function() {
+                const rowCount = provisionRowsContainer.getElementsByClassName('provision-row').length;
+                const newRow = document.createElement('div');
+                newRow.className = 'row mb-3 provision-row';
+                newRow.innerHTML = `
+                    <div class="col-md-3">
+                        <label class="form-label">Name</label>
+                        <input type="text" name="name[]" class="form-control" placeholder="Provision Name">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Min Days</label>
+                        <input type="number" name="min_days[]" class="form-control" placeholder="Min Days">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Max Days</label>
+                        <input type="number" name="max_days[]" class="form-control" placeholder="Max Days">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Rate</label>
+                        <input type="text" name="rate[]" class="form-control" placeholder="Rate">
+                    </div>
+                    <div class="col-md-1 d-flex align-items-center">
+                        <button type="button" class="btn btn-danger btn-sm remove-row-btn">Remove</button>
+                    </div>
+                `;
+                provisionRowsContainer.appendChild(newRow);
+            });
+
+            // Event delegation for dynamically added remove buttons
+            provisionRowsContainer.addEventListener('click', function(event) {
+                if (event.target.classList.contains('remove-row-btn')) {
+                    event.target.closest('.provision-row').remove();
+                }
+            });
+        });
+    </script>
+{% endblock content %}

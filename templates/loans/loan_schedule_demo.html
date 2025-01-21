@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="page_title">
+                <h2>Loan Simulation Schedule</h2>
+            </div>
+        </div>
+        <div class="container deposit p-5 shadow-lg rounded rounded-5">
+            <a href="{% url 'loans' %}" style="color: green; font-weight: bold; text-align: right; display: block;">Loans Menu</a>
+            <div class="row mb-3">
+                <div class="col-md-12 text-right">
+                    <!-- Print Button -->
+                    <button class="btn btn-success" id="printButton" onclick="printReport()">Print Report</button>
+                </div>
+            </div>
+            <div class="row mt-3 table-row1">
+                <div class="col-md-12 justify-content-center text-center m-auto">
+                    <table class="table table-responsive table-hover">
+                        <thead class="thead-dark">
+                            <tr>
+                                <th>Period</th>
+                                <th>Payment Date</th>
+                                <th>Principal Payment</th>
+                                <th>Interest Payment</th>
+                                <th>Total Payment</th>
+                                <th>Principal Remaining</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for payment in loan_schedule %}
+                            <tr>
+                                <td>{{ payment.period }}</td>
+                                <td>{{ payment.payment_date|date:"d-m-Y" }}</td>
+                                <td>{{ payment.principal_payment|floatformat:2|intcomma }}</td>
+                                <td>{{ payment.interest_payment|floatformat:2|intcomma }}</td>
+                                <td>{{ payment.total_payment|floatformat:2|intcomma }}</td>
+                                <td>{{ payment.principal_remaining|floatformat:2|intcomma }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="2"><strong>Total</strong></td>
+                                <td><strong>{{ total_principal_sum|floatformat:2|intcomma }}</strong></td>
+                                <td><strong>{{ total_interest_sum|floatformat:2|intcomma }}</strong></td>
+                                <td><strong>{{ total_payments_sum|floatformat:2|intcomma }}</strong></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript for Print Button -->
+<script>
+    function printReport() {
+        window.print();
+    }
+</script>
+
+<!-- Print-Specific CSS -->
+<style>
+    @media print {
+        .container-fluid {
+            width: 100%;
+            padding: 0;
+        }
+
+        .row {
+            margin: 0;
+        }
+
+        .text-right {
+            text-align: left;
+        }
+
+        .btn {
+            display: none;
+        }
+    }
+</style>
+{% endblock %}

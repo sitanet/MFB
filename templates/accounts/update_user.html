@@ -1,0 +1,139 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block content %}
+      
+            {% include 'includes/alerts.html' %}
+                                    
+            
+               <div class="container-fluid">
+                     <div class="row column_title">
+                         <div class="col-md-12">
+                               <div class="page_title">
+                                       <h2>User Form</h2>
+                               </div>
+                         </div>
+                     </div>
+           
+                    
+                             <!-- <header>Registration</header> -->
+
+                            <p style="color: red;">{{ form.errors }}</p> 
+                            
+                            
+                     
+                     <form method="post" class="bg-white p-5 rounded rounded-5 shadow">
+                        <!-- <h4>User Form</h4> -->
+
+                        {% csrf_token %}
+                        {{ form.errors }}
+            
+                        {% if messages %}
+                        <ul class="messages">
+                            {% for message in messages %}
+                                <li style="font-size: 50px; color: brown;"  {% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                        <div class="form-row">
+                    
+                           <!-- <div class="form-group col-md-6">
+                              <label for="fName">Branch</label>
+                              <input type="text" name="branch" class="form-control bg-light" value="{{ form.instance.branch.branch_name }}">
+                          </div> -->
+
+                          <div class="form-group col-md-6">
+                           <label for="branch">Branch</label>
+                           <select name="branch" class="form-control bg-light">
+                               <option value="">Select a Branch</option>
+                               {% for branch in branch %}
+                                   <option value="{{ branch.id }}" {% if branch.id == form.branch.value %}selected{% endif %}>{{ branch.branch_name }}</option>
+                               {% endfor %}
+                           </select>
+                       </div>
+                    
+                           <div class="form-group col-md-6">
+                              <label for="fName">First Name</label>
+                              <input type="text" name="first_name" class="form-control bg-light"  value="{{ form.first_name.value }}">
+                              
+                           </div>
+                           <div class="form-group col-md-6">
+                            <label for="fName">Last Name</label>
+                            <input type="text" name="last_name" class="form-control bg-light" placeholder="Last Name" value="{{ form.last_name.value }}">
+                            
+                         </div>
+   
+                           <div class="form-group col-md-6">
+                              <label for="address">Email Address</label>
+                              <input type="email" name="email" class="form-control bg-light" placeholder="Email Address" value="{{ form.email.value }}">
+                           </div>
+                           <div class="form-group col-md-6">
+                              <label for="Phone">Phone Number</label>
+                              <input type="tel" name="phone_number" class="form-control bg-light" placeholder="Phone Number" value="{{ form.phone_number.value }}">
+                           </div>
+   
+                           <div class="form-group col-md-6">
+                              <label for="marital">Role</label>
+                              <select class="form-control bg-light" name="role" id=""  required>
+                                 <option value="">Select Role</option>
+                              
+
+                                 {% for choice in form.role.field.choices %}
+                                 <option value="{{ choice.0 }}" {% if choice.0 == form.role.value %}selected{% endif %}>
+                                     {{ choice.1 }}
+                                 </option>
+                             {% endfor %}
+   
+                              </select>
+                            
+                           </div>
+                           <div class="form-group col-md-6">
+                            <label for="fName">Username</label>
+                            <input type="text" name="username" class="form-control bg-light" placeholder="Username" value="{{ form.username.value }}">
+                            
+                         </div>
+
+                         <!-- <div class="form-group col-md-6">
+                           <label for="fName">Cashier GL?</label>
+                           <input type="text" name="cashier_gl" class="form-control bg-light" placeholder="Cashier GL" value="{{ form.cashier_gl.value }}">
+                           
+                        </div> -->
+
+                        <div class="form-group col-md-6">
+                           <label for="marital">Cashier GL?</label>
+                           <select class="form-control bg-light" name="cashier_gl" id="role" required>
+                               <option value="">Select Cashier GL?</option>
+                               {% for customer in customer %}
+                                   <option value="{{ customer.gl_no }}">{{ customer.first_name }}</option>
+                               {% endfor %}
+                           </select>
+                       </div>
+                        <div class="form-group col-md-6">
+                           <label for="fName">Cashier AC?</label>
+                           <input type="text" name="cashier_ac" class="form-control bg-light" placeholder="Cashier AC" value="{{ form.cashier_ac.value }}">
+                           
+                        </div>
+                           <div class="form-group col-md-6">
+                              <label for="occupation">Password </label>
+                              <input type="password" class="form-control bg-light" placeholder="password" value="{{ form.password.value }}" disabled>
+                           </div>
+                           <div class="form-group col-md-6">
+                              <label for="id">Confirm Password</label>
+                              <input type="password" name="confirm_password" class="form-control bg-light" placeholder="Confirm Password" value="{{ form.confirm_password.value }}" disabled>
+                           </div>
+                           <!-- <div class="form-group col-md-6">
+                              <label for="email">Department</label>
+                              <input type="email" class="form-control bg-light" placeholder="Email Address">
+                           </div> -->
+                        </div>
+                        <button type="submit" class="btn w-100 btn-danger mt-4 shadow-sm">Submit</button>
+                     </form>
+                           
+                </div>
+            
+                
+            
+            
+            
+                  {% endblock %}

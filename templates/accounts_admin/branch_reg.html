@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+
+
+{% block content %}
+
+
+
+<div class="container-fluid">
+  <div class="row">
+        <div class="col-md-12">
+              <div class="page_title">
+                    <h2>Create Branch</h2>
+              </div>
+        </div>
+        <!-- form -->
+        <form method="POST" class="chart_of_account p-5 shadow-lg rounded rounded-5">
+            {% csrf_token %}
+            {% if messages %}
+    <ul class="messages">
+        {% for message in messages %}
+            <li style="font-size: 30px; color: brown; font-weight: bold;"  {% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+        {% endfor %}
+    </ul>
+{% endif %}
+<h6 style="color: red;" >{{ form.errors }}</h6>
+              <div class="form-row">
+                  <div class="form-group col-md-4">
+                        <label for="">Branch</label>
+                        <select class="form-control bg-light" id="general_ledger_type"
+                              name="double_entry_type" required>
+                              <option value="">-- Select --</option>
+                              <option value="1">Debit & Credit</option>
+                              <option value="2">Credit</option>
+                              <option value="3">Debit</option>
+                             
+                        </select>
+                  </div>
+                    <div class="form-group col-md-4">
+                          <label for="general_ledger_accout_no">General Ledger Name.</label>
+                          <input type="text" class="form-control bg-light"
+                                id="general_ledger_accout_no"
+                                name="gl_no">
+                    </div>
+                    <div class="form-group col-md-4">
+                          <label for="general_ledger_accout_name">Account No</label>
+                          <input type="text" class="form-control bg-light"
+                                id="general_ledger_accout_name"
+                                name="gl_name" value="1" disabled>
+                    </div>
+
+                    <div class="form-group col-md-4">
+                     
+                 
+                  
+                  </div>
+
+               
+
+               
+              
+
+                  
+                    
+                  
+
+                   
+                    
+                          
+                    <!-- <button type="submit"
+                          class="btn w- btn-success mt-4 shadow-sm">Delete</button> -->
+              </div>
+              <button type="submit"
+                          class="btn w- btn-success mt-4 shadow-sm">Add</button>
+        </form>
+
+        <div>
+              <!-- Chart of Accoutwill come here -->
+        </div>
+
+
+  </div>
+
+</div>
+<!-- <h1>Chart of Account</h1> -->
+
+
+  
+    
+    {% endblock %}

@@ -1,0 +1,260 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block content %}
+    {% include 'includes/alerts.html' %}
+
+    <style>
+        /* Add your CSS styles here */
+        .container-fluid {
+            padding: 20px;
+        }
+
+        .column_title {
+            margin-bottom: 20px;
+        }
+
+        .page_title h2 {
+            margin: 0;
+            color: #333;
+        }
+
+        h5 {
+            margin: 10px 0;
+            color: #555;
+        }
+
+        .table-section {
+            margin-top: 20px;
+        }
+
+        p {
+            margin-bottom: 5px;
+            color: #666;
+        }
+
+        .table {
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #333;
+            color: #fff;
+        }
+
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+
+        .total-row {
+            border-bottom: 3px solid #000;
+            border-top: 3px solid #000;
+        }
+
+        .total-row td {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .office-address {
+            margin-bottom: 20px;
+        }
+
+        .totals-left {
+            float: left;
+        }
+
+        .totals-right {
+            float: right;
+        }
+
+        .print-btn {
+            margin: 20px 0;
+            text-align: right;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            .printable-area, .printable-area * {
+                visibility: visible;
+            }
+            .printable-area {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                padding: 20px;
+                box-sizing: border-box;
+            }
+            .print-btn {
+                display: none;
+            }
+        }
+    </style>
+
+    <div class="container-fluid">
+        <div class="row column_title">
+            <div class="col-md-12">
+                <div class="page_title">
+                    <h2>Balance Sheet</h2>
+                </div>
+            </div>
+        </div>
+
+        <!-- Print Button -->
+        <div class="row print-btn">
+            <div class="col-md-12 text-right">
+                <button onclick="window.print()" class="btn btn-primary">Print</button>
+            </div>
+        </div>
+
+        <!-- Form for input -->
+        <form id="generateForm" method="post" action="{% url 'balance_sheet' %}" class="chart_of_account p-5 shadow-lg rounded rounded-5">
+            {% csrf_token %}
+            <div class="form-row">
+                <div class="form-group col-md-3">
+                    <label for="start_date">Select Start Date</label>
+                    <input type="date" class="form-control bg-light" name="start_date" id="start_date" value="{{ start_date }}">
+                </div>
+                <div class="form-group col-md-3">
+                    <label for="end_date">Select End Date</label>
+                    <input type="date" class="form-control bg-light" name="end_date" id="end_date" value="{{ end_date }}">
+                </div>
+                <div class="form-group col-md-3">
+                    <label for="branch">Select Branch</label>
+                    <select class="form-control bg-light" name="branch" id="branch">
+                        <option value="">All Branches</option>
+                        {% for company in companies %}
+                            <option value="{{ company.id }}" {% if company.id|stringformat:"s" == selected_branch %}selected{% endif %}>{{ company.branch_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit" class="btn w- btn-success mt-4 shadow-sm">Submit</button>
+            </div>
+        </form>
+
+        <!-- Balance Sheet Results (Initially hidden) -->
+        <div class="col-md-12 printable-area hidden">
+            <div class="white_shd full margin_bottom_30">
+                <div class="table_section padding_infor_info">
+                    <div class="row">
+                        <div class="col-md-12 text-center">
+                            <h4>{{ company.company_name }}</h4>
+                            <p>{{ company.branch_name }}</p>
+                            <p class="office-address">{{ company.office_address }}</p>
+                            <h5 style="color: #1115f0;">Balance Sheet</h5>
+                        </div>
+                    </div>
+                    <div class="row" style="padding: 10px; border-radius: 5px;">
+                        <div class="row">
+                            <div class="col-md-12 text-center">
+                                <h5 style="color: #336699; text-align: center;">Balance Sheet</h5>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <p>Reporting from <strong>{{ start_date }}</strong> To <strong>{{ end_date }}</strong></p>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive-sm">
+                        <table class="table">
+                            <thead class="thead-dark">
+                                <tr>
+                                    <th>GL No.</th>
+                                    <th>Account Name</th>
+                                    <th>Debit</th>
+                                    <th>Credit</th>
+                                    <th>Balance</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for entry in balance_sheet_data %}
+                                    <tr>
+                                        <td>{{ entry.gl_no }}</td>
+                                        <td>{{ entry.gl_name }}</td>
+                                        <td>{{ entry.debit }}</td>
+                                        <td>{{ entry.credit }}</td>
+                                        <td>{{ entry.balance }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        <div class="totals-left">
+                            <p>Total Debit: {{ total_debit }}</p>
+                            <p>Total Credit: {{ total_credit }}</p>
+                            <p>Total Balance: {{ total_balance }}</p>
+                        </div>
+                        <div class="totals-right">
+                            {% if subtotal_4 %}
+                                <p>Total Incomes: {{ subtotal_4 }}</p>
+                            {% endif %}
+                            {% if subtotal_5 %}
+                                <p>Total Expenses: {{ subtotal_5 }}</p>
+                            {% endif %}
+                            <p><strong>Net Income: {{ net_income }}</strong></p>
+                        </div>
+ 
+                    </div>
+                    {% if subtotal_4 or subtotal_5 %}
+                    <p style="font-size: 18px; font-weight: bold; {% if net_income < 0 %}color: red;{% endif %}">
+                        <em>The Net position of Statement of Profit or Loss as at {{ end_date }} is:</em> N{{ net_income }}
+                    </p>
+                {% endif %}
+                </div>
+              
+            </div>
+           
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var startDateInput = document.getElementById('start_date');
+            var endDateInput = document.getElementById('end_date');
+            var generateForm = document.getElementById('generateForm');
+            var resultsArea = document.querySelector('.printable-area');
+            var companyDate = '{{ company_date }}'; // Assuming company_date is in the 'YYYY-MM-DD' format
+
+            // Hide the results area if there is no data
+            {% if balance_sheet_data %}
+                resultsArea.classList.remove('hidden');
+                generateForm.classList.add('hidden');
+            {% endif %}
+
+            startDateInput.addEventListener('change', function() {
+                var selectedDate = new Date(startDateInput.value);
+                var companyDateObj = new Date(companyDate);
+
+                if (selectedDate > companyDateObj) {
+                    alert('Please select a date not greater than the session date.');
+                    startDateInput.value = '{{ company_date }}'; // Clear the input value
+                }
+            });
+
+            endDateInput.addEventListener('change', function() {
+                var selectedDate = new Date(endDateInput.value);
+                var companyDateObj = new Date(companyDate);
+
+                if (selectedDate > companyDateObj) {
+                    alert('Please select a date not greater than the session date.');
+                    endDateInput.value = '{{ company_date }}'; // Clear the input value
+                }
+            });
+        });
+    </script>
+
+{% endblock %}

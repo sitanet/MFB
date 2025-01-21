@@ -1,0 +1,50 @@
+#account-tree {
+    list-style: none;
+    padding-left: 20px;
+    font-weight: 900;
+    font-size: 20px;
+    color: purple;
+    font-family:Arial, Helvetica, sans-serif;
+   }
+   #account-tree,
+   #account-tree li.child,
+   #account-tree li.grandchild {
+    cursor: pointer;
+   }
+   
+   #account-tree li.child{
+    color: green;
+   }
+   
+   #account-tree li.grandchild{
+    color: orangered;
+   }
+
+   #account-tree li.greatgrandchild{
+    color: #00008B;
+   }
+   
+   #account-tree ul {
+    display: none;
+    margin-left: 20px;
+   
+   }
+   
+   #account-tree li.expanded > ul {
+    display: block;
+   }
+   
+   ul {
+   list-style: none; /* Remove default list bullets */
+   }
+   
+   /* li::before {
+   content: "-"; 
+   margin-right: 1px; 
+   }
+    */
+   #grandchild li{
+   list-style:none;
+   }
+   
+   

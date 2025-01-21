@@ -1,0 +1,88 @@
+<!-- templates/transactions/calculate_interest.html -->
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Title -->
+    <div class="row column_title mb-4">
+        <div class="col-md-12">
+            <div class="page_title">
+                <h2>Calculate Interest</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid mt-4">
+  
+
+    <div class="card mb-4">
+      
+        <div class="card-body">
+            <form method="post" action="{% url 'calculate_interest' %}">
+                {% csrf_token %}
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="gl_no" class="form-label">GL Number:</label>
+                        <input type="text" id="gl_no" name="gl_no" class="form-control" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="start_date" class="form-label">Start Date:</label>
+                        <input type="date" id="start_date" name="start_date" class="form-control" required>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="end_date" class="form-label">End Date:</label>
+                        <input type="date" id="end_date" name="end_date" class="form-control" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="ses_date" class="form-label">Session Date:</label>
+                        <input type="date" id="ses_date" name="ses_date" class="form-control" required>
+                    </div>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <button type="submit" name="action" value="preview" class="btn btn-primary">Preview</button>
+                    <button type="submit" name="action" value="save" class="btn btn-success">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if results %}
+        <h3 class="mb-4">Calculation Results:</h3>
+        <div class="table-responsive">
+            <table class="table table-bordered table-striped">
+                <thead class="table-dark">
+                    <tr>
+                        <th>GL No</th>
+                        <th>Account No</th>
+                        <th>Total Amount</th>
+                        <th>Interest Rate</th>
+                        <th>Total Interest</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for result in results %}
+                        <tr>
+                            <td>{{ result.gl_no }}</td>
+                            <td>{{ result.ac_no }}</td>
+                            <td>{{ result.total_amount }}</td>
+                            <td>{{ result.interest_rate }}</td>
+                            <td>{{ result.total_interest }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr class="table-active">
+                        <td colspan="2"><strong>Totals:</strong></td>
+                        <td>{{ total_amount_sum }}</td>
+                        <td></td>
+                        <td>{{ total_interest_sum }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

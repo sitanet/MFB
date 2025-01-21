@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container-fluid">
+  <div class="row">
+    <!-- Chart of Account will come here -->
+  </div>
+
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-md-12">
+        <div class="page_title">
+          <h2>Financial Report</h2>
+        </div>
+      </div>
+
+      <div class="col-md-3 mb-3">
+        <div class="account_setting py-5 fs-1 bg-white">
+          <div class="couter_icon col-md-10">
+            <i class="couter_icon fa fa-balance-scale" style="font-size: 24px; color: #f39c12;"></i>
+          </div>
+          <a href="{% url 'trial_balance' %}" class="text-center">
+            <h5 class="my-2">Trial Balance</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-3 mb-3">
+        <div class="account_setting py-5 fs-1 bg-white rounded rounded-5">
+          <div class="couter_icon col-md-10">
+            <i class="couter_icon fa fa-file-invoice-dollar" style="font-size: 24px; color: #27ae60;"></i>
+          </div>
+          <a href="{% url 'balance_sheet' %}" class="text-center">
+            <h5 class="my-2">Balance Sheet</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-3 mb-3">
+        <div class="account_setting py-5 fs-1 bg-white">
+          <div class="couter_icon col-md-10">
+            <i class="couter_icon fa fa-chart-line" style="font-size: 24px; color: #3498db;"></i>
+          </div>
+          <a href="{% url 'profit_and_loss' %}" class="text-center">
+            <h5 class="my-2">Profit/Loss Report</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-3 mb-3">
+        <div class="account_setting py-5 fs-1 bg-white shadow-lg rounded rounded-5">
+          <div class="couter_icon col-md-10">
+            <i class="couter_icon fa fa-file-alt" style="font-size: 24px; color: #8e44ad;"></i>
+          </div>
+          <a href="{% url 'customer_list' %}" class="text-center">
+            <h5 class="my-2">General Report</h5>
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+{% endblock %}

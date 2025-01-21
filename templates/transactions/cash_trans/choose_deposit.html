@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="page_title">
+                <h2>Choose Deposit</h2>
+            </div>
+        </div>
+        <!-- SearchTable -->
+        <div class="container deposit p-5 shadow-lg rounded rounded-5">
+
+            
+
+            
+            <div class="row mt-3 table-row1">
+
+                <div class="col-md-3 mb-3">
+                    <div class="account_setting  py-5 fs-1 bg-white shadow-lg rounded rounded-5">
+                       <div class="couter_icon  col-md-3">
+                          <i class="couter_icon fa fa-user yellow_color"></i>
+                       </div>
+                       <a href="{% url 'loans' %}" class="text-center">
+                          <h5 class="my-2">Loan Simulation</h5>
+                       </a>
+                    </div>
+                 </div>
+                 <div class="col-md-3 mb-3">
+                    <div class="account_setting  py-5 fs-1 bg-white shadow-lg rounded rounded-5">
+                       <div class="couter_icon  col-md-3">
+                          <i class="couter_icon fa fa-user yellow_color"></i>
+                       </div>
+                       <a href="{% url 'loans' %}" class="text-center">
+                          <h5 class="my-2">Loan Simulation</h5>
+                       </a>
+                    </div>
+                 </div>
+                 <div class="col-md-3 mb-3">
+                    <div class="account_setting  py-5 fs-1 bg-white shadow-lg rounded rounded-5">
+                       <div class="couter_icon  col-md-3">
+                          <i class="couter_icon fa fa-user yellow_color"></i>
+                       </div>
+                       <a href="{% url 'loans' %}" class="text-center">
+                          <h5 class="my-2">Loan Simulation</h5>
+                       </a>
+                    </div>
+                 </div>
+                 <div class="col-md-3 mb-3">
+                    <div class="account_setting  py-5 fs-1 bg-white shadow-lg rounded rounded-5">
+                       <div class="couter_icon  col-md-3">
+                          <i class="couter_icon fa fa-user yellow_color"></i>
+                       </div>
+                       <a href="{% url 'loans' %}" class="text-center">
+                          <h5 class="my-2">Loan Simulation</h5>
+                       </a>
+                    </div>
+                 </div>
+                <div class="col-md-12 justify-content-center text-center m-auto">
+                    <div class="input-group mb-3">
+                        <input type="text" class="form-control form-control-lg bg-white border"
+                            placeholder="Search..." id="searchInput">
+                        <div class="">
+                            <button class="btn btn-success py-3" type="button"
+                                onclick="searchTable()">Search</button>
+                        </div>
+                    </div>
+                    <script>
+                        // JavaScript function to go back in history
+                        function goBack() {
+                            window.history.back();
+                        }
+                    </script>
+                    <button class="btn btn-success" onclick="goBack()">Back</button>
+
+                    <!-- table -->
+                    <table class="table table-responsive table-hover">
+                        <thead class="thead-dark">
+                            <tr>
+                                <th class="teller">Teller Fullname</th>
+                                <th class="teller">Teller Account No.</th>
+                                <th class="teller">Teller GL No.</th>
+                                <th>Passport</th>
+                                <th>First Name</th>
+                                <th>Last Name</th>
+                                <th>GL No.</th>
+                                <th>Account No.</th>
+                                <th>Balance</th>
+                                <th>Branch</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in total_amounts %}
+                                <tr>
+                                    <td class="teller">{{ item.customer.first_name }} {{ item.customer.last_name }}</td>
+                                    <td class="teller">{{ item.customer.ac_no }}</td>
+                                    <td class="teller">{{ item.customer.gl_no }}</td>
+                                    <td><img src="./images/layout_img/msg5.png" class="rounded-circle w-25" alt=""></td>
+                                    <td>{{ item.customer.first_name }}</td>
+                                    <td>{{ item.customer.last_name }}</td>
+                                    <td>{{ item.customer.gl_no }}</td>
+                                    <td>{{ item.customer.ac_no }}</td>
+                                    <td>N{{ item.total_amount|floatformat:2 }}</td>
+                                    <td>{{ item.customer.branch }}</td>
+                                    <td>
+                                        <button class="btn shadow-sm" style="background-color: #2E8B57;"
+                                            type="button">
+                                            <a href="{% url 'deposit' item.customer.id %}"
+                                                style="font-weight: bold; color: white;">Choose</a>
+                                        </button>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

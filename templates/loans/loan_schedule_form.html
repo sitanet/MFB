@@ -1,0 +1,166 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block content %}
+      
+           
+                                    
+     
+            <div class="container-fluid">
+                <div class="row column_title">
+                    <div class="col-md-12">
+                          <div class="page_title">
+                                  <h2>Loan Simulation Form</h2>
+                          </div>
+                    </div>
+                </div>
+      
+                <div class="container">
+                        <!-- <header>Customer Account</header> -->
+
+                        <a href="{% url 'loans' %}" style="color: green; font-weight: bold; text-align: right; display: block;">Loans Menu</a>
+                        <form method="POST" enctype="multipart/form-data">
+                         {% csrf_token %}
+                         {% if messages %}
+                         <ul class="messages">
+                             {% for message in messages %}
+                                 <li style="font-size: 30px; color: brown; font-weight: bold;"  {% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+                             {% endfor %}
+                        
+                         </ul>
+                     {% endif %}
+                     <h6 style="color: red;" >{{ form.errors }}</h6>
+                     {% include 'includes/alerts.html' %}
+                 
+                  
+                           <div class="form first">
+                               <div class="details personal">
+                                <!-- <div align="right">
+                                    <div align="right" style="color: firebrick;font-weight: bold;">
+                                        <a href="{% url 'customer_list' %}" style="color: green; font-weight: bold;">Display List of Customers</a>
+                                     </div>
+                                 
+                               
+                                </div> -->
+
+                           
+                                 
+                 
+                 
+                                <!-- <div class="image-preview-container">
+                                    <div class="preview">
+                                        <img id="preview-selected-image" />
+                                    </div>
+                                   
+                                    <label for="file-upload">Choose Photo</label>
+                               
+                                    <input type="file" id="file-upload" name="photo" value="{{customer.photo.url}}" accept="image/*" onchange="previewImage(event);">
+
+                                </div> -->
+                              
+          
+                                   <div class="fields">
+                                      
+                                           <input type="hidden"  value="{{ member.team_sup.username}}" name="user" required>
+                                         
+                                           <!-- <div class="input-field">
+                                            <label>Branch</label>
+                                            <select id="team_lead" name="branch" required>
+                                                
+                                                {% for cust_branch in cust_branch %}
+                                                    <option value="{{ cust_branch.id }}">{{ cust_branch.branch_name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div> -->
+
+                                        <!-- <div class="input-field">
+                                            <label for="fName">Branch</label>
+                                            <span class="form-control bg-light">{{ user.branch }}</span>
+                                          
+                                        </div> -->
+                                        <input type="text" name="branch" value="{{ user.branch }}" hidden>
+                                       
+
+                                     
+                                            <input type="text" class="form-control bg-light" name="customer" value=" {{customer.id}}" hidden>
+                                          
+                                
+                                      
+                                      
+
+                                       <div class="input-field">
+                                           <label>Registration Date</label>
+                                           <input type="date" name="appli_date" value="{% now "Y-m-d" %}" required>
+                                       </div>
+                                       <div class="input-field">
+                                        <label for="deposit_description">Loan Amount:</label>
+                                        <input type="number"  class="form-control bg-light"
+                                            placeholder="0.00" name="loan_amount">
+                                    </div>
+                                    <div class="input-field">
+                                        <label for="deposit_description">Annual Int Rate:</label>
+                                        <input type="number"  class="form-control bg-light"
+                                            placeholder="0.00000" name="interest_rate">
+                                    </div>
+                                    <div class="input-field">
+                                        <label for="deposit_description">No. of Frequency:</label>
+                                        {{form.payment_freq}}
+                                    </div>
+
+                                    <div class="input-field">
+                                        <label for="deposit_description">Interest Method:</label>
+                                        {{form.interest_calculation_method}}
+                                    </div>
+                               
+
+                                    <div class="input-field">
+                                        <label for="deposit_description">No of Installment:</label>
+                                        {{form.num_install}}
+                                    </div>
+
+<!--                                     
+                                    <div class="input-field">
+                                        <label for="deposit_description">No of Installment:</label>
+                                        {{form.numerical_value}}
+                                    </div> -->
+
+                                
+                                  
+                                       <button class="sumbit">
+                                        <span class="btnText">Calculate Loan Schedule</span>
+                                        <i class="uil uil-navigator"></i>
+                                    </button>
+                                 
+                                   
+                                
+                                   
+                              
+                                    
+                               
+                                    
+                                   </div>
+                               </div>
+                 
+                             
+                 
+                               <!-- <button class="sumbit">
+                                           <span class="btnText">Submit</span>
+                                           <i class="uil uil-navigator"></i>
+                                       </button> -->
+
+                                       <!-- <button type="submit" class="btn w-100 btn-danger mt-4 shadow-sm">Submit</button> -->
+                               </div> 
+                           </div>
+                 
+                        
+                       </form>
+                </div>
+      
+                      
+             </div>
+         
+            
+                 
+            
+                  {% endblock %}

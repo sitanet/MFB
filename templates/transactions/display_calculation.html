@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+    <h2>Interest Calculation Results</h2>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>GL Number</th>
+                <th>Account Number</th>
+                <th>Interest Rate</th>
+                <th>Total Amount</th>
+                <th>Total Interest</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for result in results %}
+            <tr>
+                <td>{{ result.gl_no }}</td>
+                <td>{{ result.ac_no }}</td>
+                <td>{{ result.interest_rate }}</td>
+                <td>{{ result.total_amount }}</td>
+                <td>{{ result.total_interest }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <a href="{% url 'calculate_interest' %}" class="btn btn-primary">Back</a>
+    
+    <a href="{% url 'calculate_interest' %}" class="btn btn-primary">Back</a>
+    
+</div>
+{% endblock %}

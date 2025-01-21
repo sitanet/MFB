@@ -1,0 +1,63 @@
+<!-- templates/loans/loan_provision_list.html -->
+
+{% extends 'base.html' %}
+
+{% block title %}Loan Provisions List{% endblock %}
+
+{% block content %}
+    <!-- Container for Page Title -->
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="page_title mb-4">
+                    <h2>List Loan Provision</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Page Header and Add Button -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3">Loan Provisions List</h1>
+        <a href="{% url 'add_loan_provision' %}" class="btn btn-primary">Add Loan Provision</a>
+    </div>
+
+    <!-- Bootstrap Card to contain the table -->
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">Loan Provisions</h5>
+            <!-- Table -->
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover">
+                    <thead class="thead-light">
+                        <tr>
+                            <th>Name</th>
+                            <th>Min Days</th>
+                            <th>Max Days</th>
+                            <th>Rate</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for provision in provisions %}
+                            <tr>
+                                <td>{{ provision.name }}</td>
+                                <td>{{ provision.min_days }}</td>
+                                <td>{{ provision.max_days }}</td>
+                                <td>{{ provision.rate }}%</td>
+                                <td>
+                                    <a href="{% url 'edit_loan_provision' provision.pk %}" class="btn btn-sm btn-warning">Edit</a>
+                                    <a href="{% url 'delete_loan_provision' provision.pk %}" class="btn btn-sm btn-danger">Delete</a>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted">No loan provisions found.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+{% endblock content %}

@@ -1,0 +1,331 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block content %}
+      
+           
+                                    
+     
+            <div class="container-fluid">
+                <div class="row column_title">
+                    <div class="col-md-12">
+                          <div class="page_title">
+                                  <h2>Dashboard</h2>
+                          </div>
+                    </div>
+                </div>
+      
+                <div class="container">
+                        <header>Customer Account</header>
+                        <a href="{% url 'loans' %}" style="color: green; font-weight: bold; text-align: right; display: block;">Loans Menu</a>
+
+                        
+                        
+
+                        <form method="POST" enctype="multipart/form-data">
+                         {% csrf_token %}
+                         {% if messages %}
+                         <ul class="messages">
+                             {% for message in messages %}
+                                 <li style="font-size: 30px; color: brown; font-weight: bold;"  {% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+                             {% endfor %}
+                        
+                         </ul>
+                     {% endif %}
+                     <h6 style="color: red;" >{{ form.errors }}</h6>
+                  {% include 'includes/alerts.html' %}
+                 
+                  
+                           <div class="form first">
+                               <div class="details personal">
+                                <div align="right">
+                                    <div align="right" style="color: firebrick;font-weight: bold;">
+                                        <a href="{% url 'customer_list' %}" style="color: green; font-weight: bold;">Display List of Customers</a>
+                                     </div>
+                                 
+                               
+                                </div>
+
+                           
+                                 
+                 
+                 
+                                <div class="image-preview-container">
+                                    <div class="preview">
+                                        <img id="preview-selected-image" />
+                                    </div>
+                                   
+                                    <label for="file-upload">Choose Photo</label>
+                               
+                                    <input type="file" id="file-upload" name="photo" value="{{customer.photo.url}}" accept="image/*" onchange="previewImage(event);">
+
+                                </div>
+                              
+          
+                                   <div class="fields">
+                                      
+                                           <input type="hidden"  value="{{ member.team_sup.username}}" name="user" required>
+                                         
+                                           <!-- <div class="input-field">
+                                            <label>Branch</label>
+                                            <select id="team_lead" name="branch" required>
+                                                
+                                                {% for cust_branch in cust_branch %}
+                                                    <option value="{{ cust_branch.id }}">{{ cust_branch.branch_name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div> -->
+
+                                        <div class="input-field col-md-3">
+                                            <label for="fName">Branch</label>
+                                            <span class="form-control bg-light">{{ user.branch }}</span>
+                                            <input type="hidden" name="branch" value="{{ user.branch }}">
+                                        </div>
+                                        
+                                       <div class="input-field col-md-3">
+                                           <label>First Name*</label>
+                                           <input type="text" placeholder="Enter First Name" name="first_name" value="{{customer.first_name}}" readonly>
+                                         
+                                       </div>
+                                        <div class="input-field col-md-3">
+                                           <label>Middle Name</label>
+                                           <input type="text" placeholder="Enter Middle Name" name="middle_name" value="{{customer.middle_name}}" readonly>
+                                       </div>
+                                        <div class="input-field col-md-3">
+                                           <label>Last Name*</label>
+                                           <input type="text" placeholder="Enter Last Name" name="last_name" value="{{customer.last_name}}" readonly>
+                                       </div>
+                                       <div class="input-field col-md-3">
+                                        <label>Date of Birth*</label>
+                                        <input type="date" placeholder="Enter birth date" name="dob" value="{{ customer.dob|date:'Y-m-d'}}"  readonly>
+                                    </div>
+                                    <div class="input-field col-md-3">
+                                        <label>Email*</label>
+                                        <input type="Email"  name="email" value="{{customer.email}}" readonly>
+                                    </div>
+                                    <div class="input-field col-md-3">
+                                        <label>Gender*</label>
+                                       
+                                       <input type="Email" name="cust_sex" value="{{ customer.cust_sex }}" readonly> 
+                                    </div>
+
+                            
+                                    <div class="input-field col-md-3">
+                                        <label>Marital Status*</label>
+                                        
+                                       <input type="Email" placeholder="Enter your Email" name="marital_status" value="{{ customer.marital_status }}" readonly> 
+                                    </div>
+                 
+                                        <div class="input-field col-md-3">
+                                           <label>Address*</label>
+                                           <!-- <input type="textarea" placeholder="Enter Address" name="address" > -->
+                                           <textarea name="address" id="comments" rows="3" cols="50" readonly>
+                                            {{ customer.address}}
+                                          </textarea>
+                                       </div>
+                 
+                                       <div class="input-field col-md-3">
+                                           <label>Nationality*</label>
+                                           <input type="text" placeholder="Enter Nationality" name="nationality" value="{{ customer.nationality}}" readonly>
+                                       </div>
+                                       <div class="input-field col-md-3">
+                                        <label>State*</label>
+                                        <input type="text" placeholder="Enter Nationality" name="state" value="{{ customer.state}}" readonly>
+                                    </div>
+                 
+            
+                 
+                                       <div class="input-field col-md-3">
+                                           <label>Phone Number*</label>
+                                           <input type="number" placeholder="Enter mobile number" name="phone_no" value="{{ customer.phone_no}}" readonly>
+                                       </div>
+                                       <div class="input-field col-md-3">
+                                        <label>Mobile Number*</label>
+                                        <input type="number" placeholder="Enter mobile number" name="mobile" value="{{ customer.mobile}}"  readonly>
+                                    </div>
+                                  
+                                       
+                                    <div class="input-field col-md-3">
+                                        <label>ID Card*</label>
+                                        <!-- {{customer.id_card}} -->
+                                        <input type="text"  name="id_card" value=" {{customer.id_card}}" readonly>
+                                    </div>
+
+                                    <div class="input-field col-md-3">
+                                        <label>Type of ID Card</label>
+                                        <select id="team_lead" name="id_type" required>
+                                            <option value="">Select Type of ID Card</option>
+                                            {% for id_card in id_card %}
+                                                {% if id_card.id == customer.id_type.id %}
+                                                    <option value="{{ id_card.id }}" selected>{{ id_card.id_card_name }}</option>
+                                                {% else %}
+                                                    <option value="{{ id_card.id }}">{{ id_card.id_card_name }}</option>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </select>
+                                        
+                                        
+                                        <!-- <input type="text"  name="id_type" value="{{ customer.id_type}}" readonly> -->
+                                    </div>
+                                    <!-- <div class="input-field">
+                                        <label>Ref No*</label>
+                                        <input type="text" placeholder="Enter your occupation" name="id_type" value="{{ form.id_type.value|default:""}}" >
+                                    </div> -->
+                                    <div class="input-field col-md-3">
+                                        <label>Ref No*</label>
+                                        <input type="text" placeholder="Enter your occupation" name="ref_no" value="{{ customer.ref_no}}" readonly>
+                                    </div>
+                                    <div class="input-field col-md-3">
+                                        
+                                        <input type="text"  name="label" value="L" hidden>
+                                    </div>
+                                        
+                 
+                                       <div class="input-field col-md-3">
+                                           <label>Occupation*</label>
+                                           <input type="text" placeholder="Enter your occupation" name="occupation" value="{{ customer.occupation}}" readonly>
+                                       </div>
+                                       <div class="input-field col-md-3">
+                                        <label>Customer Category</label>
+                                        <select id="team_lead" name="cust_cat" required>
+                                            <option value="">Select Customer Category</option>
+                                            {% for category in category %}
+                                                {% if category.id == customer.cust_cat.id %}
+                                                    <option value="{{ category.id }}" selected>{{ category.category_name }}</option>
+                                                {% else %}
+                                                    <option value="{{ category.id }}">{{ category.category_name }}</option>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </select>
+                                        
+                                        <!-- <input type="text"  name="cust_cat" value="{{ customer.cust_cat}}" readonly> -->
+                                    </div>
+                                   
+                                            
+                                    <div class="input-field col-md-3">
+                                        <label>Region</label>
+                                        <select id="team_lead" name="region" required>
+                                            <option value="">Select Customer Region</option>
+                                            {% for region in region %}
+                                                {% if region.id == customer.region.id %}
+                                                    <option value="{{ region.id }}" selected>{{ region.region_name }}</option>
+                                                {% else %}
+                                                    <option value="{{ region.id }}">{{ region.region_name }}</option>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </select>
+                                        <!-- <input type="text"  name="region" value="{{ customer.region}}" readonly> -->
+
+                                     
+
+                                        
+                                    </div>
+                                    <div class="input-field col-md-3">
+                                        <label>Credit Officer</label>
+                                        <!-- <select id="team_lead" name="credit_officer" value="{{ form.credit_officer.value|default:""}}" required>
+                                            <option value="">Select Account Officer</option>
+                                            {% for officer in officer %}
+                                                <option value="{{ officer.id }}">{{ officer.user }}</option>
+                                            {% endfor %}
+                                        </select> -->
+                                        <!-- <input type="text"  name="credit_officer" value="{{ customer.credit_officer}}" readonly> -->
+
+                                        <!-- <select id="team_lead" name="credit_officer" value="{{ form.credit_officer.value|default:""}}" required>
+                                            <option value="">Select Account Officer</option>
+                                            {% for officer in officer %}
+                                                <option value="{{ officer.id }}">{{ officer.user }}</option>
+                                            {% endfor %}
+                                        </select> -->
+
+                                        <select id="team_lead" name="credit_officer" required>
+                                            <option value="">Select Customer Officer</option>
+                                            {% for officer in credit_officer %}
+                                                {% if officer.id == customer.credit_officer.id %}
+                                                    <option value="{{ officer.id }}" selected>{{ officer.user }}</option>
+                                                {% else %}
+                                                    <option value="{{ officer.id }}">{{ officer.user }}</option>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </select>
+                                        
+                                    </div>
+                              
+
+                                    <div class="input-field col-md-3">
+                                        <label>Account Type</label>
+                                        <select id="team_lead" name="gl_no" value="{{ form.gl_no.value|default:""}}" required>
+                                            
+                                            
+                                            <option value="">Select Account Type</option>
+                                           
+            
+                                            {% for loan_account in loan_account %}
+                                            <option value="{{ loan_account.gl_no }}">{{ loan_account.gl_name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="input-field col-md-3">
+                                          <label for="accountNoInput">Account No.:</label>
+                                          <input type="text" class="form-control bg-light"  id="accountNoInput1" name="ac_no"
+                                          value="{{customer.ac_no}}">
+                                        
+                                      </div>
+
+                                       <div class="input-field col-md-3">
+                                           <label>Registration Date</label>
+                                           <input type="date" name="reg_date" value="{{ form.reg_date|date:'Y-m-d'}}" required>
+                                       </div>
+                 
+                                     
+
+                                       <!-- <div class="input-field">
+                                           <label>Registration Date*</label>
+                                           <input type="date" name="reg_date" >
+                                       </div> -->
+                 
+                                     
+
+                                     
+
+                                
+                                     
+                                    
+                                        <div class="input-field col-md-3">
+                                           <label>Status*</label>
+                                          {{form.status}}
+                                       </div>
+
+                                       <button class="sumbit">
+                                        <span class="btnText">Submit</span>
+                                        <i class="uil uil-navigator"></i>
+                                    </button>
+                                 
+
+        
+                                    
+                                   </div>
+                               </div>
+                 
+                             
+                 
+                               <!-- <button class="sumbit">
+                                           <span class="btnText">Submit</span>
+                                           <i class="uil uil-navigator"></i>
+                                       </button> -->
+
+                                       <!-- <button type="submit" class="btn w-100 btn-danger mt-4 shadow-sm">Submit</button> -->
+                               </div> 
+                           </div>
+                 
+                        
+                       </form>
+                </div>
+      
+                      
+             </div>
+         
+            
+                 
+            
+                  {% endblock %}

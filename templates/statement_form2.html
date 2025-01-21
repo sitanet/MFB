@@ -1,0 +1,15 @@
+<!-- templates/statement_form.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Statement of Account</title>
+</head>
+<body>
+    <h1>Statement of Account</h1>
+    <form method="post" action="{% url 'statement_of_account' %}">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Generate Statement</button>
+    </form>
+</body>
+</html>

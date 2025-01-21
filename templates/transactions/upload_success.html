@@ -1,0 +1,70 @@
+<!-- templates/transactions/upload_success.html -->
+{% extends 'base.html' %}
+
+{% block title %}Upload Successful{% endblock %}
+
+{% block extra_head %}
+<style>
+    .success-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        background-color: #f0f4f7; /* Light background for a clean look */
+    }
+    .success-box {
+        text-align: center;
+        max-width: 500px;
+        padding: 30px;
+        border-radius: 8px;
+        background-color: #ffffff; /* White background for the content box */
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1); /* Enhanced shadow for depth */
+    }
+    .success-icon {
+        font-size: 60px;
+        color: #28a745; /* Success green color */
+        margin-bottom: 20px;
+    }
+    h2 {
+        margin-bottom: 20px;
+        color: #333;
+        font-size: 28px;
+        font-weight: 600; /* Bold header text */
+    }
+    p {
+        font-size: 18px;
+        color: #666; /* Slightly darker gray for text */
+        margin-bottom: 30px; /* Space below the paragraph */
+    }
+    .btn-back {
+        display: inline-block;
+        padding: 12px 24px;
+        border: none;
+        border-radius: 4px;
+        background-color: #007BFF; /* Primary color */
+        color: white;
+        text-decoration: none;
+        font-size: 18px;
+        font-weight: 500; /* Slightly bolder text */
+        cursor: pointer;
+        transition: background-color 0.3s ease; /* Smooth color transition */
+    }
+    .btn-back:hover {
+        background-color: #0056b3; /* Darker shade on hover */
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="success-box">
+        <div class="success-icon">
+            <!-- Font Awesome check icon or use an SVG -->
+            <i class="fas fa-check-circle"></i>
+        </div>
+        <h2>File Uploaded Successfully</h2>
+        <p>Your file has been processed successfully.</p>
+        <a href="{% url 'upload_file' %}" class="btn-back">Back to Upload</a>
+    </div>
+</div>
+{% endblock %}

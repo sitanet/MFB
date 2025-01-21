@@ -1,0 +1,171 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block content %}
+      
+           
+                                    
+     
+            <div class="container-fluid">
+                <div class="row column_title">
+                    <div class="col-md-12">
+                          <div class="page_title">
+                                  <h2>Loan Application</h2>
+                          </div>
+                    </div>
+                </div>
+      
+                <div class="container">
+                        <!-- <header>Customer Account</header> -->
+
+                        <a href="{% url 'loans' %}" style="color: green; font-weight: bold; text-align: right; display: block;">Loans Menu</a>
+                        <form method="POST" enctype="multipart/form-data">
+                         {% csrf_token %}
+                         {% if messages %}
+                         <ul class="messages">
+                             {% for message in messages %}
+                                 <li style="font-size: 30px; color: brown; font-weight: bold;"  {% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+                             {% endfor %}
+                        
+                         </ul>
+                     {% endif %}
+                     <h6 style="color: red;" >{{ form.errors }}</h6>
+                     {% include 'includes/alerts.html' %}
+                 
+                  
+                           <div class="form first">
+                               <div class="details personal">
+                        
+
+                           
+                                 
+
+                              
+          
+                                   <div class="fields">
+                                      
+                                           <input type="hidden"  value="{{ member.team_sup.username}}" name="user" required>
+                                 
+                                        <input type="text" name="branch" value="{{ user.branch }}" hidden>
+                                       
+
+                                     
+                                            <input type="text" class="form-control bg-light" name="customer" value=" {{customer.id}}" hidden>
+                                          
+                                
+                                       <div class="input-field">
+                                           <label>First Name*</label>
+                                           <input type="text" class="form-control bg-light" name="first_name" value="{{customer.first_name}}" readonly>
+                                         
+                                       </div>
+                                        <div class="input-field">
+                                           <label>Middle Name</label>
+                                           <input type="text" class="form-control bg-light" name="middle_name" value="{{customer.middle_name}}" readonly>
+                                       </div>
+                                        <div class="input-field">
+                                           <label>Last Name*</label>
+                                           <input type="text" class="form-control bg-light" name="last_name" value="{{customer.last_name}}" readonly>
+                                       </div>
+                                       <div class="input-field">
+                                        <label>Account Type</label>
+                                    
+                                        <input type="text" class="form-control bg-light"  id="accountNoInput1" name="gl_no"
+                                        value="{{customer.gl_no}}">
+                                    
+                                    </div>
+                                    <div class="input-field">
+                                          <label for="accountNoInput">Account No.:</label>
+                                          <input type="text" class="form-control bg-light"  id="accountNoInput1" name="ac_no"
+                                          value="{{customer.ac_no}}">
+                                        
+                                      </div>
+
+                                       <div class="input-field">
+                                           <label>Registration Date</label>
+                                           <input type="date" id="ses_date" name="appli_date" value="{{ company_date }}" required>
+                                       </div>
+                                       <div class="input-field">
+                                        <label for="deposit_description">Loan Amount:</label>
+                                        <input type="number"  class="form-control bg-light"
+                                            placeholder="0.00" name="loan_amount" required>
+                                    </div>
+                                    <div class="input-field">
+                                        <label for="deposit_description">Annual Int Rate:</label>
+                                        <input type="number"  class="form-control bg-light"
+                                            placeholder="0.00000" name="interest_rate" required>
+                                    </div>
+                                    <div class="input-field">
+                                        <label for="deposit_description">No. of Frequency:</label>
+                                        {{form.payment_freq}}
+                                    </div>
+
+                                    <div class="input-field">
+                                        <label for="deposit_description">Interest Method:</label>
+                                        {{form.interest_calculation_method}}
+                                    </div>
+                                    <div class="input-field">
+                                        <label for="deposit_description">Loan Officers:</label>
+                                        {{form.loan_officer}}
+                                    </div>
+                                    <div class="input-field">
+                                        <label for="deposit_description">Business Sector:</label>
+                                        {{form.business_sector}}
+                                    </div>
+
+                                    <div class="input-field">
+                                        <label for="deposit_description">No of Installment:</label>
+                                        {{form.num_install}}
+                                    </div>
+                                
+                                    
+
+
+                                       <button class="sumbit">
+                                        <span class="btnText">Submit</span>
+                                        <i class="uil uil-navigator"></i>
+                                    </button>
+                                 
+                                   
+                                
+                                   
+                              
+                                    
+                               
+                                    
+                                   </div>
+                               </div>
+                 
+                             
+                 
+                           
+                               </div> 
+                           </div>
+                 
+                        
+                       </form>
+                </div>
+      
+                      
+             </div>
+         
+            
+ 
+             <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    var sessionDateInput = document.getElementById('ses_date');
+                    var companyDate = '{{ company_date }}'; // Assuming company_date is in the 'YYYY-MM-DD' format
+            
+                    sessionDateInput.addEventListener('change', function() {
+                        var selectedDate = new Date(sessionDateInput.value);
+                        var companyDateObj = new Date(companyDate);
+            
+                        if (selectedDate > companyDateObj) {
+                            alert('Please select a date not greater than the session date.');
+                            sessionDateInput.value = '{{ company_date }}'; // Clear the input value
+                        }
+                    });
+                });
+            </script>                
+            
+                  {% endblock %}

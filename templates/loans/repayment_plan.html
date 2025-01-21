@@ -1,0 +1,39 @@
+<!-- repayment_plan.html -->
+{% extends 'base.html' %}
+
+{% block content %}
+    <div class="container">
+        <h2>Loan Repayment Plan</h2>
+        <p><strong>Loan Account Number:</strong> {{ loan.ac_no }}</p>
+        <p><strong>Loan Amount:</strong> ${{ loan.loan_amount }}</p>
+        <p><strong>Interest Rate:</strong> {{ loan.interest_rate }}%</p>
+        <p><strong>Number of Installments:</strong> {{ loan.num_install }}</p>
+
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Installment Number</th>
+                    <th>Due Date</th>
+                    <th>Monthly Payment</th>
+                    <th>Interest Payment</th>
+                    <th>Principal Payment</th>
+                    <th>Remaining Balance</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for installment in loan.repayment_schedule %}
+                    <tr>
+                        <td>{{ installment.installment_number }}</td>
+                        <td>{{ installment.due_date|date:"F j, Y" }}</td>
+                        <td>${{ installment.monthly_payment|floatformat:2 }}</td>
+                        <td>${{ installment.interest_payment|floatformat:2 }}</td>
+                        <td>${{ installment.principal_payment|floatformat:2 }}</td>
+                        <td>${{ installment.remaining_balance|floatformat:2 }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}
+
+<a href="{% url 'loans:repayment_plan' loan.id %}">View Repayment Plan</a>

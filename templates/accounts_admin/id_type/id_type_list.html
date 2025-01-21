@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block content %}
+            
+                    
+                       
+
+                
+                       
+                        {% include 'includes/alerts.html' %}
+                        
+                        <h6 style="color: red;" >{{ form.errors }}</h6>
+                        
+                        <!-- dashboard inner -->
+            
+                        
+                            <div class="container-fluid">
+                               <div class="row column_title">
+                                  <div class="col-md-12">
+                                     <div class="page_title">
+                                        <h2>Create ID Card Type</h2>
+                                     </div>
+                                  </div>
+                               </div>
+             
+             
+             
+                               <!-- table -->
+                               <div class="col-md-12">
+                                  <div class="white_shd full margin_bottom_30">
+             
+                                     <div class="table_section padding_infor_info">
+                                        <div class="table-responsive-sm">
+                                           
+                                            <table class="table">
+                                                <thead class="thead-dark">
+                                                   <tr>
+                                               
+                                                      <th>ID Card Type</th>
+                                                    
+                                                      <th>Action</th>
+                                                    
+                                                      
+                                                   </tr>
+                                                </thead>
+                                                <tbody>
+                                                  {% for id_type in id_type %}
+                                                     <tr>
+                                                        <!-- <td><img style="width: 40px; height: 50px;" class="img-responsive rounded-circle" src="{{ member.image.url }}" 
+                                                           onerror="this.src='{% static 'images/avatar.jpg' %}'"  alt="#" /></td> -->
+                                                        <td>{{ id_type.id_card_name }}</td>
+                                                        
+                                                        <td><a href="{% url 'update_id_type' id_type.id %}"style="font-weight: bold; color: blue;" >Edit</a>/<a href="{% url 'id_type_delete' id_type.id %}" style="font-weight: bold; color: red;" >Delete</a></td>
+                                                       
+
+                                                       
+                                                        
+                                                     </tr>
+                                                     {% endfor %}
+                                              
+               
+                                                </tbody>
+                                             </table>
+                                           <a href="{% url 'create_id_type' %}" style="color: green; font-weight: bold;">Create a New ID Card Type</a>
+                                        </div>
+                                     </div>
+                                  </div>
+                               </div>
+                            </div>
+                       
+
+             
+                               <!-- footer -->
+                             
+                            </div>
+                            <!-- end dashboard inner -->
+                         </div>
+                    
+
+
+                    
+     
+
+
+{% endblock %}

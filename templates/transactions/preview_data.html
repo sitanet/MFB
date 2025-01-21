@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block title %}Preview Data{% endblock %}
+
+{% block extra_head %}
+<style>
+    .midde_cont {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+    }
+    .container-fluid {
+        max-width: 800px;
+        padding: 20px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        background-color: #f9f9f9;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    h2 {
+        text-align: center;
+        margin-bottom: 20px;
+        color: #333;
+    }
+    .table-responsive-sm {
+        margin-top: 20px;
+    }
+    .btn-save {
+        display: block;
+        width: 100%;
+        padding: 10px;
+        border: none;
+        border-radius: 4px;
+        background-color: #007BFF;
+        color: white;
+        cursor: pointer;
+        margin-top: 20px;
+        text-align: center;
+    }
+    .btn-save:hover {
+        background-color: #0056b3;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="midde_cont">
+    <div class="container-fluid">
+        <h2>Preview Data</h2>
+        <form method="post">
+            {% csrf_token %}
+            <div class="table-responsive-sm">
+                <table class="table">
+                    <thead class="thead-dark">
+                        <tr>
+                            <th>Branch</th>
+                            <th>Customer Name</th>
+                            <th>GL No</th>
+                            <th>Account No</th>
+                            <th>Transaction No</th>
+                            <th>Session Date</th>
+                            <th>Application Date</th>
+                            <th>Amount</th>
+                            <th>Description</th>
+                            <th>Error</th>
+                            <th>Type</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for transaction in transactions %}
+                            <tr>
+                                <td>{{ transaction.branch }}</td>
+                                <td>{{ transaction.customer_name }}</td>
+                                <td>{{ transaction.gl_no }}</td>
+                                <td>{{ transaction.ac_no }}</td>
+                                <td>{{ transaction.trx_no }}</td>
+                                <td>{{ transaction.ses_date }}</td>
+                                <td>{{ transaction.app_date }}</td>
+                                <td>{{ transaction.amount }}</td>
+                                <td>{{ transaction.description }}</td>
+                                <td>{{ transaction.error }}</td>
+                                <td>{{ transaction.type }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <button type="submit" class="btn-save">Save Data</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,58 @@
+
+
+{% extends "base.html" %}
+
+
+
+{% block content %}
+
+
+
+<div class="container-fluid">
+  <div class="row">
+ 
+        
+
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="page_title">
+                    <h2>Delete Sub-Account</h2>
+                </div>
+            </div>
+            <div class="col-md-12 m-auto pb-5 bg-white rounded-3 shadow-sm">
+                <div class="text-center mt-4">
+                    <h1>Cannot delete a Sub-Account</h1>
+                    <p class="fs-5 mt-4">Cannot delete ... because it has related child account.</p>
+                    <!-- <button type="submit" class="btn btn-success mt-2 shadow-sm">Back</button> -->
+                    <!-- <p>Cannot delete {{ instance }} because it has related child objects.</p> -->
+                    <a href="{% url 'chart_of_accounts' %}">Go back</a>
+                </div>
+            </div>
+        </div>
+ 
+            <!-- footer -->
+            <!-- <div class="container-fluid">
+       <div class="footer">
+          <p>Copyright &copy; 2023 The CityGate Church. All rights reserved.
+          </p>
+       </div>
+    </div> -->
+        </div>
+    
+
+        <div>
+              <!-- Chart of Accoutwill come here -->
+        </div>
+
+
+  </div>
+
+</div>
+<!-- <h1>Chart of Account</h1> -->
+
+
+
+</div>
+  
+  {% endblock %}

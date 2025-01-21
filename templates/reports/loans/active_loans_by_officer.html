@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Title -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="page_title">
+                <h2 class="text-center">{{ report_title }}</h2>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form Section -->
+    <div id="form-container" class="form-container {% if active_loans_by_officer %}d-none{% endif %}">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <form method="post" action="{% url 'loan_till_sheet' %}">
+                    {% csrf_token %}
+                    <div class="row">
+                        <!-- Reporting Date -->
+                        <div class="col-md-6 form-group">
+                            <label for="id_reporting_date">Reporting Date:</label>
+                            <input type="date" name="reporting_date" id="id_reporting_date" class="form-control" value="{{ reporting_date }}">
+                        </div>
+
+                        <!-- Branch -->
+                        <div class="col-md-6 form-group">
+                            <label for="id_branch">Branch:</label>
+                            <select name="branch" id="id_branch" class="form-control">
+                                <option value="">Select Branch</option>
+                                {% for branch in branches %}
+                                    <option value="{{ branch.branch_code }}" {% if selected_branch == branch.name %}selected{% endif %}>{{ branch.branch_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Product -->
+                        <div class="col-md-6 form-group mt-3">
+                            <label for="id_product">Product:</label>
+                            <select name="product" id="id_product" class="form-control">
+                                <option value="">Select Product</option>
+                                {% for product in products %}
+                                    <option value="{{ product.gl_no }}" {% if selected_product == product.gl_no %}selected{% endif %}>{{ product.gl_no }} - {{ product.gl_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Loan Officer -->
+                        <div class="col-md-6 form-group mt-3">
+                            <label for="id_officer">Loan Officer:</label>
+                            <select name="officer" id="id_officer" class="form-control">
+                                <option value="">Select Loan Officer</option>
+                                {% for officer in officers %}
+                                    <option value="{{ officer.user }}" {% if selected_officer == officer.user %}selected{% endif %}>{{ officer.user }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group mt-3">
+                        <button type="submit" class="btn btn-primary">Generate Report</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Report Section -->
+    <div id="report-container" class="report-container {% if not active_loans_by_officer %}d-none{% endif %}">
+        {% if active_loans_by_officer %}
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="report-header mb-4">
+                        <h4 class="text-center">{{ report_title }}</h4>
+                        <p class="text-center">Date: {{ reporting_date }}</p>
+                    </div>
+                    <div class="table-responsive">
+                        {% for officer, loans in active_loans_by_officer.items %}
+                            <h5>Loan Officer: {{ officer }}</h5>
+                            <table class="table table-bordered table-striped">
+                                <thead class="thead-dark">
+                                    <tr>
+                                        <th>GL No</th>
+                                        <th>Account No</th>
+                                        <th>Customer Name</th>
+                                        <th>Loan Amount</th>
+                                        <th>Disbursement Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for loan in loans %}
+                                        <tr>
+                                            <td>{{ loan.gl_no }}</td>
+                                            <td>{{ loan.ac_no }}</td>
+                                            <td>{{ loan.customer_name }}</td>
+                                            <td>{{ loan.loan_amount }}</td>
+                                            <td>{{ loan.disbursement_date }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <p class="text-center">No active loans found for the selected criteria.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

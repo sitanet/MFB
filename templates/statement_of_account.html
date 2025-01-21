@@ -1,0 +1,75 @@
+<!-- templates/statement_of_account.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Statement of Account</title>
+</head>
+<body>
+    <h1>Statement of Account</h1>
+    <form method="post" action="{% url 'statement_of_account' %}?{{ request.GET.urlencode }}">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Generate Statement</button>
+    </form>
+    
+
+    {% if statement_data %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Description</th>
+                    <th>Debit</th>
+                    <th>Credit</th>
+                    <th>Running Balance</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for transaction in statement_data %}
+                    <tr>
+                        <td>{{ transaction.date }}</td>
+                        <td>{{ transaction.description }}</td>
+                        <td>{{ transaction.debit }}</td>
+                        <td>{{ transaction.credit }}</td>
+                        <td>{{ transaction.running_balance }}</td>
+                    </tr>
+                {% endfor %}
+                <tr>
+                    <td colspan="2"><strong>Opening Balance:</strong></td>
+                    <td colspan="2"></td>
+                    <td><strong>{{ opening_balance }}</strong></td>
+                </tr>
+                <tr>
+                    <td colspan="2"><strong>Totals:</strong></td>
+                    <td><strong>{{ total_debit }}</strong></td>
+                    <td><strong>{{ total_credit }}</strong></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td colspan="2"><strong>Closing Balance:</strong></td>
+                    <td colspan="2"></td>
+                    <td><strong>{{ closing_balance }}</strong></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="pagination">
+            <span class="step-links">
+                {% if statement_data.has_previous %}
+                    <a href="?page=1">&laquo; first</a>
+                    <a href="?page={{ statement_data.previous_page_number }}">previous</a>
+                {% endif %}
+
+                <span class="current">
+                    Page {{ statement_data.number }} of {{ statement_data.paginator.num_pages }}.
+                </span>
+
+                {% if statement_data.has_next %}
+                    <a href="?page={{ statement_data.next_page_number }}">next</a>
+                    <a href="?page={{ statement_data.paginator.num_pages }}">last &raquo;</a>
+                {% endif %}
+            </span>
+        </div>
+    {% endif %}
+</body>
+</html>

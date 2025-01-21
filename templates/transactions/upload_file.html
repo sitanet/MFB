@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block content %}
+            
+                    
+                       
+
+                
+                       
+                        {% include 'includes/alerts.html' %}
+                        
+                        <h6 style="color: red;" >{{ form.errors }}</h6>
+                        
+                        <!-- dashboard inner -->
+                        {% if request.session.error_message %}
+                        <div class="alert alert-danger">
+                            {{ request.session.error_message }}
+                        </div>
+                    {% endif %}
+                    
+            
+                        <div class="midde_cont">
+                            <div class="container-fluid">
+                               <div class="row column_title">
+                                  <div class="col-md-12">
+                                     <div class="page_title">
+                                        <h2>Upload a Spreadsheet</h2>
+                                     </div>
+                                  </div>
+                               </div>
+         
+             
+             
+                              <div class="midde_cont">
+    <div class="container-fluid">
+        <!-- <h2>Upload a Spreadsheet</h2> -->
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="id_file">File</label>
+                <input type="file" name="file" class="form-control" id="id_file">
+            </div>
+            <button type="submit" class="btn btn-primary">Upload</button>
+        </form>
+    </div>
+</div>
+                                           
+                                        </div>
+                                     </div>
+                                  </div>
+                               </div>
+                            </div>
+                         </div>
+
+             
+                               <!-- footer -->
+                             
+                            </div>
+                            <!-- end dashboard inner -->
+                         </div>
+                    
+
+
+                    
+     
+
+
+{% endblock %}

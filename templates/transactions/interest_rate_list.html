@@ -1,0 +1,34 @@
+<!-- templates/transactions/interest_rate_list.html -->
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2>Interest Rates</h2>
+    <a href="{% url 'add_interest_rate' %}" class="btn btn-primary mb-3">Add New Interest Rate</a>
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>GL No</th>
+                <th>Interest Rate</th>
+                <th>GL Debit</th>
+                <th>AC Debit</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for rate in rates %}
+                <tr>
+                    <td>{{ rate.gl_no }}</td>
+                    <td>{{ rate.rate }}</td>
+                    <td>{{ rate.glno_debit_account }}</td>
+                    <td>{{ rate.acno_debit_account }}</td>
+                    <td>
+                        <a href="{% url 'edit_interest_rate' rate.pk %}" class="btn btn-warning btn-sm">Edit</a>
+                        <a href="{% url 'delete_interest_rate' rate.pk %}" class="btn btn-danger btn-sm">Delete</a>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

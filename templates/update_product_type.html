@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+{% include 'includes/alerts.html' %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="page_title">
+                <h2>Create Product Type</h2>
+            </div>
+        </div>
+        <!-- form -->
+        <form method="POST" class="chart_of_account p-5 shadow-lg rounded rounded-5" action="{% url 'update_product_type' %}">
+            {% csrf_token %}
+            {% if messages %}
+                <ul class="messages">
+                    {% for message in messages %}
+                        <li style="font-size: 30px; color: brown; font-weight: bold;" {% if message.tags %} class="{{ message.tags }}" {% endif %}>{{ message }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+            {{ form.errors }}
+            <div class="form-row">
+                <div class="form-group col-md-6">
+                  
+                    <label for="accountNoInput">Select Account:</label>
+                    {{ form.account }}
+                </div>
+           
+
+            
+
+                <div class="form-group col-md-6">
+                    <label for="accountNoInput">Select Product Type:</label>
+                    {{ form.product_type }}
+                </div>
+               
+                <button type="submit" class="btn w- btn-success mt-4 shadow-sm">Add</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,262 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<style>
+    .total-row {
+        border-bottom: 3px solid #000;
+        border-top: 3px solid #000;
+        background-color: #f8f9fa;
+        color: #212529;
+        font-weight: bold;
+    }
+
+    .subtotal-row {
+        background-color: #e9ecef;
+        color: #0370dd;
+    }
+
+    .count-row {
+        background-color: #d4edda;
+        color: #155724;
+    }
+
+    .info-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+    }
+
+    .info-table td {
+        padding: 5px;
+        border: none;
+        vertical-align: top;
+    }
+
+    .info-table .info-label {
+        font-weight: bold;
+    }
+
+    .info-section {
+        margin-bottom: 20px;
+    }
+
+    .blue-text {
+        color: blue;
+    }
+
+    .print-button {
+        margin-top: 20px;
+        margin-bottom: 20px;
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    @media print {
+        body * {
+            visibility: hidden;
+        }
+
+        .print-area, .print-area * {
+            visibility: visible;
+        }
+
+        .print-area {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            margin: auto;
+        }
+    }
+
+    .date-time {
+        text-align: right;
+    }
+
+    .date-time-item {
+        margin: 0;
+        padding: 0;
+        display: inline-block;
+        line-height: 1.2;
+    }
+</style>
+
+<div class="container-fluid">
+    <div class="row column_title">
+        <div class="col-md-12">
+            <div class="page_title">
+                <h2>Savings Account Status</h2>
+            </div>
+        </div>
+    </div>
+
+    {% if not account_status_data %}
+    <form id="statusForm" method="post" action="{% url 'savings_account_status' %}" class="p-5 shadow-lg rounded rounded-5 mt-4 bg-light">
+        {% csrf_token %}
+        <div class="form-row">
+            <div class="form-group col-md-3">
+                <label for="start_date">Start Date:</label>
+                <input type="date" class="form-control bg-white" name="start_date" id="start_date" value="{{ start_date|date:'Y-m-d' }}">
+            </div>
+            <div class="form-group col-md-3">
+                <label for="end_date">End Date:</label>
+                <input type="date" class="form-control bg-white" name="end_date" id="end_date" value="{{ end_date|date:'Y-m-d' }}">
+            </div>
+            <div class="form-group col-md-3">
+                <label for="branch">Branch:</label>
+                <select class="form-control bg-white" name="branch" id="branch">
+                    <option value="">All Branches</option>
+                    {% for branch in branches %}
+                        <option value="{{ branch.id }}" {% if selected_branch and selected_branch.id == branch.id %}selected{% endif %}>{{ branch.branch_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group col-md-3">
+                <label for="gl_no">Product:</label>
+                <select class="form-control bg-white" name="gl_no" id="gl_no">
+                    <option value="">All Products</option>
+                    {% for gl_account in gl_accounts %}
+                        <option value="{{ gl_account.gl_no }}" {% if selected_gl_no == gl_account.gl_no %}selected{% endif %}>
+                            {{ gl_account.gl_no }} - {{ gl_account.gl_name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group col-md-3">
+                <label for="region">Region:</label>
+                <select class="form-control bg-white" name="region" id="region">
+                    <option value="">All Regions</option>
+                    {% for region in regions %}
+                        <option value="{{ region.id }}" {% if selected_region and selected_region.id == region.id %}selected{% endif %}>
+                            {{ region.region_name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group col-md-3">
+                <label for="credit_officer">Account Officer:</label>
+                <select class="form-control bg-white" name="credit_officer" id="credit_officer">
+                    <option value="">All Account Officers</option>
+                    {% for officer in account_officers %}
+                        <option value="{{ officer.id }}" {% if selected_officer and selected_officer.id == officer.id %}selected{% endif %}>
+                            {{ officer.user }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group col-md-3">
+                <label for="include_non_zero">Include Non-Zero Balance:</label>
+                <input type="checkbox" id="include_non_zero" name="include_non_zero" {% if include_non_zero %}checked{% endif %}>
+            </div>
+            <div class="form-group col-md-3">
+                <label for="exclude_ac_no_one">Exclude Internal Account:</label>
+                <input type="checkbox" id="exclude_ac_no_one" name="exclude_ac_no_one" {% if exclude_ac_no_one %}checked{% endif %}>
+            </div>
+        </div>
+        <button type="submit" class="btn btn-success mt-4 shadow-sm">Filter</button>
+    </form>
+    {% endif %}
+
+    {% if account_status_data %}
+    <div class="print-button">
+        <button class="btn btn-primary" onclick="window.print()">Print Account Status</button>
+    </div>
+
+    <div class="card mt-5 shadow-sm print-area">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="date-time">
+                        <p class="date-time-item">{{ current_datetime|date:"d/m/Y" }}</p><br>
+                        <p class="date-time-item">{{ current_datetime|date:"h:i:s A" }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-header bg-white text-center">
+                <h4>
+                    {% if selected_branch %}
+                        {{ selected_branch.branch_name }}
+                    {% else %}
+                        {{ branches.first.branch_name }}
+                    {% endif %}
+                </h4>
+                <p>{{ selected_branch.office_address }}</p>
+                <h5 style="color: #1115f0;">Savings Account Status</h5>
+                <div class="row justify-content-center">
+                    <div class="col-md-6 text-center">
+                        {% if start_date %}
+                            <p>From: <strong>{{ start_date|date:"d/m/Y" }}</strong></p>
+                        {% endif %}
+                        {% if end_date %}
+                            <p>To: <strong>{{ end_date|date:"d/m/Y" }}</strong></p>
+                        {% endif %}
+                        {% if selected_gl_no %}
+                            <p>GL No: <strong>{{ selected_gl_no }}</strong></p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-responsive-sm">
+                <table class="table table-bordered">
+                    <thead class="thead-dark">
+                        <tr>
+                            <th>GL No</th>
+                            <th>Account No</th>
+                            <th>Names</th>
+                            <th>Address</th>
+                            <th>Account Balance</th>
+                            <th>Last Transaction Date</th>
+                            <th>Days Without Activity</th>
+                            <th>Registration Date</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for gl_no, data in account_status_data.items %}
+                            <tr class="count-row">
+                                <td colspan="8">
+                                    {{ gl_no }} - {{ data.gl_name }}
+                                    <span style="float: right; font-weight: normal;">
+                                        ({{ data.accounts|length }} Accounts)
+                                    </span>
+                                </td>
+                            </tr>
+                            {% for account in data.accounts %}
+                            <tr>
+                                <td>{{ account.gl_no }}</td>
+                                <td>{{ account.ac_no }}</td>
+                                <td>{{ account.first_name }} {{ account.middle_name }} {{ account.last_name }}</td>
+                                <td>{{ account.address }}</td>
+                                <td>{{ account.account_balance }}</td>
+                                <td>{{ account.last_trx_date|date:"d/m/Y" }}</td>
+                                <td>{{ account.days_without_activity }}</td>
+                                <td>{{ account.reg_date }}</td>
+                                <td>{{ account.status }}</td>
+                            </tr>
+                            {% endfor %}
+                            <tr class="total-row subtotal-row">
+                                <td colspan="7">Subtotal for {{ gl_no }} - {{ data.gl_name }}</td>
+                                <td>{{ data.subtotal }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="total-row">
+                            <td colspan="7">Grand Total</td>
+                            <td>{{ grand_total }}</td>
+                        </tr>
+                    </tfoot>
+                    
+                </table>
+            </div>
+        </div>
+    </div>
+    {% else %}
+        <p class="text-center mt-4 blue-text">No data available for the selected filters.</p>
+    {% endif %}
+</div>
+
+{% endblock %}

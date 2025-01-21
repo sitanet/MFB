@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="page_title">
+                <h2>Loans</h2>
+            </div>
+        </div>
+        <div class="container deposit p-5 shadow-lg rounded rounded-5">
+            <div class="row mt-3 table-row1">
+                <div class="col-md-12 justify-content-center text-center m-auto">
+                    <div class="input-group mb-3">
+                        <input type="text" class="form-control form-control-lg bg-white border" placeholder="Search..." id="searchInput">
+                        <div class="">
+                            <button class="btn btn-success py-3" type="button" onclick="searchTable()">Search</button>
+                        </div>
+                    </div>
+
+                    <!-- Loans table -->
+                    <table class="table table-responsive table-hover">
+                        <thead class="thead-dark">
+                            <tr>
+                                <th>Customer</th>
+                                <th>Branch</th>
+                                <th>GL No</th>
+                                <th>Account No</th>
+                                <th>Cycle</th>
+                                <th>Loan Amount</th>
+                                <th>Interest Rate</th>
+                                <th>Total Loan</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for loan in loans %}
+                            <tr>
+                                <td>{{ loan.customer.first_name }}</td>
+                                <td>{{ loan.branch }}</td>
+                                <td>{{ loan.gl_no }}</td>
+                                <td>{{ loan.ac_no }}</td>
+                                <td>{{ loan.cycle }}</td>
+                                <td>{{ loan.loan_amount }}</td>
+                                <td>{{ loan.interest_rate }}</td>
+                                <td>{{ loan.total_loan }}</td>
+                                <td>
+                                    <a href="{% url 'loan_history' loan.id %}" class="btn btn-primary">View Loan History</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function searchTable() {
+        var input, filter, table, tr, td, i, j, txtValue;
+        input = document.getElementById("searchInput");
+        filter = input.value.toUpperCase();
+        table = document.querySelector(".table");
+        tr = table.getElementsByTagName("tr");
+
+        for (i = 1; i < tr.length; i++) {
+            tr[i].style.display = "none";
+            td = tr[i].getElementsByTagName("td");
+            for (j = 0; j < td.length; j++) {
+                if (td[j]) {
+                    txtValue = td[j].textContent || td[j].innerText;
+                    if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                        tr[i].style.display = "";
+                        break;
+                    }
+                }
+            }
+        }
+    }
+</script>
+{% endblock %}

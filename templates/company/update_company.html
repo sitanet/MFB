@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+          <div class="col-md-12">
+                <div class="page_title">
+                      <h2>Update Company</h2>
+                </div>
+          </div>
+          <!-- form -->
+          <form method="POST" class="chart_of_account p-5 shadow-lg rounded rounded-5">
+              {% csrf_token %}
+              {% if messages %}
+      <ul class="messages">
+          {% for message in messages %}
+              <li style="font-size: 30px; color: brown; font-weight: bold;"  {% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+          {% endfor %}
+      </ul>
+  {% endif %}
+  <h6 style="color: red;" >{{ form.errors }}</h6>
+                <div class="form-row">
+                      <!-- <div class="form-group col-md-4">
+                            <label for="general_ledger_accout_no">Branch Code.</label>
+                            <input type="text" class="form-control bg-light"
+                                  id="general_ledger_accout_no"
+                                  name="branch_code" value="{{ form.branch_code.value }}">
+                      </div> -->
+                      <div class="form-group col-md-4">
+                        <label for="general_ledger_accout_name">Company
+                              Name</label>
+                        <input type="text" class="form-control bg-light"
+                              id="general_ledger_accout_name"
+                              name="company_name" value="{{ form.company_name.value }}">
+                  </div>
+                      <!-- <div class="form-group col-md-4">
+                            <label for="general_ledger_accout_name">Branch
+                                  Name</label>
+                            <input type="text" class="form-control bg-light"
+                                  id="general_ledger_accout_name"
+                                  name="branch_name" value="{{ form.branch_name.value }}">
+                      </div> -->
+  
+                
+                    <div class="form-group col-md-4">
+                        <label for="general_ledger_accout_name">Contact person</label>
+                        <input type="text" class="form-control bg-light"
+                              id="general_ledger_accout_name"
+                              name="contact_person" value="{{ form.contact_person.value }}">
+                  </div>
+  
+                    
+                      <div class="form-group col-md-4">
+                        <label for="general_ledger_accout_name">office Address</label>
+                        <input type="text" class="form-control bg-light"
+                              id="general_ledger_accout_name"
+                              name="office_address" value="{{ form.office_address.value }}">
+                             
+                  </div>
+  
+                 
+                      <div class="form-group col-md-4">
+                        <label for="general_ledger_accout_name">Contact Phone NO</label>
+                        <input type="text" class="form-control bg-light"
+                              id="general_ledger_accout_name"
+                              name="contact_phone_no" value="{{ form.contact_phone_no.value }}">
+                  </div>
+                 
+                    <div class="form-group col-md-4">
+                        <label for="general_ledger_accout_name">Session Date</label>
+                        <input type="date" class="form-control bg-light"
+                              id="general_ledger_accout_name"
+                              name="session_date" value="{{ company.session_date|date:'Y-m-d' }}">
+                  </div>
+               
+                  <div class="form-group col-md-4">
+                    <label for="general_ledger_accout_name">Registration Date</label>
+                    <input type="date" class="form-control bg-light"
+                          id="general_ledger_accout_name"
+                          name="registration_date" value="{{ company.registration_date|date:'Y-m-d'}}">
+              </div>
+             
+              <div class="form-group col-md-4">
+                <label for="general_ledger_accout_name">Expiration Date</label>
+                <input type="date" class="form-control bg-light"
+                      id="general_ledger_accout_name"
+                      name="expiration_date" value="{{ company.expiration_date|date:'Y-m-d'}}">
+                  
+          </div>
+
+          <div class="form-group col-md-4">
+            <label for="general_ledger_accout_name">Expiration Date</label>
+            <input type="text" class="form-control bg-light"
+                  id="general_ledger_accout_name"
+                  name="license_key" value="{{ form.license_key.value}}">
+                 
+      </div>
+                  
+                            
+                      <!-- <button type="submit"
+                            class="btn w- btn-success mt-4 shadow-sm">Delete</button> -->
+                            <button type="submit"
+                            class="btn w- btn-success mt-4 shadow-sm">Update</button>
+                </div>
+               
+                <a href="{% url 'company_list' %}" style="color: green; font-weight: bold;">Back to Company List</a>
+          </form>
+          
+  
+          <div>
+                <!-- Chart of Accoutwill come here -->
+          </div>
+  
+  
+    </div>
+  
+  </div>
+{% endblock %}

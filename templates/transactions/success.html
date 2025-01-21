@@ -1,0 +1,15 @@
+<!-- templates/transactions/success.html -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <h2>Success!</h2>
+            <p>The interest rate has been successfully added.</p>
+            <a href="{% url 'add_interest_rate' %}" class="btn btn-primary">Add Another</a>
+            <a href="{% url 'calculate_interest' %}" class="btn btn-primary">Calculate Interest</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,131 @@
+
+{% extends "base.html" %}
+{% block content %}
+<div class="container-fluid">
+      <div class="row">
+          <div class="col-md-12">
+              <div class="page_title">
+                  <h2>Choose Withdrawal</h2>
+              </div>
+          </div>
+          <!-- ................. -------------------------------->
+          <div class="container  deposit p-5 shadow-lg rounded rounded-5">
+
+          
+
+              <!-- SearchTable -->
+              <div class="row mt-3 table-row1">
+
+                <div class="col-md-3 mb-3">
+                    <div class="account_setting  py-5 fs-1 bg-white shadow-lg rounded rounded-5">
+                       <div class="couter_icon  col-md-3">
+                          <i class="couter_icon fa fa-user yellow_color"></i>
+                       </div>
+                       <a href="{% url 'loans' %}" class="text-center">
+                          <h5 class="my-2">Loan Simulation</h5>
+                       </a>
+                    </div>
+                 </div>
+                 <div class="col-md-3 mb-3">
+                    <div class="account_setting  py-5 fs-1 bg-white shadow-lg rounded rounded-5">
+                       <div class="couter_icon  col-md-3">
+                          <i class="couter_icon fa fa-user yellow_color"></i>
+                       </div>
+                       <a href="{% url 'loans' %}" class="text-center">
+                          <h5 class="my-2">Loan Simulation</h5>
+                       </a>
+                    </div>
+                 </div>
+                 <div class="col-md-3 mb-3">
+                    <div class="account_setting  py-5 fs-1 bg-white shadow-lg rounded rounded-5">
+                       <div class="couter_icon  col-md-3">
+                          <i class="couter_icon fa fa-user yellow_color"></i>
+                       </div>
+                       <a href="{% url 'loans' %}" class="text-center">
+                          <h5 class="my-2">Loan Simulation</h5>
+                       </a>
+                    </div>
+                 </div>
+                 <div class="col-md-3 mb-3">
+                    <div class="account_setting  py-5 fs-1 bg-white shadow-lg rounded rounded-5">
+                       <div class="couter_icon  col-md-3">
+                          <i class="couter_icon fa fa-user yellow_color"></i>
+                       </div>
+                       <a href="{% url 'loans' %}" class="text-center">
+                          <h5 class="my-2">Loan Simulation</h5>
+                       </a>
+                    </div>
+                 </div>
+
+                 {% csrf_token %}
+                 {% if messages %}
+                 <ul class="messages">
+                     {% for message in messages %}
+                         <li style="font-size: 20px; color: brown; font-weight: bold; margin-left: 30%;"  {% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+                     {% endfor %}
+                 </ul>
+                 {% endif %}
+                 {{ form.errors }}
+                  <div class="col-md-12 justify-content-center text-center m-auto">
+                      <div class="input-group mb-3">
+                          <input type="text" class="form-control form-control-lg bg-white border"
+                              placeholder="Search..." id="searchInput">
+                          <div class="">
+                              <button class="btn btn-success py-3" type="button"
+                                  onclick="searchTable()">Search</button>
+                          </div>
+                      </div>
+
+                      <!-- table -->
+                      <table class="table table-responsive table-hover">
+                          <thead class="thead-dark">
+                              <tr>
+                                  <th class="teller">Teller Fullname</th>
+                                  <th class="teller">Teller Account No.</th>
+                                  <th class="teller">Teller GL No.</th>
+                                  <th>Passport</th>
+                                  <th>First Name</th>
+                                  <th>Last Name</th>
+                                  <th>GL No.</th>
+                                  <th>Account No.</th>
+                                  <th>Balance</th>
+                                  <th>Branch</th>
+                                  <th>Action</th>
+                              </tr>
+                          </thead>
+                          <tbody>
+
+                            {% for item in total_amounts %}
+                                <tr>
+                                    <td class="teller">{{ item.customer.first_name }} {{ item.customer.last_name }}</td>
+                                    <td class="teller">{{ item.customer.ac_no }}</td>
+                                    <td class="teller">{{ item.customer.gl_no }}</td>
+                                    <td><img src="./images/layout_img/msg5.png" class="rounded-circle w-25" alt=""></td>
+                                    <td>{{ item.customer.first_name }}</td>
+                                    <td>{{ item.customer.last_name }}</td>
+                                    <td>{{ item.customer.gl_no }}</td>
+                                    <td>{{ item.customer.ac_no }}</td>
+                                    <td>N{{ item.total_amount|floatformat:2 }}</td>
+                                    <td>{{ item.customer.branch }}</td>
+                                    <td>
+                                        <button class="btn shadow-sm" style="background-color: #FE632A;" type="button"><a href="{% url 'withdraw' item.customer.id %}" style="font-weight: bold; color: white;">Choose</a></button>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                           
+                             
+                             
+                              </td>
+                          </tbody>
+                      </table>
+                  </div>
+              </div>
+
+          </div>
+          <!-- ------------------- -->
+
+      </div>
+  </div>
+  
+
+{% endblock %}

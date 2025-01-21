@@ -1,0 +1,42 @@
+<!-- templates/loans/delete_loan_provision.html -->
+
+{% extends 'base.html' %}
+
+{% block title %}Delete Loan Provision{% endblock %}
+
+{% block content %}
+    <!-- Container for Page Title -->
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="page_title mb-4">
+                    <h2>Chart of Account</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Page Header and Back Button -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3">Delete Loan Provision</h1>
+        <a href="{% url 'loan_provision_list' %}" class="btn btn-secondary">Back to List</a>
+    </div>
+
+    <!-- Bootstrap Card to contain the form -->
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">Confirm Deletion</h5>
+            
+            <!-- Delete Form -->
+            <form method="POST">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <p>Are you sure you want to delete the loan provision: <strong>{{ provision.name }}</strong>?</p>
+                    <input type="hidden" name="provision_id" value="{{ provision.id }}">
+                </div>
+                <button type="submit" class="btn btn-danger">Delete Provision</button>
+                <a href="{% url 'loan_provision_list' %}" class="btn btn-secondary">Cancel</a>
+            </form>
+        </div>
+    </div>
+{% endblock content %}

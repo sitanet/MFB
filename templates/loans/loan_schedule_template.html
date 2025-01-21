@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block content %}
+{% load humanize %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="page_title">
+                <h2>Loan Repayment Schedule</h2>
+            </div>
+        </div>
+
+        <!-- SearchTable -->
+        <div class="container deposit p-5 shadow-lg rounded rounded-5">
+            
+            <div class="row mt-3 table-row1">
+              
+                <div class="third mx-auto text-center">
+                    <h5> {{ company.company_name }}</h5>
+                    <h6>{{ company.office_address }}</h6>
+                    <h6>{{ company.branch_name }}</h6>
+                    <h6>{{ company.contact_phone_no }}</h6>
+               
+                </div>
+                
+                <div class="dropdown" style="text-align: right; ">
+                    <button class="btn btn-success dropdown-toggle" type="button" id="downloadMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        Download All Format
+                    </button>
+                    <div class="dropdown-menu" aria-labelledby="downloadMenu">
+                        <a class="dropdown-item" href="{% url 'generate_pdf' id=loan_instance.id %}" target="_blank">PDF</a>
+                        <a class="dropdown-item" href="{% url 'generate_doc' id=loan_instance.id %}" target="_blank">Doc</a>
+                        <a class="dropdown-item" href="{% url 'generate_excel' id=loan_instance.id %}" target="_blank">Excel</a>
+                        <a class="dropdown-item" href="{% url 'generate_csv' id=loan_instance.id %}" target="_blank">CSV</a>
+                    </div>
+                    <button class="btn btn-success" id="printButton" onclick="window.print()">Print Report</button>
+                    
+                    <script>
+                        // JavaScript function to go back in history
+                        function goBack() {
+                            window.history.back();
+                        }
+                    </script>
+                    <button class="btn btn-success" onclick="goBack()">Back</button>
+
+                
+                </div>
+                <div class="col-md-12 mx-0">
+                  
+                    
+                    <div class="two" style="float: left; margin-right: 10%;">
+                        <h6>Loan Product: {{ customers.first_name }} {{ customers.middle_name }} {{ customers.last_name }}</h6>
+                        <h6>Loan No: {{ loan_instance.gl_no }} {{ loan_instance.ac_no }}</h6>
+                        <h6>Account No: N{{ loan_instance.loan_amount|floatformat:2|intcomma  }} </h6>
+                        <h6>Interest Rate: {{ loan_instance.interest_rate }} </h6>
+                        <h6>Physical/Postal Address: {{ customers.address }} </h6>
+                        <h6>Approved Date: {{ loan_instance.approval_date }} </h6>
+                        <h6> No of Installment: {{ loan_instance.num_install}}</h6>
+                        <h6>Loan Period: {{ loan_instance.payment_freq }} </h6>
+                    </div>
+                    <div class="one">
+                        
+                        <!-- <h6>No. of Installments: {{ loan_instance.gl_no }} {{ loan_instance.ac_no }}</h6>
+                        <h6>Annual Int. Rate: N{{ loan_instance.loan_amount|floatformat:2|intcomma  }} </h6>
+                        <h6> Loan Officer: {{ loan_instance.num_install}}</h6>
+                        <h6> Loan Fund: {{ loan_instance.num_install}}</h6> -->
+                    </div>
+
+
+                    <!-- table -->
+                    <table class="table table-responsive table-hover">
+                        <thead class="thead-dark">
+                            <tr>
+                                <th>Period</th>
+                                <th>Payment Date</th>
+                                <th>Principal Payment.</th>
+                                <th>Interest Payment</th>
+                                <th>Total Payment</th>
+                                <th>Principal Remaining</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>0</td>
+                                <td>{{loan_instance.appli_date|date:"d-m-Y" }}</td>
+                                <td>0.00</td>
+                                <td>0.00</td>
+                                <td>0.00</td>
+                                <td>{{ loan_instance.loan_amount }}</td>
+                            </tr>
+                            {% for payment in loan_schedule %}
+                                <tr>
+                                    <td>{{ payment.period }}</td>
+                                    <td>{{payment.payment_date|date:"d-m-Y" }}</td>
+                                    <td>{{ payment.principal_payment|floatformat:2|intcomma  }}</td>
+                                    <td>{{ payment.interest_payment|floatformat:2|intcomma }}</td>
+                                    <td>{{ payment.total_payment|floatformat:2|intcomma }}</td>
+                                    <td>{{ payment.principal_remaining|floatformat:2|intcomma  }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="2"><strong>Total</strong></td>
+                                <td><strong>{{ total_principal_sum|floatformat:2|intcomma }}</strong></td>
+                                <td><strong>{{ total_interest_sum|floatformat:2|intcomma }}</strong></td>
+                                <td><strong>{{ total_payments_sum|floatformat:2|intcomma }}</strong></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

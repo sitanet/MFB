@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+          <div class="col-md-12">
+                <div class="page_title">
+                      <h2>Change Session</h2>
+                </div>
+          </div>
+          <!-- form -->
+          <form method="POST" class="chart_of_account p-5 shadow-lg rounded rounded-5">
+            {% csrf_token %}
+            {% if messages %}
+    <ul class="messages">
+        {% for message in messages %}
+            <li style="font-size: 30px; color: brown; font-weight: bold;"  {% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+        {% endfor %}
+    </ul>
+{% endif %}
+<h6 style="color: red;" >{{ form.errors }}</h6>
+              <div class="form-row">
+                    <div class="form-group col-md-4">
+                          <label for="general_ledger_accout_no">Session Date .</label>
+                          <input type="date" class="form-control bg-light" name="session_date" value="{{ form.instance.session_date|date:'Y-m-d' }}">
+                    </div>
+                    <div class="form-group col-md-4">
+                          <label for="general_ledger_accout_name">Session Status </label>
+                          <select class="form-control bg-light" name="session_status">
+                            <option value="Open" {% if form.instance.session_status == 'Open' %}selected{% endif %}>Open</option>
+                            <option value="Closed" {% if form.instance.session_status == 'Closed' %}selected{% endif %}>Closed</option>
+                        </select>
+                    </div>
+                    <div class="form-group col-md-4">
+                   
+                  </div>
+
+                
+
+              
+                    {% if form.instance.session_status == 'Closed' %}
+                    <button type="submit"
+                          class="btn w- btn-success mt-4 shadow-sm">Open</button>
+                    {% else %}
+                    <button type="submit"
+                          class="btn w- btn-success mt-4 shadow-sm">Closed</button>
+                    {% endif %}
+
+
+
+                    
+
+                   
+              
+                          
+              
+              </div>
+              <a href="{% url 'software_reg' %}" style="color: green; font-weight: bold;">Back to Software Reg</a>
+        </form>
+      
+  
+            
+          </div>
+  
+  
+    </div>
+  
+
+{% endblock %}

@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Title -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="page_title">
+                <h2 >{{ report_title }}</h2>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form Section -->
+    <div id="form-container" class="form-container {% if expected_repayments %}d-none{% endif %}">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <form method="post" action="{% url 'loan_due_vs_repayment_report' %}">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-md-4 form-group">
+                            <label for="id_reporting_date">Reporting Date:</label>
+                            <input type="date" name="reporting_date" id="id_reporting_date" class="form-control" value="{{ reporting_date }}">
+                        </div>
+                        <div class="col-md-4 form-group">
+                            <label for="id_branch">Branch:</label>
+                            <select name="branch" id="id_branch" class="form-control">
+                                <option value="">Select Branch</option>
+                                {% for branch in branches %}
+                                    <option value="{{ branch.branch_code }}" {% if selected_branch == branch.branch_code %}selected{% endif %}>{{ branch.branch_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4 form-group">
+                            <label for="id_gl_no">GL No (with GL Name):</label>
+                            <select name="gl_no" id="id_gl_no" class="form-control">
+                                <option value="">Select GL No</option>
+                                {% for gl_account in gl_accounts %}
+                                    <option value="{{ gl_account.gl_no }}" {% if selected_gl_no == gl_account.gl_no %}selected{% endif %}>
+                                        {{ gl_account.gl_no }} - {{ gl_account.gl_name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group mt-3">
+                        <button type="submit" class="btn btn-primary">Generate Report</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Report Section -->
+    <div id="report-container" class="report-container {% if not expected_repayments %}d-none{% endif %}">
+        {% if expected_repayments %}
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="report-header mb-4">
+                        <h4 class="text-center">{{ report_title }}</h4>
+                        <p class="text-center mb-1">Date: {{ current_date }}</p>
+                        <p class="text-center">Reporting Date: {{ reporting_date }}</p>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped">
+                            <thead class="thead-dark">
+                                <tr>
+                                    <th>GL No</th>
+                                    <th>Account No</th>
+                                    <th>Customer Name</th>
+                                    <th>Loan Amount</th>
+                                    <th>Total Interest</th>
+                                    <th>Total Principal Paid</th>
+                                    <th>Total Interest Paid</th>
+                                    <th>Expected Principal Repayment</th>
+                                    <th>Expected Interest Repayment</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for repayment in expected_repayments %}
+                                    <tr>
+                                        <td>{{ repayment.gl_no }}</td>
+                                        <td>{{ repayment.ac_no }}</td>
+                                        <td>{{ repayment.customer_name }}</td>
+                                        <td>{{ repayment.loan_amount }}</td>
+                                        <td>{{ repayment.total_interest }}</td>
+                                        <td>{{ repayment.total_principal_paid }}</td>
+                                        <td>{{ repayment.total_interest_paid }}</td>
+                                        <td>{{ repayment.expected_principal_repayment }}</td>
+                                        <td>{{ repayment.expected_interest_repayment }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot class="thead-dark">
+                                <tr>
+                                    <td colspan="4" class="font-weight-bold">Grand Total:</td>
+                                    <td>{{ grand_total_interest }}</td>
+                                    <td>{{ grand_total_principal_paid }}</td>
+                                    <td>{{ grand_total_interest_paid }}</td>
+                                    <td>{{ grand_total_repayment }}</td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

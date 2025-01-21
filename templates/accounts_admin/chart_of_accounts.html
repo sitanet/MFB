@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="page_title">
+                <h2>Chart of Account</h2>
+            </div>
+        </div>
+        <!-- form -->
+        <form method="POST" class="chart_of_account p-5 shadow-lg rounded rounded-5">
+            {% csrf_token %}
+            {% if messages %}
+            <ul class="messages">
+                {% for message in messages %}
+                <li style="font-size: 30px; color: brown; font-weight: bold;" {% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+            <h6 style="color: red;">{{ form.errors }}</h6>
+            <div class="form-row">
+                <div class="form-group col-md-4">
+                    <label for="general_ledger_accout_no">General Ledger Account No.</label>
+                    <input type="text" class="form-control bg-light" id="general_ledger_accout_no" name="gl_no">
+                </div>
+                <div class="form-group col-md-4">
+                    <label for="general_ledger_accout_name">General Ledger Account Name</label>
+                    <input type="text" class="form-control bg-light" id="general_ledger_accout_name" name="gl_name">
+                </div>
+
+                <div class="form-group col-md-4">
+                    <label for="">General Ledger Type</label>
+                    <select class="form-control bg-light" id="general_ledger_type" name="account_type" required>
+                        <option value="">-- Select --</option>
+                        <option value="1">Assets</option>
+                        <option value="2">Liabilities</option>
+                        <option value="3">Equity</option>
+                        <option value="4">Income</option>
+                        <option value="5">Expenses</option>
+                    </select>
+                </div>
+
+                <div class="form-group col-md-4">
+                    <label for="currency_code">Currency Code</label>
+                    <select class="form-control bg-light" id="currency" name="currency" required>
+                        <option value="">-- Select --</option>
+                        <option value="1">US Dollar</option>
+                        <option value="2">Nigeria Naira</option>
+                    </select>
+                </div>
+
+                <div class="form-group col-md-4">
+                    <label for="">Debit/Credit Type</label>
+                    <select class="form-control bg-light" id="double_entry_type" name="double_entry_type" required>
+                        <option value="">-- Select --</option>
+                        <option value="1">Debit & Credit</option>
+                        <option value="2">Credit</option>
+                        <option value="3">Debit</option>
+                    </select>
+                </div>
+                <div class="form-group col-md-4">
+                    <label for="">Header</label>
+                    <select class="form-control bg-light" id="header" name="header">
+                        <option value="">-- Select --</option>
+                        {% for account in account %}
+                        <option value="{{ account.id }}">{{ account.gl_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-12 mt-3 ms-5">
+                    <label for="non-financial">Non-Financial Account</label>
+                    <input type="checkbox" id="is_non_financial" name="is_non_financial" {% if form.is_non_financial.value %}checked{% endif %}>
+                </div>
+
+                <button type="submit" class="btn w- btn-success mt-4 shadow-sm">Add</button>
+            </div>
+
+            <ul id="account-tree">
+                {% for account in accounts %}
+                <li>
+                    {% if account.account_set.all %}
+                    <span class="toggle" onclick="toggleChildren(this)">+</span>
+                    {% endif %}
+                    <span class="gl-name" 
+                          data-gl-no="{{ account.gl_no }}" 
+                          data-gl-name="{{ account.gl_name }}" 
+                          data-account-type="{{ account.account_type }}" 
+                          data-currency="{{ account.currency }}" 
+                          data-double-entry-type="{{ account.double_entry_type }}" 
+                          data-header="{{ account.header_id }}" 
+                          data-is-non-financial="{{ account.is_non_financial }}">
+                        {{ account.gl_no }} {{ account.gl_name }}
+                    </span>
+                    <a href="{% url 'update_chart_of_account' account.id %}">Edit</a>
+                    <a href="{% url 'delete_chart_of_account' account.id %}">Delete</a>
+                    <ul class="children" style="display:none;">
+                        {% for child in account.account_set.all %}
+                        <li class="child">
+                            {% if child.account_set.all %}
+                            <span class="toggle" onclick="toggleChildren(this)">+</span>
+                            {% endif %}
+                            <span class="gl-name" 
+                                  data-gl-no="{{ child.gl_no }}" 
+                                  data-gl-name="{{ child.gl_name }}" 
+                                  data-account-type="{{ child.account_type }}" 
+                                  data-currency="{{ child.currency }}" 
+                                  data-double-entry-type="{{ child.double_entry_type }}" 
+                                  data-header="{{ child.header_id }}" 
+                                  data-is-non-financial="{{ child.is_non_financial }}">
+                                {{ child.gl_no }} {{ child.gl_name }}
+                            </span>
+                            <a href="{% url 'update_chart_of_account' child.id %}">Edit</a>
+                            <a href="{% url 'delete_chart_of_account' child.id %}">Delete</a>
+                            <ul class="children" style="display:none;">
+                                {% for grandchild in child.account_set.all %}
+                                <li class="grandchild">
+                                    {% if grandchild.account_set.all %}
+                                    <span class="toggle" onclick="toggleChildren(this)">+</span>
+                                    {% endif %}
+                                    <span class="gl-name" 
+                                          data-gl-no="{{ grandchild.gl_no }}" 
+                                          data-gl-name="{{ grandchild.gl_name }}" 
+                                          data-account-type="{{ grandchild.account_type }}" 
+                                          data-currency="{{ grandchild.currency }}" 
+                                          data-double-entry-type="{{ grandchild.double_entry_type }}" 
+                                          data-header="{{ grandchild.header_id }}" 
+                                          data-is-non-financial="{{ grandchild.is_non_financial }}">
+                                        {{ grandchild.gl_no }} {{ grandchild.gl_name }}
+                                    </span>
+                                    <a href="{% url 'update_chart_of_account' grandchild.id %}">Edit</a>
+                                    <a class="submit" href="{% url 'delete_chart_of_account' grandchild.id %}">Delete</a>
+                                    <ul class="children" style="display:none;">
+                                        {% for greatgrandchild in grandchild.account_set.all %}
+                                        <li class="greatgrandchild">
+                                            {% if greatgrandchild.account_set.all %}
+                                            <span class="toggle" onclick="toggleChildren(this)">+</span>
+                                            {% endif %}
+                                            <span class="gl-name" 
+                                                  data-gl-no="{{ greatgrandchild.gl_no }}" 
+                                                  data-gl-name="{{ greatgrandchild.gl_name }}" 
+                                                  data-account-type="{{ greatgrandchild.account_type }}" 
+                                                  data-currency="{{ greatgrandchild.currency }}" 
+                                                  data-double-entry-type="{{ greatgrandchild.double_entry_type }}" 
+                                                  data-header="{{ greatgrandchild.header_id }}" 
+                                                  data-is-non-financial="{{ greatgrandchild.is_non_financial }}">
+                                                {{ greatgrandchild.gl_no }} {{ greatgrandchild.gl_name }}
+                                            </span>
+                                            <a href="{% url 'update_chart_of_account' greatgrandchild.id %}">Edit</a>
+                                            <!-- <a class="submit" href="{% url 'delete_chart_of_account' greatgrandchild.id %}">Delete</a> -->
+                                            <a class="submit" href="{% url 'delete_chart_of_account' greatgrandchild.id %}" style="color: red;">Delete</a>
+
+                                        </li>
+                                        {% endfor %}
+                                    </ul>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </li>
+                {% endfor %}
+            </ul>
+        </form>
+
+        <div>
+            <!-- Chart of Account will come here -->
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const glNames = document.querySelectorAll(".gl-name");
+        glNames.forEach(glName => {
+            glName.addEventListener("click", function () {
+                document.getElementById("general_ledger_accout_no").value = this.dataset.glNo || "";
+                document.getElementById("general_ledger_accout_name").value = this.dataset.glName || "";
+                document.getElementById("general_ledger_type").value = this.dataset.accountType || "";
+                document.getElementById("currency").value = this.dataset.currency || "";
+                document.getElementById("double_entry_type").value = this.dataset.doubleEntryType || "";
+                document.getElementById("header").value = this.dataset.header || "";
+                document.getElementById("is_non_financial").checked = this.dataset.isNonFinancial === "true";
+            });
+        });
+    });
+
+    function toggleChildren(element) {
+        const childrenContainer = element.parentElement.querySelector('ul.children');
+        if (childrenContainer.style.display === "none") {
+            childrenContainer.style.display = "block";
+            element.innerHTML = "-";
+        } else {
+            childrenContainer.style.display = "none";
+            element.innerHTML = "+";
+        }
+    }
+</script>
+
+{% endblock %}

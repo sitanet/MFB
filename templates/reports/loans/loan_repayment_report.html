@@ -1,0 +1,258 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    /* Add your custom styles here */
+    .total-row, .subtotal-row {
+        font-weight: bold;
+    }
+
+    .total-row {
+        border-top: 3px solid #007bff;
+        border-bottom: 3px solid #007bff;
+        background-color: #e9ecef;
+        color: #000;
+    }
+
+    .subtotal-row {
+        background-color: #f8f9fa;
+        color: #007bff;
+    }
+
+    .info-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+    }
+
+    .info-table th, .info-table td {
+        padding: 12px;
+        border: 1px solid #dee2e6;
+        text-align: left;
+    }
+
+    .info-table th {
+        background-color: #343a40;
+        color: #fff;
+    }
+
+    .info-table td {
+        background-color: #fff;
+    }
+
+    .info-table tr:nth-child(even) td {
+        background-color: #f9f9f9;
+    }
+
+    .info-table tr:hover td {
+        background-color: #f1f1f1;
+    }
+
+    .form-container, .report-container {
+        margin-bottom: 20px;
+    }
+
+    .form-container.hidden, .report-container.hidden {
+        display: none;
+    }
+
+    .form-container .card {
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .form-container .card-header {
+        background-color: #007bff;
+        color: #fff;
+        border-bottom: 1px solid #ddd;
+    }
+
+    .form-container .card-body {
+        padding: 20px;
+    }
+
+    .print-button {
+        margin-top: 20px;
+        text-align: right;
+    }
+
+    .btn-primary {
+        background-color: #007bff;
+        border-color: #007bff;
+    }
+
+    .btn-primary:hover {
+        background-color: #0056b3;
+        border-color: #004085;
+    }
+
+    .report-header {
+        padding: 20px;
+        color: #fff;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        text-align: center;
+    }
+
+    .report-header h4, .report-header p {
+        margin: 0;
+    }
+
+    .report-header h4 {
+        font-size: 24px;
+    }
+
+    .report-header p {
+        font-size: 14px;
+    }
+
+    .date-time {
+        text-align: right;
+        font-size: 12px;
+        color: #666;
+    }
+</style>
+
+<div class="container-fluid">
+    <!-- Page Title -->
+    <div class="row column_title mb-4">
+        <div class="col-md-12">
+            <div class="page_title">
+                <h2>Loan Repayment Report</h2>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form Section -->
+    <div id="form-container" class="form-container {% if repayments %}hidden{% endif %}">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <form method="post" action="{% url 'loan_repayment_report' %}" onsubmit="handleSubmit(event)">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-md-4 form-group">
+                            <label for="id_start_date">Start Date:</label>
+                            <input type="date" name="start_date" id="id_start_date" class="form-control" value="{{ form.start_date.value|default:'' }}">
+                        </div>
+                        <div class="col-md-4 form-group">
+                            <label for="id_end_date">End Date:</label>
+                            <input type="date" name="end_date" id="id_end_date" class="form-control" value="{{ form.end_date.value|default:'' }}">
+                        </div>
+                        <div class="col-md-4 form-group">
+                            <label for="id_branch">Branch:</label>
+                            <select name="branch" id="id_branch" class="form-control">
+                                <option value="">All Branches</option>
+                                {% for branch in form.branch.field.queryset %}
+                                    <option value="{{ branch.pk }}" {% if form.branch.value == branch.pk|stringformat:"s" %}selected{% endif %}>
+                                        {{ branch.company_name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4 form-group">
+                            <label for="id_gl_no">Product (GL No):</label>
+                            <select name="gl_no" id="id_gl_no" class="form-control">
+                                <option value="">All Products</option>
+                                {% for gl_account in form.gl_no.field.queryset %}
+                                    <option value="{{ gl_account.pk }}" {% if form.gl_no.value == gl_account.pk|stringformat:"s" %}selected{% endif %}>
+                                        {{ gl_account.gl_no }} - {{ gl_account.gl_name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Generate Report</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Report Section -->
+    <div id="report-container" class="report-container {% if not repayments %}hidden{% endif %}">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <div class="report-header">
+                    {% if selected_branch %}
+                        <h4>{{ selected_branch.company_name }}</h4>
+                        <p class="office-address">{{ selected_branch.office_address }}</p>
+                        <p>Date Range: {{ start_date|date:"d/m/Y" }} - {{ end_date|date:"d/m/Y" }}</p>
+                    {% endif %}
+                    <h4>Loan Repayment Report</h4>
+                </div>
+                <table class="info-table">
+                    <thead>
+                        <tr>
+                            <th>Branch</th>
+                            <th>Loan No.</th>
+                            <th>Period</th>
+                            <th>Trx Date</th>
+                            <th>Trx Type</th>
+                            <th>Trx No.</th>
+                            <th>Principal</th>
+                            <th>Interest</th>
+                            <th>Penalty</th>
+                            <th>Total Paid</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% with total_paid_sum=0 %}
+                        {% for repayment in repayments %}
+                        <tr>
+                            <td>{{ repayment.branch }}</td>
+                            <td>{{ repayment.gl_no }}.{{ repayment.ac_no }}.{{ repayment.cycle }}</td>
+                            <td>{{ repayment.period }}</td>
+                            <td>{{ repayment.trx_date }}</td>
+                            <td>{{ repayment.trx_type }}</td>
+                            <td>{{ repayment.trx_no }}</td>
+                            <td>{{ repayment.principal }}</td>
+                            <td>{{ repayment.interest }}</td>
+                            <td>{{ repayment.penalty }}</td>
+                            <td>
+                                {% with total_paid=repayment.principal|add:repayment.interest %}
+                                    {{ total_paid }}
+                                    {% with total_paid_sum=total_paid_sum|add:total_paid %}
+                                    {% endwith %}
+                                {% endwith %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% endwith %}
+                        {% if subtotals %}
+                            {% for subtotal in subtotals %}
+                            <tr class="subtotal-row">
+                                <td colspan="6">Subtotal for GL No. {{ subtotal.gl_no }}</td>
+                                <td>{{ subtotal.subtotal_principal }}</td>
+                                <td>{{ subtotal.subtotal_interest }}</td>
+                                <td>{{ subtotal.subtotal_penalty }}</td>
+                            </tr>
+                            {% endfor %}
+                        {% endif %}
+                        <tr class="total-row">
+                            <td colspan="6" class="text-end">Grand Total:</td>
+                            <td>{{ grand_total_principal }}</td>
+                            <td>{{ grand_total_interest }}</td>
+                            <td>{{ grand_total_penalty }}</td>
+                            <td>{{ total_paid_sum }}</td> <!-- Display the total sum of Total Paid -->
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Print Button -->
+    {% if repayments %}
+    <div class="print-button">
+        <button class="btn btn-secondary" onclick="window.print()">Print Report</button>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    function handleSubmit(event) {
+        document.getElementById('form-container').classList.add('hidden');
+        document.getElementById('report-container').classList.remove('hidden');
+    }
+</script>
+
+{% endblock %}

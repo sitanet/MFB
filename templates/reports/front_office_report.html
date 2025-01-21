@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container-fluid">
+  <div class="row">
+    <!-- Chart of Account will come here -->
+  </div>
+
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-md-12">
+        <div class="page_title">
+          <h2>Front Office Report</h2>
+        </div>
+      </div>
+
+      <div class="col-md-2 mb-3">
+        <div class="account_setting py-5 fs-1 bg-white">
+          <div class="couter_icon col-md-12">
+            <i class="couter_icon fa fa-user" style="font-size: 16px; color: #f39c12;"></i>
+          </div>
+          <a href="{% url 'generate_statement' %}" class="text-center">
+            <h5 class="my-2" style="font-size: 13px;">Statement of Account</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-2 mb-3">
+        <div class="account_setting py-5 fs-1 bg-white">
+          <div class="couter_icon col-md-12">
+            <i class="couter_icon fa fa-sign-in-alt" style="font-size: 16px; color: #27ae60;"></i>
+          </div>
+          <a href="{% url 'transaction_sequence_by_ses_date' %}" class="text-center">
+            <h5 class="my-2" style="font-size: 13px;">Transactions Sequence by Session Date</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-2 mb-3">
+        <div class="account_setting py-5 fs-1 bg-white">
+          <div class="couter_icon col-md-12">
+            <i class="couter_icon fa fa-exchange-alt" style="font-size: 16px; color: #3498db;"></i>
+          </div>
+          <a href="{% url 'transaction_sequence_by_trx_date' %}" class="text-center">
+            <h5 class="my-2" style="font-size: 13px;">Transactions Sequence by Trx Date</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-2 mb-3">
+        <div class="account_setting py-5 fs-1 bg-white rounded rounded-5">
+          <div class="couter_icon col-md-12">
+            <i class="couter_icon fa fa-book" style="font-size: 16px; color: #e74c3c;"></i>
+          </div>
+          <a href="{% url 'transaction_journal_listing_by_ses_date' %}" class="text-center">
+            <h5 class="my-2" style="font-size: 13px;">Transactions Journal Listing By Session Date</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-2 mb-3">
+        <div class="account_setting py-5 fs-1 bg-white shadow-lg rounded rounded-5">
+          <div class="couter_icon col-md-12">
+            <i class="couter_icon fa fa-list" style="font-size: 16px; color: #8e44ad;"></i>
+          </div>
+          <a href="{% url 'transaction_journal_listing_by_trx_date' %}" class="text-center">
+            <h5 class="my-2" style="font-size: 13px;">Transaction Journal Listing By Trx Date</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-2 mb-3">
+        <div class="account_setting py-5 fs-1 bg-white shadow-lg rounded rounded-5">
+          <div class="couter_icon col-md-12">
+            <i class="couter_icon fa fa-sun" style="font-size: 16px; color: #f1c40f;"></i>
+          </div>
+          <a href="{% url 'transaction_day_sheet_by_session_date' %}" class="text-center">
+            <h5 class="my-2" style="font-size: 13px;">Trx/Day Sheet By Session Date</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-2 mb-3">
+        <div class="account_setting py-5 fs-1 bg-white shadow-lg rounded rounded-5">
+          <div class="couter_icon col-md-12">
+            <i class="couter_icon fa fa-file-alt" style="font-size: 16px; color: #1abc9c;"></i>
+          </div>
+          <a href="{% url 'transaction_day_sheet_by_trx_date' %}" class="text-center">
+            <h5 class="my-2" style="font-size: 13px;">Trx/Day Sheet By Trx Date</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-2 mb-3">
+        <div class="account_setting py-5 fs-1 bg-white rounded rounded-5">
+          <div class="couter_icon col-md-12">
+            <i class="couter_icon fa fa-user-plus" style="font-size: 16px; color: #2ecc71;"></i>
+          </div>
+          <a href="{% url 'general_trx_register_by_session_date' %}" class="text-center">
+            <h5 class="my-2" style="font-size: 13px;">General Trx Register By Session Date</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-2 mb-3">
+        <div class="account_setting py-5 fs-1 bg-white rounded rounded-5">
+          <div class="couter_icon col-md-12">
+            <i class="couter_icon fa fa-user-plus" style="font-size: 16px; color: #e67e22;"></i>
+          </div>
+          <a href="{% url 'general_trx_register_by_trx_date' %}" class="text-center">
+            <h5 class="my-2" style="font-size: 13px;">General Trx Register By Trx Date</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-2 mb-3">
+        <div class="account_setting py-5 fs-1 bg-white rounded rounded-5">
+          <div class="couter_icon col-md-12">
+            <i class="couter_icon fa fa-cash-register" style="font-size: 16px; color: #d35400;"></i>
+          </div>
+          <a href="{% url 'cashier_teller_cash_status_by_session_date' %}" class="text-center">
+            <h5 class="my-2" style="font-size: 13px;">Cashier/Teller Cash Status By Session Date</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-2 mb-3">
+        <div class="account_setting py-5 fs-1 bg-white rounded rounded-5">
+          <div class="couter_icon col-md-12">
+            <i class="couter_icon fa fa-cash-register" style="font-size: 16px; color: #16a085;"></i>
+          </div>
+          <a href="{% url 'cashier_teller_cash_status_by_trx_date' %}" class="text-center">
+            <h5 class="my-2" style="font-size: 13px;">Cashier/Teller Cash Status By Trx Date</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-2 mb-3">
+        <div class="account_setting py-5 fs-1 bg-white rounded rounded-5">
+          <div class="couter_icon col-md-12">
+            <i class="couter_icon fa fa-chart-line" style="font-size: 16px; color: #c0392b;"></i>
+          </div>
+          <a href="{% url 'cashier_teller_cash_status_by_trx_date' %}" class="text-center">
+            <h5 class="my-2" style="font-size: 13px;">Transactions Variance Report</h5>
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+{% endblock %}

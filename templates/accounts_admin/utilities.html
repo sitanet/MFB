@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+
+
+{% block content %}
+
+
+
+<div class="container-fluid">
+  <div class="row">
+ 
+    
+        </div>
+    
+
+        <div>
+              <!-- Chart of Accoutwill come here -->
+        </div>
+
+        <div class="container-fluid">
+            <div class="row">
+               <div class="col-md-12">
+                  <div class="page_title">
+                     <h2>Account Setting</h2>
+                  </div>
+               </div>
+
+        
+      
+               <div class="col-md-3">
+                  <div class="account_setting  py-5 fs-1 bg-white  rounded rounded-5">
+                     <div class="couter_icon  col-md-12">
+                        <i class="couter_icon fa fa-user yellow_color"></i>
+                     </div>
+                     <a href="{% url 'session_mgt' company_id=1 %}" class="text-center">
+                        <h5 class="my-4">Change  Session</h5>
+                     </a>
+                  </div>
+               </div>
+               
+            
+      
+         
+      
+           
+            </div>
+            <!-- footer -->
+            <!-- <div class="container-fluid">
+            <div class="footer">
+               <p>Copyright &copy; 2023 The CityGate Church. All rights reserved.
+               </p>
+            </div>
+         </div> -->
+         </div>
+
+
+
+<!-- <h1>Chart of Account</h1> -->
+
+
+
+</div>
+  
+  {% endblock %}

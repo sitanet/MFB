@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container-fluid">
+  <div class="row"></div>
+
+  <div>
+    <!-- Chart of Account will come here -->
+  </div>
+
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-md-12">
+        <div class="page_title">
+          <h2>Loans Report</h2>
+        </div>
+      </div>
+
+      <!-- <div class="col-md-4 mb-3">
+        <div class="account_setting py-3 fs-4 bg-white rounded shadow-sm">
+          <div class="couter_icon text-center">
+            <i class="couter_icon fa fa-history" style="color: #ff4500; font-size: 24px;"></i> 
+          </div>
+          <a href="{% url 'loan_hist' %}" class="text-center d-block mt-2">
+            <h5 class="my-1">Loans History</h5>
+          </a>
+        </div>
+      </div> -->
+
+      <div class="col-md-4 mb-3">
+        <div class="account_setting py-3 fs-4 bg-white rounded shadow-sm">
+          <div class="couter_icon text-center">
+            <i class="couter_icon fa fa-book" style="color: #4682b4; font-size: 24px;"></i> <!-- Steel Blue -->
+          </div>
+          <a href="{% url 'loan_ledger_card' %}" class="text-center d-block mt-2">
+            <h5 class="my-1">Loan Ledger Card</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-4 mb-3">
+        <div class="account_setting py-3 fs-4 bg-white rounded shadow-sm">
+          <div class="couter_icon text-center">
+            <i class="couter_icon fa fa-calendar-check" style="color: #32cd32; font-size: 24px;"></i> <!-- Lime Green -->
+          </div>
+          <a href="{% url 'loan_repayment_schedule' %}" class="text-center d-block mt-2">
+            <h5 class="my-1">Loan Repayment Schedule</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-4 mb-3">
+        <div class="account_setting py-3 fs-4 bg-white rounded shadow-sm">
+          <div class="couter_icon text-center">
+            <i class="couter_icon fa fa-money-check-alt" style="color: #ffa500; font-size: 24px;"></i> <!-- Orange -->
+          </div>
+          <a href="{% url 'loan_disbursement_report' %}" class="text-center d-block mt-2">
+            <h5 class="my-1">Loan Disbursement Report</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-4 mb-3">
+        <div class="account_setting py-3 fs-4 bg-white rounded shadow-sm">
+          <div class="couter_icon text-center">
+            <i class="couter_icon fa fa-file-alt" style="color: #6a5acd; font-size: 24px;"></i> <!-- Slate Blue -->
+          </div>
+          <a href="{% url 'loan_repayment_report' %}" class="text-center d-block mt-2">
+            <h5 class="my-1">Loan Repayment Report</h5>
+          </a>
+        </div>
+      </div>
+
+      
+      <div class="col-md-4 mb-3">
+        <div class="account_setting py-3 fs-4 bg-white rounded shadow-sm">
+          <div class="couter_icon text-center">
+            <i class="couter_icon fa fa-hand-holding-usd" style="color: #dc143c; font-size: 24px;"></i> <!-- Crimson -->
+          </div>
+          <a href="{% url 'repayment_since_disbursement_report' %}" class="text-center d-block mt-2">
+            <h5 class="my-1">Repayment Since Disbursement Report</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-4 mb-3">
+        <div class="account_setting py-3 fs-4 bg-white rounded shadow-sm">
+          <div class="couter_icon text-center">
+            <i class="couter_icon fa fa-balance-scale" style="color: #ff6347; font-size: 24px;"></i> <!-- Tomato -->
+          </div>
+          <a href="{% url 'loan_outstanding_balance' %}" class="text-center d-block mt-2">
+            <h5 class="my-1">Loan Outstanding Balance Report</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-4 mb-3">
+        <div class="account_setting py-3 fs-4 bg-white rounded shadow-sm">
+          <div class="couter_icon text-center">
+            <i class="couter_icon fa fa-chart-line" style="color: #20b2aa; font-size: 24px;"></i> <!-- Light Sea Green -->
+          </div>
+          <a href="{% url 'expected_repayment' %}" class="text-center d-block mt-2">
+            <h5 class="my-1">Expected Repayment Report</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-4 mb-3">
+        <div class="account_setting py-3 fs-4 bg-white rounded shadow-sm">
+          <div class="couter_icon text-center">
+            <i class="couter_icon fa fa-users" style="color: #ff1493; font-size: 24px;"></i> <!-- Deep Pink -->
+          </div>
+          <a href="{% url 'active_loans_by_officer' %}" class="text-center d-block mt-2">
+            <h5 class="my-1">Active Loans By Loan Officer</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-4 mb-3">
+        <div class="account_setting py-3 fs-4 bg-white rounded shadow-sm">
+          <div class="couter_icon text-center">
+            <i class="couter_icon fa fa-receipt" style="color: #008080; font-size: 24px;"></i> <!-- Teal -->
+          </div>
+          <a href="{% url 'loan_till_sheet' %}" class="text-center d-block mt-2">
+            <h5 class="my-1">Loan Till Sheet</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-4 mb-3">
+        <div class="account_setting py-3 fs-4 bg-white rounded shadow-sm">
+          <div class="couter_icon text-center">
+            <i class="couter_icon fa fa-exclamation-triangle" style="color: #ff4500; font-size: 24px;"></i> <!-- Orange Red -->
+          </div>
+          <a href="{% url 'loan_due_vs_repayment_report' %}" class="text-center d-block mt-2">
+            <h5 class="my-1">Loan Dues vs Repayment Report</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-4 mb-3">
+        <div class="account_setting py-3 fs-4 bg-white rounded shadow-sm">
+          <div class="couter_icon text-center">
+            <i class="couter_icon fa fa-chart-bar" style="color: #6a5acd; font-size: 24px;"></i> <!-- Slate Blue -->
+          </div>
+          <a href="{% url 'portfolio_at_risk_report_view' %}" class="text-center d-block mt-2">
+            <h5 class="my-1">Portfolio At Risk Report</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-4 mb-3">
+        <div class="account_setting py-3 fs-4 bg-white rounded shadow-sm">
+          <div class="couter_icon text-center">
+            <i class="couter_icon fa fa-file-excel" style="color: #ff1493; font-size: 24px;"></i> <!-- Deep Pink -->
+          </div>
+          <a href="#" class="text-center d-block mt-2">
+            <h5 class="my-1">Written-Off Loans Report</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-4 mb-3">
+        <div class="account_setting py-3 fs-4 bg-white rounded shadow-sm">
+          <div class="couter_icon text-center">
+            <i class="couter_icon fa fa-handshake" style="color: #008080; font-size: 24px;"></i> <!-- Teal -->
+          </div>
+          <a href="#" class="text-center d-block mt-2">
+            <h5 class="my-1">Written-Off Loans Repayments Report</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-4 mb-3">
+        <div class="account_setting py-3 fs-4 bg-white rounded shadow-sm">
+          <div class="couter_icon text-center">
+            <i class="couter_icon fa fa-clock" style="color: #dc143c; font-size: 24px;"></i> <!-- Crimson -->
+          </div>
+          <a href="#" class="text-center d-block mt-2">
+            <h5 class="my-1">Rescheduled Loans Report</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-4 mb-3">
+        <div class="account_setting py-3 fs-4 bg-white rounded shadow-sm">
+          <div class="couter_icon text-center">
+            <i class="couter_icon fa fa-cubes" style="color: #32cd32; font-size: 24px;"></i> <!-- Lime Green -->
+          </div>
+          <a href="#" class="text-center d-block mt-2">
+            <h5 class="my-1">Portfolio Concentration Report</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-4 mb-3">
+        <div class="account_setting py-3 fs-4 bg-white rounded shadow-sm">
+          <div class="couter_icon text-center">
+            <i class="couter_icon fa fa-times-circle" style="color: #ff6347; font-size: 24px;"></i> <!-- Tomato -->
+          </div>
+          <a href="#" class="text-center d-block mt-2">
+            <h5 class="my-1">Loan Collection Sheet</h5>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock content %}

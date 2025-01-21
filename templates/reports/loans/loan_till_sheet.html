@@ -1,0 +1,299 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<style>
+    /* General Styles */
+    .total-row, .subtotal-row {
+        font-weight: bold;
+    }
+
+    .total-row {
+        border-top: 3px solid #007bff;
+        border-bottom: 3px solid #007bff;
+        background-color: #e9ecef;
+        color: #000;
+    }
+
+    .subtotal-row {
+        background-color: #f8f9fa;
+        color: #007bff;
+    }
+
+    .info-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        margin-bottom: 20px;
+        font-size: 12px;
+        color: #05090c;
+    }
+
+    .info-table th, .info-table td {
+        padding: 12px;
+        border: 1px solid #dee2e6;
+        vertical-align: middle;
+        text-align: left;
+        border-radius: 4px;
+    }
+
+    .info-table th {
+        background-color: #343a40;
+        color: #fff;
+        font-weight: bold;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .info-table td {
+        background-color: #fff;
+    }
+
+    .info-table tr:nth-child(even) td {
+        background-color: #f9f9f9;
+    }
+
+    .info-table tr:hover td {
+        background-color: #f1f1f1;
+    }
+
+    .info-table tr {
+        transition: background-color 0.3s ease;
+    }
+
+    .form-container, .report-container {
+        margin-bottom: 20px;
+    }
+
+    .form-container.hidden, .report-container.hidden {
+        display: none;
+    }
+
+    .form-container .card {
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .form-container .card-header {
+        background-color: #007bff;
+        color: #fff;
+        border-bottom: 1px solid #ddd;
+    }
+
+    .form-container .card-body {
+        padding: 20px;
+    }
+
+    .form-group label {
+        font-weight: bold;
+    }
+
+    .print-button {
+        margin-top: 20px;
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    .btn-primary {
+        background-color: #007bff;
+        border-color: #007bff;
+        font-weight: bold;
+    }
+
+    .btn-primary:hover {
+        background-color: #0056b3;
+        border-color: #004085;
+    }
+
+    .report-header {
+        padding: 20px;
+        color: #fff;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        text-align: center;
+    }
+
+    .report-header h4, .report-header p {
+        margin: 0;
+    }
+
+    .report-header h4 {
+        font-size: 24px;
+    }
+
+    .report-header p {
+        font-size: 14px;
+    }
+
+    .date-time {
+        text-align: right;
+        font-size: 12px;
+        color: #666;
+    }
+
+    @media print {
+        body * {
+            visibility: hidden;
+        }
+        .print-area, .print-area * {
+            visibility: visible;
+        }
+        .print-area {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            margin: auto;
+        }
+    }
+</style>
+
+<div class="container-fluid">
+    <!-- Page Title -->
+    <div class="row column_title mb-4">
+        <div class="col-md-12">
+            <div class="page_title">
+                <h2>Loan Till Sheet</h2>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form Section -->
+    <div id="form-container" class="form-container {% if repayments %}hidden{% endif %}">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <form method="post" action="{% url 'loan_till_sheet' %}" onsubmit="handleSubmit(event)">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-md-4 form-group">
+                            <label for="id_start_date">Start Date:</label>
+                            <input type="date" name="start_date" id="id_start_date" class="form-control" value="{{ form.start_date.value|default:'' }}">
+                        </div>
+
+                        <div class="col-md-4 form-group">
+                            <label for="id_end_date">End Date:</label>
+                            <input type="date" name="end_date" id="id_end_date" class="form-control" value="{{ form.end_date.value|default:'' }}">
+                        </div>
+
+                        <div class="col-md-4 form-group">
+                            <label for="id_branch">Branch:</label>
+                            <select name="branch" id="id_branch" class="form-control">
+                                <option value="">All Branches</option>
+                                {% for branch in form.branch.field.queryset %}
+                                    <option value="{{ branch.pk }}" {% if form.branch.value == branch.pk|stringformat:"s" %}selected{% endif %}>
+                                        {{ branch.company_name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-md-4 form-group">
+                            <label for="id_gl_no">Product (GL No):</label>
+                            <select name="gl_no" id="id_gl_no" class="form-control">
+                                <option value="">All Products</option>
+                                {% for gl_account in form.gl_no.field.queryset %}
+                                    <option value="{{ gl_account.pk }}" {% if form.gl_no.value == gl_account.pk|stringformat:"s" %}selected{% endif %}>
+                                        {{ gl_account.gl_no }} - {{ gl_account.gl_name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Generate Report</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Report Section -->
+    <div id="report-container" class="report-container {% if not repayments %}hidden{% endif %}">
+        {% if repayments %}
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="report-header">
+                        {% if selected_branch %}
+                            <h4>{{ selected_branch.company_name }}</h4>
+                            <p>{{ selected_branch.office_address }}</p>
+                        {% endif %}
+                        <h4>Loan Till Sheet</h4>
+                        <p>Date Range: {{ start_date|date:"d/m/Y" }} - {{ end_date|date:"d/m/Y" }}</p>
+                    </div>
+                    <table class="table table-bordered">
+                
+                            <thead class="thead-dark">
+                            <tr>
+                                <th>Loan No.</th>
+                                <th>Customer Name</th>
+                                
+                               
+                                <th>Loan Amount</th>
+                                <th>Total Interest</th>
+                                <th>Principal Paid</th>
+                                <th>Interest Paid</th>
+                               
+                                <th>Total Paid</th>
+                              
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for repayment in repayments %}
+                            <tr>
+                             
+                                
+                                <td>{{ repayment.gl_no }}.{{ repayment.ac_no }}.{{ repayment.cycle }}</td>
+                                <td>{{ repayment.customer_name }}</td>
+                                <td>{{ repayment.loan_amount }}</td>
+                                <td>{{ repayment.total_loan_interest }}</td>
+                                <td>{{ repayment.total_principal }}</td>
+                                <td>{{ repayment.total_interest }}</td>
+                                
+                                <td>{{ repayment.total_paid }}</td>
+                              
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="11">No data available</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="4">Grand Total</td>
+                                <td>{{ grand_total_principal }}</td>
+                                <td>{{ grand_total_interest }}</td>
+                                <td>{{ grand_total_penalty }}</td>
+                                <td>{{ grand_total_paid }}</td>
+                                <td>{{ grand_total_paid_percentage }}</td> <!-- Optional: for percentage -->
+                            </tr>
+                        </tfoot>
+                        
+                    </table>
+                    
+                    <div class="date-time">
+                        Report generated on {{ current_date }}
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <p>No repayments found for the selected criteria.</p>
+        {% endif %}
+    </div>
+
+    <!-- Print Button -->
+    <div class="print-button">
+        <button onclick="window.print()" class="btn btn-primary">Print Report</button>
+    </div>
+</div>
+
+<script>
+    function handleSubmit(event) {
+        event.preventDefault();
+        document.getElementById('form-container').classList.add('hidden');
+        document.getElementById('report-container').classList.remove('hidden');
+        event.target.submit();
+    }
+</script>
+
+{% endblock %}

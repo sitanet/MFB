@@ -1,0 +1,171 @@
+
+{% extends "base.html" %}
+{% block content %}
+
+{% include 'includes/alerts.html' %}
+<div class="container-fluid">
+      <div class="row">
+          <div class="col-md-12">
+              <div class="page_title">
+                  <h2>Genaral Journal</h2>
+              </div>
+          </div>
+          <!-- ................. -------------------------------->
+          <div class="container  deposit p-5 shadow-lg rounded rounded-5">
+
+          
+                     
+
+              <div  class="mb-5">
+                  <!-- <div class="col-md-2 m-auto">
+                      <h4 class=" text-center text-light bg-success  py-2 rounded rounded-5">Deposit
+                      </h4>
+                  </div> -->
+
+
+                  <form method="POST"  >
+
+                    {% csrf_token %}
+                    {% if messages %}
+                    <ul class="messages">
+                        {% for message in messages %}
+                            <li style="font-size: 20px; color: brown; font-weight: bold;"  {% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                    {{ form.errors }}
+                      <div class="form-row">
+                    
+                       
+                          <div class="col-md-3">
+                              <label class="fw-bold" for="branch">Branch:</label>
+                              <input type="text" class="form-control bg-light" id="branch" name="branch" value="{{ user.branch }}" readonly>
+                          </div>
+                          <div class="col-md-3 ">
+                           
+                        </div>
+                          <div class="col-md-3 ">
+                            <label class="fw-bold" for="branch">Transaction No:</label>
+                            <input type="text" class="form-control bg-light" id="branch" value="{{data.trx_no}}" readonly>
+                           
+                          
+                        </div>
+                          <div class="col-md-3 col-md-offset-9">
+                            <label class="fw-bold" for="branch">Session Date:</label>
+                            <input type="date" class="form-control bg-light" id="ses_date" name="ses_date" value="{{ company_date }}">
+                        </div>
+                        
+                          <!-- form 2 -->
+                          <div class="col-md-12 mb-2">
+                              <!-- <label class="fw-bold" for="tellerName">Full Name:</label> -->
+                              <span class="fw-bold" id="tellerName" hidden></span>
+                          </div>
+                          <div class="col-md-6">
+                              <label for="tellerGlNo">GL No.:</label>
+                              <input type="text" class="form-control bg-light"  name="gl_no_cashier" >
+                          </div>
+                          <div class="col-md-6">
+                              <label for="tellerAccountNo">Account No.:</label>
+                              <input type="text"  class="form-control bg-light"
+                                  id="tellerAccountNo" name="ac_no_cashier" value="{{user.cashier_ac}}" readonly>
+                                  
+                          </div>
+
+                          <!-- form 2 ends here -->
+
+                          <!-- form 1 -->
+
+
+                          <div class="col-md-12 mt-3 mb-2">
+                      
+                              <span class="fw-bold" id="customerName" hidden></span>
+                          </div>
+                          <div class="col-md-6">
+                              <label for="glNoInput">GL No.:</label>
+                              <input type="text" class="form-control bg-light" id="glNoInput1" name="gl_no" value="{{customer.gl_no}}" readonly>
+                          </div>
+                          <div class="col-md-6">
+                              <label for="accountNoInput">Account No.:</label>
+                              <input type=" text" class="form-control bg-light"  id="accountNoInput1" name="ac_no"
+                              value="{{customer.ac_no}}" readonly>
+                          </div>
+                       
+                          <div class="col-md-6 mt-3">
+                              <label for="deposit_description">Amount:</label>
+                              <input type="number"  class="form-control bg-light"
+                                  id="deposit_description" placeholder="0.00" name="amount">
+                          </div>
+                          <div class="col-md-6 mt-3">
+                              <label for="deposit_description">Description:</label>
+                              <!-- <input type="text" name="deposit_description" class="form-control bg-light"
+                                  id="deposit_description"> -->
+                              <textarea  id="deposit_description"
+                                  class="form-control bg-light" cols="30" rows="2" name="description"></textarea>
+                          </div>
+                          <!-- form 1 ends here -->
+                      </div>
+                      <div class="row mt-4">
+                          <div class="col-md-6">
+                              <div>
+                                 
+                                  <strong style="color: red; font-weight: bold;"> DEBIT: </strong>   <span class="fw-bold" id="teller_fullName2"></span>
+                              </div>
+                              <div>
+                                <label class=" mt-2">Available Balance:</label>
+                                <span id="customer_available_balance"></span>
+                            </div>
+                            <div>
+                                <label>Total Balance:</label>
+                                <span id="customer_total_balance"></span>
+                            </div>
+                          </div>
+                          <div class="col-md-6">
+                              <div>
+                                 
+                                  <span class="fw-bold" id="customerName2">CREDIT:{{customers_with_cashier_gl.balance}}</span> <strong style="color: green; font-weight: bold;"> {{customer.first_name}} {{customer.middle_name}} {{customer.last_name}}</strong> 
+                              </div>
+                            
+
+                              <div>
+                                <label class="mt-2">Current Balance:<strong style="color: green; font-weight: bold;"> {{formatted_balance}}</strong></label>
+                                <span id="teller_available_balance"> </span>
+                              
+                             
+                            </div>
+                            <div>
+                                <label>Available Balance:</label>
+                                <span id="teller_balance"><strong style="color: black; font-weight: bold;"> {{formatted_balance}} </strong></span>
+                            </div>
+                          </div>
+                      </div>
+                      <div class="mt-8">
+                        
+                           
+                          <button class="btn btn-success shadow-sm" type="Submit">Save</button>
+                      </div>
+                  </form>
+              </div>
+          </div>
+          <!-- ------------------- -->
+
+      </div>
+  </div>
+  
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var sessionDateInput = document.getElementById('ses_date');
+        var companyDate = '{{ company_date }}'; // Assuming company_date is in the 'YYYY-MM-DD' format
+
+        sessionDateInput.addEventListener('change', function() {
+            var selectedDate = new Date(sessionDateInput.value);
+            var companyDateObj = new Date(companyDate);
+
+            if (selectedDate > companyDateObj) {
+                alert('Please select a date not greater than the session date.');
+                sessionDateInput.value = '{{ company_date }}'; // Clear the input value
+            }
+        });
+    });
+</script>
+{% endblock %}

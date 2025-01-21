@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>Calculate Interest</h2>
+
+{% if request.session.error_message %}
+    <div class="alert alert-danger">
+        {{ request.session.error_message }}
+    </div>
+    {% comment %} Clear the error message after displaying it {% endcomment %}
+    {% with request.session.error_message as error_message %}
+        {% if error_message %}
+            {% request.session.error_message %}
+            {% request.session.pop('error_message') %}
+        {% endif %}
+    {% endwith %}
+{% endif %}
+
+<form method="post" action="{% url 'calculate_interest' %}">
+    {% csrf_token %}
+    <div class="form-group">
+        <label for="gl_no">GL Number:</label>
+        <input type="text" id="gl_no" name="gl_no" class="form-control" required>
+    </div>
+    <div class="form-group">
+        <label for="start_date">Start Date:</label>
+        <input type="date" id="start_date" name="start_date" class="form-control" required>
+    </div>
+    <div class="form-group">
+        <label for="end_date">End Date:</label>
+        <input type="date" id="end_date" name="end_date" class="form-control" required>
+    </div>
+    <div class="form-group">
+        <label for="ses_date">Session Date:</label>
+        <input type="date" id="ses_date" name="ses_date" class="form-control" required>
+    </div>
+    <button type="submit" name="action" value="preview" class="btn btn-primary">Preview</button>
+    <button type="submit" name="action" value="save" class="btn btn-success">Save</button>
+</form>
+
+{% if results %}
+    <h3>Calculation Results:</h3>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>GL No</th>
+                <th>Account No</th>
+                <th>Total Amount</th>
+                <th>Interest Rate</th>
+                <th>Total Interest</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for result in results %}
+                <tr>
+                    <td>{{ result.gl_no }}</td>
+                    <td>{{ result.ac_no }}</td>
+                    <td>{{ result.total_amount }}</td>
+                    <td>{{ result.interest_rate }}</td>
+                    <td>{{ result.total_interest }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="2"><strong>Totals:</strong></td>
+                <td>{{ total_amount_sum }}</td>
+                <td></td>
+                <td>{{ total_interest_sum }}</td>
+            </tr>
+        </tfoot>
+    </table>
+{% endif %}
+
+{% endblock %}

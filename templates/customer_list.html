@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="page_title">
+                <h2>Customer List</h2>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search and Customer List Card -->
+    <div class="card p-4 shadow-lg rounded">
+        <div class="card-body">
+            <!-- Search Input -->
+            <div class="row mb-3">
+                <div class="col-md-12 text-center">
+                    <div class="input-group mb-3">
+                        <input type="text" class="form-control form-control-lg" placeholder="Search..." id="searchInput">
+                        <div class="input-group-append">
+                            <button class="btn btn-success" type="button" onclick="searchTable()">Search</button>
+                        </div>
+                    </div>
+                 
+                </div>
+            </div>
+
+            <!-- Customer Table -->
+            <table class="table table-hover table-striped">
+                <thead class="thead-dark">
+                    <tr>
+                        <th>#</th>
+                        <th>Full Name</th>
+                       
+                        <th>Account No</th>
+                        <th>Email</th>
+                        <th>Phone Number</th>
+                        <th>Details</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for customer in customers %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ customer.get_full_name }}</td>
+                        <td>{{ customer.gl_no }}{{ customer.ac_no }}</td>
+                        <td>{{ customer.email }}</td>
+                        <td>{{ customer.phone_no }}</td>
+                        <td>
+                            <button class="btn btn-success">
+                                <a href="{% url 'customer_detail' customer.pk %}" class="text-white text-decoration-none">View Details</a>
+                            </button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center">No customers found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    // JavaScript function to go back in history
+    function goBack() {
+        window.history.back();
+    }
+
+    // JavaScript function to search table
+    function searchTable() {
+        var input, filter, table, tr, td, i, j, txtValue;
+        input = document.getElementById('searchInput');
+        filter = input.value.toUpperCase();
+        table = document.querySelector('table');
+        tr = table.getElementsByTagName('tr');
+
+        for (i = 1; i < tr.length; i++) {
+            tr[i].style.display = 'none';
+            td = tr[i].getElementsByTagName('td');
+            for (j = 0; j < td.length; j++) {
+                if (td[j]) {
+                    txtValue = td[j].textContent || td[j].innerText;
+                    if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                        tr[i].style.display = '';
+                        break;
+                    }
+                }
+            }
+        }
+    }
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page_title h2 {
+        text-align: center;
+        font-size: 2.5rem;
+        color: #343a40;
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+
+    .card {
+        background-color: #ffffff;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .card-body {
+        padding: 2rem;
+    }
+
+    .input-group {
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    .input-group input {
+        border-radius: 0.25rem;
+    }
+
+    .btn-success {
+        background-color: #28a745;
+        border-color: #28a745;
+        font-weight: 600;
+    }
+
+    .btn-success:hover {
+        background-color: #218838;
+        border-color: #1e7e34;
+    }
+
+    .btn-secondary {
+        background-color: #6c757d;
+        border-color: #6c757d;
+        font-weight: 600;
+        margin-top: 1rem;
+    }
+
+    .btn-secondary:hover {
+        background-color: #5a6268;
+        border-color: #545b62;
+    }
+
+    .table thead th {
+        text-align: center;
+        background-color: #343a40;
+        color: #ffffff;
+    }
+
+    .table tbody td {
+        text-align: center;
+    }
+
+    @media screen and (max-width: 768px) {
+        .table thead th, .table tbody td {
+            font-size: 0.9rem;
+        }
+
+        .input-group input {
+            font-size: 0.8rem;
+        }
+    }
+</style>
+{% endblock %}

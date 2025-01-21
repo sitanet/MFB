@@ -1,0 +1,213 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block content %}
+    {% include 'includes/alerts.html' %}
+
+    <style>
+        /* Add your CSS styles here */
+        .container-fluid {
+            padding: 20px;
+        }
+
+        .column_title {
+            margin-bottom: 20px;
+        }
+
+        .page_title h2 {
+            margin: 0;
+            color: #333;
+        }
+
+        h5 {
+            margin: 10px 0;
+            color: #555;
+        }
+
+        .table-section {
+            margin-top: 20px;
+        }
+
+        p {
+            margin-bottom: 5px;
+            color: #666;
+        }
+
+        .table {
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #333;
+            color: #fff;
+        }
+
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+
+        .total-row {
+            border-bottom: 3px solid #000;
+            border-top: 3px solid #000;
+        }
+
+        .total-row td {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .office-address {
+            margin-bottom: 20px; /* Adjust the value as needed */
+        }
+
+        /* Print-specific styles */
+        @media print {
+            .container-fluid {
+                padding: 0;
+            }
+
+            .table {
+                border-collapse: collapse;
+            }
+
+            th, td {
+                border: 1px solid #000;
+            }
+
+            .page_title {
+                text-align: center;
+                margin-bottom: 20px;
+            }
+
+            .no-print {
+                display: none;
+            }
+        }
+
+        /* Button styling */
+        .print-button {
+            background-color: #149414; /* Navy green color */
+            color: #fff; /* White text */
+            border: none; /* Remove default border */
+            border-radius: 5px; /* Rounded corners */
+            padding: 10px 20px; /* Padding for better click area */
+            font-size: 16px; /* Font size */
+            cursor: pointer; /* Pointer cursor on hover */
+            transition: background-color 0.3s, box-shadow 0.3s; /* Smooth transition */
+        }
+
+        .print-button:hover {
+            background-color: #00332e; /* Darker navy green on hover */
+        }
+
+        .print-button:focus {
+            outline: none; /* Remove default focus outline */
+        }
+
+        .print-button:active {
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.2); /* Shadow effect on click */
+        }
+    </style>
+
+    <div class="container-fluid">
+        <div class="row column_title">
+            <div class="col-md-12">
+                <div class="page_title">
+                    <h2>Statement of Account</h2>
+                </div>
+            </div>
+        </div>
+
+        <!-- Print Button -->
+        <div class="text-right no-print">
+            <button class="print-button" onclick="window.print()">Print</button>
+        </div>
+
+        <!-- Statement of Account Content -->
+        <div class="col-md-12">
+            <div class="white_shd full margin_bottom_30">
+                <div class="table_section padding_infor_info">
+                    <div class="row">
+                        <div class="col-md-12 text-center">
+                            <h4>{{ company.company_name }}</h4>
+                            <p>{{ company.branch_name }}</p>
+                            <p class="office-address">{{ company.office_address }}</p>
+                        </div>
+                    </div>
+                    <div class="row" style="padding: 10px; border-radius: 5px;">
+                        <div class="row">
+                            <div class="col-md-12 text-center">
+                                <h5 style="color: #336699; text-align: center;">{{ full_name }}</h5>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Start Date: </strong>{{ start_date }}</p>
+                            <p><strong>End Date:</strong> {{ end_date }}</p>
+                            <p><strong>GL No: </strong>{{ gl_no }}</p>
+                            <p><strong>AC No:</strong> {{ ac_no }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Opening Balance: </strong>{{ opening_balance }}</p>
+                            <p><strong>Closing Balance: </strong>{{ closing_balance }}</p>
+                            <p><strong>Debit Balance: </strong>{{ credit_amount }}</p>
+                            <p><strong>Credit Balance:</strong> {{ debit_amount }}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="table-responsive-sm">
+                        <table class="table">
+                            <thead class="thead-dark">
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Description</th>
+                                    <th>Transaction No</th>
+                                    <th>Debit</th>
+                                    <th>Credit</th>
+                                    <th>Running Balance</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>{{ start_date }}</td>
+                                    <td>Opening Balance</td>
+                                    <td>{{ entry.trx_no }}</td>
+                                    <td>0.00</td>
+                                    <td>0.00</td>
+                                    <td>{{ opening_balance }}</td>
+                                </tr>
+                                {% for entry in statement_data %}
+                                    <tr>
+                                        <td>{{ entry.date }}</td>
+                                        <td>{{ entry.description }}</td>
+                                        <td>{{ entry.trx_no }}</td>
+                                        <td>{{ entry.credit }}</td>
+                                        <td>{{ entry.debit }}</td>
+                                        <td>{{ entry.running_balance }}</td>
+                                    </tr>
+                                {% endfor %}
+                                <tr class="total-row">
+                                    <td></td>
+                                    <td><strong>Total</strong></td>
+                                    <td>{{ entry.trx_no }}</td>
+                                    <td>{{ credit_amount }}</td>
+                                    <td>{{ debit_amount }}</td>
+                                    <td><strong>{{ closing_balance }}</strong></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <!-- End of Statement of Account Content -->
+        </div>
+    </div>
+
+{% endblock %}

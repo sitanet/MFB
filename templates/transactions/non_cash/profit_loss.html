@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profit and Loss Statement</title>
+</head>
+<body>
+    <h1>Profit and Loss Statement</h1>
+    
+    <h2>Income</h2>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Item</th>
+                <th>Debit</th>
+                <th>Credit</th>
+                <th>Balance</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Total Income</td>
+                <td>{{ income_data.debit }}</td>
+                <td>{{ income_data.credit }}</td>
+                <td>{{ income_data.balance }}</td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <h2>Expenses</h2>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Item</th>
+                <th>Debit</th>
+                <th>Credit</th>
+                <th>Balance</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Total Expenses</td>
+                <td>{{ expense_data.debit }}</td>
+                <td>{{ expense_data.credit }}</td>
+                <td>{{ expense_data.balance }}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>Net Profit / Loss</h2>
+    <p>{{ income_data.balance - expense_data.balance }}</p>
+</body>
+</html>

@@ -1,0 +1,145 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+      <!-- basic -->
+      <meta charset="utf-8">
+      <meta http-equiv="X-UA-Compatible" content="IE=edge">
+      <!-- mobile metas -->
+      <meta name="viewport" content="width=device-width, initial-scale=1">
+      <meta name="viewport" content="initial-scale=1, maximum-scale=1">
+      <!-- site metas -->
+      <title>Banking System</title>
+      <meta name="keywords" content="">
+      <meta name="description" content="">
+      <meta name="author" content="">
+      <!-- site icon -->
+      <!-- <link rel="icon" href="{% static 'images/fevicon.png' %}" type="image/png" /> -->
+      <!-- bootstrap css -->
+      <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}" />
+      <!-- site css -->
+      <link rel="stylesheet" href="{% static 'style.css' %}" />
+      <!-- responsive css -->
+      <link rel="stylesheet" href="{% static 'css/responsive.css' %}" />
+      <!-- color css -->
+      <link rel="stylesheet" href="{% static 'css/colors.css' %}" />
+      <!-- select bootstrap -->
+      <link rel="stylesheet" href="{% static 'css/bootstrap-select.css' %}" />
+      <!-- scrollbar css -->
+      <link rel="stylesheet" href="{% static 'css/perfect-scrollbar.css' %}" />
+      <!-- custom css -->
+      <link rel="stylesheet" href="{% static 'css/custom.css' %}" />
+      <link rel="stylesheet" href="{% static 'css/multi_form.css' %}" />
+      <link rel="stylesheet" href="{% static 'css/passport.css' %}" />
+      <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+      <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+
+      <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+      <![endif]-->
+
+      <link rel="stylesheet" type="text/css" href="{% static 'css/treeview.css' %}">
+      <script src="{% static 'js/treeview.js' %}"></script>
+      <!-- Include jQuery -->
+      <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+
+</head>
+
+<body class="dashboard dashboard_1">
+      <div class="full_container">
+            <div class="inner_container">
+                  <!-- Sidebar  -->
+
+
+                  {% include "navbar.html" %}
+
+
+                  
+                  <!-- right content -->
+                  <div id="content">
+                        <!-- topbar -->
+                        <div class="topbar">
+                              <nav class="navbar navbar-expand-lg navbar-light">
+                                    <div class="full">
+                                          <button type="button" id="sidebarCollapse" class="sidebar_toggle"><i
+                                                      class="fa fa-bars"></i></button>
+                                          <div class="logo_section">
+                                                <!-- <img class="img-responsive"
+                                                      src="https://thecitygatechurch.org/public_html/followtheminchrist/static/images/logo.png"
+                                                      alt="LOGO" /> -->
+                                          </div>
+                                          <div class="right_topbar">
+                                                <div class="icon_info">
+                                                    <ul class="user_profile_dd">
+                                                        <li>
+                                                            <a class="dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                                                                <img class="img-responsive rounded-circle" src="{{ user.profile_picture.url }}" alt="Image" />
+                                                                <b style="color: #fff;">{{ user.first_name }} {{ user.last_name }}</b>
+                                                                <i class="fas fa-caret-down"></i>
+                                                            </a>
+                                                            <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                                                                <a class="dropdown-item" href="{% url 'profile' %}">My Profile</a>
+                                                                <a class="dropdown-item" href="{% url 'change_password' %}">Change Password</a>
+                                                                <a class="dropdown-item" href="{% url 'logout' %}">
+                                                                    <span>Log Out</span>
+                                                                    <i class="fas fa-sign-out-alt"></i>
+                                                                </a>
+                                                            </div>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                    </div>
+                              </nav>
+                        </div>
+                        <!-- end topbar -->
+                        {% if soon_expire_message %}
+                        <div class="alert alert-warning">
+                            {{ soon_expire_message }}
+                        </div>
+                        {% endif %}
+
+                          <!-- file inner -->
+                          {% block content %}
+
+                          {% endblock %}
+                          <!-- end file inner -->
+                  </div>
+            </div>
+      </div>
+      <!-- jQuery -->
+      <script src="{% static 'js/jquery.min.js' %}"></script>
+      <script src="{% static 'js/popper.min.js' %}"></script>
+      <script src="{% static 'js/bootstrap.min.js' %}"></script>
+      <!-- wow animation -->
+      <script src="{% static 'js/animate.js' %}"></script>
+      <!-- select country -->
+      <script src="{% static 'js/bootstrap-select.js' %}"></script>
+      <!-- owl carousel -->
+      <script src="{% static 'js/owl.carousel.js' %}"></script>
+      <!-- chart js -->
+      <script src="{% static 'js/Chart.min.js' %}"></script>
+      <script src="{% static 'js/Chart.bundle.min.js' %}"></script>
+      <script src="{% static 'js/utils.js' %}"></script>
+      <script src="{% static 'js/analyser.js' %}"></script>
+      <!-- nice scrollbar -->
+      <script src="{% static 'js/perfect-scrollbar.min.js' %}"></script>
+            <script>
+                  var ps = new PerfectScrollbar('#sidebar');
+            </script>
+            <!-- custom js -->
+            <script src="{% static 'js/chart_custom_style1.js' %}"></script>
+            <script src="{% static 'js/custom.js' %}"></script>
+            <script src="{% static 'js/multi_form.js' %}"></script>
+            <script src="{% static 'js/passport.js' %}"></script>
+            <script src="{% static 'js/index.js' %}"></script>
+
+         
+            
+</body>
+
+</html>

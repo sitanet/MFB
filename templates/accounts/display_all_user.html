@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block content %}
+            
+                    
+                       
+
+                
+                       
+                        {% include 'includes/alerts.html' %}
+                        
+                            {{ form.errors }}
+                        
+                        <!-- dashboard inner -->
+            
+                        <div class="midde_cont">
+                            <div class="container-fluid">
+                               <div class="row column_title">
+                                  <div class="col-md-12">
+                                     <div class="page_title">
+                                        <h2>Display Members</h2>
+                                     </div>
+                                  </div>
+                               </div>
+             
+             
+             
+                               <!-- table -->
+                               <div class="col-md-12">
+                                  <div class="white_shd full margin_bottom_30">
+             
+                                     <div class="table_section padding_infor_info">
+                                        <div class="table-responsive-sm">
+                                           <div class="input-group mb-1">
+                                              <input type="text" class="form-control bg-light" placeholder="Search..."
+                                                 id="searchInput">
+                                              <div class="">
+                                                 <button class="btn" style="background-color: #FF4500;" type="button" onclick="searchTable()">Search</button>
+                                              </div>
+                                           </div>
+                                           <table class="table">
+                                              <thead class="thead-dark">
+                                                 <tr>
+                                                    <th>Branch</th>
+                                                    <th>Firstname</th>
+                                                    <th>Lastname</th>
+                                                
+                                                    <th>Phone Number</th>
+                                                    <th>GL No</th>
+                                                    <th>Role</th>
+                                              
+                                             
+                                                    <th>Action</th>
+                                                    
+                                                 </tr>
+                                              </thead>
+                                              <tbody>
+                                                {% for user in users %}
+                                                   <tr>
+                                                      <!-- <td><img style="width: 40px; height: 50px;" class="img-responsive rounded-circle" src="{{ member.image.url }}" 
+                                                         onerror="this.src='{% static 'images/avatar.jpg' %}'"  alt="#" /></td> -->
+                                                      <td>{{ user.branch }}</td>
+                                                      <td>{{ user.first_name }}</td>
+                                                      <td>{{ user.last_name }}</td>
+                                                      <td>{{ user.phone_number }}</td>
+                                                      <td>{{ user.cashier_gl }}</td>
+                                                      <td>{{ user.get_role_display }}</td>
+                                                      
+                                                      
+                                                     
+                                                      <td ><a href="{% url 'edit_user' user.id %}" style="font-weight: bold; color: blue;">Edit</a>/<a href="{% url 'delete_user' user.id %}" onclick="return confirm('Are you sure you want to delete ?')" style="font-weight: bold; color: red;">Delete</a></td>
+                                                   </tr>
+                                                   {% endfor %}
+                                            
+             
+                                              </tbody>
+                                           </table>
+                                        </div>
+                                     </div>
+                                  </div>
+                               </div>
+                            </div>
+                         </div>
+
+             
+                               <!-- footer -->
+                             
+                            </div>
+                            <!-- end dashboard inner -->
+                         </div>
+                    
+
+
+                    
+     
+
+
+{% endblock %}

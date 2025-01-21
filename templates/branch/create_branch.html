@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Page Title -->
+        <div class="col-md-12">
+            <div class="page_title">
+                <h2>Create Branch</h2>
+            </div>
+        </div>
+    </div>
+
+    <!-- Branch Form -->
+    <form method="POST" class="p-5 shadow-lg rounded-5 bg-light">
+        {% csrf_token %}
+        
+        <!-- Display Messages -->
+        {% if messages %}
+            <ul class="messages">
+                {% for message in messages %}
+                    <li style="font-size: 18px; color: brown; font-weight: bold;" 
+                        {% if message.tags %}class="{{ message.tags }}"{% endif %}>
+                        {{ message }}
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+
+        <!-- Display Form Errors -->
+        <h6 style="color: red;">{{ form.errors }}</h6>
+
+        <div class="form-row">
+            <!-- Company -->
+            <div class="form-group col-md-6">
+                <label for="company">Company</label>
+                <select class="form-control" id="company" name="company" required>
+                    <option value="" disabled selected>Select a Company</option>
+                    {% for company in companies %}
+                        <option value="{{ company.id }}">{{ company.company_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Branch Code -->
+            <div class="form-group col-md-6">
+                <label for="branch_code">Branch Code</label>
+                <input type="text" class="form-control" id="branch_code" name="branch_code" required>
+            </div>
+
+            <!-- Branch Name -->
+            <div class="form-group col-md-6">
+                <label for="branch_name">Branch Name</label>
+                <input type="text" class="form-control" id="branch_name" name="branch_name" required>
+            </div>
+
+            <!-- Session Date -->
+            <div class="form-group col-md-6">
+                <label for="session_date">Session Date</label>
+                <input type="date" class="form-control" id="session_date" name="session_date">
+            </div>
+
+            <!-- System Date -->
+            <div class="form-group col-md-6">
+                <label for="system_date_date">System Date</label>
+                <input type="date" class="form-control" id="system_date_date" name="system_date_date">
+            </div>
+
+            <!-- Session Status -->
+            <div class="form-group col-md-6">
+                <label for="session_status">Session Status</label>
+                <input type="text" class="form-control" id="session_status" name="session_status">
+            </div>
+        </div>
+
+        <!-- Submit and Navigation -->
+        <div class="form-row mt-4">
+            <div class="col-md-12 text-center">
+                <button type="submit" class="btn btn-success shadow-sm">Add Branch</button>
+                <a href="{% url 'branch_list' %}" class="btn btn-secondary shadow-sm">Back to Branch List</a>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}

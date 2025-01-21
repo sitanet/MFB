@@ -1,0 +1,127 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block content %}
+            
+                    
+                       
+
+                
+                       
+                        {% include 'includes/alerts.html' %}
+                        
+                        <h6 style="color: red;" >{{ form.errors }}</h6>
+                        
+                        <!-- dashboard inner -->
+            
+                        <div class="midde_cont">
+                            <div class="container-fluid">
+                               <div class="row column_title">
+                                  <div class="col-md-12">
+                                     <div class="page_title">
+                                        <h2>Display Customers</h2>
+                                     </div>
+                                  </div>
+                               </div>
+         
+             
+             
+                               <!-- table -->
+                               <div class="col-md-12">
+
+
+                                 
+                                  <div class="white_shd full margin_bottom_30">
+
+                                    
+                                    <div class="table_section padding_infor_info">
+                                     
+                                       
+                                       
+                                       <div align="right">
+                                          <div align="right" style="color: firebrick;font-weight: bold;">
+                                              <a href="{% url 'chart_of_accounts' %}" style="color: green; font-weight: bold;">Create Chart of Account</a>
+
+                                              
+                                           </div>
+
+                                           
+                                       
+                                     
+                                      </div>
+
+                                      
+                                        <div class="table-responsive-sm">
+                                           <div class="input-group mb-1">
+                                             
+                                              <input type="text" class="form-control bg-light" placeholder="Search..."
+                                                 id="searchInput">
+                                              <div class="">
+                                                 <button class="btn" style="background-color: #FF4500;" type="button" onclick="searchTable()">Search</button>
+                                              </div>
+                                           </div>
+                                           
+                                           <table class="table">
+                                              <thead class="thead-dark">
+                                                 <tr>
+                                                    <th>GL NO.</th>
+                                                    
+                                                    <th>GL NAME</th>
+                                                   
+                                                    <th>Action</th>
+                                                   
+                                                    
+                                                 </tr>
+                                              </thead>
+                                              <tbody>
+                                                {% for accounts in accounts %}
+                                                   <tr>
+                                                      <!-- <td><img style="width: 40px; height: 50px;" class="img-responsive rounded-circle" src="{{ member.image.url }}" 
+                                                         onerror="this.src='{% static 'images/avatar.jpg' %}'"  alt="#" /></td> -->
+                                                         <td>{{ accounts.gl_no }}</td>
+                                                        
+                                                         <td>{{ accounts.gl_name }}</td>
+                                                       
+                                                      
+                                                      
+                                                   
+                                                      <!-- <td>{{ user.get_role_display }}</td> -->
+
+                                                      <td>
+                                                         <a href="{% url 'update_account' accounts.id %}" style="font-weight: bold; color: green;">Paramenters</a>/
+                                                          <a href="{% url 'update_account' accounts.id %}" style="font-weight: bold; color: blue;">Ledger</a>/
+                                                         <a href="{% url 'delete_account' accounts.pk %}" style="font-weight: bold; color: red;" >Delete</a>
+                                                      </td>
+                                                      
+                                                      
+                                                      
+                                                      
+                                                   </tr>
+                                                   {% endfor %}
+                                            
+             
+                                              </tbody>
+                                           </table>
+                                           
+                                        </div>
+                                     </div>
+                                  </div>
+                               </div>
+                            </div>
+                         </div>
+
+             
+                               <!-- footer -->
+                             
+                            </div>
+                            <!-- end dashboard inner -->
+                         </div>
+                    
+
+
+                    
+     
+
+
+{% endblock %}

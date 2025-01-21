@@ -1,0 +1,165 @@
+{% load humanize %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loan Repayment Schedule</title>
+    <!-- Add your styles here -->
+    <style>
+        /* Add your custom styles here */
+        .container {
+            /* Your container styles */
+        }
+    
+        .third {
+            /* Your third div styles */
+            margin-bottom: 1px;
+            
+
+            h6 {
+            margin: 0; /* Remove margin */
+            padding: 0; /* Remove padding */
+        }
+        }
+    
+        .two {
+            /* Your two div styles */
+        
+        }
+    
+        .one {
+            /* Your one div styles */
+        }
+    
+        .input-group {
+            /* Your input-group styles */
+        }
+    
+        table {
+            /* Your table styles */
+          
+            border-collapse: collapse;
+           
+        }
+    
+        th {
+            background-color: #333;
+            color: #fff;
+            padding: 5px;
+            text-align: left;
+        }
+    
+        td {
+            padding: 5px;
+         
+        }
+    
+        tfoot {
+           
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container deposit p-5 shadow-lg rounded rounded-5">
+
+        <div class="row mt-3 table-row1">
+            <div class="third mx-auto text-center" style="text-align: center;">
+                <h5 style="margin: 6px 0;"> {{ cust_branch.company_name }}</h5>
+                <h6 style="margin: 6px 0;">{{ cust_branch.office_address }}</h6>
+                <h6 style="margin: 6px 0;">{{ cust_branch.branch_name }}</h6>
+                <h6 style="margin: 6px 0;">{{ cust_branch.contact_phone_no }}</h6>
+           
+            </div>
+
+
+            <div class="third mx-auto text-center">
+                <h5>{{ company.company_name }}</h5>
+                {{ company.office_address }}
+                <h4 style="color: blue; text-align: center;">Loan Repayment Schedule</h4>
+
+               
+
+                <div class="two" style="float: left; margin-right: 15%;">
+                    <h6 style="margin: 6px 0;">Loan Product: {{ customers.first_name }} {{ customers.middle_name }} {{ customers.last_name }}</h6>
+                    <h6 style="margin: 6px 0;">Loan No: {{ customers.gl_no }} </h6>
+                    <h6 style="margin: 6px 0;">Account No: {{ customers.ac_no }} </h6>
+                    <h6 style="margin: 6px 0;">Name: {{ customers.first_name }} {{ customers.middle_name }} {{ customers.last_name }}</h6>
+                    <h6 style="margin: 6px 0;">Physical/Postal Address: {{ customers.address }} </h6>
+                    <h6 style="margin: 6px 0;">Disbursement Date No: {{ customer.appli_date }} </h6>
+                    <h6 style="margin: 6px 0;"> Ref: {{ loan_instance.num_install}}</h6>
+                </div>
+                <div class="one">
+                    <h6 style="margin: 6px 0;">Loan Period: {{ customers.first_name }} {{ customers.middle_name }} {{ customers.last_name }}</h6>
+                    <h6 style="margin: 6px 0;">No. of Installments: {{ loan_instance.gl_no }} {{ loan_instance.ac_no }}</h6>
+                    <h6 style="margin: 6px 0;">Annual Int. Rate: N{{ loan_instance.loan_amount|floatformat:2|intcomma  }} </h6>
+                    <h6 style="margin: 6px 0;"> Loan Officer: {{ loan_instance.num_install}}</h6>
+                    <h6 style="margin: 6px 0;"> Loan Fund: {{ loan_instance.num_install}}</h6>
+                </div>
+            </div>
+
+            
+              
+            <div class="col-md-12 mx-0">
+
+                <div class="two" style="float: left; margin-right: 35%;">
+                    <!-- Your two div content -->
+                </div>
+                <div class="one">
+                    <!-- Your one div content -->
+                </div>
+              
+
+                <!-- table -->
+                <table class="table table-responsive table-hover">
+                    <thead class="thead-dark">
+                        <tr>
+                            <th>Period</th>
+                            <th>Payment Date</th>
+                            <th>Principal Payment.</th>
+                            <th>Interest Payment</th>
+                            <th>Total Payment</th>
+                            <th>Principal Remaining</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        
+                        <tr>
+                            <td>0</td>
+                            <td>{{ loan_instance.appli_date|date:"d-m-Y" }}</td>
+                            <td>0.00</td>
+                            <td>0.00</td>
+                            <td>0.00</td>
+                            <td>{{ customer.loan_amount }}</td>
+                        </tr>
+                        {% for payment in loan_schedule %}
+                        <tr>
+                            <td>{{ payment.period }}</td>
+                            <td>{{ payment.payment_date|date:"d-m-Y" }}</td>
+                            <td>{{ payment.principal_payment|floatformat:2}}</td>
+                            <td>{{ payment.interest_payment|floatformat:2}}</td>
+                            <td>{{ payment.total_payment|floatformat:2 }}</td>
+                            <td>{{ payment.principal_remaining|floatformat:2 }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="2"><strong>Total</strong></td>
+                            <td><strong>{{ total_principal_sum|floatformat:2}}</strong></td>
+                            <td><strong>{{ total_interest_sum|floatformat:2}}</strong></td>
+                            <td><strong>{{ total_payments_sum|floatformat:2}}</strong></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+    </div>
+</body>
+
+</html>

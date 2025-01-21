@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+
+
+{% block content %}
+
+
+
+<div class="container-fluid">
+  <div class="row">
+        <div class="col-md-12">
+              <div class="page_title">
+                    <h2>Create Internal Account</h2>
+              </div>
+        </div>
+        <!-- form -->
+        <form method="POST" class="chart_of_account p-5 shadow-lg rounded rounded-5">
+            {% csrf_token %}
+            {% if messages %}
+    <ul class="messages">
+        {% for message in messages %}
+            <li style="font-size: 30px; color: brown; font-weight: bold;"  {% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+        {% endfor %}
+    </ul>
+{% endif %}
+<h6 style="color: red;" >{{ form.errors }}</h6>
+              <div class="form-row">
+                <div class="form-group col-md-4">
+                    <label for="fName">Branch</label>
+                    <span class="form-control bg-light">{{ user.branch }}</span>
+                    <input type="hidden" name="branch" value="{{ user.branch }}">
+                </div>
+                  <div class="form-group col-md-4">
+                    <label>Account Type</label>
+                    <select  class="form-control bg-light" id="general_ledger_type" name="gl_no" required>
+                        <option value="">-- Select Account Type --</option>
+                        {% for cust_data in cust_data %}
+                            <option value="{{ cust_data.gl_no }}" {% if cust_data.gl_no == form.gl_no.value %}selected{% endif %}>
+                                {{ cust_data.gl_name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group col-md-4">
+                    <label for="general_ledger_accout_name">General Ledger Name</label>
+                    <input type="text" class="form-control bg-light"
+                          id="general_ledger_accout_name"
+                          name="first_name"  value="{{form.first_name.value}}">
+              </div>
+                    <div class="form-group col-md-4">
+                          <label for="general_ledger_accout_name">Account No</label>
+                          <input type="text" class="form-control bg-light"
+                                id="general_ledger_accout_name"
+                                name="ac_no"  value="{{form.ac_no.value}}">
+                    </div>
+
+                    <div class="form-group col-md-4">
+                        <label for="general_ledger_accout_name">Ref No</label>
+                        <input type="text" class="form-control bg-light"
+                              id="general_ledger_accout_name"
+                              name="ref_no"  value="{{form.ref_no.value}}">
+                  </div>
+
+                  <div class="form-group col-md-4">
+                        <label for="general_ledger_accout_no">Registration Date.</label>
+                        <input type="date" class="form-control bg-light"
+                              id="general_ledger_accout_no"
+                              name="reg_date" value="{{ account.reg_date|date:'Y-m-d'}}">
+                  </div>
+
+               
+               
+
+    
+
+                    <div class="form-group col-md-4">
+                        <label for="">status</label>
+                        <select class="form-control bg-light" id="header" name="status">
+                              <option value="">---------</option>  <!-- Add a default empty option -->
+                              {% for choice in form.status.field.choices %}
+                                  <option value="{{ choice.0 }}" {% if choice.0 == form.status.value %}selected{% endif %}>
+                                      {{ choice.1 }}
+                                  </option>
+                              {% endfor %}
+                          </select>
+                  </div>
+                    
+                  
+
+                   
+                 
+                          
+                    <!-- <button type="submit"
+                          class="btn w- btn-success mt-4 shadow-sm">Delete</button> -->
+              </div>
+              <button type="submit"
+              class="btn w- btn-success mt-4 shadow-sm">Update</button>
+              <div></div>
+             
+              <a href="{% url 'internal_list' %}" style="color: green; font-weight: bold;">Back to Internal List</a>        
+        </form>
+       
+
+        <div>
+              <!-- Chart of Accoutwill come here -->
+        </div>
+
+
+  </div>
+
+</div>
+<!-- <h1>Chart of Account</h1> -->
+
+
+  
+    
+    {% endblock %}
