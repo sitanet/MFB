@@ -6,7 +6,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from accounts.models import User
 from accounts.views import check_role_admin
 from accounts_admin.models import Account, Account_Officer
-from company.models import Company
+from company.models import Company, Branch
 import customers
 from django.db import transaction
 from customers.models import Customer
@@ -35,19 +35,37 @@ def loans(request):
 # list of account that can apply for loan
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
+
+
 def choose_to_apply_loan(request):
-    data = Memtrans.objects.all().order_by('-id').first()
-    customers = Customer.objects.filter(label='L').order_by('-id')
+    # Get the logged-in user's branch
+    user_branch = request.user.branch
+
+    # Get the most recent Memtrans object for the user's branch
+    data = Memtrans.objects.filter(branch=user_branch).order_by('-id').first()
+
+    # Filter customers by label 'L' and the user's branch
+    customers = Customer.objects.filter(label='L', branch=user_branch).order_by('-id')
+
     total_amounts = []
     for customer in customers:
-        # Calculate the total amount for each customer
-        total_amount = Memtrans.objects.filter(gl_no=customer.gl_no, ac_no=customer.ac_no, error='A').aggregate(total_amount=Sum('amount'))['total_amount']
+        # Calculate the total amount for each customer within the user's branch
+        total_amount = Memtrans.objects.filter(
+            gl_no=customer.gl_no,
+            ac_no=customer.ac_no,
+            error='A',
+            branch=user_branch
+        ).aggregate(total_amount=Sum('amount'))['total_amount']
         total_amounts.append({
             'customer': customer,
             'total_amount': total_amount or 0.0,
         })
-    return render(request, 'loans/choose_to_apply_for_loan.html',{'customers':customers,'total_amounts':total_amounts,'data':data})
 
+    return render(request, 'loans/choose_to_apply_for_loan.html', {
+        'customers': customers,
+        'total_amounts': total_amounts,
+        'data': data,
+    })
 
 # loan application
 from django.core.exceptions import ValidationError
@@ -57,14 +75,22 @@ from django.utils import timezone
 @user_passes_test(check_role_admin)
 
 def loan_application(request, id):
+    # Get customer by ID
     customer = get_object_or_404(Customer, id=id)
+
+    # Filter loan accounts based on GL number
     loan_account = Account.objects.filter(gl_no__startswith='104').exclude(gl_no='10400').exclude(gl_no='104100').exclude(gl_no='104200')
+
+    # Set initial values for the form
     initial_values = {'gl_no_cust': customer.gl_no, 'ac_no_cust': customer.ac_no}
-    user = User.objects.get(id=request.user.id)
-    branch_id = user.branch_id
-    company = get_object_or_404(Company, id=branch_id)
+
+    # Get the logged-in user's branch information
+    user = request.user
+    branch = get_object_or_404(Branch, id=user.branch_id)  # Fetch the Branch instance
+    company = get_object_or_404(Company, id=branch.id)
     company_date = company.session_date.strftime('%Y-%m-%d') if company.session_date else ''
-    
+
+    # Check if the company's session status is closed
     if company.session_status == 'Closed':
         return HttpResponse("You can not post any transaction. Session is closed.")
     else:
@@ -73,16 +99,17 @@ def loan_application(request, id):
             if form.is_valid():
                 gl_no = form.cleaned_data['gl_no']
                 ac_no = form.cleaned_data['ac_no']
-                
+
                 with transaction.atomic():
                     # Check if there is an existing loan with the same 'gl_no' and 'ac_no'
                     existing_loan = Loans.objects.filter(gl_no=gl_no, ac_no=ac_no).last()
 
+                    # Create a new loan instance
                     if existing_loan:
-                        # If an existing loan is found, create a new loan with an incremented cycle
+                        # If an existing loan is found, increment the cycle
                         new_loan = Loans(
-                            branch=form.cleaned_data.get('branch', branch_id),  # Automatically assign the logged-in user's branch
-                            appli_date=form.cleaned_data.get('appli_date', 0),
+                            branch=branch,  # Assign the Branch instance
+                            appli_date=form.cleaned_data.get('appli_date'),
                             loan_amount=form.cleaned_data.get('loan_amount', 0),
                             interest_rate=form.cleaned_data.get('interest_rate', 0),
                             payment_freq=form.cleaned_data.get('payment_freq', 0),
@@ -96,10 +123,10 @@ def loan_application(request, id):
                             cycle=existing_loan.cycle + 1 if existing_loan.cycle is not None else 1,
                         )
                     else:
-                        # If no existing loan is found, create a new loan with cycle 1
+                        # If no existing loan is found, start with cycle 1
                         new_loan = Loans(
-                            branch=form.cleaned_data.get('branch', branch_id),  # Automatically assign the logged-in user's branch
-                            appli_date=form.cleaned_data.get('appli_date', 0),
+                            branch=branch,  # Assign the Branch instance
+                            appli_date=form.cleaned_data.get('appli_date'),
                             loan_amount=form.cleaned_data.get('loan_amount', 0),
                             interest_rate=form.cleaned_data.get('interest_rate', 0),
                             payment_freq=form.cleaned_data.get('payment_freq', 0),
@@ -113,25 +140,34 @@ def loan_application(request, id):
                             cycle=1,
                         )
 
+                    # Save the new loan to the database
                     new_loan.save()
+
+                    # Update customer loan status
                     customer.loan = 'T'
                     customer.save()
 
+                    # Display success message
                     messages.success(request, 'Loan Applied successfully!')
                     return redirect('choose_to_apply_loan')
-            
+
             else:
+                # Display error message if the form is invalid
                 messages.error(request, 'Form is not valid. Please check the entered data.')
         else:
+            # Initialize the form with initial values
             form = LoansForm(initial=initial_values)
 
+    # Render the loan application page
     return render(request, 'loans/loans_application.html', {
         'form': form,
         'customer': customer,
         'loan_account': loan_account,
         'company': company,
-        'company_date': company_date
+        'company_date': company_date,
     })
+
+
 
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
@@ -189,15 +225,25 @@ def loan_modification(request, id):
 
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
+
 def choose_loan_approval(request):
-    # Filter customers with loan approval status set to 'F'
-    customers = Loans.objects.select_related('customer').filter(approval_status='F')
+    # Get the logged-in user's branch
+    user_branch = request.user.branch
+
+    # Filter loans with approval_status 'F' and related customers in the user's branch
+    customers = Loans.objects.select_related('customer').filter(
+        approval_status='F',
+        customer__branch=user_branch
+    )
+
+    # Optional: Print customer first names for debugging
     for customer in customers:
         if customer.customer:
             print(customer.customer.first_name)
         else:
             print("No associated customer for this loan.")
-    # Pass the customers data to the template
+
+    # Pass the filtered customers to the template
     return render(request, 'loans/choose_loan_approval.html', {'customers': customers})
 
 
@@ -215,7 +261,7 @@ def loan_approval(request, id):
     officer = Account_Officer.objects.all()
     user = User.objects.get(id=request.user.id)
     branch_id = user.branch_id
-    company = get_object_or_404(Company, id=branch_id)
+    company = get_object_or_404(Branch, id=branch_id)
     # Assuming 'loans' is an instance of a Django model
     if customer.appli_date:
         appli_date = customer.appli_date.strftime('%Y-%m-%d')
@@ -322,14 +368,26 @@ def reverse_loan_approval(request, id):
 
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
+
 def choose_to_disburse(request):
-    customers = Loans.objects.select_related('customer').filter(approval_status='T',disb_status='F')
+    # Get the logged-in user's branch
+    user_branch = request.user.branch
+
+    # Filter loans with approval_status 'T', disb_status 'F', and customers in the user's branch
+    customers = Loans.objects.select_related('customer').filter(
+        approval_status='T',
+        disb_status='F',
+        customer__branch=user_branch
+    )
+
+    # Optional: Print customer first names for debugging
     for customer in customers:
         if customer.customer:
             print(customer.customer.first_name)
         else:
             print("No associated customer for this loan.")
-    # Pass the customers data to the template
+
+    # Pass the filtered customers to the template
     return render(request, 'loans/choose_to_disburse.html', {'customers': customers})
 
 
@@ -512,8 +570,8 @@ def loan_disbursement(request, id):
     officer = Account_Officer.objects.all()
     
     user = request.user
-    branch_id = user.branch_id
-    company = get_object_or_404(Company, id=branch_id)
+    branch_id = user.branch_id  # Get the logged-in user's branch ID
+    company = get_object_or_404(Branch, id=branch_id)
     company_date = company.session_date.strftime('%Y-%m-%d') if company.session_date else ''
     
     if loan.appli_date:
@@ -546,9 +604,10 @@ def loan_disbursement(request, id):
                         # Generate a unique transaction number
                         unique_trx_no = generate_loan_disbursement_id()
 
+                        # Debit transaction
                         debit_transaction = Memtrans(
-                            branch=loan.branch,
-                            customer_id=customer_id,  # Use the customer ID from the form data
+                            branch=loan.branch,  # Use the loan's branch (could also use user.branch)
+                            customer_id=customer_id,
                             cycle=loan.cycle,
                             gl_no=loan.gl_no,
                             ac_no=loan.ac_no,
@@ -565,9 +624,10 @@ def loan_disbursement(request, id):
                         )
                         debit_transaction.save()
 
+                        # Credit transaction
                         credit_transaction = Memtrans(
-                            branch=form.cleaned_data['branch'],
-                            customer_id=customer_id,  # Use the customer ID from the form data
+                            branch=form.cleaned_data['branch'],  # The branch from the form, or use loan.branch
+                            customer_id=customer_id,
                             cycle=loan.cycle,
                             gl_no=form.cleaned_data['gl_no_cashier'],
                             ac_no=form.cleaned_data['ac_no_cashier'],
@@ -595,7 +655,7 @@ def loan_disbursement(request, id):
                         # Insert loan schedule into LoanHist
                         for payment in loan_schedule:
                             loanhist_entry = LoanHist(
-                                branch=loan.branch,
+                                branch=loan.branch,  # Use the loan's branch
                                 gl_no=loan.gl_no,
                                 ac_no=loan.ac_no,
                                 cycle=loan.cycle,
@@ -620,7 +680,7 @@ def loan_disbursement(request, id):
 
                         # Additional debit and credit transactions for interest
                         debit_transaction = Memtrans(
-                            branch=loan.branch,
+                            branch=loan.branch,  # Use the loan's branch
                             customer_id=customer_id,
                             cycle=loan.cycle,
                             gl_no=account.int_to_recev_gl_dr,
@@ -639,7 +699,7 @@ def loan_disbursement(request, id):
                         debit_transaction.save()
 
                         credit_transaction = Memtrans(
-                            branch=form.cleaned_data['branch'],
+                            branch=form.cleaned_data['branch'],  # Use the branch from the form, or use loan.branch
                             customer_id=customer_id,
                             cycle=loan.cycle,
                             gl_no=account.unearned_int_inc_gl,

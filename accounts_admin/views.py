@@ -401,28 +401,44 @@ def user_define(request):
 
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
+
+
 def create_bus_sector(request):
+    # Retrieve all existing business sectors (if needed for the page)
     region = Business_Sector.objects.all()
-   
+
     if request.method == "POST":
         form = BusinessSectorForm(request.POST)
         if form.is_valid():
-            bus_sector = form.save(commit=False)  # Create the instance without saving
-            bus_sector.branch = request.user.branch  # Automatically assign the user's branch
-            bus_sector.save()  # Save the instance to the database
-            return redirect('bus_sec_list')  # Redirect to the business sector list page
+            # Create the instance without saving to set the branch
+            bus_sector = form.save(commit=False)
+            # Automatically assign the logged-in user's branch
+            bus_sector.branch = request.user.branch
+            # Save the instance to the database
+            bus_sector.save()
+            # Redirect to the business sector list page after successful creation
+            return redirect('bus_sec_list')
     else:
+        # Initialize an empty form for GET requests
         form = BusinessSectorForm()
-    return render(request, 'accounts_admin/business_sector/create_bus_sector.html', {'form': form, 'region': region})
+
+    # Render the page with the form and any additional context (e.g., region)
+    return render(request, 'accounts_admin/business_sector/create_bus_sector.html', {
+        'form': form,
+        'region': region,
+    })
 
 
 
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
-def bus_sec_list(request):
-    bus_sec = Business_Sector.objects.all()
-    return render(request, 'accounts_admin/business_sector/bus_sec_list.html', {'bus_sec': bus_sec})
 
+def bus_sec_list(request):
+    # Filter business sectors based on the logged-in user's branch
+    bus_sec = Business_Sector.objects.filter(branch=request.user.branch)
+
+    # Render the template with the filtered business sectors
+    return render(request, 'accounts_admin/business_sector/bus_sec_list.html', {'bus_sec': bus_sec})
 
 
 

@@ -39,6 +39,7 @@ def deposit(request, id):
     branch_id = user.branch_id
     company = get_object_or_404(Branch, id=branch_id)
     company_date = company.session_date.strftime('%Y-%m-%d') if company.session_date else ''
+    customer_branch = customer.branch
     
     # Retrieve the user's branch
     user_branch = user.branch
@@ -96,6 +97,7 @@ def deposit(request, id):
                     with transaction.atomic():
                         customer_transaction = Memtrans(
                             branch=branch_customer,
+                            cust_branch=customer_branch,
                             gl_no=gl_no_customer,
                             ac_no=ac_no_customer,
                             amount=amount,
@@ -125,6 +127,7 @@ def deposit(request, id):
                         
                         cashier_transaction = Memtrans(
                             branch=branch_cashier,
+                            cust_branch=user_branch,
                             gl_no=gl_no_cashier,
                             ac_no=ac_no_cashier,
                             amount=-amount,
@@ -187,8 +190,6 @@ def deposit(request, id):
             'company_date': company_date,
             'last_transaction': last_transaction,  # Pass the last transaction to the template
         })
-
-
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
 
@@ -208,6 +209,11 @@ def withdraw(request, id):
     branch_id = user.branch_id
     company = get_object_or_404(Branch, id=branch_id)
     company_date = company.session_date.strftime('%Y-%m-%d') if company.session_date else ''
+
+    customer_branch = customer.branch
+    
+    # Retrieve the user's branch
+    user_branch = user.branch
     
     # Retrieve the last transaction for the customer
     last_transaction = Memtrans.objects.filter(
@@ -274,6 +280,7 @@ def withdraw(request, id):
                         # Create a transaction record in Memtrans
                         customer_transaction = Memtrans(
                             branch=branch_customer,
+                            cust_branch=customer_branch,
                             gl_no=gl_no_customer,
                             ac_no=ac_no_customer,
                             ses_date=ses_date,
@@ -301,11 +308,13 @@ def withdraw(request, id):
                         customer_to_update.save()
 
                         # Credit the cashier's account
+                    
                         gl_no_cashier = form.cleaned_data['gl_no_cashier']
                         ac_no_cashier = form.cleaned_data['ac_no_cashier']
 
                         cashier_transaction = Memtrans(
-                            branch=branch_customer,
+                            branch=user_branch,
+                            cust_branch=user_branch,
                             gl_no=gl_no_cashier,
                             ac_no=ac_no_cashier,
                             ses_date=ses_date,
@@ -374,6 +383,8 @@ def withdraw(request, id):
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
 def income(request, id):
+    # Retrieve the user's branch
+
     user_branch = request.user.branch
     customer = get_object_or_404(Customer, id=id)
     formatted_balance = '{:,.2f}'.format(customer.balance)
@@ -385,7 +396,7 @@ def income(request, id):
     branch_id = user.branch_id
     company = get_object_or_404(Branch, id=branch_id)
     company_date = company.session_date.strftime('%Y-%m-%d') if company.session_date else ''
-    
+    customer_branch = customer.branch
     # Retrieve the user's branch
     user_branch = user.branch
 
@@ -442,6 +453,7 @@ def income(request, id):
                     with transaction.atomic():
                         customer_transaction = Memtrans(
                             branch=branch_customer,
+                            cust_branch=customer_branch,
                             gl_no=gl_no_customer,
                             ac_no=ac_no_customer,
                             amount=amount,
@@ -471,6 +483,7 @@ def income(request, id):
                         
                         cashier_transaction = Memtrans(
                             branch=branch_cashier,
+                            cust_branch=user_branch,
                             gl_no=gl_no_cashier,
                             ac_no=ac_no_cashier,
                             amount=-amount,
@@ -515,7 +528,7 @@ def income(request, id):
                             send_sms(customer.phone_no, sms_message)
 
                         messages.success(request, 'Account saved successfully!')
-                        return redirect('deposit', id=id)
+                        return redirect('income', id=id)
         else:
             form = MemtransForm(initial=initial_values)
             form.fields['branch'].disabled = True  # Disable the branch field to prevent changes
@@ -556,6 +569,10 @@ def expense(request, id):
     branch_id = user.branch_id
     company = get_object_or_404(Branch, id=branch_id)
     company_date = company.session_date.strftime('%Y-%m-%d') if company.session_date else ''
+    customer_branch = customer.branch
+    
+    # Retrieve the user's branch
+    user_branch = user.branch
     
     # Retrieve the last transaction for the customer
     last_transaction = Memtrans.objects.filter(
@@ -601,7 +618,7 @@ def expense(request, id):
             form = MemtransForm(request.POST)
             
             if form.is_valid():
-                branch_customer = form.cleaned_data['branch']
+                branch_customer = form.cleaned_data['cust_branch']
                 gl_no_customer = form.cleaned_data['gl_no']
                 ac_no_customer = form.cleaned_data['ac_no']
                 amount = form.cleaned_data['amount']
@@ -627,6 +644,7 @@ def expense(request, id):
                         # Create a transaction record in Memtrans
                         customer_transaction = Memtrans(
                             branch=branch_customer,
+                            cust_branch=customer_branch,
                             gl_no=gl_no_customer,
                             ac_no=ac_no_customer,
                             ses_date=form.cleaned_data['ses_date'],
@@ -658,7 +676,8 @@ def expense(request, id):
                         ac_no_cashier = form.cleaned_data['ac_no_cashier']
 
                         cashier_transaction = Memtrans(
-                            branch=branch_customer,
+                            branch=user_branch,
+                            cust_branch=user_branch,
                             gl_no=gl_no_cashier,
                             ac_no=ac_no_cashier,
                             ses_date=form.cleaned_data['ses_date'],
@@ -895,6 +914,7 @@ def general_journal(request, id):
     customers = Customer.objects.filter(branch=user_branch)  # Fetch all customers in the user's branch
 
     last_transaction = Memtrans.objects.filter(gl_no=customer.gl_no, ac_no=customer.ac_no).order_by('-id').first()
+    customer_branch = customer.branch
 
     if company.session_status == 'Closed':
         messages.success(request, 'Session Closed!')
@@ -917,7 +937,8 @@ def general_journal(request, id):
                 else:
                     with transaction.atomic():
                         customer_transaction = Memtrans(
-                            branch=branch_customer,  # Set the user's branch
+                            branch=branch_customer,
+                            cust_branch=customer_branch, # Set the user's branch
                             gl_no=gl_no_customer,
                             ac_no=ac_no_customer,
                             amount=-amount,
@@ -942,7 +963,8 @@ def general_journal(request, id):
                         description = form.cleaned_data['description']
 
                         cashier_transaction = Memtrans(
-                            branch=branch_customer,  # Set the user's branch for the cashier transaction
+                            branch=user_branch,
+                            cust_branch=user_branch,  # Set the user's branch for the cashier transaction
                             gl_no=gl_no_cashier,
                             ac_no=ac_no_cashier,
                             amount=amount,

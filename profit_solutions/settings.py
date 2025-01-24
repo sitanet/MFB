@@ -44,7 +44,7 @@ INSTALLED_APPS = [
     'customers',
     'transactions',
     'loans',
-    # 'django.contrib.humanize',
+    'django.contrib.humanize',
     'reports',
     'end_of_periods',
    

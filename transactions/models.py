@@ -10,7 +10,9 @@ from company.models import Company, Branch
 
 
 class Memtrans(models.Model):
-    branch = models.ForeignKey(Branch, on_delete=models.CASCADE, related_name="memtrans", 
+    branch = models.ForeignKey(Branch, on_delete=models.CASCADE, related_name="branch_memtrans", 
+    null=True, blank=True)
+    cust_branch = models.ForeignKey(Branch, on_delete=models.CASCADE, related_name="cust_branch", 
     null=True, blank=True)
     # account = models.ForeignKey(Account, on_delete=models.CASCADE, related_name='memtrans')
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, null=True, blank=True)
