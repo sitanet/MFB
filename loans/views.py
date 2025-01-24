@@ -369,26 +369,6 @@ def reverse_loan_approval(request, id):
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
 
-def choose_to_disburse(request):
-    # Get the logged-in user's branch
-    user_branch = request.user.branch
-
-    # Filter loans with approval_status 'T', disb_status 'F', and customers in the user's branch
-    customers = Loans.objects.select_related('customer').filter(
-        approval_status='T',
-        disb_status='F',
-        customer__branch=user_branch
-    )
-
-    # Optional: Print customer first names for debugging
-    for customer in customers:
-        if customer.customer:
-            print(customer.customer.first_name)
-        else:
-            print("No associated customer for this loan.")
-
-    # Pass the filtered customers to the template
-    return render(request, 'loans/choose_to_disburse.html', {'customers': customers})
 
 
 @login_required(login_url='login')
@@ -543,7 +523,7 @@ def loan_disbursement_reversal(request, id):
     })
 
 def choose_to_disburse(request):
-    customers = Loans.objects.select_related('customer').filter(approval_status='T', disb_status='F')
+    customers = Loans.objects.select_related('customer').filter(approval_status='T', disb_status='F', branch__company=request.user.branch.company)
     for customer in customers:
         if customer.customer:
             print(customer.customer.first_name)
@@ -573,7 +553,10 @@ def loan_disbursement(request, id):
     branch_id = user.branch_id  # Get the logged-in user's branch ID
     company = get_object_or_404(Branch, id=branch_id)
     company_date = company.session_date.strftime('%Y-%m-%d') if company.session_date else ''
-    
+    customer_branch = customer.branch
+    user_branch = request.user.branch
+
+
     if loan.appli_date:
         appli_date = loan.appli_date.strftime('%Y-%m-%d')
     else:
@@ -606,7 +589,8 @@ def loan_disbursement(request, id):
 
                         # Debit transaction
                         debit_transaction = Memtrans(
-                            branch=loan.branch,  # Use the loan's branch (could also use user.branch)
+                            branch=user_branch,  # Use the loan's branch (could also use user.branch)
+                            cust_branch=customer_branch,
                             customer_id=customer_id,
                             cycle=loan.cycle,
                             gl_no=loan.gl_no,
@@ -626,7 +610,8 @@ def loan_disbursement(request, id):
 
                         # Credit transaction
                         credit_transaction = Memtrans(
-                            branch=form.cleaned_data['branch'],  # The branch from the form, or use loan.branch
+                            branch=user_branch,
+                            cust_branch=customer_branch,  # The branch from the form, or use loan.branch
                             customer_id=customer_id,
                             cycle=loan.cycle,
                             gl_no=form.cleaned_data['gl_no_cashier'],
@@ -680,7 +665,8 @@ def loan_disbursement(request, id):
 
                         # Additional debit and credit transactions for interest
                         debit_transaction = Memtrans(
-                            branch=loan.branch,  # Use the loan's branch
+                            branch=user_branch,
+                            cust_branch=customer_branch,  # Use the loan's branch
                             customer_id=customer_id,
                             cycle=loan.cycle,
                             gl_no=account.int_to_recev_gl_dr,
@@ -699,7 +685,8 @@ def loan_disbursement(request, id):
                         debit_transaction.save()
 
                         credit_transaction = Memtrans(
-                            branch=form.cleaned_data['branch'],  # Use the branch from the form, or use loan.branch
+                            branch=user_branch, 
+                            cust_branch=customer_branch, # Use the branch from the form, or use loan.branch
                             customer_id=customer_id,
                             cycle=loan.cycle,
                             gl_no=account.unearned_int_inc_gl,

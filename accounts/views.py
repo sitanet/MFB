@@ -245,18 +245,11 @@ def edit_user(request, id):
 
 
 
-from django.contrib import messages
-from django.shortcuts import render, redirect
-from django.utils import timezone
 from django.contrib.auth import authenticate, login as auth_login
-from accounts.models import User
-from .models import Company, Branch
-
-from django.contrib import messages
-from django.contrib.auth import authenticate, login as auth_login
-from django.shortcuts import render, redirect
 from django.utils import timezone
-from accounts.models import Branch
+import random  # For generating OTP
+from django.core.cache import cache  # To store OTP temporarily
+from .utils import send_sms  # Custom function to send SMS (integrate with an SMS gateway)
 
 def login(request):
     if request.user.is_authenticated:
@@ -271,12 +264,11 @@ def login(request):
 
         if user is not None:
             try:
-                # Ensure user has an associated branch
                 if not hasattr(user, 'branch'):
                     messages.error(request, "Your account is not linked to a branch. Please contact your administrator.")
                     return redirect('login')
 
-                # Fetch branch details
+                # Check branch and license
                 company = Branch.objects.get(pk=user.branch.pk)
                 expiration_date = company.company.expiration_date
                 today = timezone.now().date()
@@ -290,10 +282,23 @@ def login(request):
                         f"Your company's license will expire on {expiration_date}. Please contact your vendor."
                     )
 
-                auth_login(request, user)
-                return redirect('myAccount')
+                # Generate OTP
+                otp = random.randint(100000, 999999)  # 6-digit OTP
+                cache.set(f'otp_{user.id}', otp, timeout=300)  # Store OTP in cache for 5 minutes
+                
+                # Send OTP via SMS
+                phone_number = user.phone_number  # Assuming user profile has phone number
+                if not phone_number:
+                    messages.error(request, "No phone number linked to your account. Please contact support.")
+                    return redirect('login')
+                
+                send_sms(phone_number, f"Your OTP is {otp}. It will expire in 5 minutes.")  # SMS sending logic
 
-            except company.company.DoesNotExist:
+                # Redirect to OTP verification page
+                request.session['temp_user_id'] = user.id
+                return redirect('verify_otp')
+
+            except Branch.DoesNotExist:
                 messages.error(request, "Company details not found. Please contact your vendor.")
                 return redirect('login')
 
@@ -303,6 +308,47 @@ def login(request):
 
     return render(request, 'accounts/login.html')
 
+def verify_otp(request):
+    user_id = request.session.get('temp_user_id')
+    if not user_id:
+        messages.error(request, "Session expired. Please login again.")
+        return redirect('login')
+
+    if request.method == 'POST':
+        input_otp = request.POST.get('otp')
+        cached_otp = cache.get(f'otp_{user_id}')
+
+        if str(input_otp) == str(cached_otp):
+            # OTP is valid
+            user = User.objects.get(pk=user_id)
+            auth_login(request, user)
+            cache.delete(f'otp_{user_id}')  # Clear OTP from cache
+            del request.session['temp_user_id']  # Clear session
+            messages.success(request, "Login successful!")
+            return redirect('myAccount')
+        else:
+            messages.error(request, "Invalid or expired OTP.")
+            return redirect('verify_otp')
+
+    return render(request, 'accounts/verify_otp.html')
+
+
+from django.shortcuts import redirect
+from django.contrib import messages
+
+def resend_otp(request):
+    if request.method == "POST":
+        phone_number = request.session.get('phone_number')  # Assuming phone_number is stored in session
+        otp = request.session.get('otp')  # Assuming OTP is stored in session
+
+        if phone_number and otp:
+            # Resend the OTP using your Termii send_sms function
+            send_sms(phone_number, f"Your OTP code is {otp}")
+            messages.success(request, "OTP has been resent to your phone.")
+        else:
+            messages.error(request, "Unable to resend OTP. Please try again.")
+
+    return redirect('verify_otp')  # Redirect back to the OTP verification page
 
 
 def logout(request):

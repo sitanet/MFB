@@ -75,3 +75,41 @@ def send_notification(mail_subject, mail_template, context):
     mail = EmailMessage(mail_subject, message, from_email, to=to_email)
     mail.content_subtype = "html"
     mail.send()
+
+
+
+
+
+
+import requests
+
+def send_sms(phone_number, message):
+    """
+    Send SMS using Termii API.
+    """
+    api_key = "TLDfcyAogBKwuMYnxvPHatThWJqfkOFffeNMTNJaucRjzaoSSeTHugQkzIgDDS"  # Replace with your Termii API key
+    sender_id = "MFB"  # Replace with your registered Termii sender ID
+    url = "https://api.ng.termii.com/api/sms/send"
+
+    payload = {
+        "to": phone_number,
+        "from": sender_id,
+        "sms": message,
+        "type": "plain",
+        "channel": "generic",
+        "api_key": api_key,
+    }
+
+    try:
+        response = requests.post(url, json=payload)
+        response_data = response.json()
+
+        if response.status_code == 200 and response_data.get("message") == "Successfully Sent":
+            return True
+        else:
+            print(f"Failed to send SMS: {response_data}")
+            return False
+
+    except requests.exceptions.RequestException as e:
+        print(f"An error occurred: {e}")
+        return False

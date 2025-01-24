@@ -147,3 +147,21 @@ def session_mgt(request):
         form = EndSession(instance=branch)
     
     return render(request, 'company/session_mgt.html', {'form': form})
+
+
+
+
+
+
+from django.contrib.auth import get_user_model
+from django.shortcuts import render
+
+def display_users_and_branches(request):
+    # Get the custom User model
+    User = get_user_model()  
+    
+    # Fetch users and prefetch related branch and company data
+    users = User.objects.select_related('branch', 'branch__company').all()
+
+    # Pass the user data to the template
+    return render(request, 'users/display_users_and_branches.html', {'users': users})

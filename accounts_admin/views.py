@@ -3,7 +3,7 @@ from django.shortcuts import get_object_or_404, render, redirect
 from accounts.models import User
 
 from accounts.views import check_role_admin
-from company.models import Company
+from company.models import Company, Branch
 from .models import Account, Account_Officer, Business_Sector, Category, Id_card_type, LoanProvision, Product_type, Region
 from .forms import AccountForm, BusinessSectorForm, CategoryForm, CreditOfficerForm, IdcardTypeForm, RegionForm, loanProductSettingsForm
 from django.contrib import messages, auth
@@ -44,7 +44,7 @@ def chart_of_accounts(request):
         form = AccountForm()
 
     # Retrieve accounts for the logged-in user's branch
-    account = Account.objects.filter(branch=request.user.branch).order_by('gl_no')
+    account = Account.objects.filter(branch__company=request.user.branch.company).order_by('gl_no')
     return render(request, 'accounts_admin/chart_of_accounts.html', {
         'account': account,
         'accounts': accounts,
@@ -607,23 +607,41 @@ def account_list(request):
 
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
+
 def update_account(request, id):
+    # Fetch the account to update
     account = get_object_or_404(Account, id=id)
-    cust_branch = Company.objects.all()
-    
+    cust_branch = Branch.objects.all()  # Fetch all branches for reference (optional)
+
+    # Get the user's branch and the corresponding company
+    user_branch = getattr(request.user, 'branch', None)  # Ensure the user is linked to a branch
+    if user_branch:
+        user_company = user_branch.company  # Get the company from the user's branch
+    else:
+        messages.error(request, "You are not assigned to a branch or company. Please contact the administrator.")
+        return redirect('account_list')
+
+    # Ensure that the account's branch belongs to the same company as the user's branch
+    if account.branch and account.branch.company != user_company:
+        messages.error(request, "You can only edit accounts within your branch's company.")
+        return redirect('account_list')
+
+    # Handle form submission
     if request.method == 'POST':
         form = loanProductSettingsForm(request.POST, instance=account)
         if form.is_valid():
             form.save()
-            messages.success(request, 'Account saved successfully!')
+            messages.success(request, 'Account updated successfully!')
             return redirect('account_list')
     else:
         initial_data = {'gl_no': account.gl_no}
         form = loanProductSettingsForm(instance=account, initial=initial_data)
-        # form = CustomerForm(instance=customer)
-    return render(request, 'update_account.html', {'form': form, 'account': account, 
-     'cust_branch': cust_branch,  })
 
+    return render(request, 'update_account.html', {
+        'form': form,
+        'account': account,
+        'cust_branch': cust_branch,  # Pass all available branches (optional)
+    })
 
 
 @login_required(login_url='login')

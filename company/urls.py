@@ -3,6 +3,7 @@ from . import views
 
 urlpatterns = [
     path('company_list/', views.company_list, name='company_list'),
+    path('update_company/<int:id>/', views.update_company, name='update_company'),
     path('branch_list/', views.branch_list, name='branch_list'),
     path('<int:pk>/', views.company_detail, name='company_detail'),
     # URL pattern for branch detail
@@ -14,4 +15,5 @@ urlpatterns = [
     path('<int:id>/delete/', views.company_delete, name='company_delete'),
     path('<int:id>/delete/', views.branch_delete, name='branch_delete'),
     path('session_mgt/<int:branch_id>/update/', views.session_mgt, name='session_mgt'),
+    path('users/', views.display_users_and_branches, name='display_users_and_branches'),
 ]
