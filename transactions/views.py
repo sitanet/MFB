@@ -1152,13 +1152,24 @@ def upload_file(request):
             df = pd.read_excel(file)
             transactions = []
             for index, row in df.iterrows():
+                # Fetch the branch instance
+                branch = Branch.objects.filter(branch_code=row['branch']).first()
+                if not branch:
+                    # Skip or handle missing branch
+                    continue
+
+                # Fetch the customer instance
                 customer = Customer.objects.filter(gl_no=row['gl_no'], ac_no=row['ac_no']).first()
                 if customer:
                     customer_name = f"{customer.first_name} {customer.middle_name} {customer.last_name}"
+                    error_message = ''
                 else:
                     customer_name = 'Unknown'
+                    error_message = 'Account not found'
+
+                # Create a Memtrans instance
                 transaction = Memtrans(
-                    branch=row['branch'],
+                    branch=branch,
                     customer=customer,
                     loans=row.get('loans', ''),
                     cycle=row.get('cycle', 0),
@@ -1166,8 +1177,8 @@ def upload_file(request):
                     ac_no=row['ac_no'],
                     trx_no=generate_upload_excel(),  # Automatically generated transaction ID
                     ses_date=row['ses_date'],
-                    app_date=row.get('app_date'),                          
-                    sys_date = timezone.now(),
+                    app_date=row.get('app_date'),
+                    sys_date=timezone.now(),
                     amount=row['amount'],
                     description=row.get('description', ''),
                     error='A',  # Automatically set
@@ -1175,8 +1186,10 @@ def upload_file(request):
                     user=request.user,
                     code='UP'
                 )
+                
+                # Add transaction details to the session for preview
                 transactions.append({
-                    'branch': transaction.branch,
+                    'branch': branch.branch_code,
                     'customer_name': customer_name,
                     'loans': transaction.loans,
                     'cycle': transaction.cycle,
@@ -1187,7 +1200,7 @@ def upload_file(request):
                     'app_date': transaction.app_date.strftime('%Y-%m-%d') if transaction.app_date else '',
                     'amount': str(transaction.amount),
                     'description': transaction.description,
-                    'error': transaction.error,
+                    'error': error_message if error_message else transaction.error,
                     'type': transaction.type,
                     'user': transaction.user.username,
                 })
@@ -1195,8 +1208,9 @@ def upload_file(request):
             return redirect('preview_data')
     else:
         form = UploadFileForm()
-    
+
     return render(request, 'transactions/upload_file.html', {'form': form})
+
 
 
 def preview_data(request):
@@ -1204,7 +1218,7 @@ def preview_data(request):
         transactions = request.session.get('transactions', [])
 
         # Fetch the latest Company instance (assuming there's only one)
-        company = Company.objects.first()
+        company = Branch.objects.first()
         if not company:
             return render(request, 'transactions/preview_data.html', {
                 'transactions': transactions,

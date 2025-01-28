@@ -58,7 +58,7 @@ class MemtransForm(forms.ModelForm):
     ac_no = forms.CharField(max_length=100, widget=forms.TextInput(attrs={'readonly': 'readonly'}))
     class Meta:
         model = Memtrans
-        fields = ['branch','gl_no', 'ac_no','ses_date','app_date', 'amount','gl_no_cashier','ac_no_cashier','description']
+        fields = ['gl_no', 'ac_no','ses_date','app_date', 'amount','gl_no_cashier','ac_no_cashier','description']
 
 
 

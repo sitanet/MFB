@@ -292,7 +292,7 @@ def login(request):
                     messages.error(request, "No phone number linked to your account. Please contact support.")
                     return redirect('login')
                 
-                send_sms(phone_number, f"Your OTP is {otp}. It will expire in 5 minutes.")  # SMS sending logic
+                send_sms(phone_number, f"Your verification code is {otp}. It will expire in 5 minutes.")  # SMS sending logic
 
                 # Redirect to OTP verification page
                 request.session['temp_user_id'] = user.id

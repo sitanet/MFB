@@ -77,6 +77,7 @@ from django.utils import timezone
 def loan_application(request, id):
     # Get customer by ID
     customer = get_object_or_404(Customer, id=id)
+    cust_branch=customer.branch
 
     # Filter loan accounts based on GL number
     loan_account = Account.objects.filter(gl_no__startswith='104').exclude(gl_no='10400').exclude(gl_no='104100').exclude(gl_no='104200')
@@ -108,7 +109,7 @@ def loan_application(request, id):
                     if existing_loan:
                         # If an existing loan is found, increment the cycle
                         new_loan = Loans(
-                            branch=branch,  # Assign the Branch instance
+                            branch=cust_branch,  # Assign the Branch instance
                             appli_date=form.cleaned_data.get('appli_date'),
                             loan_amount=form.cleaned_data.get('loan_amount', 0),
                             interest_rate=form.cleaned_data.get('interest_rate', 0),
@@ -125,7 +126,7 @@ def loan_application(request, id):
                     else:
                         # If no existing loan is found, start with cycle 1
                         new_loan = Loans(
-                            branch=branch,  # Assign the Branch instance
+                            branch=cust_branch,  # Assign the Branch instance
                             appli_date=form.cleaned_data.get('appli_date'),
                             loan_amount=form.cleaned_data.get('loan_amount', 0),
                             interest_rate=form.cleaned_data.get('interest_rate', 0),
@@ -523,7 +524,8 @@ def loan_disbursement_reversal(request, id):
     })
 
 def choose_to_disburse(request):
-    customers = Loans.objects.select_related('customer').filter(approval_status='T', disb_status='F', branch__company=request.user.branch.company)
+    user_branch=request.user.branch.company
+    customers = Loans.objects.select_related('customer').filter(approval_status='T', disb_status='F', branch__company=user_branch)
     for customer in customers:
         if customer.customer:
             print(customer.customer.first_name)
@@ -857,15 +859,17 @@ def loan_repayment(request, id):
     cust_data = Account.objects.filter(gl_no__startswith='20').exclude(gl_no__in=['20100', '20200', '20000'])
     gl_no = Account.objects.filter(gl_no__startswith='200').values_list('gl_no', flat=True)
     ac_no_list = Memtrans.objects.filter(ac_no=customer.ac_no).values_list('ac_no', flat=True).distinct()
-    cust_branch = Company.objects.all()
+    cust_branch = Branch.objects.all()
     amounts = Memtrans.objects.filter(ac_no=customer.ac_no, gl_no__startswith='2').values('gl_no').annotate(total_amount=Sum('amount')).order_by('-total_amount')
     officer = Account_Officer.objects.all()
 
     user = User.objects.get(id=request.user.id)
     branch_id = user.branch_id
-    company = get_object_or_404(Company, id=branch_id)
+    company = get_object_or_404(Branch, id=branch_id)
     company_date = company.session_date.strftime('%Y-%m-%d') if company.session_date else ''
     
+    customer_branch = customer.branch
+    user_branch = request.user.branch
     total_principal_currently = LoanHist.objects.filter(trx_date__lt=company_date, gl_no=customer.gl_no, ac_no=customer.ac_no, cycle=customer.cycle).aggregate(Sum('principal'))['principal__sum'] or 0
     total_interest_currently = LoanHist.objects.filter(trx_date__lt=company_date, gl_no=customer.gl_no, ac_no=customer.ac_no, cycle=customer.cycle).aggregate(Sum('interest'))['interest__sum'] or 0
 
@@ -920,7 +924,8 @@ def loan_repayment(request, id):
                 
                 if account.int_to_recev_gl_dr and account.int_to_recev_ac_dr and account.unearned_int_inc_gl and account.unearned_int_inc_ac:
                     debit_transaction = Memtrans(
-                        branch=customer.branch,
+                        branch=user_branch,
+                        cust_branch=customer_branch,
                         gl_no=form.cleaned_data['gl_no_cashier'],
                         ac_no=form.cleaned_data['ac_no_cashier'],
                         cycle=customer.cycle,
@@ -937,7 +942,8 @@ def loan_repayment(request, id):
                     debit_transaction.save()
 
                     credit_transaction = Memtrans(
-                        branch=form.cleaned_data['branch'],
+                        branch=user_branch,
+                        cust_branch=customer_branch,
                         gl_no=customer.gl_no,
                         ac_no=customer.ac_no,
                         cycle=customer.cycle,
@@ -955,7 +961,8 @@ def loan_repayment(request, id):
                     credit_transaction.save()
 
                     debit_transaction_interest = Memtrans(
-                        branch=customer.branch,
+                        cust_branch=customer_branch,
+                        branch=user_branch,
                         gl_no=form.cleaned_data['gl_no_cashier'],
                         ac_no=form.cleaned_data['ac_no_cashier'],
                         cycle=customer.cycle,
@@ -972,7 +979,8 @@ def loan_repayment(request, id):
                     debit_transaction_interest.save()
 
                     credit_transaction_interest = Memtrans(
-                        branch=form.cleaned_data['branch'],
+                        cust_branch=customer_branch,
+                        branch=user_branch,
                         gl_no=account.interest_gl,
                         ac_no=account.interest_ac,
                         cycle=customer.cycle,
@@ -998,7 +1006,7 @@ def loan_repayment(request, id):
                     period = lp_count + 1
 
                     loanhist_entry = LoanHist(
-                        branch=customer.branch,
+                        branch=customer_branch,
                         gl_no=customer.gl_no,
                         ac_no=customer.ac_no,
                         cycle=customer.cycle,
@@ -1021,7 +1029,8 @@ def loan_repayment(request, id):
                     customer.save()
 
                     debit_transaction_interest_accounting = Memtrans(
-                        branch=customer.branch,
+                        cust_branch=customer_branch,
+                        branch=user_branch,
                         gl_no=account.int_to_recev_gl_dr,
                         ac_no=account.int_to_recev_ac_dr,
                         cycle=customer.cycle,
@@ -1038,7 +1047,8 @@ def loan_repayment(request, id):
                     debit_transaction_interest_accounting.save()
 
                     credit_transaction_interest_accounting = Memtrans(
-                        branch=form.cleaned_data['branch'],
+                        cust_branch=customer_branch,
+                        branch=user_branch,
                         gl_no=account.unearned_int_inc_gl,
                         ac_no=account.unearned_int_inc_ac,
                         cycle=customer.cycle,

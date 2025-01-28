@@ -10,6 +10,13 @@
         <!-- SearchTable -->
         
         <div class="container deposit p-5 shadow-lg rounded rounded-5">
+            {% if messages %}
+            <ul class="messages">
+                {% for message in messages %}
+                <li style="font-size: 20px; color: brown; font-weight: bold;" {% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
             
             <div class="row mt-3 table-row1">
                 <a href="{% url 'loans' %}" style="color: green; font-weight: bold; text-align: right; display: block;">Loans Menu</a>
