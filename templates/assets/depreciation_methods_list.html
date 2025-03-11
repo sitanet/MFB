@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}Asset Types{% endblock %}
+
+{% block content %}
+<h2>Asset Types</h2>
+
+<a href="{% url 'add_asset_type' %}" class="btn btn-primary mb-3">
+    Add New Asset Type
+</a>
+
+{% if asset_types %}
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Name</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for asset_type in asset_types %}
+        <tr>
+            <td>{{ asset_type.name }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>No asset types found.</p>
+{% endif %}
+{% endblock %}

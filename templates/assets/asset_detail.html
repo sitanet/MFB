@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %} Asset Details {% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow-lg">
+        <div class="card-header bg-primary text-white">
+            <h2 class="mb-0"><i class="fas fa-box"></i> {{ asset.asset_name }}</h2>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong><i class="fas fa-tag"></i> Type:</strong> {{ asset.get_asset_type_display }}</p>
+                    <p><strong><i class="fas fa-user"></i> Owner:</strong> 
+                        {% if asset.owner_type == "CUSTOMER" %}
+                            {{ asset.customer.full_name }}
+                        {% elif asset.owner_type == "BRANCH" %}
+                            {{ asset.branch.branch_name }}
+                        {% elif asset.owner_type == "BANK" %}
+                            <span class="text-muted">Bank Headquarters</span>
+                        {% else %}
+                            <span class="text-muted">Unknown</span>
+                        {% endif %}
+                    </p>
+                    <p><strong><i class="fas fa-calendar-alt"></i> Purchase Date:</strong> 
+                        {{ asset.purchase_date|date:"M d, Y" }}
+                    </p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong><i class="fas fa-dollar-sign"></i> Purchase Price:</strong> 
+                        ${{ asset.purchase_price|floatformat:2 }}
+                    </p>
+                    <p><strong><i class="fas fa-chart-line"></i> Current Value:</strong> 
+                        <span class="text-success fw-bold">${{ asset.current_value|floatformat:2 }}</span>
+                    </p>
+                    <p><strong><i class="fas fa-percentage"></i> Depreciation Rate:</strong> 
+                        {{ asset.depreciation_rate }}%
+                    </p>
+                    <p><strong><i class="fas fa-info-circle"></i> Status:</strong> 
+                        <span class="badge 
+                            {% if asset.status == 'Active' %} bg-success 
+                            {% elif asset.status == 'Sold' %} bg-warning 
+                            {% else %} bg-danger {% endif %}">
+                            {{ asset.status }}
+                        </span>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-4 shadow">
+        <div class="card-header bg-secondary text-white">
+            <h3 class="mb-0"><i class="fas fa-history"></i> Depreciation History</h3>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th><i class="fas fa-calendar"></i> Date</th>
+                            <th><i class="fas fa-money-bill-wave"></i> Depreciation Amount</th>
+                            <th><i class="fas fa-balance-scale"></i> Remaining Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for record in depreciation_records %}
+                        <tr>
+                            <td>{{ record.depreciation_date|date:"M d, Y" }}</td>
+                            <td class="text-danger">-${{ record.depreciation_amount|floatformat:2 }}</td>
+                            <td class="text-success">${{ record.remaining_value|floatformat:2 }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" class="text-center text-muted">No depreciation records found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-4">
+        <a href="{% url 'asset_list' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Asset List
+        </a>
+        <a href="{% url 'edit_asset' asset.id %}" class="btn btn-warning">
+            <i class="fas fa-edit"></i> Edit Asset
+        </a>
+    </div>
+</div>
+{% endblock %}

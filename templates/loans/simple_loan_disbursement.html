@@ -1,147 +1,210 @@
 {% extends 'base.html' %}
-
 {% load static %}
 
 {% block content %}
 <div class="container-fluid">
     <div class="row column_title">
         <div class="col-md-12">
-            <div class="page_title">
-                <h2>Loan Approval</h2>
+            <div class="page_title text-center">
+                <h2 class="text-primary fw-bold">Direct Disbursement</h2>
             </div>
         </div>
     </div>
 
-    <div class="container">
-        <a href="{% url 'loans' %}" style="color: green; font-weight: bold; text-align: right; display: block;">Loans Menu</a>
-        <form method="POST" enctype="multipart/form-data">
+    <div class="container mt-4">
+        <a href="{% url 'loans' %}" class="text-success fw-bold text-end d-block">Loans Menu</a>
+
+        <form method="POST" enctype="multipart/form-data" class="mt-3 shadow-lg p-4 bg-white rounded">
             {% csrf_token %}
+            
             {% if messages %}
-            <ul class="messages">
-                {% for message in messages %}
-                <li style="font-size: 30px; color: brown; font-weight: bold;" {% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
-                {% endfor %}
-            </ul>
+            <div class="alert alert-warning">
+                <ul class="mb-0">
+                    {% for message in messages %}
+                    <li class="fw-bold {% if message.tags %} {{ message.tags }} {% endif %}">
+                        {{ message }}
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
             {% endif %}
-            <h6 style="color: red;">{{ form.errors }}</h6>
+            
+            <h6 class="text-danger">{{ form.errors }}</h6>
             {% include 'includes/alerts.html' %}
 
-            <div class="form first">
-                <div class="details personal">
-                    <div class="fields">
-                        <input type="hidden" value="{{ member.team_sup.username }}" name="user" required>
-                        <input type="hidden" name="branch" value="{{ user.branch }}" required>
+            <div class="card p-4">
+                <h5 class="text-primary fw-bold">Customer Details</h5>
+                <hr>
+                
+                <input type="hidden" name="user" value="{{ member.team_sup.username }}">
+                <input type="hidden" name="branch" value="{{ user.branch }}">
 
-                        <div class="input-field">
-                            <label>First Name*</label>
-                            <input type="text" class="form-control bg-light" name="first_name" value="{{ loan.customer.first_name }}" readonly>
-                        </div>
-                        <div class="input-field">
-                            <label>Middle Name</label>
-                            <input type="text" class="form-control bg-light" name="middle_name" value="{{ loan.customer.middle_name }}" readonly>
-                        </div>
-                        <div class="input-field">
-                            <label>Last Name*</label>
-                            <input type="text" class="form-control bg-light" name="last_name" value="{{ loan.customer.last_name }}" readonly>
-                        </div>
-                        <div class="input-field">
-                            <label>Account Type</label>
-                            <input type="text" class="form-control bg-light" name="gl_no" value="{{ loan.gl_no }}" readonly>
-                        </div>
-                        <div class="input-field">
-                            <label for="accountNoInput">Account No.:</label>
-                            <input type="text" class="form-control bg-light" name="ac_no_cashier" value="{{ loan.ac_no }}" readonly>
-                            <input type="text" class="form-control bg-light" name="customer" value="{{ loan.customer.id }}" readonly>
-                            <input type="text" class="form-control bg-light" name="cycle" value="{{ loan.cycle }}" readonly>
-                        </div>
-
-                        <div class="input-field">
-                            <label>Application Date</label>
-                            <input type="date" name="appli_date" value="{{appli_date}}" required disabled>
-                        </div>
-                        <div class="input-field">
-                            <label>Approve Date</label>
-                            <!-- <input type="date" name="approval_date" value="{{ form.approve_date.value}}" required disabled> -->
-                            {{ form.approval_date}}
-                        </div>
-                        <div class="input-field">
-                            <label>Disbursement Date</label>
-                            <input type="date" name="disbursement_date" id="ses_date" value="{{ company_date }}" required>
-                        </div>
-
-                        <input type="date" name="ses_date" value="{% now 'Y-m-d' %}" required >
-
-                        <div class="input-field">
-                            <label for="deposit_description">Loan Amount:</label>
-                            <input type="text" class="form-control bg-light" name="amount" value="{{ loan.loan_amount }}" readonly>
-                        </div>
-                        <div class="input-field">
-                            <label for="deposit_description">Annual Int Rate:</label>
-                            <input type="text" class="form-control bg-light" name="interest_rate" value="{{ loan.interest_rate }}" readonly>
-                        </div>
-                        <div class="input-field">
-                            <label for="deposit_description">No. of Frequency:</label>
-                            {{ form.payment_freq }}
-                        </div>
-                        <div class="input-field">
-                            <label for="deposit_description">Interest Method:</label>
-                            {{ form.interest_calculation_method }}
-                        </div>
-                        <div class="input-field">
-                            <label for="deposit_description">Loan Officers:</label>
-                            {{ form.loan_officer }}
-                        </div>
-                        <div class="input-field">
-                            <label for="deposit_description">Business Sector:</label>
-                            {{ form.business_sector }}
-                        </div>
-                        <div class="input-field">
-                            <label for="deposit_description">No of Installment:</label>
-                            {{ form.num_install }}
-                        </div>
-
-                        <div class="input-field">
-                            <label for="gl_no">Funding Account:</label>
-                            <select name="gl_no_cashier" id="gl_no">
-                                {% for record in amounts %}
-                                <option value="{{ record.gl_no }}">GL No: {{ record.gl_no }} - Total Amount: {{ record.total_amount }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-
-                      
-
-                        <input type="hidden" name="ac_no" value="{{ loan.ac_no }}">
-                        <input type="hidden" name="int_to_recev_gl_dr" value="{{ account.int_to_recev_gl_dr }}">
-                        <input type="hidden" name="int_to_recev_ac_dr" value="{{ account.int_to_recev_ac_dr }}">
-                        <input type="hidden" name="unearned_int_inc_gl" value="{{ account.unearned_int_inc_gl }}">
-                        <input type="hidden" name="unearned_int_inc_ac" value="{{ account.unearned_int_inc_ac }}">
-
-                        <button class="submit">
-                            <span class="btnText">Disburse</span>
-                            <i class="uil uil-navigator"></i>
-                        </button>
+                <div class="row">
+                    <div class="col-md-4">
+                        <label>First Name*</label>
+                        <input type="text" class="form-control bg-light" name="first_name" value="{{ loan.customer.first_name }}" readonly>
+                    </div>
+                    <div class="col-md-4">
+                        <label>Middle Name</label>
+                        <input type="text" class="form-control bg-light" name="middle_name" value="{{ loan.customer.middle_name }}" readonly>
+                    </div>
+                    <div class="col-md-4">
+                        <label>Last Name*</label>
+                        <input type="text" class="form-control bg-light" name="last_name" value="{{ loan.customer.last_name }}" readonly>
                     </div>
                 </div>
             </div>
+
+            <div class="card p-4 mt-3">
+                <h5 class="text-primary fw-bold">Loan Details</h5>
+                <hr>
+
+                <div class="row">
+                    <div class="col-md-4">
+                        <label>Account Type</label>
+                        <input type="text" class="form-control bg-light" name="gl_no" value="{{ loan.gl_no }}" readonly>
+                    </div>
+                    <div class="col-md-4">
+                        <label>Account No.</label>
+                        <input type="text" class="form-control bg-light" name="ac_no_cashier" value="{{ loan.ac_no }}" readonly>
+                        <input type="hidden" name="customer" value="{{ loan.customer.id }}">
+                        <input type="hidden" name="cycle" value="{{ loan.cycle }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label>Application Date</label>
+                        <input type="date" class="form-control" name="appli_date" value="{{ appli_date }}" required disabled>
+                    </div>
+                </div>
+
+                <div class="row mt-3">
+                    <div class="col-md-4">
+                        <label>Approval Date</label>
+                        <input type="date" class="form-control" name="approval_date" value="{{ appli_date }}" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label>Disbursement Date</label>
+                        <input type="date" class="form-control" name="disbursement_date" id="ses_date" value="{{ company_date }}" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label>Loan Amount</label>
+                        <input type="text" class="form-control bg-light" name="amount" value="{{ loan.loan_amount }}" readonly>
+                    </div>
+                </div>
+            </div>
+
+            <input type="hidden" name="ses_date" value="{% now 'Y-m-d' %}" required>
+
+            <div class="card p-4 mt-3">
+                <h5 class="text-primary fw-bold">Payment & Interest</h5>
+                <hr>
+
+                <div class="row">
+                    <div class="col-md-4">
+                        <label>Annual Interest Rate</label>
+                        <input type="text" class="form-control bg-light" name="interest_rate" value="{{ loan.interest_rate }}" readonly>
+                    </div>
+                    <div class="col-md-4">
+                        <label>No. of Frequency</label>
+                        <select class="form-control" name="payment_freq">
+                            {% for choice in form.payment_freq.field.choices %}
+                                <option value="{{ choice.0 }}" {% if form.payment_freq.value == choice.0 %}selected{% endif %}>
+                                    {{ choice.1 }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label>Interest Method</label>
+                        <select class="form-control" name="interest_calculation_method">
+                            {% for choice in form.interest_calculation_method.field.choices %}
+                                <option value="{{ choice.0 }}" {% if form.interest_calculation_method.value == choice.0 %}selected{% endif %}>
+                                    {{ choice.1 }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+        <div class="card p-4 mt-3">
+                <h5 class="text-primary fw-bold">Additional Details</h5>
+                <hr>
+                <div class="row mt-3">
+                    <div class="col-md-4">
+                        <label>Loan Officers</label>
+                        <select class="form-control" name="loan_officer">
+                            {% for choice in form.loan_officer.field.choices %}
+                                <option value="{{ choice.0 }}" {% if form.loan_officer.value == choice.0 %}selected{% endif %}>
+                                    {{ choice.1 }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                
+                    <div class="col-md-4">
+                        <label>Business Sector</label>
+                        <select class="form-control" name="business_sector">
+                            {% for choice in form.business_sector.field.choices %}
+                                <option value="{{ choice.0 }}" {% if form.business_sector.value == choice.0 %}selected{% endif %}>
+                                    {{ choice.1 }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label>No of Installments</label>
+                        <div class="input-group">
+                            {{ form.num_install }}
+                        </div>
+                    </div> 
+                    
+                </div>
+                
+
+            <div class="card p-4 mt-3">
+                <h5 class="text-primary fw-bold">Funding Account</h5>
+                <hr>
+
+                <div class="row">
+                    <div class="col-md-4">
+                        <label>Funding Account</label>
+                        <select class="form-control" name="gl_no_cashier" id="gl_no">
+                            {% for record in amounts %}
+                            <option value="{{ record.gl_no }}">GL No: {{ record.gl_no }} - Total Amount: {{ record.total_amount }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center mt-4">
+                <button class="btn btn-success btn-lg px-5">
+                    <span class="btnText">Disburse Loan</span>
+                    <i class="uil uil-navigator"></i>
+                </button>
+            </div>
+
         </form>
     </div>
 </div>
 
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        var sessionDateInput = document.getElementById('ses_date');
-        var companyDate = '{{ company_date }}'; // Assuming company_date is in the 'YYYY-MM-DD' format
+<style>
+    .form-control {
+        border-radius: 5px;
+    }
+    label {
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+    .btnText {
+        font-size: 18px;
+    }
+    .btn-success {
+        font-size: 20px;
+        padding: 12px 30px;
+        border-radius: 5px;
+    }
+</style>
 
-        sessionDateInput.addEventListener('change', function() {
-            var selectedDate = new Date(sessionDateInput.value);
-            var companyDateObj = new Date(companyDate);
-
-            if (selectedDate > companyDateObj) {
-                alert('Please select a date not greater than the session date.');
-                sessionDateInput.value = '{{ company_date }}'; // Reset the input value
-            }
-        });
-    });
-</script>
 {% endblock %}

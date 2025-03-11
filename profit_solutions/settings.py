@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'django.contrib.humanize',
     'reports',
     'end_of_periods',
+    'fixed_assets',
    
 ]
 
@@ -172,4 +173,13 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'accounts.User'  # Example for a custom user model
 
+
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "smtp.zoho.com"
+EMAIL_PORT = 587  # Use 465 if using SSL
+EMAIL_USE_TLS = True  # Set to False if using SSL
+EMAIL_USE_SSL = False  # Set to True if using SSL
+EMAIL_HOST_USER = "support@knowyourpropfirm.com"
+EMAIL_HOST_PASSWORD = "db$kScHEFg!ajd#9"  # Use App Password if 2FA is enabled
+DEFAULT_FROM_EMAIL = "Know Your PropFirm <support@knowyourpropfirm.com>"
 

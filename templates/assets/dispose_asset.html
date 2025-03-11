@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-3">Dispose Asset: {{ asset.asset_name }}</h2>
+
+    <!-- Display Messages -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Disposal Form -->
+    <form method="post">
+        {% csrf_token %}
+
+        <div class="mb-3">
+            <label class="form-label"><strong>Asset Name:</strong></label>
+            <input type="text" class="form-control" value="{{ asset.asset_name }}" disabled>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label"><strong>Original Cost:</strong></label>
+            <input type="text" class="form-control" value="{{ asset.asset_cost|floatformat:2|default_if_none:'0.00' }}" disabled>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label"><strong>Accumulated Depreciation:</strong></label>
+            <input type="text" class="form-control" value="{{ asset.total_depreciation|floatformat:2|default_if_none:'0.00' }}" disabled>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label"><strong>Net Book Value (NBV):</strong></label>
+            <input type="text" class="form-control" value="{{ asset.net_book_value|floatformat:2|default_if_none:'0.00' }}" disabled>
+        </div>
+
+        <div class="mb-3">
+            <label for="disposal_price" class="form-label"><strong>Disposal Price:</strong></label>
+            <input type="number" step="0.01" name="disposal_price" class="form-control" required min="0">
+        </div>
+
+        <div class="mb-3">
+            <label for="disposal_reason" class="form-label"><strong>Disposal Reason:</strong></label>
+            <textarea name="disposal_reason" class="form-control" rows="3" required></textarea>
+        </div>
+
+        <!-- Gain/Loss Calculation -->
+        <div class="mb-3">
+            <label class="form-label"><strong>Expected Gain/Loss:</strong></label>
+            <input type="text" id="gainLoss" class="form-control" disabled>
+        </div>
+
+        <!-- Submit & Cancel Buttons -->
+        <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to dispose of this asset? This action cannot be undone.')">
+            Dispose Asset
+        </button>
+        <a href="{% url 'asset_list' %}" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+
+<!-- JavaScript for Gain/Loss Calculation -->
+<script>
+    document.querySelector('input[name="disposal_price"]').addEventListener('input', function() {
+        let disposalPrice = parseFloat(this.value) || 0;
+        let nbv = parseFloat({{ asset.net_book_value }}) || 0;
+        let gainLoss = disposalPrice - nbv;
+        document.getElementById('gainLoss').value = gainLoss.toFixed(2);
+    });
+
+    // Auto-hide messages after 3 seconds
+    setTimeout(function() {
+        let alerts = document.querySelectorAll('.alert');
+        alerts.forEach(alert => alert.style.display = 'none');
+    }, 3000);
+</script>
+
+{% endblock %}

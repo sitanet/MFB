@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container-fluid">
+  <div class="row">
+  </div>
+
+  <div>
+    <!-- Chart of Account will come here -->
+  </div>
+
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-md-12">
+        <div class="page_title">
+          <h2>Fixed Asset</h2>
+        </div>
+      </div>
+
+      <!-- Loan Application -->
+      <div class="col-md-3 mb-3">
+        <div class="account_setting py-5 fs-1 bg-white">
+          <div class="couter_icon col-md-12">
+            <i class="fa fa-file-alt text-primary"></i>
+          </div>
+          <a href="{% url 'asset_create' %}" class="text-center">
+            <h5 class="my-2">Register Assets</h5>
+          </a>
+        </div>
+      </div>
+
+      <!-- Modify Loan Application -->
+      <div class="col-md-3 mb-3">
+        <div class="account_setting py-5 fs-1 bg-white">
+          <div class="couter_icon col-md-12">
+            <i class="fa fa-edit text-success"></i>
+          </div>
+          <a href="{% url 'choose_to_modify_loan' %}" class="text-center">
+            <h5 class="my-2">Assets Disposal</h5>
+          </a>
+        </div>
+      </div>
+
+      <!-- Loan Approval/Reject -->
+   
+
+
+
+
+
+      
+
+
+
+
+
+    
+ 
+
+    </div>
+    <!-- footer -->
+    <!-- 
+    <div class="container-fluid">
+      <div class="footer">
+        <p>Copyright &copy; 2023 The CityGate Church. All rights reserved.</p>
+      </div>
+    </div> 
+    -->
+  </div>
+
+</div>
+
+{% endblock %}

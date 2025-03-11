@@ -69,6 +69,15 @@ class Customer(models.Model):
     def gl_no_gl_no(self):
         return self.gl_no.gl_no
     
+    # def get_full_name(self):
+    #     if self.middle_name:
+    #         return f"{self.first_name} {self.middle_name} {self.last_name}"
+    #     else:
+    #         return f"{self.first_name} {self.last_name}"
+
+    def __str__(self):
+        return self.get_full_name()
+
     def get_full_name(self):
         if self.middle_name:
             return f"{self.first_name} {self.middle_name} {self.last_name}"

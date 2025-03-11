@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}Add Depreciation Method{% endblock %}
+
+{% block content %}
+<h2>Add Depreciation Method</h2>
+
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-success">Save</button>
+</form>
+
+<a href="{% url 'depreciation_methods_list' %}" class="btn btn-secondary mt-3">
+    Back to Depreciation Methods
+</a>
+{% endblock %}

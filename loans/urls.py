@@ -19,6 +19,8 @@ urlpatterns = [
     path('loan_schedule/<int:loan_id>/', views.loan_schedule_view, name='loan_schedule'),
     path('loan_schedule_demo/', views.loan_schedule_demo, name='loan_schedule_demo'),
     path('choose_to_disburse/', views.choose_to_disburse, name='choose_to_disburse'),
+    path('choose_to_direct_disburse/', views.choose_to_direct_disburse, name='choose_to_direct_disburse'),
+
     # path('choose_to_disburse_reversal/', views.choose_to_disburse_reversal, name='choose_to_disburse_reversal'),
     path('display_loan_disbursements/', views.display_loan_disbursements, name='display_loan_disbursements'),
     # path('delete_transactions/<int:loan_id>/', views.delete_transactions, name='delete_transactions'),

@@ -22,7 +22,7 @@ class Memtrans(models.Model):
     cycle = models.IntegerField( null=True, blank=True) 
     gl_no = models.CharField(max_length=6, null=True, blank=True) 
     ac_no = models.CharField(max_length=6, null=True, blank=True) 
-    trx_no = models.CharField(max_length=8, null=True, blank=True)  # 7-digit number + 1 alphabet
+    trx_no = models.CharField(max_length=10, null=True, blank=True)  # 7-digit number + 1 alphabet
     ses_date = models.DateField()   
     app_date = models.DateField(null=True, blank=True) 
     sys_date = models.DateTimeField(default=timezone.now, null=True, blank=True)

@@ -31,4 +31,5 @@ urlpatterns = [
     path('end_of_periods/', include('end_of_periods.urls')),
     path('loans/', include('loans.urls')),
     path('reports/', include('reports.urls')),
+    path('fixed_assets/', include('fixed_assets.urls')),
 ]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

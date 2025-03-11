@@ -536,6 +536,22 @@ def choose_to_disburse(request):
 
  # Assuming you have this utility function
 
+
+
+
+
+
+def choose_to_direct_disburse(request):
+    user_branch=request.user.branch.company
+    customers = Loans.objects.select_related('customer').filter(approval_status='F', disb_status='F', branch__company=user_branch)
+    for customer in customers:
+        if customer.customer:
+            print(customer.customer.first_name)
+        else:
+            print("No associated customer for this loan.")
+    # Pass the customers data to the template
+    return render(request, 'loans/choose_to_disburse.html', {'customers': customers})
+
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
 

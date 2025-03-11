@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="text-primary">Fixed Assets</h2>
+        <a href="{% url 'register_fixed_asset' %}" class="btn btn-success">
+            <i class="fas fa-plus"></i> Add New Fixed Asset
+        </a>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            {% if assets %}
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>#</th>
+                                <th>Asset Name</th>
+                                <th>Purchase Date</th>
+                                <th>Purchase Cost (₦)</th>
+                                <th>Net Book Value (₦)</th>
+                                <th class="text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for asset in assets %}
+                            <tr>
+                                <td>{{ forloop.counter }}</td>
+                                <td>{{ asset.asset_name }}</td>
+                                <td>{{ asset.date_of_purchase|date:"d M Y" }}</td>
+                                <td class="text-end">{{ asset.asset_cost|floatformat:2 }}</td>
+                                <td class="text-end">{{ asset.calculated_nbv|floatformat:2 }}</td>
+
+                                <td class="text-center">
+                                    <a href="{% url 'edit_fixed_asset' asset.id %}" class="btn btn-sm btn-warning">
+                                        <i class="fas fa-edit"></i> Edit
+                                    </a>
+                                    <a href="{% url 'delete_fixed_asset' asset.id %}" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to delete this asset?');">
+                                        <i class="fas fa-trash"></i> Delete
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="text-muted text-center">No fixed assets found.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

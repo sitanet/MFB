@@ -1,0 +1,241 @@
+{% extends "base.html" %}
+
+{% block title %}Register Fixed Asset{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-3">Register Fixed Asset</h2>
+
+    <!-- Display success messages -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Fixed Asset Registration Form -->
+    <form method="POST" class="card p-4 shadow-sm">
+        {% csrf_token %}
+
+        <div class="row">
+            <!-- Asset Name -->
+            <div class="col-md-4 mb-3">
+                <label for="asset_name" class="form-label">Asset Name</label>
+                <input type="text" id="asset_name" name="asset_name" class="form-control" required>
+            </div>
+
+            <!-- Asset ID -->
+            <div class="col-md-4 mb-3">
+                <label for="asset_id" class="form-label">Asset ID</label>
+                <input type="text" id="asset_id" name="asset_id" class="form-control" required>
+            </div>
+
+            <!-- Serial Number -->
+            <div class="col-md-4 mb-3">
+                <label for="asset_serial_no" class="form-label">Serial Number</label>
+                <input type="text" id="asset_serial_no" name="asset_serial_no" class="form-control" required>
+            </div>
+
+            <!-- Model Number -->
+            <div class="col-md-4 mb-3">
+                <label for="asset_model_no" class="form-label">Model Number</label>
+                <input type="text" id="asset_model_no" name="asset_model_no" class="form-control">
+            </div>
+
+            <!-- Asset Type -->
+            <div class="col-md-4 mb-3">
+                <label for="asset_type" class="form-label">Asset Type</label>
+                <select id="asset_type" name="asset_type" class="form-select" required>
+                    <option value="">Select Asset Type</option>
+                    {% for asset_type in asset_types %}
+                        <option value="{{ asset_type.id }}">{{ asset_type.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Asset Class -->
+            <div class="col-md-4 mb-3">
+                <label for="asset_class" class="form-label">Asset Class</label>
+                <select id="asset_class" name="asset_class" class="form-select" required>
+                    <option value="">Select Asset Class</option>
+                    {% for asset_class in asset_class %}
+                        <option value="{{ asset_class.id }}">{{ asset_class.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Asset Group -->
+            <div class="col-md-4 mb-3">
+                <label for="asset_group" class="form-label">Asset Group</label>
+                <select id="asset_group" name="asset_group" class="form-select" required>
+                    <option value="">Select Asset Group</option>
+                    {% for group in asset_groups %}
+                        <option value="{{ group.id }}">{{ group.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Branch -->
+            <div class="col-md-4 mb-3">
+                <label for="branch" class="form-label">Branch</label>
+                <select id="branch" name="branch" class="form-select" required>
+                    <option value="">Select Branch</option>
+                    {% for br in branches %}
+                        <option value="{{ br.id }}">{{ br.branch_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Department -->
+            <div class="col-md-4 mb-3">
+                <label for="department" class="form-label">Department</label>
+                <select id="department" name="department" class="form-select" required>
+                    <option value="">Select Department</option>
+                    {% for dept in departments %}
+                        <option value="{{ dept.id }}">{{ dept.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <!-- Asset Location -->
+            <div class="col-md-4 mb-3">
+                <label for="asset_locations" class="form-label">Asset Location</label>
+                <select id="asset_locations" name="asset_locations" class="form-select" required>
+                    <option value="">Select Officer</option>
+                    {% for asset_locations in asset_locations %}
+                        <option value="{{ asset_locations.id }}">{{ asset_locations.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Assigned Officer -->
+            <div class="col-md-4 mb-3">
+                <label for="officer" class="form-label">Assigned Officer</label>
+                <select id="officer" name="officer" class="form-select" required>
+                    <option value="">Select Officer</option>
+                    {% for officer in officers %}
+                        <option value="{{ officer.id }}">{{ officer.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Date of Purchase -->
+            <div class="col-md-4 mb-3">
+                <label for="date_of_purchase" class="form-label">Date of Purchase</label>
+                <input type="date" id="date_of_purchase" name="date_of_purchase" class="form-control" required>
+            </div>
+
+            <!-- GL Account (Allowance) -->
+            <div class="col-md-4 mb-3">
+                <label for="allowance_account" class="form-label">GL Account (Allowance)</label>
+                <select id="allowance_account" name="allowance_account" class="form-select" required>
+                    {% for account in gl_accounts %}
+                        <option value="{{ account.id }}">{{ account.gl_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- GL Account (Expense) -->
+            <div class="col-md-4 mb-3">
+                <label for="expense_account_id" class="form-label">GL Account (Expense)</label>
+                <select id="expense_account_id" name="expense_account" class="form-select" required>
+                    {% for account in gl_accounts %}
+                        <option value="{{ account.id }}">{{ account.gl_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Asset Cost -->
+            <div class="col-md-4 mb-3">
+                <label for="asset_cost" class="form-label">Asset Cost</label>
+                <input type="number" step="0.01" id="asset_cost" name="asset_cost" class="form-control" required>
+            </div>
+
+            <!-- Depreciation Method -->
+            <div class="col-md-4 mb-3">
+                <label for="depreciation_method" class="form-label">Depreciation Method</label>
+                <select id="depreciation_method" name="depreciation_method" class="form-select" required>
+                    <option value="">Select Depreciation Method</option>
+                    {% for depreciation_method in depreciation_methods %}
+                        <option value="{{ depreciation_method.id }}">{{ depreciation_method.method }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Residual Value -->
+            <div class="col-md-4 mb-3">
+                <label for="residual_value" class="form-label">Residual Value</label>
+                <input type="number" step="0.01" id="residual_value" name="residual_value" class="form-control" required>
+            </div>
+            <div class="col-md-4 mb-3">
+                <label for="minimum_asset_cost" class="form-label">Minimum Asset</label>
+                <input type="number" step="0.01" id="minimum_asset_cost" name="minimum_asset_cost" class="form-control" required>
+            </div>
+
+            <!-- Asset Life (Months) -->
+            <div class="col-md-4 mb-3">
+                <label for="asset_life_months" class="form-label">Asset Life (Months)</label>
+                <input type="number" id="asset_life_months" name="asset_life_months" class="form-control" required>
+            </div>
+
+            <!-- Depreciation Rate -->
+            <div class="col-md-4 mb-3">
+                <label for="depreciation_rate" class="form-label">Depreciation Rate (%)</label>
+                <input type="number" step="0.01" id="depreciation_rate" name="depreciation_rate" class="form-control" required>
+            </div>
+
+            <!-- Depreciation Frequency -->
+            <div class="col-md-4 mb-3">
+                <label for="depreciation_frequency" class="form-label">Depreciation Frequency</label>
+                <select id="depreciation_frequency" name="depreciation_frequency" class="form-select" required>
+                    <option value="12">Monthly</option>
+                    <option value="4">Quarterly</option>
+                    <option value="2">Semi-Annually</option>
+                    <option value="1">Annually</option>
+                </select>
+            </div>
+
+            <!-- GL Account -->
+            <div class="col-md-4 mb-3">
+                <label for="gl_account" class="form-label">GL Account</label>
+                <select id="gl_account" name="gl_account_id" class="form-select" required>
+                    {% for account in gl_accounts %}
+                        <option value="{{ account.id }}">{{ account.gl_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Account No -->
+            <div class="col-md-4 mb-3">
+                <label for="ac_no" class="form-label">Account No</label>
+                <input type="number" id="ac_no" name="ac_no" class="form-control" required>
+            </div>
+
+            <!-- Bank Account -->
+            <div class="col-md-4 mb-3">
+                <label for="bank_account" class="form-label">Bank Account</label>
+                <select id="bank_account" name="bank_account" class="form-select" required>
+                    {% for account in bank_accounts %}
+                        <option value="{{ account.id }}">{{ account.gl_no }}--{{ account.gl_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Description -->
+            <div class="col-md-12 mb-3">
+                <label for="description" class="form-label">Description</label>
+                <textarea id="description" name="description" class="form-control" rows="3"></textarea>
+            </div>
+        </div>
+
+        <!-- Submit Button -->
+        <div class="mt-4">
+            <button type="submit" class="btn btn-primary">Save Asset</button>
+            <a href="{% url 'asset_list' %}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
