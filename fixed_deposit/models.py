@@ -14,6 +14,7 @@ class FixedDeposit(models.Model):
     fixed_gl_no = models.CharField(max_length=20)  # ✅ Fixed GL No (Stored as CharField)
     fixed_ac_no = models.CharField(max_length=20)  # ✅ Fixed Deposit Account No
     branch = models.ForeignKey(Branch, on_delete=models.CASCADE)
+    cycle = models.IntegerField(null=True, blank=True)
     
     deposit_amount = models.DecimalField(max_digits=12, decimal_places=2)  # Principal
     interest_rate = models.DecimalField(max_digits=5, decimal_places=2)  # Interest rate (e.g., 5.5 for 5.5%)

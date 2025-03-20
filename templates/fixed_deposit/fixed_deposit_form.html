@@ -4,6 +4,17 @@
 <div class="container">
     <h2>Register Fixed Deposit</h2>
 
+    {% if messages %}
+    <div class="alert alert-dismissible fade show">
+        {% for message in messages %}
+        <div class="alert {% if message.tags == 'success' %}alert-success{% else %}alert-danger{% endif %}" role="alert">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+   
+
     <form method="POST">
         {% csrf_token %}
         <h6 style="color: red;" >{{ form.errors }}</h6>

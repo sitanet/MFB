@@ -10,7 +10,7 @@ urlpatterns = [
     path("fixed-deposit-list/", views.display_customers_with_fixed_deposit, name="display_customers_with_fixed_deposit"),
     path("running-fixed-deposits/", views.running_fixed_deposits, name="running_fixed_deposits"),
 
-    path("fixed-deposits/", views.display_customers_for_fixed_deposit_withdrawal, name="customers_with_fixed_deposit"),
+    path("display-customers-for-fixed-deposit-withdrawal/", views.display_customers_for_fixed_deposit_withdrawal, name="display_customers_for_fixed_deposit_withdrawal"),
     path("reversal/<int:deposit_id>/", views.reversal_for_fixed_deposit, name="reversal_for_fixed_deposit"),
     path("reversal-fixed-deposit-list/", views.reversal_fixed_deposit_list, name="reversal_fixed_deposit_list"),
 ]

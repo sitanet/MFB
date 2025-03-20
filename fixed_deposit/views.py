@@ -64,10 +64,8 @@ def get_account_balance(gl_no, ac_no):
     return credit_total + debit_total  # Net balance
 
 
-@csrf_exempt  # 🔹 Remove if CSRF protection is required
 
 
-@csrf_exempt  # 🔹 Remove if CSRF protection is required
 def register_fixed_deposit(request):
     customer_id = request.GET.get("customer_id")
     customer = None
@@ -91,28 +89,35 @@ def register_fixed_deposit(request):
                     fixed_deposit = form.save(commit=False)
 
                     # Ensure branch is set
-                    fixed_deposit.branch = customer.branch if customer and hasattr(customer, "branch") else Branch.objects.first()
+                    if customer and hasattr(customer, "branch") and customer.branch:
+                        fixed_deposit.branch = customer.branch
+                    else:
+                        fixed_deposit.branch = Branch.objects.first()
+                        if not fixed_deposit.branch:
+                            messages.error(request, "⚠️ No branch found.")
+                            return render(request, "fixed_deposit/fixed_deposit_form.html", {"form": form, "customer": customer})
 
                     # Fetch Fixed Interest GL and AC from Account model
-                    fixed_gl_no = fixed_deposit.fixed_gl_no
-                    account = Account.objects.filter(gl_no=fixed_gl_no).first()
-
+                    account = Account.objects.filter(gl_no=fixed_deposit.fixed_gl_no).first()
                     if account:
                         fixed_int_gl_no = account.fixed_dep_int_gl_no
                         fixed_int_ac_no = account.fixed_dep_int_ac_no
                     else:
                         messages.error(request, "⚠️ No matching account found for the selected Fixed GL No.")
-                        return render(request, "fixed_deposit/fixed_deposit_form.html", {
-                            "form": form, "customer": customer
-                        })
+                        return render(request, "fixed_deposit/fixed_deposit_form.html", {"form": form, "customer": customer})
 
                     # Validate sufficient balance
                     cust_balance = get_account_balance(fixed_deposit.cust_gl_no, fixed_deposit.cust_ac_no)
                     if cust_balance < fixed_deposit.deposit_amount:
                         messages.error(request, "❌ Insufficient funds in the account.")
-                        return render(request, "fixed_deposit/fixed_deposit_form.html", {
-                            "form": form, "customer": customer
-                        })
+                        return render(request, "fixed_deposit/fixed_deposit_form.html", {"form": form, "customer": customer})
+
+                    # Calculate the cycle number
+                    last_cycle = FixedDeposit.objects.filter(
+                        fixed_gl_no=fixed_deposit.fixed_gl_no,
+                        fixed_ac_no=fixed_deposit.fixed_ac_no
+                    ).aggregate(Max("cycle"))["cycle__max"] or 0
+                    fixed_deposit.cycle = last_cycle + 1
 
                     # Save Fixed Deposit
                     fixed_deposit.fixed_int_gl_no = fixed_int_gl_no or "DEFAULT_GL_NO"
@@ -121,10 +126,10 @@ def register_fixed_deposit(request):
 
                     # Generate unique transaction number
                     trx_no = generate_fixed_deposit_id()
-                    user = request.user  # Get logged-in user
 
                     # Record Transaction Entries
-                    Memtrans.objects.bulk_create([
+                    user = request.user
+                    transactions = [
                         Memtrans(
                             branch=fixed_deposit.branch,
                             customer=fixed_deposit.customer,
@@ -134,12 +139,13 @@ def register_fixed_deposit(request):
                             ses_date=fixed_deposit.start_date,
                             sys_date=now(),
                             amount=-fixed_deposit.deposit_amount,
-                            description="Fixed Deposit Debit",
+                            description=f"Fixed Deposit Debit (Cycle {fixed_deposit.cycle})",
                             type="C",
                             account_type="C",
                             code="FD",
-                            user=user,  # ✅ Fixed
+                            user=user,
                             cust_branch=user.branch,
+                            cycle=fixed_deposit.cycle,
                         ),
                         Memtrans(
                             branch=fixed_deposit.branch,
@@ -150,14 +156,16 @@ def register_fixed_deposit(request):
                             ses_date=fixed_deposit.start_date,
                             sys_date=now(),
                             amount=fixed_deposit.deposit_amount,
-                            description="Fixed Deposit Credit",
+                            description=f"Fixed Deposit Credit (Cycle {fixed_deposit.cycle})",
                             type="C",
                             account_type="C",
                             code="FD",
-                            user=user,  # ✅ Fixed
+                            user=user,
                             cust_branch=user.branch,
+                            cycle=fixed_deposit.cycle,
                         )
-                    ])
+                    ]
+                    Memtrans.objects.bulk_create(transactions)
 
                     # Log in Fixed Deposit History
                     FixedDepositHist.objects.create(
@@ -166,10 +174,10 @@ def register_fixed_deposit(request):
                         fixed_ac_no=fixed_deposit.fixed_ac_no,
                         trx_date=fixed_deposit.start_date,
                         trx_type="FD",
-                        trx_naration="Fixed deposit initiated",
+                        trx_naration=f"Fixed deposit initiated (Cycle {fixed_deposit.cycle})",
                         trx_no=trx_no,
                         principal=fixed_deposit.deposit_amount,
-                        interest=fixed_deposit.interest_amount or 0.00
+                        interest=fixed_deposit.interest_amount or 0.00,
                     )
 
                     messages.success(request, "✅ Fixed Deposit registered successfully!")
@@ -186,7 +194,6 @@ def register_fixed_deposit(request):
         "fixed_int_gl_no": fixed_int_gl_no,
         "fixed_int_ac_no": fixed_int_ac_no,
     })
-
 
 
 from django.shortcuts import render, redirect, get_object_or_404
@@ -251,21 +258,23 @@ def withdraw_fixed_deposit(request, deposit_id):
                     # Generate unique transaction number
                     trx_no = generate_fixed_deposit_id()
 
-                    # Create transaction records
+                    # Create transaction records with the same cycle as the fixed deposit
                     transactions = [
                         # Debit Fixed Deposit Account
                         Memtrans(
                             branch=branch, customer=fixed_deposit.customer, gl_no=fixed_deposit.fixed_gl_no,
                             ac_no=fixed_deposit.fixed_ac_no, trx_no=trx_no, ses_date=now(), sys_date=now(),
                             amount=-withdraw_amount, description="Fixed Deposit Withdrawal", type="D",
-                            account_type="C", code="FDW", user=user, cust_branch=user.branch
+                            account_type="C", code="FDW", user=user, cust_branch=user.branch,
+                            cycle=fixed_deposit.cycle  # Include the same cycle
                         ),
                         # Credit Customer Account
                         Memtrans(
                             branch=branch, customer=fixed_deposit.customer, gl_no=fixed_deposit.cust_gl_no,
                             ac_no=fixed_deposit.cust_ac_no, trx_no=trx_no, ses_date=now(), sys_date=now(),
                             amount=withdraw_amount, description="Fixed Deposit Withdrawal Credit", type="C",
-                            account_type="C", code="FDW", user=user, cust_branch=user.branch
+                            account_type="C", code="FDW", user=user, cust_branch=user.branch,
+                            cycle=fixed_deposit.cycle  # Include the same cycle
                         ),
                     ]
 
@@ -277,25 +286,28 @@ def withdraw_fixed_deposit(request, deposit_id):
                                 branch=branch, customer=fixed_deposit.customer, gl_no=fixed_int_gl_no,
                                 ac_no=fixed_int_ac_no, trx_no=trx_no, ses_date=now(), sys_date=now(),
                                 amount=-interest_amount, description="Fixed Deposit Interest Debit", type="D",
-                                account_type="C", code="FDI", user=user, cust_branch=user.branch
+                                account_type="C", code="FDI", user=user, cust_branch=user.branch,
+                                cycle=fixed_deposit.cycle  # Include the same cycle
                             ),
                             # Credit Interest to Customer
                             Memtrans(
                                 branch=branch, customer=fixed_deposit.customer, gl_no=fixed_deposit.cust_gl_no,
                                 ac_no=fixed_deposit.cust_ac_no, trx_no=trx_no, ses_date=now(), sys_date=now(),
                                 amount=interest_amount, description="Fixed Deposit Interest Credit", type="C",
-                                account_type="C", code="FDI", user=user, cust_branch=user.branch
+                                account_type="C", code="FDI", user=user, cust_branch=user.branch,
+                                cycle=fixed_deposit.cycle  # Include the same cycle
                             )
                         ])
 
                     # Bulk insert transactions
                     Memtrans.objects.bulk_create(transactions)
 
-                    # Log withdrawal history
+                    # Log withdrawal history with the same cycle
                     FixedDepositHist.objects.create(
                         branch=branch, fixed_gl_no=fixed_deposit.fixed_gl_no, fixed_ac_no=fixed_deposit.fixed_ac_no,
                         trx_date=now(), trx_type="FDW", trx_naration="Fixed deposit withdrawn",
-                        trx_no=trx_no, principal=-withdraw_amount, interest=-interest_amount
+                        trx_no=trx_no, principal=-withdraw_amount, interest=-interest_amount,
+                        # cycle=fixed_deposit.cycle  # Include the same cycle
                     )
 
                     # Update FixedDeposit status to "closed" instead of deleting
@@ -354,56 +366,29 @@ def reversal_for_fixed_deposit(request, deposit_id):
     if request.method == "POST":
         try:
             with transaction.atomic():
-                trx_no = generate_fixed_deposit_id()
                 user = request.user  # Get logged-in user
-                
-                total_reversal_amount = fixed_deposit.deposit_amount
 
-                # Ensure sufficient balance in Fixed Deposit Account before reversal
-                fixed_balance = get_account_balance(fixed_deposit.fixed_gl_no, fixed_deposit.fixed_ac_no)
-                if fixed_balance < total_reversal_amount:
-                    messages.error(request, "❌ Insufficient funds in the Fixed Deposit Account for reversal.")
+                # Find the original transactions for both customer and fixed deposit account with the same cycle
+                original_transactions = Memtrans.objects.filter(
+                    gl_no__in=[fixed_deposit.cust_gl_no, fixed_deposit.fixed_gl_no],
+                    ac_no__in=[fixed_deposit.cust_ac_no, fixed_deposit.fixed_ac_no],
+                    cycle=fixed_deposit.cycle  # Filter by the same cycle
+                )
+
+                if not original_transactions.exists():
+                    messages.error(request, "❌ Original transactions not found for reversal.")
                     return redirect("display_customers_with_fixed_deposit")
 
-                # Reverse Transactions
-                Memtrans.objects.bulk_create([
-                    # Debit Fixed Deposit Account
-                    Memtrans(
-                        branch=fixed_deposit.branch,
-                        customer=fixed_deposit.customer,
-                        gl_no=fixed_deposit.fixed_gl_no,
-                        ac_no=fixed_deposit.fixed_ac_no,
-                        trx_no=trx_no,
-                        ses_date=now(),
-                        sys_date=now(),
-                        amount=-total_reversal_amount,
-                        description="Fixed Deposit Reversal - Debit",
-                        type="D",
-                        account_type="C",
-                        code="FD-REV",
-                        user=user,
-                        cust_branch=user.branch,
-                    ),
-                    # Credit Customer Account
-                    Memtrans(
-                        branch=fixed_deposit.branch,
-                        customer=fixed_deposit.customer,
-                        gl_no=fixed_deposit.cust_gl_no,
-                        ac_no=fixed_deposit.cust_ac_no,
-                        trx_no=trx_no,
-                        ses_date=now(),
-                        sys_date=now(),
-                        amount=total_reversal_amount,
-                        description="Fixed Deposit Reversal - Credit",
-                        type="C",
-                        account_type="C",
-                        code="FD-REV",
-                        user=user,
-                        cust_branch=user.branch,
-                    )
-                ])
+                # Debugging: Log original transactions
+                logger.debug(f"Original Transactions: {original_transactions}")
 
-                # Log in Fixed Deposit History
+                # Update the existing transactions to mark them as errors (error="H")
+                for original_transaction in original_transactions:
+                    original_transaction.error = "H"  # Set error to "H"
+                    original_transaction.description = f"Reversal: {original_transaction.description}"
+                    original_transaction.save()  # Save the updated transaction
+
+                # Log in Fixed Deposit History (optional, if needed)
                 FixedDepositHist.objects.create(
                     branch=fixed_deposit.branch,
                     fixed_gl_no=fixed_deposit.fixed_gl_no,
@@ -411,12 +396,13 @@ def reversal_for_fixed_deposit(request, deposit_id):
                     trx_date=now(),
                     trx_type="FD-REV",
                     trx_naration="Fixed Deposit Reversed",
-                    trx_no=trx_no,
+                    trx_no=generate_fixed_deposit_id(),  # Generate a new transaction number for history
                     principal=-fixed_deposit.deposit_amount,
-                    interest=-(fixed_deposit.interest_amount or 0.00)
+                    interest=-(fixed_deposit.interest_amount or 0.00),
+                    # cycle=fixed_deposit.cycle  # Include the same cycle
                 )
 
-                # Delete the fixed deposit record
+                # Delete the fixed deposit record (optional, if needed)
                 fixed_deposit.delete()
 
                 messages.success(request, "✅ Fixed Deposit successfully reversed!")
@@ -429,8 +415,6 @@ def reversal_for_fixed_deposit(request, deposit_id):
     return render(request, "fixed_deposit/fixed_deposit_reversal.html", {
         "fixed_deposit": fixed_deposit
     })
-
-
 
 def reversal_fixed_deposit_list(request):
     fixed_deposits = FixedDeposit.objects.filter(status="active")

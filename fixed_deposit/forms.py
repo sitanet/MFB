@@ -4,7 +4,7 @@ from .models import FixedDeposit
 class FixedDepositForm(forms.ModelForm):
     class Meta:
         model = FixedDeposit  # Ensure it's linked to the correct model
-        fields = ["customer", "cust_gl_no","cust_ac_no","fixed_gl_no", "fixed_ac_no", "deposit_amount", "interest_rate", "tenure_months", "start_date"]
+        fields = ["customer", "cust_gl_no","cust_ac_no","fixed_gl_no", "fixed_ac_no", "deposit_amount", "interest_rate", "tenure_months", "start_date", "cycle"]
 
 
 
