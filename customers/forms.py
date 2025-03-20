@@ -23,3 +23,18 @@ class InternalAccountForm(forms.ModelForm):
         model = Customer
         fields = '__all__'
     
+
+
+
+
+
+    # forms.py
+from django import forms
+from .models import FixedDepositAccount
+from customers.models import Customer
+from company.models import Branch
+
+class FixedDepositAccountForm(forms.ModelForm):
+    class Meta:
+        model = FixedDepositAccount
+        fields = ['customer', 'fixed_gl_no', 'fixed_ac_no', 'branch']

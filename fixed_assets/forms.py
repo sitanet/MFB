@@ -18,3 +18,20 @@ class FixedAssetForm(forms.ModelForm):
         if residual_value and asset_cost and residual_value > asset_cost:
             raise forms.ValidationError("Residual value cannot be greater than asset cost.")
         return residual_value
+
+
+
+
+from django import forms
+from .models import FixedAsset
+
+class AssetRevaluationForm(forms.Form):
+    new_value = forms.DecimalField(max_digits=15, decimal_places=2, label="New Asset Value")
+    new_residual = forms.DecimalField(max_digits=15, decimal_places=2, label="New Residual Value", required=False)
+    reason = forms.CharField(widget=forms.Textarea, required=False, label="Revaluation Reason")
+
+    def clean_new_value(self):
+        value = self.cleaned_data.get("new_value")
+        if value <= 0:
+            raise forms.ValidationError("Asset value must be greater than zero.")
+        return value

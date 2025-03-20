@@ -2,7 +2,6 @@ from django import forms
 from company.models import Company, Branch
 
 from transactions.models import Memtrans
-
 class MemtransForm(forms.ModelForm):
     gl_no_cashier = forms.CharField(max_length=100, widget=forms.TextInput(attrs={'readonly': 'readonly'}))
     ac_no_cashier = forms.CharField(max_length=100, widget=forms.TextInput(attrs={'readonly': 'readonly'}))
@@ -10,14 +9,17 @@ class MemtransForm(forms.ModelForm):
     ac_no = forms.CharField(max_length=100, widget=forms.TextInput(attrs={'readonly': 'readonly'}))
     
     disbursement_date = forms.DateField(required=False)
-
     label_select = forms.CharField(max_length=100, required=False, widget=forms.TextInput(attrs={'readonly': 'readonly'}))
     label_there = forms.CharField(max_length=100, required=False, widget=forms.TextInput(attrs={'readonly': 'readonly'}))
+
+    # Add cust_branch field if it's a ForeignKey to Branch
+    
+
     class Meta:
         model = Memtrans
-        fields = ['branch','gl_no', 'ac_no', 'cycle','app_date', 'ses_date', 'amount', 'gl_no_cashier', 'ac_no_cashier', 'description','label_select','label_there','disbursement_date']
+        fields = ['branch', 'cust_branch', 'gl_no', 'ac_no', 'cycle', 'app_date', 'ses_date', 'amount', 
+                  'gl_no_cashier', 'ac_no_cashier', 'description', 'label_select', 'label_there', 'disbursement_date']
 
-    
 
 # forms.py
 from django import forms

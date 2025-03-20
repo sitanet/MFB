@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block title %}Revalue Asset - {{ asset.asset_name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-center align-items-center vh-100" 
+    style="background: linear-gradient(135deg, #28a745, #fd7e14);">
+    
+    <div class="card shadow-lg border-0 rounded-4 p-4" 
+        style="max-width: 500px; width: 100%; background: #fff;">
+        
+        <div class="card-body">
+            <!-- Header -->
+            <h2 class="text-center fw-bold text-dark mb-4">
+                <i class="fas fa-balance-scale text-success"></i> Revalue Asset
+            </h2>
+            <hr class="mb-4">
+
+            <!-- Form -->
+            <form method="post" class="needs-validation" novalidate>
+                {% csrf_token %}
+
+                <!-- Total Depreciated Amount (Read-only) -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold text-danger">
+                        <i class="fas fa-chart-line"></i> Total Depreciated
+                    </label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-danger text-white">
+                            <i class="fas fa-minus-circle"></i>
+                        </span>
+                        <input type="text" class="form-control rounded-3 shadow-sm bg-light" 
+                            value="{{ total_depreciated }}" readonly>
+                    </div>
+                </div>
+
+                <!-- Net Book Value (Read-only) -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold text-primary">
+                        <i class="fas fa-calculator"></i> Net Book Value
+                    </label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-primary text-white">
+                            <i class="fas fa-balance-scale"></i>
+                        </span>
+                        <input type="text" class="form-control rounded-3 shadow-sm bg-light" 
+                            value="{{ net_book_value }}" readonly>
+                    </div>
+                </div>
+
+                <!-- New Asset Value -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold text-success">
+                        <i class="fas fa-coins"></i> New Asset Value
+                    </label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-success text-white">
+                            <i class="fas fa-dollar-sign"></i>
+                        </span>
+                        {{ form.new_value }}
+                    </div>
+                </div>
+
+                <!-- New Residual Value -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold text-warning">
+                        <i class="fas fa-piggy-bank"></i> New Residual Value
+                    </label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-warning text-white">
+                            <i class="fas fa-hand-holding-usd"></i>
+                        </span>
+                        {{ form.new_residual }}
+                    </div>
+                </div>
+
+                <!-- Revaluation Reason -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold text-dark">
+                        <i class="fas fa-comment-alt"></i> Revaluation Reason
+                    </label>
+                    <textarea class="form-control rounded-3 shadow-sm" 
+                        rows="3" placeholder="Enter reason for revaluation" required>
+                        {{ form.reason.value }}
+                    </textarea>
+                </div>
+
+                <!-- Buttons -->
+                <div class="d-grid gap-2 mt-4">
+                    <button type="submit" class="btn btn-lg shadow-lg fw-bold rounded-3" 
+                        style="background: #28a745; color: white; border: none;">
+                        <i class="fas fa-check"></i> Submit Revaluation
+                    </button>
+                    <a href="{% url 'asset_detail' asset.id %}" class="btn btn-lg shadow-sm fw-bold rounded-3" 
+                        style="background: #fd7e14; color: white; border: none;">
+                        <i class="fas fa-arrow-left"></i> Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container-fluid">
+  <div class="row">
+  </div>
+
+  <div>
+    <!-- Chart of Account will come here -->
+  </div>
+
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-md-12">
+        <div class="page_title">
+          <h2>Fixed Deposit Account</h2>
+        </div>
+      </div>
+
+      <!-- Register Fixed Deposit -->
+      <div class="col-md-3 mb-3">
+        <div class="account_setting py-5 fs-1 bg-white shadow-lg rounded-5">
+          <div class="couter_icon col-md-12">
+            <i class="fa fa-file-alt text-primary"></i>
+          </div>
+          <a href="{% url 'display_customers_with_fixed_deposit' %}" class="text-center">
+            <h5 class="my-2">Register Fixed Deposit</h5>
+          </a>
+        </div>
+      </div>
+      
+      <!-- Reverse Fixed Deposit -->
+      <div class="col-md-3 mb-3">
+        <div class="account_setting py-5 fs-1 bg-white shadow-lg rounded-5">
+          <div class="couter_icon col-md-12">
+            <i class="fa fa-undo text-success"></i>
+          </div>
+          <a href="{% url 'reversal_fixed_deposit_list' %}" class="text-center">
+            <h5 class="my-2">Reverse Fixed Deposit</h5>
+          </a>
+        </div>
+      </div>
+      
+      <!-- Fixed Deposit Withdrawal -->
+      <div class="col-md-3 mb-3">
+        <div class="account_setting py-5 fs-1 bg-white shadow-lg rounded-5">
+          <div class="couter_icon col-md-12">
+            <i class="fa fa-money-bill-wave text-warning"></i>
+          </div>
+          <a href="{% url 'customers_with_fixed_deposit' %}" class="text-center">
+            <h5 class="my-2">Fixed Deposit Withdrawal</h5>
+          </a>
+        </div>
+      </div>
+
+      <!-- Reverse Fixed Deposit Withdrawal -->
+      <div class="col-md-3 mb-3">
+        <div class="account_setting py-5 fs-1 bg-white shadow-lg rounded-5">
+          <div class="couter_icon col-md-12">
+            <i class="fa fa-exchange-alt text-danger"></i>
+          </div>
+          <a href="" class="text-center">
+            <h5 class="my-2">Reverse Fixed Deposit Withdrawal</h5>
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}

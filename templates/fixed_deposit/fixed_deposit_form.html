@@ -1,0 +1,192 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <h2>Register Fixed Deposit</h2>
+
+    <form method="POST">
+        {% csrf_token %}
+        <h6 style="color: red;" >{{ form.errors }}</h6>
+
+        {% if customer %}
+        <div class="row">
+            <div class="form-group col-md-4">
+                <label for="first_name">First Name:</label>
+                <input type="text" id="first_name" name="first_name" class="form-control"
+                       value="{{ customer.first_name }}" readonly>
+            </div>
+
+
+            <div class="form-group col-md-4">
+                <label for="last_name">Last Name:</label>
+                <input type="text" id="last_name" name="last_name" class="form-control"
+                       value="{{ customer.last_name }}" readonly>
+            </div>
+
+            <div class="form-group col-md-4">
+                <label for="branch">Branch:</label>
+                <input type="text" id="branch" name="branch" class="form-control"
+                       value="{{ user.branch }}" readonly>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="row">
+            <div class="form-group col-md-4">
+                <label for="fixed_gl_no">GL Number:</label>
+                <input type="text" id="fixed_gl_no" name="fixed_gl_no" class="form-control"
+                       value="{{ form.fixed_gl_no.value }}" readonly>
+            </div>
+
+            <div class="form-group col-md-4">
+                <label for="fixed_ac_no">Account Number:</label>
+                <input type="text" id="fixed_ac_no" name="fixed_ac_no" class="form-control"
+                       value="{{ form.fixed_ac_no.value }}" readonly>
+            </div>
+
+            <div class="form-group col-md-4">
+                <label for="deposit_amount">Deposit Amount:</label>
+                <input type="number" id="deposit_amount" name="deposit_amount" class="form-control" oninput="calculateFD()">
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="form-group col-md-4">
+                <label for="interest_rate">Interest Rate (%):</label>
+                <input type="number" id="interest_rate" name="interest_rate" class="form-control" oninput="calculateFD()">
+            </div>
+
+            <div class="form-group col-md-4">
+                <label for="tenure_months">Tenure (Months):</label>
+                <input type="number" id="tenure_months" name="tenure_months" class="form-control" oninput="calculateFD()">
+            </div>
+
+            <div class="form-group col-md-4">
+                <label for="start_date">Start Date:</label>
+                <input type="date" id="start_date" name="start_date" class="form-control" onchange="calculateFD()">
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="form-group col-md-4">
+                <label for="maturity_date">Maturity Date:</label>
+                <input type="date" id="maturity_date" name="maturity_date" class="form-control" readonly>
+            </div>
+
+            <div class="form-group col-md-4">
+                <label for="interest_amount">Interest Amount:</label>
+                <input type="number" id="interest_amount" name="interest_amount" class="form-control" readonly>
+            </div>
+
+            <div class="form-group col-md-4">
+                <label for="maturity_amount">Maturity Amount:</label>
+                <input type="number" id="maturity_amount" name="maturity_amount" class="form-control" readonly>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="form-group col-md-4">
+                <label for="customer">Select Customer:</label>
+                <select id="customer" name="customer" class="form-control" onchange="updateCustomerDetails()">
+                    <option value="">-- Select Customer --</option>
+                    {% for c in customers %}
+                        <option value="{{ c.id }}" 
+                            data-gl-no="{{ c.gl_no }}" 
+                            data-ac-no="{{ c.ac_no }}"
+                            {% if customer and customer.id == c.id %}selected{% endif %}>
+                            {{ c.first_name }} {{ c.last_name }} - {{ c.ac_no }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group col-md-4">
+                <label for="cust_gl_no">GL Number:</label>
+                <input type="text" id="cust_gl_no" name="cust_gl_no" class="form-control" value="{{ form.cust_gl_no.value }}" readonly>
+            </div>
+        
+            <div class="form-group col-md-4">
+                <label for="cust_ac_no">Account Number:</label>
+                <input type="text" id="cust_ac_no" name="cust_ac_no" class="form-control" value="{{ form.cust_ac_no.value }}" readonly>
+            </div>
+
+            <!-- <div class="form-group col-md-4">
+                <label for="fixed_int_gl_no">Int. Exp GL:</label>
+                <input type="text" id="fixed_int_gl_no" name="fixed_int_gl_no" class="form-control" 
+                       value="{{ form.fixed_int_gl_no.value }}" readonly>
+            </div> -->
+            
+            <!-- <div class="form-group col-md-4">
+                <label for="fixed_int_ac_no">Int. Exp AC:</label>
+                <input type="text" id="fixed_int_ac_no" name="fixed_int_ac_no" class="form-control" 
+                       value="{{ form.fixed_int_ac_no.value }}" readonly>
+            </div> -->
+            
+
+        </div>
+        
+        <div class="row">
+            <div class="form-group col-md-4">
+                <label for="interest_payment">Interest Payment:</label>
+                <select id="interest_payment" name="interest_payment" class="form-control">
+                    <option value="Monthly">Monthly</option>
+                    <option value="Quarterly">Quarterly</option>
+                    <option value="Annually">Annually</option>
+                    <option value="At Maturity">At Maturity</option>
+                </select>
+            </div>
+
+            <div class="form-group col-md-4">
+                <label for="status">Status:</label>
+                <select id="status" name="status" class="form-control">
+                    <option value="Active">Active</option>
+                    <option value="Closed">Closed</option>
+                    <option value="Pending">Pending</option>
+                </select>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-success mt-3">Submit</button>
+    </form>
+</div>
+
+<script>
+    function calculateFD() {
+        let depositAmount = parseFloat(document.getElementById("deposit_amount").value) || 0;
+        let interestRate = parseFloat(document.getElementById("interest_rate").value) || 0;
+        let tenureMonths = parseInt(document.getElementById("tenure_months").value) || 0;
+        let startDate = document.getElementById("start_date").value;
+
+        if (depositAmount > 0 && interestRate > 0 && tenureMonths > 0) {
+            let interestAmount = (depositAmount * interestRate * tenureMonths) / (12 * 100);
+            document.getElementById("interest_amount").value = interestAmount.toFixed(2);
+            let maturityAmount = depositAmount + interestAmount;
+            document.getElementById("maturity_amount").value = maturityAmount.toFixed(2);
+        }
+
+        if (startDate && tenureMonths > 0) {
+            let maturityDate = new Date(startDate);
+            maturityDate.setMonth(maturityDate.getMonth() + tenureMonths);
+            document.getElementById("maturity_date").value = maturityDate.toISOString().split("T")[0];
+        }
+    }
+
+    function updateCustomerDetails() {
+        let selectedCustomer = document.getElementById("customer").selectedOptions[0];
+
+        if (selectedCustomer) {
+            document.getElementById("cust_gl_no").value = selectedCustomer.getAttribute("data-gl-no") || "";
+            document.getElementById("cust_ac_no").value = selectedCustomer.getAttribute("data-ac-no") || "";
+            
+            // Also update fixed_gl_no and fixed_ac_no
+            // document.getElementById("fixed_gl_no").value = selectedCustomer.getAttribute("data-gl-no") || "";
+            // document.getElementById("fixed_ac_no").value = selectedCustomer.getAttribute("data-ac-no") || "";
+        }
+    }
+
+    // Run update function on page load if a customer is preselected
+    document.addEventListener("DOMContentLoaded", function () {
+        updateCustomerDetails();
+    });
+</script>
+{% endblock %}

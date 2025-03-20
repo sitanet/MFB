@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'reports',
     'end_of_periods',
     'fixed_assets',
+    'fixed_deposit',
    
 ]
 

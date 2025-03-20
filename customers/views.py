@@ -461,7 +461,9 @@ def create_another_account(request, id):
 @user_passes_test(check_role_admin)
 def create_loan(request, id):
     customer = get_object_or_404(Customer, id=id)
-    loan_account = Account.objects.filter(gl_no__startswith='104').exclude(gl_no='104000').exclude(gl_no='104100').exclude(gl_no='104200')
+    loan_account = Account.objects.filter(
+    Q(gl_no__startswith='104') | Q(gl_no__startswith='206')
+).exclude(gl_no='104000').exclude(gl_no='104100').exclude(gl_no='104200')
     initial_values = {'gl_no_cust': customer.gl_no, 'ac_no_cust': customer.ac_no}
 
     if request.method == 'POST':
@@ -569,3 +571,38 @@ def transaction_list(request, gl_no, ac_no):
         'transactions': transactions
     }
     return render(request, 'transaction_list.html', context)
+
+
+
+
+
+# views.py
+from django.shortcuts import render, redirect
+from .forms import FixedDepositAccountForm
+from .models import FixedDepositAccount
+from customers.models import Customer
+from company.models import Branch
+
+def register_fixed_deposit_account(request):
+    if request.method == "POST":
+        form = FixedDepositAccountForm(request.POST)
+        if form.is_valid():
+            # Set the branch to the logged-in user's branch before saving
+            fixed_deposit_account = form.save(commit=False)
+            fixed_deposit_account.branch = request.user.branch  # Assuming the user has a branch field
+            fixed_deposit_account.save()
+            return redirect("fixed_deposit/fixed_deposit_account_success")  # Redirect to a success page
+    else:
+        form = FixedDepositAccountForm()
+
+    # Fetch all customers for the dropdown
+    customers = Customer.objects.all()
+
+    # Get the logged-in user's branch
+    user_branch = request.user.branch  # Assuming the user has a branch field
+
+    return render(request, "fixed_deposit/register_fixed_deposit_account.html", {
+        "form": form,
+        "customers": customers,
+        "user_branch": user_branch,  # Pass the user's branch to the template
+    })

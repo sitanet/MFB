@@ -1,0 +1,17 @@
+<!-- fixed_deposit_account/success.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container">
+    <div class="card">
+        <div class="card-header">
+            Success!
+        </div>
+        <div class="card-body">
+            <p>Fixed Deposit Account has been registered successfully.</p>
+            <a href="{% url 'register_fixed_deposit_account' %}" class="btn btn-primary">Register Another</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

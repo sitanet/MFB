@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block content %}
+    {% include 'includes/alerts.html' %}
+    
+    <h6 style="color: red;">{{ form.errors }}</h6>
+
+    <div class="midde_cont">
+        <div class="container-fluid">
+            <div class="row column_title">
+                <div class="col-md-12">
+                    <div class="page_title">
+                        <h2>Running Fixed Deposits</h2>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-12">
+                <div class="white_shd full margin_bottom_30">
+                    <div class="table_section padding_infor_info">
+                        <div align="right">
+                            <a href="{% url 'register_fixed_deposit' %}" style="color: green; font-weight: bold;">New Fixed Deposit</a>
+                        </div>
+
+                        <div class="table-responsive-sm">
+                            <div class="input-group mb-1">
+                                <input type="text" class="form-control bg-light" placeholder="Search..." id="searchInput">
+                                <div class="">
+                                    <button class="btn" style="background-color: #FF4500;" type="button" onclick="searchTable()">Search</button>
+                                </div>
+                            </div>
+
+                            <table class="table">
+                                <thead class="thead-dark">
+                                    <tr>
+                                        <th>Customer</th>
+                                        <th>Account No.</th>
+                                        <th>Fixed Deposit Account</th>
+                                        <th>Deposit Amount</th>
+                                        <th>Interest Amount</th>
+                                        <th>Maturity Amount</th>
+                                        <th>Start Date</th>
+                                        <th>Maturity Date</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for deposit in running_deposits %}
+                                        <tr>
+                                            <td>{{ deposit.customer.full_name }}</td>
+                                            <td>{{ deposit.fixed_gl_no }}{{ deposit.fixed_ac_no }}</td>
+                                            <td>FD-{{ deposit.fixed_ac_no }}</td>
+                                            <td>{{ deposit.deposit_amount }}</td>
+                                            <td>{{ deposit.interest_amount }}</td>
+                                            <td>{{ deposit.maturity_amount }}</td>
+                                            <td>{{ deposit.start_date }}</td>
+                                            <td>{{ deposit.maturity_date }}</td>
+                                            <td style="color: green; font-weight: bold;">Running</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+
+                            {% if not running_deposits %}
+                                <p style="text-align: center; color: red;">No running fixed deposits found.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

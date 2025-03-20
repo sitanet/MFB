@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Customer
+from .models import Customer, FixedDepositAccount
 from django.contrib.auth.admin import UserAdmin
 
 # Register your models here.
@@ -9,3 +9,5 @@ from django.contrib.auth.admin import UserAdmin
 
 
 admin.site.register(Customer)
+
+admin.site.register(FixedDepositAccount)

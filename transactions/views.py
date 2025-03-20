@@ -28,10 +28,12 @@ from customers.sms_service import send_sms
 @user_passes_test(check_role_admin)
 
 def deposit(request, id):
-    user_branch = request.user.branch
+    user_branch = request.user.branch.branch_code 
     customer = get_object_or_404(Customer, id=id)
     formatted_balance = '{:,.2f}'.format(customer.balance)
     data = Memtrans.objects.filter(branch=user_branch).order_by('-id').first()
+   
+
     total_amount = None
     cashier_gl_value = request.user.cashier_gl
     customers = Customer.objects.get(gl_no=cashier_gl_value)
@@ -63,7 +65,7 @@ def deposit(request, id):
         gl_no=initial_values['gl_no_cashier'],
         ac_no=initial_values['ac_no_cashier'],
         error='A',
-        branch=user_branch  # Filter by the logged-in user's branch
+        branch=user_branch.branch_code  # Filter by the logged-in user's branch
     ).aggregate(total_amount1=Sum('amount'))['total_amount1']
 
     sum_of_amount_cust = Memtrans.objects.filter(
@@ -83,7 +85,7 @@ def deposit(request, id):
             if form.is_valid():
                 form.cleaned_data['branch'] = user_branch  # Ensure the branch is set to the user's branch
                 
-                branch_customer = form.cleaned_data['branch']
+                branch_customer = form.cleaned_data['branch'].branch_code
                 gl_no_customer = form.cleaned_data['gl_no']
                 ac_no_customer = form.cleaned_data['ac_no']
                 amount = form.cleaned_data['amount']
@@ -118,7 +120,7 @@ def deposit(request, id):
                         customer_transaction.trx_no = unique_id
                         customer_transaction.save()
 
-                        branch_cashier = form.cleaned_data['branch']
+                        branch_cashier = form.cleaned_data['branch'].branch_code
                         gl_no_cashier = form.cleaned_data['gl_no_cashier']
                         ac_no_cashier = form.cleaned_data['ac_no_cashier']
                         
@@ -190,11 +192,12 @@ def deposit(request, id):
             'company_date': company_date,
             'last_transaction': last_transaction,  # Pass the last transaction to the template
         })
+        
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
 
 def withdraw(request, id):
-    user_branch = request.user.branch
+    user_branch = request.user.branch.branch_code
 
     # Retrieve the customer based on the provided ID
     customer = get_object_or_404(Customer, id=id)
@@ -210,7 +213,7 @@ def withdraw(request, id):
     company = get_object_or_404(Branch, id=branch_id)
     company_date = company.session_date.strftime('%Y-%m-%d') if company.session_date else ''
 
-    customer_branch = customer.branch
+    customer_branch = customer.branch.branch_code
     
     # Retrieve the user's branch
     user_branch = user.branch
@@ -235,7 +238,7 @@ def withdraw(request, id):
         gl_no=initial_values['gl_no_cashier'],
         ac_no=initial_values['ac_no_cashier'],
         error='A',
-        branch=user_branch  # Filter by the logged-in user's branch
+        branch=user_branch.branch_code  # Filter by the logged-in user's branch
     ).aggregate(total_amount1=Sum('amount'))['total_amount1']
 
     sum_of_amount_cust = Memtrans.objects.filter(
@@ -279,8 +282,8 @@ def withdraw(request, id):
                     with transaction.atomic():
                         # Create a transaction record in Memtrans
                         customer_transaction = Memtrans(
-                            branch=branch_customer,
-                            cust_branch=customer_branch,
+                            
+                            cust_branch=Branch.objects.get(branch_code=customer_branch),
                             gl_no=gl_no_customer,
                             ac_no=ac_no_customer,
                             ses_date=ses_date,
@@ -382,22 +385,30 @@ def withdraw(request, id):
 
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
-def income(request, id):
-    # Retrieve the user's branch
+# or generate_deposit_id() as appropriate
 
+def income(request, id):
+    # Retrieve the logged-in user's branch (Branch instance)
     user_branch = request.user.branch
+    # Retrieve the customer based on the provided ID
     customer = get_object_or_404(Customer, id=id)
     formatted_balance = '{:,.2f}'.format(customer.balance)
+    
+    # Retrieve the latest transaction for the branch
     data = Memtrans.objects.filter(branch=user_branch).order_by('-id').first()
     total_amount = None
+
+    # Get cashier and company details
     cashier_gl_value = request.user.cashier_gl
-    customers = Customer.objects.get(gl_no=cashier_gl_value)
+    # Use filter().first() to avoid MultipleObjectsReturned error
+    customers = Customer.objects.filter(gl_no=cashier_gl_value).first()
     user = User.objects.get(id=request.user.id)
     branch_id = user.branch_id
     company = get_object_or_404(Branch, id=branch_id)
     company_date = company.session_date.strftime('%Y-%m-%d') if company.session_date else ''
-    customer_branch = customer.branch
-    # Retrieve the user's branch
+    customer_branch = customer.branch  # This is used for cust_branch (likely a ForeignKey)
+
+    # (Re)assign user_branch from user if needed
     user_branch = user.branch
 
     # Retrieve the last transaction for the customer
@@ -407,19 +418,21 @@ def income(request, id):
         error='A'
     ).order_by('-id').first()
 
+    # Prepare initial form values (set branch as the branch code string)
     initial_values = {
-        'branch': user_branch,  # Set branch to the user's branch
-        'gl_no_cashier': customers.gl_no,
-        'ac_no_cashier': customers.ac_no,
+        'branch': user_branch.branch_code,  # Assign the string value
+        'gl_no_cashier': customers.gl_no if customers else None,
+        'ac_no_cashier': customers.ac_no if customers else None,
         'gl_no_cust': customer.gl_no,
         'ac_no_cust': customer.ac_no,
     }
 
+    # Calculate total amounts for cashier and customer
     sum_of_amount_cash = Memtrans.objects.filter(
         gl_no=initial_values['gl_no_cashier'],
         ac_no=initial_values['ac_no_cashier'],
         error='A',
-        branch=user_branch  # Filter by the logged-in user's branch
+        branch=user_branch  # This still uses the Branch instance for filtering if that field is stored as a string matching its __str__
     ).aggregate(total_amount1=Sum('amount'))['total_amount1']
 
     sum_of_amount_cust = Memtrans.objects.filter(
@@ -428,152 +441,163 @@ def income(request, id):
         error='A'
     ).aggregate(total_amount2=Sum('amount'))['total_amount2']
 
-    sum_of_amounts = None
-
+    # Check if the session is closed
     if company.session_status == 'Closed':
         messages.success(request, 'Session Closed!')
         return HttpResponse("You cannot post any transaction. Session is closed.")
+    
+    if request.method == 'POST':
+        form = MemtransForm(request.POST)
+        if form.is_valid():
+            # Instead of assigning the whole Branch instance, assign the branch_code string
+            form.cleaned_data['branch'] = user_branch.branch_code
+            branch_customer = form.cleaned_data['branch']  # Now a string value
+            gl_no_customer = form.cleaned_data['gl_no']
+            ac_no_customer = form.cleaned_data['ac_no']
+            amount = form.cleaned_data['amount']
+            description = form.cleaned_data['description']
+            ses_date = form.cleaned_data['ses_date']
+            app_date = form.cleaned_data['app_date']
+
+            # Validate if app_date is greater than company_date
+            if app_date and company.session_date and app_date > company.session_date:
+                form.add_error('app_date', 'Application date cannot be greater than the company session date.')
+            else:
+                # (Optional) Calculate total_amount if needed for further logic:
+                total_amount = Memtrans.objects.filter(
+                    gl_no=gl_no_customer,
+                    ac_no=ac_no_customer,
+                    error='A'
+                ).aggregate(total_amount=Sum('amount'))['total_amount'] or 0
+
+                # Start a database transaction
+                with transaction.atomic():
+                    # Create a transaction record in Memtrans (for income, type='C' for credit)
+                    customer_transaction = Memtrans(
+                        branch=branch_customer,  # This is now a string (e.g., "MAIN")
+                        cust_branch=customer_branch,  # This remains a Branch instance if cust_branch is a ForeignKey
+                        gl_no=gl_no_customer,
+                        ac_no=ac_no_customer,
+                        ses_date=ses_date,
+                        app_date=app_date,
+                        sys_date=timezone.now(),
+                        amount=amount,
+                        description=description,
+                        error='A',
+                        account_type=customer.label,
+                        type='C',
+                        customer=customer,
+                        code='DP',
+                        user=request.user
+                    )
+                    customer_transaction.save()
+
+                    # Generate a unique ID for the transaction
+                    unique_id = generate_income_id()
+                    customer_transaction.trx_no = unique_id
+                    customer_transaction.save()
+
+                    # Set branch for cashier's transaction similarly (using string value)
+                    branch_cashier = form.cleaned_data['branch']
+                    gl_no_cashier = form.cleaned_data['gl_no_cashier']
+                    ac_no_cashier = form.cleaned_data['ac_no_cashier']
+                    
+                    customer_with_gl = get_object_or_404(Customer, gl_no=request.user.cashier_gl)
+                    
+                    cashier_transaction = Memtrans(
+                        branch=branch_cashier,
+                        cust_branch=user_branch,  # Assuming this is acceptable for the cust_branch field
+                        gl_no=gl_no_cashier,
+                        ac_no=ac_no_cashier,
+                        ses_date=ses_date,
+                        app_date=app_date,
+                        sys_date=timezone.now(),
+                        amount=-amount,
+                        description=f'{customer.first_name}, {customer.last_name}, {customer.gl_no}-{customer.ac_no}',
+                        error='A',
+                        type='D',
+                        account_type=customers.label if customers else None,
+                        customer=customer_with_gl,
+                        code='DP',
+                        user=request.user
+                    )
+                    cashier_transaction.trx_no = customer_transaction.trx_no
+                    cashier_transaction.save()
+
+                    # Update balances of the customer and cashier
+                    sum_of_amounts = Memtrans.objects.filter(
+                        gl_no=gl_no_customer,
+                        ac_no=ac_no_customer,
+                        error='A'
+                    ).aggregate(total_amount=Sum('amount'))['total_amount']
+
+                    if sum_of_amounts is not None:
+                        customer_to_update = Customer.objects.filter(gl_no=gl_no_customer, ac_no=ac_no_customer).first()
+                        if customer_to_update:
+                            customer_to_update.balance = sum_of_amounts
+                            customer_to_update.save()
+
+                    sum_of_amounts = Memtrans.objects.filter(
+                        gl_no=gl_no_cashier,
+                        ac_no=ac_no_cashier,
+                        error='A'
+                    ).aggregate(total_amount=Sum('amount'))['total_amount']
+
+                    if sum_of_amounts is not None:
+                        cashier_to_update = Customer.objects.filter(gl_no=gl_no_cashier, ac_no=ac_no_cashier).first()
+                        if cashier_to_update:
+                            cashier_to_update.balance = sum_of_amounts
+                            cashier_to_update.save()
+
+                    messages.success(request, 'Account saved successfully!')
+                return redirect('income', id=id)
     else:
-        if request.method == 'POST':
-            form = MemtransForm(request.POST)
-            if form.is_valid():
-                form.cleaned_data['branch'] = user_branch  # Ensure the branch is set to the user's branch
-                
-                branch_customer = form.cleaned_data['branch']
-                gl_no_customer = form.cleaned_data['gl_no']
-                ac_no_customer = form.cleaned_data['ac_no']
-                amount = form.cleaned_data['amount']
-                description = form.cleaned_data['description']
-                app_date = form.cleaned_data['app_date']
+        form = MemtransForm(initial=initial_values)
+        form.fields['branch'].disabled = True  # Disable the branch field to prevent changes
 
-                # Validate if app_date is greater than company_date
-                if app_date and company.session_date and app_date > company.session_date:
-                    form.add_error('app_date', 'Application date cannot be greater than the company session date.')
-                else:
-                    with transaction.atomic():
-                        customer_transaction = Memtrans(
-                            branch=branch_customer,
-                            cust_branch=customer_branch,
-                            gl_no=gl_no_customer,
-                            ac_no=ac_no_customer,
-                            amount=amount,
-                            description=description,
-                            error='A',
-                            account_type=customer.label,
-                            type='C',
-                            ses_date=form.cleaned_data['ses_date'],
-                            app_date=form.cleaned_data['app_date'],
-                            sys_date=timezone.now(),
-                            customer=customer,
-                            code='DP',
-                            user=request.user
-                        )
-                        customer_transaction.save()
-
-                        unique_id = generate_deposit_id()
-                        customer_transaction.trx_no = unique_id
-                        customer_transaction.save()
-
-                        branch_cashier = form.cleaned_data['branch']
-                        gl_no_cashier = form.cleaned_data['gl_no_cashier']
-                        ac_no_cashier = form.cleaned_data['ac_no_cashier']
-                        
-                        user = request.user
-                        customer_with_gl = get_object_or_404(Customer, gl_no=user.cashier_gl)
-                        
-                        cashier_transaction = Memtrans(
-                            branch=branch_cashier,
-                            cust_branch=user_branch,
-                            gl_no=gl_no_cashier,
-                            ac_no=ac_no_cashier,
-                            amount=-amount,
-                            description=f'{customer.first_name}, {customer.last_name}, {customer.gl_no}-{customer.ac_no}',
-                            account_type=customers.label,
-                            type='D',
-                            ses_date=form.cleaned_data['ses_date'],
-                            app_date=form.cleaned_data['app_date'],
-                            sys_date=timezone.now(),
-                            customer=customer_with_gl,
-                            code='DP',
-                            user=request.user
-                        )
-                        cashier_transaction.trx_no = customer_transaction.trx_no
-                        cashier_transaction.save()
-
-                        sum_of_amounts = Memtrans.objects.filter(
-                            gl_no=gl_no_customer,
-                            ac_no=ac_no_customer,
-                            error='A'
-                        ).aggregate(total_amount=Sum('amount'))['total_amount']
-
-                        if sum_of_amounts is not None:
-                            customer_to_update = Customer.objects.get(gl_no=gl_no_customer, ac_no=ac_no_customer)
-                            customer_to_update.balance = sum_of_amounts
-                            customer_to_update.save()
-
-                        sum_of_amounts = Memtrans.objects.filter(
-                            gl_no=gl_no_cashier,
-                            ac_no=ac_no_cashier,
-                            error='A'
-                        ).aggregate(total_amount=Sum('amount'))['total_amount']
-
-                        if sum_of_amounts is not None:
-                            customer_to_update = Customer.objects.get(gl_no=gl_no_cashier, ac_no=ac_no_cashier)
-                            customer_to_update.balance = sum_of_amounts
-                            customer_to_update.save()
-
-                        # Send SMS if the 'sms' field is True
-                        if customer.sms:
-                            sms_message = f"Dear {customer.first_name}, your deposit of {amount} has been successful. Your new balance is {customer.balance}."
-                            send_sms(customer.phone_no, sms_message)
-
-                        messages.success(request, 'Account saved successfully!')
-                        return redirect('income', id=id)
-        else:
-            form = MemtransForm(initial=initial_values)
-            form.fields['branch'].disabled = True  # Disable the branch field to prevent changes
-
-        return render(request, 'transactions/non_cash/income.html', {
-            'form': form,
-            'data': data,
-            'customer': customer,
-            'total_amount': total_amount,
-            'formatted_balance': formatted_balance,
-            'customers': customers,
-            'sum_of_amount_cust': sum_of_amount_cust,
-            'sum_of_amount_cash': sum_of_amount_cash,
-            'company': company,
-            'company_date': company_date,
-            'last_transaction': last_transaction,  # Pass the last transaction to the template
-        })
-
-  
+    return render(request, 'transactions/non_cash/income.html', {
+        'form': form,
+        'data': data,
+        'customer': customer,
+        'total_amount': total_amount,
+        'formatted_balance': formatted_balance,
+        'customers': customers,
+        'sum_of_amount_cust': sum_of_amount_cust,
+        'sum_of_amount_cash': sum_of_amount_cash,
+        'company': company,
+        'company_date': company_date,
+        'last_transaction': last_transaction,
+    })
 
 
 
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
+# Ensure this function exists
+
+
+
 def expense(request, id):
     user_branch = request.user.branch
     # Retrieve the customer based on the provided ID
     customer = get_object_or_404(Customer, id=id)
     formatted_balance = '{:,.2f}'.format(customer.balance)
-    # data = Memtrans.objects.all().order_by('-id').first()
+
+    # Retrieve the latest transaction for the branch
     data = Memtrans.objects.filter(branch=user_branch).order_by('-id').first()
     total_amount = None
 
     # Get cashier and company details
     cashier_gl_value = request.user.cashier_gl
-    customers = Customer.objects.get(gl_no=cashier_gl_value)
+    customers = Customer.objects.filter(gl_no=cashier_gl_value).first()
+ 
+  # Use filter().first() to avoid MultipleObjectsReturned error
     user = User.objects.get(id=request.user.id)
     branch_id = user.branch_id
     company = get_object_or_404(Branch, id=branch_id)
     company_date = company.session_date.strftime('%Y-%m-%d') if company.session_date else ''
     customer_branch = customer.branch
-    
-    # Retrieve the user's branch
-    user_branch = user.branch
-    
+
     # Retrieve the last transaction for the customer
     last_transaction = Memtrans.objects.filter(
         gl_no=customer.gl_no,
@@ -583,24 +607,18 @@ def expense(request, id):
 
     # Prepare initial form values
     initial_values = {
-        'gl_no_cashier': customers.gl_no,
-        'ac_no_cashier': customers.ac_no,
+        'gl_no_cashier': customers.gl_no if customers else None,
+        'ac_no_cashier': customers.ac_no if customers else None,
         'gl_no_cust': customer.gl_no,
         'ac_no_cust': customer.ac_no,
     }
 
     # Calculate total amounts for cashier and customer
-    # sum_of_amount_cash = Memtrans.objects.filter(
-    #     gl_no=initial_values['gl_no_cashier'],
-    #     ac_no=initial_values['ac_no_cashier'],
-    #     error='A'
-    # ).aggregate(total_amount1=Sum('amount'))['total_amount1']
-
     sum_of_amount_cash = Memtrans.objects.filter(
         gl_no=initial_values['gl_no_cashier'],
         ac_no=initial_values['ac_no_cashier'],
         error='A',
-        branch=user_branch  # Filter by the logged-in user's branch
+        branch=user_branch
     ).aggregate(total_amount1=Sum('amount'))['total_amount1']
 
     sum_of_amount_cust = Memtrans.objects.filter(
@@ -613,24 +631,23 @@ def expense(request, id):
     if company.session_status == 'Closed':
         messages.success(request, 'Session Closed!')
         return HttpResponse("You cannot post any transaction. Session is closed.") 
-    else:
-        if request.method == 'POST':
-            form = MemtransForm(request.POST)
-            
-            if form.is_valid():
-                branch_customer = form.cleaned_data['cust_branch']
-                gl_no_customer = form.cleaned_data['gl_no']
-                ac_no_customer = form.cleaned_data['ac_no']
-                amount = form.cleaned_data['amount']
-                description = form.cleaned_data['description']
-                ses_date = form.cleaned_data['ses_date']
-                app_date = form.cleaned_data['app_date']
 
-                # Validate if app_date is greater than company_date
+    if request.method == 'POST':
+        form = MemtransForm(request.POST)
+        if form.is_valid():
+            branch_customer = form.cleaned_data.get('cust_branch', customer.branch)
+
+            gl_no_customer = form.cleaned_data['gl_no']
+            ac_no_customer = form.cleaned_data['ac_no']
+            amount = form.cleaned_data['amount']
+            description = form.cleaned_data['description']
+            ses_date = form.cleaned_data['ses_date']
+            app_date = form.cleaned_data['app_date']
+
+            # Validate if app_date is greater than company_date
             if app_date and company.session_date and app_date > company.session_date:
                 form.add_error('app_date', 'Application date cannot be greater than the company session date.')
             else:
-                
                 # Check if the customer has sufficient balance
                 total_amount = Memtrans.objects.filter(
                     gl_no=gl_no_customer, 
@@ -638,92 +655,91 @@ def expense(request, id):
                     error='A'
                 ).aggregate(total_amount=Sum('amount'))['total_amount'] or 0
 
-                if total_amount >= amount:
-                    # Start a database transaction
-                    with transaction.atomic():
-                        # Create a transaction record in Memtrans
-                        customer_transaction = Memtrans(
-                            branch=branch_customer,
-                            cust_branch=customer_branch,
-                            gl_no=gl_no_customer,
-                            ac_no=ac_no_customer,
-                            ses_date=form.cleaned_data['ses_date'],
-                            app_date=form.cleaned_data['app_date'],
-                            sys_date=timezone.now(),
-                            amount=-amount,
-                            description=description,
-                            error='A',
-                            account_type=customer.label,
-                            type='D',
-                            customer=customer,
-                            code='WD',
-                            user=request.user
-                        )
-                        customer_transaction.save()
+                # Start a database transaction
+                with transaction.atomic():
+                    # Create a transaction record in Memtrans
+                    customer_transaction = Memtrans(
+                        branch=branch_customer,
+                        cust_branch=customer_branch,
+                        gl_no=gl_no_customer,
+                        ac_no=ac_no_customer,
+                        ses_date=ses_date,
+                        app_date=app_date,
+                        sys_date=timezone.now(),
+                        amount=-amount,
+                        description=description,
+                        error='A',
+                        account_type=customer.label,
+                        type='D',
+                        customer=customer,
+                        code='WD',
+                        user=request.user
+                    )
+                    customer_transaction.save()
 
-                        # Generate a unique ID for the transaction
-                        unique_id = generate_withdrawal_id()
-                        customer_transaction.trx_no = unique_id
-                        customer_transaction.save()
+                    # Generate a unique ID for the transaction
+                    unique_id = generate_expense_id()
+                    customer_transaction.trx_no = unique_id
+                    customer_transaction.save()
 
-                        # Update customer balance
-                        customer_to_update = Customer.objects.get(gl_no=gl_no_customer, ac_no=ac_no_customer)
-                        customer_to_update.balance -= amount
+                    # Update customer balance
+                    customer_to_update = Customer.objects.filter(gl_no=gl_no_customer, ac_no=ac_no_customer).first()
+
+                    customer_to_update.balance -= amount
+                    customer_to_update.save()
+
+                    # Credit the cashier's account
+                    gl_no_cashier = form.cleaned_data['gl_no_cashier']
+                    ac_no_cashier = form.cleaned_data['ac_no_cashier']
+
+                    cashier_transaction = Memtrans(
+                        branch=user_branch,
+                        cust_branch=user_branch,
+                        gl_no=gl_no_cashier,
+                        ac_no=ac_no_cashier,
+                        ses_date=ses_date,
+                        app_date=app_date,
+                        sys_date=timezone.now(),
+                        amount=amount,
+                        description=f'{customer.first_name}, {customer.last_name}, {customer.gl_no}-{customer.ac_no}',
+                        error='A',
+                        type='C',
+                        account_type=customers.label if customers else None,
+                        customer=customers if customers else None,
+                        code='WD',
+                        user=request.user
+                    )
+                    cashier_transaction.trx_no = customer_transaction.trx_no
+                    cashier_transaction.save()
+
+                    # Update the balances of the customer and cashier in the Customer table
+                    sum_of_amounts = Memtrans.objects.filter(
+                        gl_no=gl_no_customer, 
+                        ac_no=ac_no_customer,
+                        error='A'
+                    ).aggregate(total_amount=Sum('amount'))['total_amount']
+
+                    if sum_of_amounts is not None:
+                        customer_to_update.balance = sum_of_amounts
                         customer_to_update.save()
 
-                        # Credit the cashier's account
-                        gl_no_cashier = form.cleaned_data['gl_no_cashier']
-                        ac_no_cashier = form.cleaned_data['ac_no_cashier']
+                    sum_of_amounts = Memtrans.objects.filter(
+                        gl_no=gl_no_cashier, 
+                        ac_no=ac_no_cashier,
+                        error='A'
+                    ).aggregate(total_amount=Sum('amount'))['total_amount']
 
-                        cashier_transaction = Memtrans(
-                            branch=user_branch,
-                            cust_branch=user_branch,
-                            gl_no=gl_no_cashier,
-                            ac_no=ac_no_cashier,
-                            ses_date=form.cleaned_data['ses_date'],
-                            app_date=form.cleaned_data['app_date'],
-                            sys_date=timezone.now(),
-                            amount=amount,
-                            description=f'{customer.first_name}, {customer.last_name}, {customer.gl_no}-{customer.ac_no}',
-                            error='A',
-                            type='C',
-                            account_type=customers.label,
-                            customer=Customer.objects.get(gl_no=request.user.cashier_gl),
-                            code='WD',
-                            user=request.user
-                        )
-                        cashier_transaction.trx_no = customer_transaction.trx_no
-                        cashier_transaction.save()
-
-                        # Update the balances of the customer and cashier in the Customer table
-                        sum_of_amounts = Memtrans.objects.filter(
-                            gl_no=gl_no_customer, 
-                            ac_no=ac_no_customer,
-                            error='A'
-                        ).aggregate(total_amount=Sum('amount'))['total_amount']
-
-                        if sum_of_amounts is not None:
-                            customer_to_update.balance = sum_of_amounts
-                            customer_to_update.save()
-
-                        sum_of_amounts = Memtrans.objects.filter(
-                            gl_no=gl_no_cashier, 
-                            ac_no=ac_no_cashier,
-                            error='A'
-                        ).aggregate(total_amount=Sum('amount'))['total_amount']
-
-                        if sum_of_amounts is not None:
-                            cashier_to_update = Customer.objects.get(gl_no=gl_no_cashier, ac_no=ac_no_cashier)
+                    if sum_of_amounts is not None:
+                        cashier_to_update = Customer.objects.filter(gl_no=gl_no_cashier, ac_no=ac_no_cashier).first()
+                        if cashier_to_update:
                             cashier_to_update.balance = sum_of_amounts
                             cashier_to_update.save()
 
-                        messages.success(request, 'Withdrawal successful!')
-                    return redirect('withdraw', id=id)
-                else:
-                    messages.warning(request, 'Insufficient Balance!')
-                    return redirect('choose_withdrawal')
-        else:
-            form = MemtransForm()
+                    messages.success(request, 'Expenses Posted successful!')
+                return redirect('expense', id=id)
+
+    else:
+        form = MemtransForm()
 
     return render(request, 'transactions/non_cash/expense.html', {
         'form': form,
@@ -736,12 +752,31 @@ def expense(request, id):
         'sum_of_amount_cust': sum_of_amount_cust,
         'company': company,
         'company_date': company_date,
-        'last_transaction': last_transaction,  # Pass the last transaction to the template
+        'last_transaction': last_transaction,
     })
 
-
-
   
+
+
+@login_required(login_url='login')
+@user_passes_test(check_role_admin)
+def choose_deposit(request):
+   data = Memtrans.objects.all().order_by('-id').first()
+   customers = Customer.objects.filter(label='C').order_by('-id')
+    
+   total_amounts = []
+
+   for customer in customers:
+        # Calculate the total amount for each customer
+        total_amount = Memtrans.objects.filter(gl_no=customer.gl_no, ac_no=customer.ac_no, error='A').aggregate(total_amount=Sum('amount'))['total_amount']
+        total_amounts.append({
+            'customer': customer,
+            'total_amount': total_amount or 0.0,
+        })
+  
+   return render(request, 'transactions/cash_trans/choose_deposit.html', {'data': data, 'total_amounts': total_amounts})
+
+
 
 
 @login_required(login_url='login')
@@ -1060,7 +1095,7 @@ def seek_and_update(request):
 
     if request.method == 'POST':
         form = SeekAndUpdateForm(request.POST)
-        
+
         if form.is_valid():
             transaction_number = form.cleaned_data['trx_no']
 
@@ -1074,11 +1109,11 @@ def seek_and_update(request):
                 messages.error(request, 'No transactions found with the given transaction number.')
                 return render(request, 'transactions/non_cash/reverse_trans.html', {'form': form, 'updated_records': updated_records})
 
-            # Fetch the branch from the first Memtrans record
-            branch = transactions.first().branch  # Assuming the field is named 'branch' in Memtrans
+            # Fetch the branch code from the first Memtrans record
+            branch_code = transactions.first().branch  # Assuming 'branch' stores the branch code as a string
 
-            # Get the Company object with the matching branch
-            company = get_object_or_404(Branch, branch_code=branch.branch_code)  # Ensure 'branch_code' is correct
+            # Get the Branch object using branch_code
+            company = get_object_or_404(Branch, branch_code=branch_code)  # Corrected lookup
 
             # Check if the company's system date is less than the current system date
             if company.system_date_date < system_date:

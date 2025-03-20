@@ -255,6 +255,19 @@
         id="general_ledger_accout_name"
         name="loan_commit_ac_vat" value="{{ form.loan_commit_ac_vat.value|default:''}}">
 </div>
+
+<div class="form-group col-md-3">
+      <label for="general_ledger_accout_name">Fixed Deposit Interest GL </label>
+      <input type="text" class="form-control bg-light"
+            id="general_ledger_accout_name"
+            name="fixed_dep_int_gl_no" value="{{ form.fixed_dep_int_gl_no.value|default:''}}">
+    </div>
+    <div class="form-group col-md-3">
+      <label for="general_ledger_accout_name">Fixed Deposit Interest A/C </label>
+      <input type="text" class="form-control bg-light"
+            id="general_ledger_accout_name"
+            name="fixed_dep_int_ac_no" value="{{ form.fixed_dep_int_ac_no.value|default:''}}">
+    </div>
 </div>
                                 <button type="submit"
                                             class="btn w- btn-success mt-4 shadow-sm">Add</button>

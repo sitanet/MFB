@@ -30,6 +30,7 @@ urlpatterns = [
     # URL for the customer detail view
     path('customer/<int:pk>/', views.customer_detail, name='customer_detail'),
     path('transactions/<str:gl_no>/<str:ac_no>/', views.transaction_list, name='transaction_list'),
+    path("register-fixed-deposit-account/", views.register_fixed_deposit_account, name="register_fixed_deposit_account"),
 
 
 ]

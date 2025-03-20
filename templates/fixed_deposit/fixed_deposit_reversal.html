@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-3 text-center fw-bold text-danger">
+        <i class="fas fa-undo-alt me-2"></i> Fixed Deposit Reversal
+    </h2>
+
+    <!-- Display Messages -->
+    {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-dismissible fade show {% if message.tags == 'success' %}alert-success{% else %}alert-danger{% endif %}" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    {% if fixed_deposit %}
+    <div class="card shadow-lg border-0">
+        <div class="card-body">
+            <!-- Fixed Deposit Details -->
+            <h5 class="card-title text-secondary mb-4">
+                <i class="fas fa-piggy-bank me-2"></i> Fixed Deposit Details
+            </h5>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="fw-semibold">
+                        <i class="fas fa-user me-2"></i>Customer Name
+                    </label>
+                    <input type="text" class="form-control bg-light" value="{{ fixed_deposit.customer.first_name }} {{ fixed_deposit.customer.last_name }}" readonly>
+                </div>
+                <div class="col-md-4">
+                    <label class="fw-semibold">
+                        <i class="fas fa-hashtag me-2"></i> Fixed GL Number
+                    </label>
+                    <input type="text" class="form-control bg-light" value="{{ fixed_deposit.fixed_gl_no }}" readonly>
+                </div>
+                <div class="col-md-4">
+                    <label class="fw-semibold">
+                        <i class="fas fa-id-card me-2"></i> Fixed Account Number
+                    </label>
+                    <input type="text" class="form-control bg-light" value="{{ fixed_deposit.fixed_ac_no }}" readonly>
+                </div>
+            </div>
+
+            <div class="row g-3 mt-3">
+                <div class="col-md-4">
+                    <label class="fw-semibold">
+                        <i class="fas fa-coins me-2"></i> Deposit Amount (₦)
+                    </label>
+                    <input type="text" class="form-control bg-light text-end" value="{{ fixed_deposit.deposit_amount|floatformat:2 }}" readonly>
+                </div>
+                <div class="col-md-4">
+                    <label class="fw-semibold">
+                        <i class="fas fa-percentage me-2"></i> Interest Amount (₦)
+                    </label>
+                    <input type="text" class="form-control bg-light text-end" value="{{ fixed_deposit.interest_amount|floatformat:2 }}" readonly>
+                </div>
+                <div class="col-md-4">
+                    <label class="fw-semibold">
+                        <i class="fas fa-wallet me-2"></i> Total Reversal Amount (₦)
+                    </label>
+                    <input type="text" class="form-control bg-light text-end fw-bold" 
+                           value="{{ fixed_deposit.deposit_amount|floatformat:2|add:fixed_deposit.interest_amount|floatformat:2 }}" readonly>
+                </div>
+            </div>
+
+            <hr class="my-4">
+
+            <!-- Reversal Confirmation -->
+            {% if fixed_deposit.status.lower == "closed" %}
+                <div class="alert alert-danger text-center fw-bold">
+                    ❌ This Fixed Deposit has already been closed and cannot be reversed.
+                </div>
+            {% else %}
+                <form method="POST">
+                    {% csrf_token %}
+                    <div class="alert alert-warning text-center fw-bold">
+                        ⚠️ Are you sure you want to reverse this Fixed Deposit?
+                    </div>
+
+                    <div class="d-flex justify-content-between gap-3 mt-4">
+                        <a href="{% url 'display_customers_with_fixed_deposit' %}" class="btn btn-secondary btn-lg rounded-pill">
+                            <i class="fas fa-arrow-left me-2"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-danger btn-lg rounded-pill">
+                            <i class="fas fa-undo-alt me-2"></i> Reverse Fixed Deposit
+                        </button>
+                    </div>
+                </form>
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+        <p class="text-danger text-center">❌ Fixed Deposit details not available.</p>
+    {% endif %}
+</div>
+{% endblock %}

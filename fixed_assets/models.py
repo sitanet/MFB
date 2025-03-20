@@ -104,6 +104,18 @@ class FixedAsset(models.Model):
     total_depreciation = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal('0.00'))
     is_disposed = models.BooleanField(default=False)
 
+    # Foreign keys to Account model for profit and loss GL accounts
+    fixed_asset_profit_gl = models.ForeignKey(
+        Account, related_name="profit_gl", on_delete=models.SET_NULL, null=True, blank=True
+    )
+    fixed_asset_loss_gl = models.ForeignKey(
+        Account, related_name="loss_gl", on_delete=models.SET_NULL, null=True, blank=True
+    )
+
+    # Blank fields for manually entered account numbers (not ForeignKeys)
+    fixed_asset_profit_ac_no = models.CharField(max_length=50, blank=True, null=True)
+    fixed_asset_loss_ac_no = models.CharField(max_length=50, blank=True, null=True)
+
     @property
     def net_book_value(self):
         """Calculate Net Book Value (NBV) dynamically."""
@@ -131,6 +143,32 @@ class FixedAsset(models.Model):
 
     def __str__(self):
         return f"{self.asset_id} - {self.asset_name} ({self.asset_type}) (Disposed: {self.is_disposed})"
+
+
+
+from django.utils.timezone import now
+class AssetRevaluation(models.Model):
+    asset = models.ForeignKey(FixedAsset, on_delete=models.CASCADE, related_name="revaluations")
+    previous_value = models.DecimalField(max_digits=15, decimal_places=2)
+    new_value = models.DecimalField(max_digits=15, decimal_places=2)
+    previous_residual = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal("0.00"))
+    new_residual = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal("0.00"))
+    reason = models.TextField(blank=True, null=True)
+    revaluation_date = models.DateField(default=now)
+
+    def __str__(self):
+        return f"Revaluation for {self.asset.asset_name} on {self.revaluation_date}"
+
+
+
+
+
+
+
+
+
+
+
 
 class AssetTransaction(models.Model):
     # Transaction Details

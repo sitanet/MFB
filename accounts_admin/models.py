@@ -90,12 +90,15 @@ class Account(models.Model):
     loan_appl_ac_vat = models.CharField(max_length=6, blank=True, null=True)
     loan_commit_gl_vat = models.CharField(max_length=6, blank=True, null=True)
     loan_commit_ac_vat = models.CharField(max_length=6, blank=True, null=True)
+    fixed_dep_int_gl_no = models.CharField(max_length=6, blank=True, null=True)
+    fixed_dep_int_ac_no = models.CharField(max_length=6, blank=True, null=True)
 
     def has_related_child_accounts(self):
         return Account.objects.filter(header=self).exists()
 
     def __str__(self):
-        return self.gl_no
+        return f"{self.gl_name} ({self.gl_no})"
+
 
     
 

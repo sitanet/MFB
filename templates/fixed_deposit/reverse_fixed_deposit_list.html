@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="text-center text-primary fw-bold">
+        <i class="fas fa-list-alt me-2"></i> Fixed Deposit Reversal
+    </h2>
+
+    <!-- Display Messages -->
+    {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-dismissible fade show {% if message.tags == 'success' %}alert-success{% else %}alert-danger{% endif %}" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="table-responsive mt-3">
+        <table class="table table-bordered table-hover">
+            <thead class="table-dark">
+                <tr>
+                    <th>Customer Name</th>
+                    <th>Fixed GL No</th>
+                    <th>Fixed AC No</th>
+                    <th>Deposit Amount (₦)</th>
+                    <th>Interest (₦)</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for deposit in fixed_deposits %}
+                <tr>
+                    <td>{{ deposit.customer.first_name }} {{ deposit.customer.last_name }}</td>
+                    <td>{{ deposit.fixed_gl_no }}</td>
+                    <td>{{ deposit.fixed_ac_no }}</td>
+                    <td class="text-end">{{ deposit.deposit_amount|floatformat:2 }}</td>
+                    <td class="text-end">{{ deposit.interest_amount|floatformat:2 }}</td>
+                    <td>
+                        <span class="badge {% if deposit.status == 'Active' %}bg-success{% else %}bg-secondary{% endif %}">
+                            {{ deposit.status }}
+                        </span>
+                    </td>
+                    <td>
+                        <a href="{% url 'reversal_for_fixed_deposit' deposit.id %}" class="btn btn-danger btn-sm">
+                            <i class="fas fa-undo-alt"></i> Reverse
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center text-danger fw-bold">❌ No active fixed deposits available.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

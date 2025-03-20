@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <h2>Depreciation Report</h2>
+
+    <button class="btn btn-success mb-3" onclick="printReport()">Print Report</button>
+
+    <div id="report-content">
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Asset Name</th>
+                    <th>Depreciation Amount</th>
+                    <th>Transaction Date</th>
+                    <th>Branch</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for asset in depreciated_assets %}
+                <tr>
+                    <td>{{ asset.asset_name }}</td>
+                    <td>{{ asset.depreciation_amount }}</td>
+                    <td>{{ asset.transaction_date }}</td>
+                    <td>{{ asset.branch }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <a href="{% url 'asset_list' %}" class="btn btn-primary">Back to Assets</a>
+</div>
+
+<script>
+    function printReport() {
+        var printContent = document.getElementById("report-content").innerHTML;
+        var originalContent = document.body.innerHTML;
+
+        document.body.innerHTML = printContent;
+        window.print();
+        document.body.innerHTML = originalContent;
+        location.reload(); // Reload to restore the page after printing
+    }
+</script>
+
+{% endblock %}

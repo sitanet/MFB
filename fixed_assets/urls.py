@@ -11,6 +11,11 @@ urlpatterns = [
     path('dispose/<int:asset_id>/', views.dispose_fixed_asset, name='dispose_asset'),
 
     path('fixed_asset_dash/', views.fixed_asset_dash, name='fixed_asset_dash'),
+
+    path('asset/<int:asset_id>/', views.asset_detail, name='asset_detail'),
+    path("asset/<int:asset_id>/revalue/", views.revalue_asset, name="revalue_asset"),
+
+    path('assets/depreciate_all/', views.post_all_depreciation, name='post_all_depreciation'),
 ]
 
 

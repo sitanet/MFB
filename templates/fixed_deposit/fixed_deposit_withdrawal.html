@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-3 text-center fw-bold text-primary">
+        <i class="fas fa-piggy-bank me-2"></i> Fixed Deposit Withdrawal
+    </h2>
+
+    <!-- Display Messages -->
+    {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-dismissible fade show {% if message.tags == 'success' %}alert-success{% else %}alert-danger{% endif %}" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Display Form Errors -->
+    {% if form.errors %}
+        <div class="alert alert-danger">
+            <strong>Form errors:</strong>
+            <ul>
+                {% for field, errors in form.errors.items %}
+                    <li>{{ field }}: {{ errors|join:", " }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+
+    <form method="POST">
+        {% csrf_token %}
+        
+        <div class="card shadow-lg border-0">
+            <div class="card-body">
+                <!-- Customer Information -->
+                <h5 class="card-title text-secondary mb-4">
+                    <i class="fas fa-user-circle me-2"></i> Customer Information
+                </h5>
+
+                {% if customer %}
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label class="fw-semibold">
+                            <i class="fas fa-user me-2"></i> Customer Name
+                        </label>
+                        <input type="text" class="form-control bg-light" value="{{ customer.first_name }} {{ customer.last_name }}" readonly>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="fw-semibold">
+                            <i class="fas fa-hashtag me-2"></i> GL Number
+                        </label>
+                        <input type="text" class="form-control bg-light" value="{{ customer.gl_no }}" readonly>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="fw-semibold">
+                            <i class="fas fa-id-card me-2"></i> Account Number
+                        </label>
+                        <input type="text" class="form-control bg-light" value="{{ customer.ac_no }}" readonly>
+                    </div>
+                </div>
+                {% else %}
+                <p class="text-danger text-center">❌ Customer details not available.</p>
+                {% endif %}
+
+                <hr class="my-4">
+
+                <!-- Fixed Deposit Details -->
+                <h5 class="card-title text-secondary mb-4">
+                    <i class="fas fa-piggy-bank me-2"></i> Fixed Deposit Details
+                </h5>
+
+                {% if form %}
+                <div class="row g-3 mb-4">
+                    <!-- Hidden Fields -->
+                    {{ form.customer }} {{ form.cust_gl_no }} {{ form.cust_ac_no }} 
+                    {{ form.fixed_gl_no }} {{ form.fixed_ac_no }} {{ form.deposit_amount }}
+
+                    <!-- Display Fixed GL Number -->
+                    <div class="col-md-4">
+                        <label class="fw-semibold">
+                            <i class="fas fa-hashtag me-2"></i> Fixed GL Number
+                        </label>
+                        <input type="text" class="form-control bg-light" value="{{ form.fixed_gl_no.value|default_if_none:'' }}" readonly>
+                    </div>
+
+                    <!-- Display Fixed Account Number -->
+                    <div class="col-md-4">
+                        <label class="fw-semibold">
+                            <i class="fas fa-id-card me-2"></i> Fixed Account Number
+                        </label>
+                        <input type="text" class="form-control bg-light" value="{{ form.fixed_ac_no.value|default_if_none:'' }}" readonly>
+                    </div>
+
+                    <!-- Display Deposit Amount -->
+                    <div class="col-md-4">
+                        <label class="fw-semibold">
+                            <i class="fas fa-coins me-2"></i> Deposit Amount (₦)
+                        </label>
+                        <input type="text" class="form-control bg-light text-end" value="{{ form.deposit_amount.value|floatformat:2|default:'0.00' }}" readonly>
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-4">
+                    <!-- Interest Amount -->
+                    <div class="col-md-4">
+                        <label class="fw-semibold">
+                            <i class="fas fa-percentage me-2"></i> Interest Amount (₦)
+                        </label>
+                        <div class="input-group shadow-sm rounded-pill">
+                            <span class="input-group-text text-white bg-primary">
+                                <i class="fas fa-coins"></i>
+                            </span>
+                            <input type="number" id="interest_amount" name="{{ form.interest_amount.name }}" 
+                                   class="form-control border-0 rounded-end-pill" 
+                                   value="{{ form.interest_amount.value|default_if_none:'' }}" oninput="calculateTotal()">
+                        </div>
+                        {% if form.interest_amount.errors %}
+                            <div class="text-danger small mt-1">{{ form.interest_amount.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Withdrawal Amount -->
+                    <div class="col-md-4">
+                        <label class="fw-semibold">
+                            <i class="fas fa-hand-holding-usd me-2"></i> Withdrawal Amount (₦)
+                        </label>
+                        <div class="input-group shadow-sm rounded-pill">
+                            <span class="input-group-text text-white bg-danger">
+                                <i class="fas fa-wallet"></i>
+                            </span>
+                            <input type="number" id="withdraw_amount" name="{{ form.withdraw_amount.name }}" 
+                                   class="form-control border-0 rounded-end-pill" 
+                                   value="{{ form.withdraw_amount.value|default_if_none:'' }}" oninput="calculateTotal()">
+                        </div>
+                        {% if form.withdraw_amount.errors %}
+                            <div class="text-danger small mt-1">{{ form.withdraw_amount.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Total Withdrawal (Calculated) -->
+                    <div class="col-md-4">
+                        <label class="fw-semibold">
+                            <i class="fas fa-wallet me-2"></i> Total Withdrawal (₦)
+                        </label>
+                        <div class="input-group shadow-sm rounded-pill">
+                            <span class="input-group-text text-white bg-success">
+                                <i class="fas fa-money-bill-wave"></i>
+                            </span>
+                            <input type="text" id="total_withdrawal" 
+                                   class="form-control bg-light text-end fw-bold border-0 rounded-end-pill" 
+                                   value="{{ total_withdrawal|floatformat:2 }}" readonly>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <p class="text-danger text-center">❌ Fixed deposit details not available.</p>
+                {% endif %}
+
+                <hr class="my-4">
+
+                <!-- Form Actions -->
+                <div class="d-flex justify-content-between gap-3 mt-4">
+                    <a href="{% url 'display_customers_with_fixed_deposit' %}" class="btn btn-secondary btn-lg">
+                        <i class="fas fa-arrow-left me-2"></i> Cancel
+                    </a>
+                    <button type="submit" class="btn btn-danger btn-lg">
+                        <i class="fas fa-hand-holding-usd me-2"></i> Withdraw
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+    function calculateTotal() {
+        let interest = parseFloat(document.getElementById('interest_amount').value) || 0;
+        let withdrawal = parseFloat(document.getElementById('withdraw_amount').value) || 0;
+        document.getElementById('total_withdrawal').value = (interest + withdrawal).toFixed(2);
+    }
+</script>
+
+{% endblock %}

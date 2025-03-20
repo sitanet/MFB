@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+    {% include 'includes/alerts.html' %}
+
+    <div class="midde_cont">
+        <div class="container-fluid">
+            <!-- Page Title -->
+            <div class="row column_title">
+                <div class="col-md-12 text-center">
+                    <div class="page_title">
+                        <h2 class="text-danger font-weight-bold">Fixed Deposit Withdrawal</h2>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-8 offset-md-2">
+                <div class="white_shd full margin_bottom_30 p-4">
+                    <h5 class="text-primary text-center mb-3">Withdraw Funds</h5>
+
+                    <!-- Display Form Errors -->
+                    {% if form.errors %}
+                        <div class="alert alert-danger">
+                            <strong>Errors:</strong>
+                            <ul>
+                                {% for field, errors in form.errors.items %}
+                                    {% for error in errors %}
+                                        <li>{{ field|title }}: {{ error }}</li>
+                                    {% endfor %}
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% endif %}
+
+                    <!-- Withdrawal Form -->
+                    <form method="POST">
+                        {% csrf_token %}
+                        <div class="form-group">
+                            <label for="account_no">Account Number:</label>
+                            <input type="text" class="form-control" id="account_no" value="{{ customer.gl_no }}{{ customer.ac_no }}" readonly>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="withdraw_amount">Withdrawal Amount:</label>
+                            <input type="number" class="form-control" id="withdraw_amount" name="withdraw_amount" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="withdraw_date">Withdrawal Date:</label>
+                            <input type="date" class="form-control" id="withdraw_date" name="withdraw_date" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="remarks">Remarks (Optional):</label>
+                            <textarea class="form-control" id="remarks" name="remarks" rows="2"></textarea>
+                        </div>
+
+                        <div class="text-center">
+                            <button type="submit" class="btn btn-danger font-weight-bold px-4">Withdraw</button>
+                            <a href="{% url 'customers' %}" class="btn btn-secondary ml-2">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Withdrawal History -->
+            <div class="col-md-10 offset-md-1 mt-4">
+                <div class="white_shd full p-3">
+                    <h5 class="text-primary">Withdrawal History</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered text-center">
+                            <thead class="thead-dark">
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Amount</th>
+                                    <th>Remarks</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for withdrawal in withdrawals %}
+                                    <tr>
+                                        <td>{{ withdrawal.withdraw_date }}</td>
+                                        <td>{{ withdrawal.amount }}</td>
+                                        <td>{{ withdrawal.remarks|default:"-" }}</td>
+                                        <td>
+                                            <span class="badge {% if withdrawal.status == 'Approved' %}badge-success{% else %}badge-warning{% endif %}">
+                                                {{ withdrawal.status }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="4" class="text-center text-muted">No withdrawals yet.</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+{% endblock %}

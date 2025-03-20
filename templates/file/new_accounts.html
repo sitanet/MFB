@@ -39,17 +39,29 @@
           </a>
         </div>
       </div>
-
+      
       <div class="col-md-3 mb-3">
         <div class="account_setting py-5 fs-1 bg-white">
           <div class="couter_icon col-md-12">
             <i class="couter_icon fa fa-hand-holding-usd text-warning"></i>
           </div>
           <a href="{% url 'choose_to_create_loan' %}" class="text-center">
-            <h5 class="my-2">Loan Account</h5>
+            <h5 class="my-2">Loan </h5>
           </a>
         </div>
       </div>
+
+      <div class="col-md-3 mb-3">
+        <div class="account_setting py-5 fs-1 bg-white">
+            <div class="couter_icon col-md-12">
+                <!-- Changed icon to "fa-piggy-bank" -->
+                <i class="couter_icon fa fa-piggy-bank text-secondary"></i>
+            </div>
+            <a href="{% url 'register_fixed_deposit_account' %}" class="text-center">
+                <h5 class="my-2">Fixed Deposit Account</h5>
+            </a>
+        </div>
+    </div>
 
       <div class="col-md-3">
         <div class="account_setting py-5 fs-1 bg-white rounded rounded-5">

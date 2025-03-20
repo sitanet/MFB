@@ -65,3 +65,8 @@ def generate_fixed_asset_dep_id():
     digits = ''.join(random.choice(string.digits) for _ in range(6))
     alphabet = 'DP'
     return digits + alphabet
+
+def generate_fixed_deposit_id():
+    digits = ''.join(random.choice(string.digits) for _ in range(6))
+    alphabet = 'FD'
+    return digits + alphabet

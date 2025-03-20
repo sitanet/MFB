@@ -35,4 +35,4 @@ class Branch(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     
     def __str__(self):
-        return f"{self.branch_name} ({self.branch_code})"
+        return f" {self.branch_code}"

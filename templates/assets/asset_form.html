@@ -216,13 +216,51 @@
 
             <!-- Bank Account -->
             <div class="col-md-4 mb-3">
-                <label for="bank_account" class="form-label">Bank Account</label>
+                <label for="bank_account" class="form-label">Bank/Transfer Account</label>
                 <select id="bank_account" name="bank_account" class="form-select" required>
                     {% for account in bank_accounts %}
                         <option value="{{ account.id }}">{{ account.gl_no }}--{{ account.gl_name }}</option>
                     {% endfor %}
                 </select>
             </div>
+
+
+
+            <!-- Fixed Asset Profit GL Account -->
+                    <div class="col-md-4 mb-3">
+                        <label for="fixed_asset_profit_gl" class="form-label">Fixed Asset Profit GL Account</label>
+                        <select id="fixed_asset_profit_gl" name="fixed_asset_profit_gl" class="form-select">
+                            <option value="">Select Profit GL Account fo revaluation</option>
+                            {% for account in gl_accounts %}
+                                <option value="{{ account.id }}">{{ account.gl_no }} - {{ account.gl_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-md-4 mb-3">
+                        <label for="fixed_asset_profit_ac_no" class="form-label">Fixed Asset Profit Account No</label>
+                        <input type="text" id="fixed_asset_profit_ac_no" name="fixed_asset_profit_ac_no" class="form-control">
+                    </div>
+
+                    <!-- Fixed Asset Loss GL Account -->
+                    <div class="col-md-4 mb-3">
+                        <label for="fixed_asset_loss_gl" class="form-label">Fixed Asset Loss GL Account</label>
+                        <select id="fixed_asset_loss_gl" name="fixed_asset_loss_gl" class="form-select">
+                            <option value="">Select Loss GL Account</option>
+                            {% for account in gl_accounts %}
+                                <option value="{{ account.id }}">{{ account.gl_no }} - {{ account.gl_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Fixed Asset Profit Account Number -->
+                  
+
+                    <!-- Fixed Asset Loss Account Number -->
+                    <div class="col-md-4 mb-3">
+                        <label for="fixed_asset_loss_ac_no" class="form-label">Fixed Asset Loss Account No</label>
+                        <input type="text" id="fixed_asset_loss_ac_no" name="fixed_asset_loss_ac_no" class="form-control">
+                    </div>
 
             <!-- Description -->
             <div class="col-md-12 mb-3">

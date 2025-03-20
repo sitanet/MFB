@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container">
+    <div class="card">
+        <div class="card-header">
+            Register Fixed Deposit Account
+        </div>
+        <div class="card-body">
+            <form method="POST">
+                {% csrf_token %}
+
+                <!-- Display form errors at the top of the form -->
+                {% if form.errors %}
+                    <div class="alert alert-danger">
+                        <strong>Error!</strong> Please correct the following errors:
+                        <ul>
+                            {% for field, errors in form.errors.items %}
+                                {% for error in errors %}
+                                    <li>{{ field|title }}: {{ error }}</li>
+                                {% endfor %}
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
+
+                <!-- Row 1: Customer, Fixed GL No -->
+                <div class="row">
+                    <!-- Select Customer -->
+                    <div class="col-md-6 mb-3">
+                        <label for="customer" class="form-label">Select Customer</label>
+                        <select id="customer" name="customer" class="form-select {% if form.customer.errors %}is-invalid{% endif %}" required>
+                            <option value="">-- Select --</option>
+                            {% for customer in customers %}
+                                <option value="{{ customer.id }}" 
+                                        data-gl="{{ customer.gl_no }}" 
+                                        data-ac="{{ customer.ac_no }}">
+                                    {{ customer.first_name }} {{ customer.last_name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        {% if form.customer.errors %}
+                            <div class="invalid-feedback">
+                                {{ form.customer.errors|join:", " }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Fixed GL Number -->
+                    <div class="col-md-6 mb-3">
+                        <label for="fixed_gl_no" class="form-label">Fixed GL No</label>
+                        <input type="text" id="fixed_gl_no" name="fixed_gl_no" class="form-control {% if form.fixed_gl_no.errors %}is-invalid{% endif %}" required>
+                        {% if form.fixed_gl_no.errors %}
+                            <div class="invalid-feedback">
+                                {{ form.fixed_gl_no.errors|join:", " }}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Row 2: Fixed Account No, Branch -->
+                <div class="row">
+                    <!-- Fixed Deposit Account Number -->
+                    <div class="col-md-6 mb-3">
+                        <label for="fixed_ac_no" class="form-label">Fixed Deposit Account No</label>
+                        <input type="text" id="fixed_ac_no" name="fixed_ac_no" class="form-control {% if form.fixed_ac_no.errors %}is-invalid{% endif %}" required>
+                        {% if form.fixed_ac_no.errors %}
+                            <div class="invalid-feedback">
+                                {{ form.fixed_ac_no.errors|join:", " }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Branch (Pre-selected based on user's branch) -->
+                    <div class="col-md-6 mb-3">
+                        <label for="branch" class="form-label">Branch</label>
+                        {% if user_branch %}
+                            <input type="text" id="branch" name="branch" class="form-control" value="{{ user_branch.branch_name }}" readonly>
+                            <input type="hidden" name="branch" value="{{ user_branch.id }}">
+                        {% else %}
+                            <select id="branch" name="branch" class="form-select {% if form.branch.errors %}is-invalid{% endif %}" required>
+                                <option value="">-- Select --</option>
+                                {% for branch in branches %}
+                                    <option value="{{ branch.id }}">{{ branch.branch_name }}</option>
+                                {% endfor %}
+                            </select>
+                            {% if form.branch.errors %}
+                                <div class="invalid-feedback">
+                                    {{ form.branch.errors|join:", " }}
+                                </div>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <div class="d-flex justify-content-center mt-3">
+                    <button type="submit" class="btn btn-submit">Register</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Auto-populate Fixed GL No and Fixed Account No when a customer is selected
+    document.getElementById("customer").addEventListener("change", function() {
+        let selectedOption = this.options[this.selectedIndex];
+        document.getElementById("fixed_gl_no").value = selectedOption.getAttribute("data-gl") || "";
+        document.getElementById("fixed_ac_no").value = selectedOption.getAttribute("data-ac") || "";
+    });
+</script>
+{% endblock %}

@@ -91,3 +91,16 @@ class Customer(models.Model):
 # class CustomerProfile(models.Model):
 #     user = models.OneToOneField(User, on_delete=models.CASCADE)
 #     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
+
+
+class FixedDepositAccount(models.Model):
+    """
+    Represents a fixed deposit account linked to a customer.
+    """
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
+    fixed_gl_no = models.CharField(max_length=20, unique=True)
+    fixed_ac_no = models.CharField(max_length=20, unique=True)  # Unique FD Account Number
+    branch = models.ForeignKey(Branch, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f"FD-{self.fixed_ac_no} | {self.customer}"
