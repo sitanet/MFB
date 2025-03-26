@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+    {% include 'includes/alerts.html' %}
+
+    <div class="midde_cont">
+        <div class="container-fluid">
+            <div class="row column_title">
+                <div class="col-md-12">
+                    <div class="page_title">
+                        <h2>Customer SMS & Email Alert Settings</h2>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-12">
+                <div class="white_shd full margin_bottom_30">
+                    <div class="table_section padding_infor_info">
+                        
+                        <!-- Search Box -->
+                        <div class="mb-3">
+                            <input type="text" id="searchInput" class="form-control" placeholder="Search by First Name, Middle Name, Last Name, or Account No.">
+                        </div>
+
+                        <div class="table-responsive-sm">
+                            <table class="table" id="customerTable">
+                                <thead class="thead-dark">
+                                    <tr>
+                                        <th>Account No.</th>
+                                        <th>First Name</th>
+                                        <th>Middle Name</th>
+                                        <th>Last Name</th>
+                                        <th>Phone Number</th>
+                                        <th>SMS Alert</th>
+                                        <th>Email Alert</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for customer in customers %}
+                                    <tr>
+                                        <td class="searchable">{{ customer.gl_no }}{{ customer.ac_no }}</td>
+                                        <td class="searchable">{{ customer.first_name }}</td>
+                                        <td class="searchable">{{ customer.middle_name }}</td>
+                                        <td class="searchable">{{ customer.last_name }}</td>
+                                        <td>{{ customer.phone_no }}</td>
+                                        <td>
+                                            {% if customer.sms %}
+                                                <span style="color: green; font-weight: bold;">Enabled</span>
+                                            {% else %}
+                                                <span style="color: red; font-weight: bold;">Disabled</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if customer.email_alert %}
+                                                <span style="color: green; font-weight: bold;">Enabled</span>
+                                            {% else %}
+                                                <span style="color: red; font-weight: bold;">Disabled</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <!-- SMS Toggle Button -->
+                                            <form method="POST" style="display:inline;">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="customer_id" value="{{ customer.id }}">
+                                                <input type="hidden" name="action_type" value="sms">
+                                                <button type="submit" class="btn btn-sm {% if customer.sms %}btn-danger{% else %}btn-success{% endif %}">
+                                                    {% if customer.sms %}Disable SMS{% else %}Enable SMS{% endif %}
+                                                </button>
+                                            </form>
+
+                                            <!-- Email Toggle Button -->
+                                            <form method="POST" style="display:inline;">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="customer_id" value="{{ customer.id }}">
+                                                <input type="hidden" name="action_type" value="email">
+                                                <button type="submit" class="btn btn-sm {% if customer.email_alert %}btn-danger{% else %}btn-success{% endif %}">
+                                                    {% if customer.email_alert %}Disable Email{% else %}Enable Email{% endif %}
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div> <!-- End table-responsive -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript for Filtering -->
+    <script>
+        document.getElementById("searchInput").addEventListener("keyup", function () {
+            let searchValue = this.value.toLowerCase();
+            let tableRows = document.querySelectorAll("#customerTable tbody tr");
+
+            tableRows.forEach(row => {
+                let cells = row.querySelectorAll(".searchable");
+                let found = false;
+
+                cells.forEach(cell => {
+                    if (cell.textContent.toLowerCase().includes(searchValue)) {
+                        found = true;
+                    }
+                });
+
+                row.style.display = found ? "" : "none";
+            });
+        });
+    </script>
+
+{% endblock %}

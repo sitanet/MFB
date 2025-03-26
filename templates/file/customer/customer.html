@@ -23,12 +23,12 @@
                 {% if messages %}
                 <ul class="messages">
                     {% for message in messages %}
-                    <li style="font-size: 30px; color: brown; font-weight: bold;" {% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+                    <li style="font-size: 20px; color: brown; font-weight: bold;" {% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
                     {% endfor %}
                     {{customer}}
                 </ul>
                 {% endif %}
-                <h6 style="color: red;" >{{ form.errors }}</h6>
+                <!-- <h6 style="color: red;" >{{ form.errors }}</h6> -->
                  
                 <div class="form first">
                     <div class="details personal">

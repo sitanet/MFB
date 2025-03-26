@@ -61,6 +61,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+
 ]
 
 ROOT_URLCONF = 'profit_solutions.urls'
@@ -88,33 +89,33 @@ WSGI_APPLICATION = 'profit_solutions.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'MFB',
-        'USER': 'postgres',
-        'PASSWORD': 'People',
-        'HOST': 'localhost',
-        # 'HOST': 'database-2.cxwm64gcozpx.us-west-2.rds.amazonaws.com',  # Or your database host
-        'PORT': '5432',           # Leave empty for the default PostgreSQL port (5432)
-    }
-}
-
-
-
-
-
 # DATABASES = {
 #     'default': {
 #         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': 'Finance_flex',
-#         'USER': 'Finance',
-#         'PASSWORD': 'Completed1234',
-#         # 'HOST': 'localhost',
-#         'HOST': 'finance-flex.ctqg0cgman7j.af-south-1.rds.amazonaws.com',  # Or your database host
-#         'PORT': '5432',          
+#         'NAME': 'MFB',
+#         'USER': 'postgres',
+#         'PASSWORD': 'People',
+#         'HOST': 'localhost',
+#         # 'HOST': 'database-2.cxwm64gcozpx.us-west-2.rds.amazonaws.com',  # Or your database host
+#         'PORT': '5432',           # Leave empty for the default PostgreSQL port (5432)
 #     }
 # }
+
+
+
+
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'FinanceFlex',
+        'USER': 'postgres',
+        'PASSWORD': 'People',
+        'HOST': 'localhost',
+        # 'HOST': 'finance-flex.ctqg0cgman7j.af-south-1.rds.amazonaws.com',  # Or your database host
+        'PORT': '5432',          
+    }
+}
 
 
 
@@ -180,7 +181,11 @@ EMAIL_HOST = "smtp.zoho.com"
 EMAIL_PORT = 587  # Use 465 if using SSL
 EMAIL_USE_TLS = True  # Set to False if using SSL
 EMAIL_USE_SSL = False  # Set to True if using SSL
-EMAIL_HOST_USER = "support@knowyourpropfirm.com"
-EMAIL_HOST_PASSWORD = "db$kScHEFg!ajd#9"  # Use App Password if 2FA is enabled
-DEFAULT_FROM_EMAIL = "Know Your PropFirm <support@knowyourpropfirm.com>"
+EMAIL_HOST_USER = "izekor@sitanetorbit.com"
+EMAIL_HOST_PASSWORD = "7AYUsXMyVN44"  # Use App Password if 2FA is enabled
+DEFAULT_FROM_EMAIL = "FinanceFlex <izekor@sitanetorbit.com>"
 
+# SMS API Configuration
+TERMII_API_KEY = "TLDfcyAogBKwuMYnxvPHatThWJqfkOFffeNMTNJaucRjzaoSSeTHugQkzIgDDS"
+TERMII_SENDER_ID = "FinanceFlex"
+TERMII_SMS_URL = "https://api.ng.termii.com/api/sms/send"

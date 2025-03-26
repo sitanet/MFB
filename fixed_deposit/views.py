@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.utils import timezone
-from django.db.models import Sum
+from django.db.models import Sum, Max  # Add Max import
 
 from .models import FixedDeposit
 from customers.models import FixedDepositAccount, Customer
@@ -13,7 +13,7 @@ from customers.models import Customer
 
 
 def display_customers_with_fixed_deposit(request):
-    customers = Customer.objects.filter(gl_no__startswith="206").select_related("branch")
+    customers = Customer.objects.filter(label="F").select_related("branch")
     fixed_accounts = FixedDepositAccount.objects.select_related("customer")
 
     return render(request, "fixed_deposit/customers_list.html", {
@@ -416,10 +416,93 @@ def reversal_for_fixed_deposit(request, deposit_id):
         "fixed_deposit": fixed_deposit
     })
 
+
+
+
+
+
+from django.shortcuts import get_object_or_404, redirect, render
+from django.db import transaction
+from django.utils.timezone import now
+from django.contrib import messages
+import logging
+
+logger = logging.getLogger(__name__)
+
+def reverse_fixed_deposit_withdrawal(request, withdrawal_id):
+    withdrawal = get_object_or_404(FixedDepositWithdrawal, id=withdrawal_id)
+
+    # Prevent reversal if status is "closed"
+    if withdrawal.status.lower() == "closed":
+        messages.error(request, "❌ This Fixed Deposit Withdrawal has already been closed and cannot be reversed.")
+        return redirect("display_customers_with_fixed_deposit")
+
+    if request.method == "POST":
+        try:
+            with transaction.atomic():
+                user = request.user  # Get logged-in user
+
+                # Retrieve original transactions linked to this withdrawal
+                original_transactions = Memtrans.objects.filter(
+                    gl_no__in=[withdrawal.cust_gl_no, withdrawal.fixed_gl_no],
+                    ac_no__in=[withdrawal.cust_ac_no, withdrawal.fixed_ac_no],
+                    cycle=withdrawal.cycle
+                )
+
+                if not original_transactions.exists():
+                    messages.error(request, "❌ Original transactions not found for reversal.")
+                    return redirect("display_customers_with_fixed_deposit")
+
+                # Log original transactions for debugging
+                logger.debug(f"Original Transactions: {original_transactions}")
+
+                # Mark original transactions as reversed
+                for transaction in original_transactions:
+                    transaction.error = "H"
+                    transaction.description = f"Reversal: {transaction.description}"
+                    transaction.save()
+
+                # Log in Fixed Deposit Withdrawal History
+                FixedDepositHist.objects.create(
+                    branch=withdrawal.branch,
+                    fixed_gl_no=withdrawal.fixed_gl_no,
+                    fixed_ac_no=withdrawal.fixed_ac_no,
+                    trx_date=now(),
+                    trx_type="FD-WD-REV",
+                    trx_naration="Fixed Deposit Withdrawal Reversed",
+                    trx_no=generate_fixed_deposit_id(),
+                    principal=withdrawal.withdrawal_amount,
+                    interest=(withdrawal.interest_amount or 0.00),
+                )
+
+                # Remove the withdrawal record
+                withdrawal.delete()
+
+                messages.success(request, "✅ Fixed Deposit Withdrawal successfully reversed!")
+                return redirect("display_customers_with_fixed_deposit")
+
+        except Exception as e:
+            logger.error(f"⚠️ Error processing fixed deposit withdrawal reversal: {e}", exc_info=True)
+            messages.error(request, "⚠️ An unexpected error occurred. Please try again.")
+
+    return render(request, "fixed_deposit/fixed_deposit_withdrawal_reversal.html", {"withdrawal": withdrawal})
+
+
+
+
+
 def reversal_fixed_deposit_list(request):
     fixed_deposits = FixedDeposit.objects.filter(status="active")
     print(f"Found {fixed_deposits.count()} active deposits")  # Debugging line
     return render(request, "fixed_deposit/reverse_fixed_deposit_list.html", {"fixed_deposits": fixed_deposits})
+
+
+
+
+
+def list_fixed_deposit_withdrawals(request):
+    withdrawals = FixedDeposit.objects.all()
+    return render(request, "fixed_deposit/fixed_deposit_withdrawal_list.html", {"withdrawals": withdrawals})
 
 
 def fixed_dep(request):

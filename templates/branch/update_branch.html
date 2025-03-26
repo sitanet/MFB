@@ -74,6 +74,18 @@
                          value="{{ branch.session_status }}" disabled>
                   <input type="hidden" name="session_status" value="{{ branch.session_status }}">
               </div>
+
+              <div class="form-group col-md-4">
+                <label for="plan">Plan</label>
+                <select class="form-control bg-light" id="plan" name="plan">
+                    {% for value, label in form.plan.field.choices %}
+                        <option value="{{ value }}" {% if branch.plan == value %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
               
               
             </div>

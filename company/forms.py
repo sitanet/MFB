@@ -6,13 +6,18 @@ class CompanyForm(forms.ModelForm):
         model = Company
         fields = '__all__'
 
+from django import forms
+from .models import Branch
+
 class BranchForm(forms.ModelForm):
     class Meta:
         model = Branch
         fields = [
             'branch_code', 'branch_name', 'company', 
+            'plan',  # Added the plan field
             'session_date', 'system_date_date', 'session_status'
         ]
+
 
 
 from django import forms

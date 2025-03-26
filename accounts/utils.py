@@ -76,20 +76,16 @@ def send_notification(mail_subject, mail_template, context):
     mail.content_subtype = "html"
     mail.send()
 
-
-
-
-
-
 import requests
+import logging
+from django.conf import settings
+
+logger = logging.getLogger(__name__)
 
 def send_sms(phone_number, message):
-    """
-    Send SMS using Termii API.
-    """
-    api_key = "TLDfcyAogBKwuMYnxvPHatThWJqfkOFffeNMTNJaucRjzaoSSeTHugQkzIgDDS"  # Replace with your Termii API key
-    sender_id = "MFB"  # Replace with your registered Termii sender ID
-    url = "https://api.ng.termii.com/api/sms/send"
+    api_key = settings.TERMII_API_KEY
+    sender_id = settings.TERMII_SENDER_ID
+    url = settings.TERMII_SMS_URL
 
     payload = {
         "to": phone_number,
@@ -102,14 +98,18 @@ def send_sms(phone_number, message):
 
     try:
         response = requests.post(url, json=payload)
-        response_data = response.json()
+        response_data = response.json() if response.text else {}
+
+        # Print full response for debugging
+        logger.info(f"SMS Response: {response.status_code}, {response.text}")
 
         if response.status_code == 200 and response_data.get("message") == "Successfully Sent":
+            logger.info(f"✅ SMS successfully sent to {phone_number}")
             return True
         else:
-            print(f"Failed to send SMS: {response_data}")
+            logger.warning(f"❌ SMS failed for {phone_number}. Response: {response_data}")
             return False
 
     except requests.exceptions.RequestException as e:
-        print(f"An error occurred: {e}")
+        logger.error(f"🚨 Network Error while sending SMS: {e}")
         return False

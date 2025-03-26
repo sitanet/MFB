@@ -12,7 +12,7 @@ from company.models import Company, Branch
 class Memtrans(models.Model):
     # branch = models.ForeignKey(Branch, on_delete=models.CASCADE, related_name="branch_memtrans", 
     # null=True, blank=True)
-    branch = models.CharField(max_length=10, null=True, blank=True)
+    branch = models.CharField(max_length=20, null=True, blank=True)
     cust_branch = models.ForeignKey(Branch, on_delete=models.CASCADE, related_name="cust_branch", 
     null=True, blank=True)
     # account = models.ForeignKey(Account, on_delete=models.CASCADE, related_name='memtrans')
@@ -23,7 +23,7 @@ class Memtrans(models.Model):
     cycle = models.IntegerField( null=True, blank=True) 
     gl_no = models.CharField(max_length=6, null=True, blank=True) 
     ac_no = models.CharField(max_length=6, null=True, blank=True) 
-    trx_no = models.CharField(max_length=10, null=True, blank=True)  # 7-digit number + 1 alphabet
+    trx_no = models.CharField(max_length=20, null=True, blank=True)  # 7-digit number + 1 alphabet
     ses_date = models.DateField()   
     app_date = models.DateField(null=True, blank=True) 
     sys_date = models.DateTimeField(default=timezone.now, null=True, blank=True)

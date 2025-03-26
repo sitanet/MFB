@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h2>Reverse Fixed Deposit Withdrawal</h2>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert {{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <p><strong>Customer:</strong> {{ withdrawal.customer_name }}</p>
+    <p><strong>Withdrawal Amount:</strong> {{ withdrawal.withdrawal_amount }}</p>
+    <p><strong>Withdrawal Date:</strong> {{ withdrawal.trx_date }}</p>
+
+    <form method="post">
+        {% csrf_token %}
+        <p>Are you sure you want to reverse this withdrawal?</p>
+        <button type="submit" class="btn btn-danger">Confirm Reversal</button>
+        <a href="{% url 'display_customers_with_fixed_deposit' %}" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+{% endblock %}

@@ -70,7 +70,7 @@ class UserManager(BaseUserManager):
             email=email,
             role=User.SYSTEM_ADMINISTRATOR,
             branch=default_branch,  # Pass the default branch to the user
-            phone_number='N/A',
+            phone_number='+2348066311516',
             cashier_gl=None,
             cashier_ac=None,
             password=password,

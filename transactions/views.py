@@ -22,11 +22,40 @@ from django.db.models import Sum
 from django.db import transaction
 from django.contrib.auth.decorators import login_required, user_passes_test
 
-from customers.sms_service import send_sms
+from accounts.utils import send_sms
+from django.core.mail import send_mail
+
+from django.core.mail import EmailMultiAlternatives
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
+from django.conf import settings
+from django.core.mail import EmailMessage
+
+
+
+
+def send_email(to_email, subject, template_name, context):
+    """
+    Helper function to send emails using Django's EmailMessage and HTML templates.
+    """
+    from django.conf import settings
+
+    # Render the HTML template
+    html_message = render_to_string(template_name, context)
+    plain_message = strip_tags(html_message)  # Strip HTML tags for the plain text version
+
+    # Create the email
+    email = EmailMessage(
+        subject,
+        html_message,
+        settings.DEFAULT_FROM_EMAIL,
+        [to_email],
+    )
+    email.content_subtype = "html"  # Set the content type to HTML
+    email.send(fail_silently=False)
 
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
-
 def deposit(request, id):
     user_branch = request.user.branch.branch_code 
     customer = get_object_or_404(Customer, id=id)
@@ -282,7 +311,6 @@ def withdraw(request, id):
                     with transaction.atomic():
                         # Create a transaction record in Memtrans
                         customer_transaction = Memtrans(
-                            
                             cust_branch=Branch.objects.get(branch_code=customer_branch),
                             gl_no=gl_no_customer,
                             ac_no=ac_no_customer,
@@ -311,7 +339,6 @@ def withdraw(request, id):
                         customer_to_update.save()
 
                         # Credit the cashier's account
-                    
                         gl_no_cashier = form.cleaned_data['gl_no_cashier']
                         ac_no_cashier = form.cleaned_data['ac_no_cashier']
 
@@ -357,6 +384,32 @@ def withdraw(request, id):
                             cashier_to_update.balance = sum_of_amounts
                             cashier_to_update.save()
 
+                        # 📢 **Send SMS & Email Notifications**
+                        sms_message = f"Dear {customer.first_name}, your withdrawal of {amount} has been successful. Your new balance is {customer_to_update.balance}."
+                        email_subject = "Withdrawal Successful"
+
+                        # Prepare context for the email template
+                        email_context = {
+                            'customer_name': customer.first_name,
+                            'amount': amount,
+                            'balance': customer_to_update.balance,
+                            'recipient_name': f"{customer.first_name} {customer.last_name}",
+                            'bank_name': "Your Bank Name",  # Replace with actual bank name
+                            'gl_number': customer.gl_no,
+                            'account_number': customer.ac_no,
+                            'transaction_number': unique_id,
+                            'transaction_date': timezone.now().strftime('%b %d, %Y %H:%M:%S'),
+                            'company_name': company.branch_name,
+                        }
+
+                        if customer.sms and customer.email_alert:
+                            send_sms(customer.phone_no, sms_message)
+                            send_email(customer.email, email_subject, 'transaction_email/withdrawal_success.html', email_context)
+                        elif customer.sms:
+                            send_sms(customer.phone_no, sms_message)
+                        elif customer.email_alert:
+                            send_email(customer.email, email_subject, 'transaction_email/withdrawal_success.html', email_context)
+
                         messages.success(request, 'Withdrawal successful!')
                     return redirect('withdraw', id=id)
                 else:
@@ -378,8 +431,6 @@ def withdraw(request, id):
         'company_date': company_date,
         'last_transaction': last_transaction,  # Pass the last transaction to the template
     })
-
-
 
 
 

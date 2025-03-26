@@ -35,81 +35,66 @@ from .sms_service import send_sms
 
 
 def customers(request):
-    # Get the user's branch from the logged-in user's branch (assuming the user has a `branch` field)
-    user_branch = request.user.branch  # Assuming that the user model has a `branch` field
+    user_branch = request.user.branch  
 
-    # Query for required data, filtering by the logged-in user's branch
     cust_data = Account.objects.filter(gl_no__startswith='20', branch=user_branch) \
         .exclude(gl_no='20100') \
         .exclude(gl_no='20200') \
         .exclude(gl_no='20000')
-    
+
     gl_no = Account.objects.filter(branch=user_branch) \
         .values_list('gl_no', flat=True).filter(gl_no__startswith='20')
-    
-    # Filter Account_Officer based on the logged-in user's branch
+
     officer = Account_Officer.objects.filter(branch=user_branch)
+    region = Region.objects.filter(branch=user_branch)  # Ensure Region has a `branch` field
+    category = Category.objects.filter(branch=user_branch)  # Ensure Category has a `branch` field
+    id_card = Id_card_type.objects.filter(branch=user_branch)  # Ensure Id_card_type has a `branch` field
+    cust_branch = Company.objects.filter(branches=user_branch)  # Ensure `branches` is the related_name in Company
 
-    # Fix: Filter Region based on the branch (assuming Region model has a `branch` relation)
-    region = Region.objects.filter(branch=user_branch)  # Assuming Region has a reference to branch
-    
-    # Fix: Filter Category based on the branch (if Category has a reference to Branch)
-    category = Category.objects.filter(branch=user_branch)  # Assuming Category has a reference to branch
-
-    # Fix: Filter Id_card_type based on the branch (if Id_card_type has a reference to Branch)
-    id_card = Id_card_type.objects.filter(branch=user_branch)  # Assuming Id_card_type has a reference to branch
-
-    # Fix: Filter Company based on the branch using the 'branches' related name
-    cust_branch = Company.objects.filter(branches=user_branch)  # Using 'branches' related name
-    
-    # Customer query - No filter based on branch
     customer = Customer.objects.all().order_by('-gl_no', '-ac_no').first()
 
-    # Handle form submission
     if request.method == 'POST':
-        form = CustomerForm(request.POST, request.FILES)  # Handle file uploads
-        if form.is_valid():
-            ac_no = generate_unique_6_digit_number()  # Generate unique account number
-            form.instance.ac_no = ac_no  # Assign generated account number
+        form = CustomerForm(request.POST, request.FILES)
 
-            # Automatically assign the logged-in user's branch
+        if form.is_valid():
+            ac_no = generate_unique_6_digit_number()
+            form.instance.ac_no = ac_no
             form.instance.branch = request.user.branch
 
             try:
-                new_record = form.save()  # Save form data
-                
-                # Extract ac_no and gl_no for use after save
+                new_record = form.save()
                 ac_no = new_record.ac_no
                 gl_no = new_record.gl_no
 
-                # Check if SMS field is True and send SMS if needed
+                # If SMS is checked, send an SMS
                 if new_record.sms:
                     phone_number = new_record.phone_no
                     message = f"Hello {new_record.first_name}, Enjoy {gl_no}{ac_no}."
-
+                    
                     print(f"Sending SMS to: {phone_number}")
                     print(f"Message: {message}")
 
-                    # Send SMS
                     sms_response = send_sms(phone_number, message)
-                    print(f"SMS response: {sms_response}")
 
                     if 'error' in sms_response:
-                        print(f"SMS failed: {sms_response['error']}")
+                        messages.error(request, f"SMS failed: {sms_response['error']}")
                     else:
-                        print(f"SMS sent successfully!")
-                
-                # Render template to display account number and gl_no
+                        messages.success(request, "SMS sent successfully!")
+
+                # Redirect to show account number
                 return render(request, 'file/customer/account_no.html', {
                     'ac_no': ac_no,
                     'gl_no': gl_no,
                 })
+
             except Exception as e:
-                print(f"Error saving customer or sending SMS: {e}")
-                form.add_error(None, "There was an error saving the customer or sending SMS.")
+                messages.error(request, f"Error saving customer or sending SMS: {e}")
+                form.add_error(None, f"Error saving customer or sending SMS: {e}")
+
         else:
-            print(f"Form errors: {form.errors}")
-    
+            messages.error(request, "There were errors in the form submission. Please correct them.")
+            print(f"Form errors: {form.errors}")  # Print form errors for debugging
+
     else:
         form = CustomerForm()
 
@@ -124,7 +109,6 @@ def customers(request):
         'customer': customer,
         'id_card': id_card
     })
-
 
 
 @login_required(login_url='login')
@@ -591,6 +575,12 @@ def register_fixed_deposit_account(request):
             fixed_deposit_account = form.save(commit=False)
             fixed_deposit_account.branch = request.user.branch  # Assuming the user has a branch field
             fixed_deposit_account.save()
+
+            # Update the customer's label to "F"
+            customer = fixed_deposit_account.customer
+            customer.label = "F"
+            customer.save()
+
             return redirect("fixed_deposit/fixed_deposit_account_success")  # Redirect to a success page
     else:
         form = FixedDepositAccountForm()
@@ -606,3 +596,30 @@ def register_fixed_deposit_account(request):
         "customers": customers,
         "user_branch": user_branch,  # Pass the user's branch to the template
     })
+
+
+
+
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from .models import Customer
+
+def customer_sms_email_alert(request):
+    customers = Customer.objects.filter(ac_no__gt=1)
+
+    if request.method == "POST":
+        customer_id = request.POST.get("customer_id")
+        action_type = request.POST.get("action_type")  # Check which button was clicked
+        customer = Customer.objects.get(id=customer_id)
+
+        if action_type == "sms":
+            customer.sms = not customer.sms  # Toggle SMS
+            messages.success(request, "SMS alert setting updated successfully.")
+        elif action_type == "email":
+            customer.email_alert = not customer.email_alert  # Toggle Email
+            messages.success(request, "Email alert setting updated successfully.")
+
+        customer.save()
+        return redirect("customer_sms_email_alert")
+
+    return render(request, "file/customer/customer_sms_email_alert.html", {"customers": customers})

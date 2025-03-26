@@ -54,6 +54,17 @@
                 <input type="text" class="form-control" id="branch_name" name="branch_name" required>
             </div>
 
+            <!-- Plan Selection -->
+            <div class="form-group col-md-6">
+                <label for="plan">Plan</label>
+                <select class="form-control" id="plan" name="plan" required>
+                    <option value="" disabled selected>Select a Plan</option>
+                    {% for plan_value, plan_name in form.fields.plan.choices %}
+                        <option value="{{ plan_value }}">{{ plan_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
             <!-- Session Date -->
             <div class="form-group col-md-6">
                 <label for="session_date">Session Date</label>

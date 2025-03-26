@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h2>Fixed Deposit Withdrawals - Reversal</h2>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert {{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <table class="table table-bordered">
+        <thead class="thead-dark">
+            <tr>
+                <th>Customer</th>
+                <th>GL No</th>
+                <th>Account No</th>
+                <th>Withdrawal Amount</th>
+                <th>Withdrawal Date</th>
+                <th>Status</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for withdrawal in withdrawals %}
+            <tr>
+                <td>{{ withdrawal.customer_name }}</td>
+                <td>{{ withdrawal.fixed_gl_no }}</td>
+                <td>{{ withdrawal.fixed_ac_no }}</td>
+                <td>{{ withdrawal.withdrawal_amount }}</td>
+                <td>{{ withdrawal.trx_date }}</td>
+                <td>
+                    {% if withdrawal.status == "closed" %}
+                        <span class="badge badge-danger">Closed</span>
+                    {% else %}
+                        <span class="badge badge-success">Active</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if withdrawal.status != "closed" %}
+                        <a href="{% url 'reverse_fixed_deposit_withdrawal' withdrawal.id %}" class="btn btn-danger btn-sm">
+                            Reverse
+                        </a>
+                    {% else %}
+                        <button class="btn btn-secondary btn-sm" disabled>Not Allowed</button>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7" class="text-center">No withdrawals available for reversal.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

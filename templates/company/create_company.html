@@ -44,6 +44,12 @@
                            id="contact_phone_no"
                            name="contact_phone_no" required>
                 </div>
+                <div class="form-group col-md-4">
+                    <label for="contact_email">Contact Email</label>
+                    <input type="text" class="form-control bg-light"
+                           id="contact_email"
+                           name="email" required>
+                </div>
                 <!-- <div class="form-group col-md-4">
                     <label for="session_date">Branch Session Date</label>
                     <input type="date" class="form-control bg-light"
@@ -80,8 +86,9 @@
                            id="session_status"
                            name="session_status">
                 </div>
-                <button type="submit" class="btn btn-success mt-4 shadow-sm">Add</button>
+             
             </div>
+            <button type="submit" class="btn btn-success mt-4 shadow-sm">Add</button>
             <a href="{% url 'company_list' %}" style="color: green; font-weight: bold;">Back to Company List</a>
         </form>
     </div>

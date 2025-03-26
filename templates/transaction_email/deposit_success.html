@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transfer Successful</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+            color: #333;
+        }
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 30px;
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e0e0e0;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            font-size: 24px;
+            font-weight: bold;
+            color: #4CAF50; /* Green */
+            margin: 0;
+        }
+        .header p {
+            font-size: 16px;
+            color: #666;
+            margin-top: 10px;
+        }
+        .content {
+            font-size: 16px;
+            line-height: 1.6;
+            color: #444;
+        }
+        .content p {
+            margin: 15px 0;
+        }
+        .highlight {
+            font-weight: bold;
+            color: #4CAF50; /* Green */
+        }
+        .details {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #f9f9f9; /* Light gray background */
+            border-radius: 8px;
+            border: 1px solid #e0e0e0; /* Light gray border */
+        }
+        .details h2 {
+            font-size: 18px;
+            color: #333; /* Dark gray */
+            margin-bottom: 15px;
+        }
+        .details p {
+            margin: 10px 0;
+            color: #555;
+        }
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 14px;
+            color: #777;
+            border-top: 1px solid #e0e0e0;
+            padding-top: 20px;
+        }
+        .footer p {
+            margin: 5px 0;
+        }
+        .button {
+            display: inline-block;
+            margin: 25px 0;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            color: #fff;
+            background: linear-gradient(135deg, #4CAF50, #45a049); /* Green gradient */
+            border-radius: 6px;
+            text-decoration: none;
+            text-align: center;
+        }
+        .button:hover {
+            background: linear-gradient(135deg, #45a049, #4CAF50); /* Green gradient hover */
+        }
+        .icon {
+            width: 60px;
+            height: 60px;
+            margin: 0 auto 20px;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <!-- Add a checkmark icon (you can use an image or an icon library like FontAwesome) -->
+            <img src="https://cdn-icons-png.flaticon.com/512/190/190411.png" alt="Success Icon" class="icon">
+            <h1>Transfer Successful</h1>
+            <p>Your transaction has been processed successfully.</p>
+        </div>
+        <div class="content">
+            <p>Dear <span class="highlight">{{ customer_name }}</span>,</p>
+            <p>Your transfer of <span class="highlight">{{ amount }}</span> is successful. Your available balance is <span class="highlight">{{ balance }}</span>.</p>
+            
+            <div class="details">
+                <h2>Transfer Details:</h2>
+                <p><strong>Name:</strong> {{ recipient_name }}</p>
+                <p><strong>Bank:</strong> {{ bank_name }}</p>
+                <p><strong>Account Number:</strong>{{ gl_number }} {{ account_number }}</p>
+                <p><strong>Amount:</strong> {{ amount }}</p>
+                <p><strong>Transaction No.:</strong> {{ transaction_number }}</p>
+                <p><strong>Transaction Date:</strong> {{ transaction_date }}</p>
+            </div>
+
+            <a href="#" class="button">View Account</a>
+        </div>
+        <div class="footer">
+            <p>Best regards,</p>
+            <p><strong>{{ company_name }}</strong></p>
+            <p>Contact us: support@yourbank.com | +123 456 7890</p>
+        </div>
+    </div>
+</body>
+</html>

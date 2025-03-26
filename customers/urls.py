@@ -31,7 +31,7 @@ urlpatterns = [
     path('customer/<int:pk>/', views.customer_detail, name='customer_detail'),
     path('transactions/<str:gl_no>/<str:ac_no>/', views.transaction_list, name='transaction_list'),
     path("register-fixed-deposit-account/", views.register_fixed_deposit_account, name="register_fixed_deposit_account"),
-
+    path("customer-sms-email-alert/", views.customer_sms_email_alert, name="customer_sms_email_alert"),
 
 ]
    
