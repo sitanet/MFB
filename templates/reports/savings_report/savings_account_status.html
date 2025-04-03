@@ -1,262 +1,408 @@
 {% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
 
 {% block content %}
+{% include 'includes/alerts.html' %}
 
 <style>
+    :root {
+        --primary: #3498db;
+        --secondary: #2c3e50;
+        --success: #27ae60;
+        --danger: #e74c3c;
+        --light: #ecf0f1;
+        --dark: #34495e;
+        --gray: #95a5a6;
+    }
+
+    .report-container {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+    }
+
+    .report-header {
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        color: white;
+        padding: 1.5rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .report-title {
+        font-weight: 600;
+        letter-spacing: 0.5px;
+    }
+
+    .report-subtitle {
+        font-weight: 300;
+        opacity: 0.9;
+    }
+
+    .report-period {
+        background: var(--light);
+        padding: 1rem;
+        border-radius: 5px;
+        margin: 1.5rem 0;
+    }
+
+    .report-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        font-size: 0.9rem;
+    }
+
+    .report-table thead th {
+        background: var(--secondary);
+        color: white;
+        padding: 0.75rem 1rem;
+        font-weight: 500;
+        position: sticky;
+        top: 0;
+    }
+
+    .report-table tbody td {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid #eee;
+        vertical-align: middle;
+    }
+
+    .report-table tbody tr:hover {
+        background: rgba(52, 152, 219, 0.05);
+    }
+
     .total-row {
-        border-bottom: 3px solid #000;
-        border-top: 3px solid #000;
-        background-color: #f8f9fa;
-        color: #212529;
-        font-weight: bold;
+        background: var(--light);
+        font-weight: 600;
+    }
+
+    .total-row td {
+        border-top: 2px solid var(--dark);
+        border-bottom: 2px solid var(--dark);
     }
 
     .subtotal-row {
         background-color: #e9ecef;
-        color: #0370dd;
+        font-weight: 500;
     }
 
-    .count-row {
+    .product-header {
         background-color: #d4edda;
-        color: #155724;
+        font-weight: 500;
     }
 
-    .info-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-bottom: 20px;
+    .form-container {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
     }
 
-    .info-table td {
-        padding: 5px;
+    .btn-print {
+        background: var(--secondary);
         border: none;
-        vertical-align: top;
     }
 
-    .info-table .info-label {
-        font-weight: bold;
+    .btn-print:hover {
+        background: var(--dark);
     }
 
-    .info-section {
-        margin-bottom: 20px;
+    .btn-generate {
+        background: var(--success);
+        border: none;
+        padding: 0.5rem 1.5rem;
     }
 
-    .blue-text {
-        color: blue;
-    }
-
-    .print-button {
-        margin-top: 20px;
-        margin-bottom: 20px;
-        display: flex;
-        justify-content: flex-end;
-    }
-
-    @media print {
-        body * {
-            visibility: hidden;
-        }
-
-        .print-area, .print-area * {
-            visibility: visible;
-        }
-
-        .print-area {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            margin: auto;
-        }
-    }
-
-    .date-time {
+    .amount {
+        font-family: 'Courier New', monospace;
         text-align: right;
     }
 
-    .date-time-item {
-        margin: 0;
-        padding: 0;
-        display: inline-block;
-        line-height: 1.2;
+    .days-column {
+        text-align: center;
+    }
+
+    .status-active {
+        color: var(--success);
+        font-weight: 500;
+    }
+
+    .status-inactive {
+        color: var(--danger);
+        font-weight: 500;
+    }
+
+    @media print {
+        .no-print { display: none !important; }
+        .report-header { background: white !important; color: black !important; }
+        .report-table thead th { background: white !important; color: black !important; }
+        body { font-size: 11pt; }
+        .report-table { font-size: 10pt; }
     }
 </style>
 
 <div class="container-fluid">
-    <div class="row column_title">
-        <div class="col-md-12">
-            <div class="page_title">
-                <h2>Savings Account Status</h2>
+    <div class="row mb-4">
+        <div class="col-12 d-flex justify-content-between align-items-center">
+            <h2 class="mb-0">Savings Account Status</h2>
+            {% if account_status_data %}
+            <div class="no-print">
+                <button onclick="window.print()" class="btn btn-print text-white">
+                    <i class="fas fa-print mr-2"></i>Print
+                </button>
             </div>
+            {% endif %}
         </div>
     </div>
 
-    {% if not account_status_data %}
-    <form id="statusForm" method="post" action="{% url 'savings_account_status' %}" class="p-5 shadow-lg rounded rounded-5 mt-4 bg-light">
-        {% csrf_token %}
-        <div class="form-row">
-            <div class="form-group col-md-3">
-                <label for="start_date">Start Date:</label>
-                <input type="date" class="form-control bg-white" name="start_date" id="start_date" value="{{ start_date|date:'Y-m-d' }}">
-            </div>
-            <div class="form-group col-md-3">
-                <label for="end_date">End Date:</label>
-                <input type="date" class="form-control bg-white" name="end_date" id="end_date" value="{{ end_date|date:'Y-m-d' }}">
-            </div>
-            <div class="form-group col-md-3">
-                <label for="branch">Branch:</label>
-                <select class="form-control bg-white" name="branch" id="branch">
-                    <option value="">All Branches</option>
-                    {% for branch in branches %}
-                        <option value="{{ branch.id }}" {% if selected_branch and selected_branch.id == branch.id %}selected{% endif %}>{{ branch.branch_name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="form-group col-md-3">
-                <label for="gl_no">Product:</label>
-                <select class="form-control bg-white" name="gl_no" id="gl_no">
-                    <option value="">All Products</option>
-                    {% for gl_account in gl_accounts %}
-                        <option value="{{ gl_account.gl_no }}" {% if selected_gl_no == gl_account.gl_no %}selected{% endif %}>
-                            {{ gl_account.gl_no }} - {{ gl_account.gl_name }}
-                        </option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="form-group col-md-3">
-                <label for="region">Region:</label>
-                <select class="form-control bg-white" name="region" id="region">
-                    <option value="">All Regions</option>
-                    {% for region in regions %}
-                        <option value="{{ region.id }}" {% if selected_region and selected_region.id == region.id %}selected{% endif %}>
-                            {{ region.region_name }}
-                        </option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="form-group col-md-3">
-                <label for="credit_officer">Account Officer:</label>
-                <select class="form-control bg-white" name="credit_officer" id="credit_officer">
-                    <option value="">All Account Officers</option>
-                    {% for officer in account_officers %}
-                        <option value="{{ officer.id }}" {% if selected_officer and selected_officer.id == officer.id %}selected{% endif %}>
-                            {{ officer.user }}
-                        </option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="form-group col-md-3">
-                <label for="include_non_zero">Include Non-Zero Balance:</label>
-                <input type="checkbox" id="include_non_zero" name="include_non_zero" {% if include_non_zero %}checked{% endif %}>
-            </div>
-            <div class="form-group col-md-3">
-                <label for="exclude_ac_no_one">Exclude Internal Account:</label>
-                <input type="checkbox" id="exclude_ac_no_one" name="exclude_ac_no_one" {% if exclude_ac_no_one %}checked{% endif %}>
+    <div class="row mb-4 no-print">
+        <div class="col-12">
+            <div class="form-container {% if account_status_data %}d-none{% endif %}">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Start Date</label>
+                            <input type="date" class="form-control" name="start_date" 
+                                   value="{{ start_date|date:'Y-m-d' }}" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">End Date</label>
+                            <input type="date" class="form-control" name="end_date" 
+                                   value="{{ end_date|date:'Y-m-d' }}" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Branch</label>
+                            <select class="form-control" name="branch">
+                                <option value="">All Branches</option>
+                                {% for branch in branches %}
+                                <option value="{{ branch.id }}" 
+                                    {% if selected_branch and branch.id == selected_branch.id %}selected{% endif %}>
+                                    {{ branch.branch_name }} ({{ branch.branch_code }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Product</label>
+                            <select class="form-control" name="gl_no">
+                                <option value="">All Products</option>
+                                {% for gl_account in gl_accounts %}
+                                <option value="{{ gl_account.gl_no }}" 
+                                    {% if selected_gl_no == gl_account.gl_no %}selected{% endif %}>
+                                    {{ gl_account.gl_no }} - {{ gl_account.gl_name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Region</label>
+                            <select class="form-control" name="region">
+                                <option value="">All Regions</option>
+                                {% for region in regions %}
+                                <option value="{{ region.id }}" 
+                                    {% if selected_region and region.id == selected_region.id %}selected{% endif %}>
+                                    {{ region.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Account Officer</label>
+                            <select class="form-control" name="credit_officer">
+                                <option value="">All Officers</option>
+                                {% for officer in account_officers %}
+                                <option value="{{ officer.id }}" 
+                                    {% if selected_officer and officer.id == selected_officer.id %}selected{% endif %}>
+                                    {{ officer.user.get_full_name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="include_non_zero" 
+                                       name="include_non_zero" {% if include_non_zero %}checked{% endif %}>
+                                <label class="form-check-label" for="include_non_zero">
+                                    Include Non-Zero Only
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="exclude_ac_no_one" 
+                                       name="exclude_ac_no_one" {% if exclude_ac_no_one %}checked{% endif %}>
+                                <label class="form-check-label" for="exclude_ac_no_one">
+                                    Exclude Internal Accounts
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-12 text-end">
+                            <button type="submit" class="btn btn-generate text-white">
+                                <i class="fas fa-file-alt mr-2"></i>Generate Report
+                            </button>
+                        </div>
+                    </div>
+                </form>
             </div>
         </div>
-        <button type="submit" class="btn btn-success mt-4 shadow-sm">Filter</button>
-    </form>
-    {% endif %}
+    </div>
 
     {% if account_status_data %}
-    <div class="print-button">
-        <button class="btn btn-primary" onclick="window.print()">Print Account Status</button>
-    </div>
+    <div class="row">
+        <div class="col-12">
+            <div class="report-container">
+                <div class="report-header">
+                    <h3 class="report-title">SAVINGS ACCOUNT STATUS</h3>
+                    <h5 class="report-subtitle mb-0">
+                        {% if company %}
+                            {{ company.name|upper }}
+                        {% else %}
+                            ALL BRANCHES
+                        {% endif %}
+                        {% if selected_branch %} | {{ selected_branch.branch_name|upper }} ({{ selected_branch.branch_code }}){% endif %}
+                    </h5>
+                </div>
 
-    <div class="card mt-5 shadow-sm print-area">
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-12">
-                    <div class="date-time">
-                        <p class="date-time-item">{{ current_datetime|date:"d/m/Y" }}</p><br>
-                        <p class="date-time-item">{{ current_datetime|date:"h:i:s A" }}</p>
+                <div class="p-4">
+                    <div class="report-period">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <strong>Period:</strong> 
+                                {% if start_date %}{{ start_date|date:"F d, Y" }}{% else %}Start{% endif %} to 
+                                {% if end_date %}{{ end_date|date:"F d, Y" }}{% else %}End{% endif %}
+                            </div>
+                            <div class="col-md-6 text-end">
+                                <strong>Generated:</strong> 
+                                {% now "F d, Y h:i A" %}
+                            </div>
+                            {% if selected_gl_no %}
+                            <div class="col-md-6">
+                                {% for gl_no, data in account_status_data.items %}
+                                    {% if forloop.first %}
+                                        <strong>Product:</strong> {{ gl_no }} - {{ data.gl_name }}
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            {% if selected_region %}
+                            <div class="col-md-6 text-end">
+                                <strong>Region:</strong> {{ selected_region.name }}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="report-table">
+                            <thead>
+                                <tr>
+                                    <th>GL No</th>
+                                    <th>Account No</th>
+                                    <th>Customer Name</th>
+                                    <th>Address</th>
+                                    <th class="text-end">Balance</th>
+                                    <th>Last Transaction</th>
+                                    <th class="days-column">Inactive Days</th>
+                                    <th>Registered</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for gl_no, data in account_status_data.items %}
+                                    <tr class="product-header">
+                                        <td colspan="9">
+                                            {{ gl_no }} - {{ data.gl_name }}
+                                            <span style="float: right;">
+                                                {{ data.count }} accounts
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    {% for account in data.accounts %}
+                                    <tr>
+                                        <td>{{ account.gl_no }}</td>
+                                        <td>{{ account.ac_no }}</td>
+                                        <td>{{ account.first_name }} {{ account.middle_name }} {{ account.last_name }}</td>
+                                        <td>{{ account.address }}</td>
+                                        <td class="amount">{{ account.account_balance|floatformat:2|intcomma }}</td>
+                                        <td>{{ account.last_trx_date|date:"M d, Y" }}</td>
+                                        <td class="days-column">{{ account.days_without_activity }}</td>
+                                        <td>{{ account.reg_date|date:"M d, Y" }}</td>
+                                        <td class="{% if account.status == 'Active' %}status-active{% else %}status-inactive{% endif %}">
+                                            {{ account.status }}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                    <tr class="subtotal-row">
+                                        <td colspan="4" class="text-end"><strong>Subtotal for {{ gl_no }}</strong></td>
+                                        <td class="amount"><strong>{{ data.subtotal|floatformat:2|intcomma }}</strong></td>
+                                        <td colspan="4"></td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot>
+                                <tr class="total-row">
+                                    <td colspan="4" class="text-end"><strong>Grand Total</strong></td>
+                                    <td class="amount"><strong>{{ grand_total|floatformat:2|intcomma }}</strong></td>
+                                    <td colspan="4"></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+
+                    <div class="mt-4 text-muted small">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <strong>Note:</strong> 
+                                Days without activity calculated as of {% now "F d, Y" %}.
+                                Negative balances indicate overdrawn accounts.
+                            </div>
+                            <div>
+                                Generated by: {{ request.user.get_full_name|default:request.user.username }}
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
-
-            <div class="card-header bg-white text-center">
-                <h4>
-                    {% if selected_branch %}
-                        {{ selected_branch.branch_name }}
-                    {% else %}
-                        {{ branches.first.branch_name }}
-                    {% endif %}
-                </h4>
-                <p>{{ selected_branch.office_address }}</p>
-                <h5 style="color: #1115f0;">Savings Account Status</h5>
-                <div class="row justify-content-center">
-                    <div class="col-md-6 text-center">
-                        {% if start_date %}
-                            <p>From: <strong>{{ start_date|date:"d/m/Y" }}</strong></p>
-                        {% endif %}
-                        {% if end_date %}
-                            <p>To: <strong>{{ end_date|date:"d/m/Y" }}</strong></p>
-                        {% endif %}
-                        {% if selected_gl_no %}
-                            <p>GL No: <strong>{{ selected_gl_no }}</strong></p>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-
-            <div class="table-responsive-sm">
-                <table class="table table-bordered">
-                    <thead class="thead-dark">
-                        <tr>
-                            <th>GL No</th>
-                            <th>Account No</th>
-                            <th>Names</th>
-                            <th>Address</th>
-                            <th>Account Balance</th>
-                            <th>Last Transaction Date</th>
-                            <th>Days Without Activity</th>
-                            <th>Registration Date</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for gl_no, data in account_status_data.items %}
-                            <tr class="count-row">
-                                <td colspan="8">
-                                    {{ gl_no }} - {{ data.gl_name }}
-                                    <span style="float: right; font-weight: normal;">
-                                        ({{ data.accounts|length }} Accounts)
-                                    </span>
-                                </td>
-                            </tr>
-                            {% for account in data.accounts %}
-                            <tr>
-                                <td>{{ account.gl_no }}</td>
-                                <td>{{ account.ac_no }}</td>
-                                <td>{{ account.first_name }} {{ account.middle_name }} {{ account.last_name }}</td>
-                                <td>{{ account.address }}</td>
-                                <td>{{ account.account_balance }}</td>
-                                <td>{{ account.last_trx_date|date:"d/m/Y" }}</td>
-                                <td>{{ account.days_without_activity }}</td>
-                                <td>{{ account.reg_date }}</td>
-                                <td>{{ account.status }}</td>
-                            </tr>
-                            {% endfor %}
-                            <tr class="total-row subtotal-row">
-                                <td colspan="7">Subtotal for {{ gl_no }} - {{ data.gl_name }}</td>
-                                <td>{{ data.subtotal }}</td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                    <tfoot>
-                        <tr class="total-row">
-                            <td colspan="7">Grand Total</td>
-                            <td>{{ grand_total }}</td>
-                        </tr>
-                    </tfoot>
-                    
-                </table>
             </div>
         </div>
     </div>
-    {% else %}
-        <p class="text-center mt-4 blue-text">No data available for the selected filters.</p>
     {% endif %}
 </div>
 
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Form validation
+    const form = document.querySelector('form');
+    if (form) {
+        form.addEventListener('submit', function() {
+            const submitBtn = this.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Generating...';
+        });
+    }
+
+    // Date validation
+    const startDate = document.querySelector('input[name="start_date"]');
+    const endDate = document.querySelector('input[name="end_date"]');
+    
+    if (startDate && endDate) {
+        startDate.addEventListener('change', function() {
+            if (endDate.value && this.value > endDate.value) {
+                alert('Start date cannot be after end date');
+                this.value = '';
+            }
+        });
+        
+        endDate.addEventListener('change', function() {
+            if (startDate.value && this.value < startDate.value) {
+                alert('End date cannot be before start date');
+                this.value = '';
+            }
+        });
+    }
+});
+</script>
 {% endblock %}

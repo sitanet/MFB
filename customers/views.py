@@ -35,21 +35,21 @@ from .sms_service import send_sms
 
 
 def customers(request):
-    user_branch = request.user.branch  
+    user_company = request.user.branch.company  # Get the user's company
 
-    cust_data = Account.objects.filter(gl_no__startswith='20', branch=user_branch) \
+    cust_data = Account.objects.filter(gl_no__startswith='20', branch__company=user_company) \
         .exclude(gl_no='20100') \
         .exclude(gl_no='20200') \
         .exclude(gl_no='20000')
 
-    gl_no = Account.objects.filter(branch=user_branch) \
+    gl_no = Account.objects.filter(branch__company=user_company) \
         .values_list('gl_no', flat=True).filter(gl_no__startswith='20')
 
-    officer = Account_Officer.objects.filter(branch=user_branch)
-    region = Region.objects.filter(branch=user_branch)  # Ensure Region has a `branch` field
-    category = Category.objects.filter(branch=user_branch)  # Ensure Category has a `branch` field
-    id_card = Id_card_type.objects.filter(branch=user_branch)  # Ensure Id_card_type has a `branch` field
-    cust_branch = Company.objects.filter(branches=user_branch)  # Ensure `branches` is the related_name in Company
+    officer = Account_Officer.objects.filter(branch__company=user_company)
+    region = Region.objects.filter(branch__company=user_company)  # Ensure Region has a `branch` field
+    category = Category.objects.filter(branch__company=user_company)  # Ensure Category has a `branch` field
+    id_card = Id_card_type.objects.filter(branch__company=user_company)  # Ensure Id_card_type has a `branch` field
+    cust_branch = Company.objects.filter(branches__company=user_company)  # Ensure `branches` is the related_name in Company
 
     customer = Customer.objects.all().order_by('-gl_no', '-ac_no').first()
 

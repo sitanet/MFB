@@ -63,4 +63,7 @@ urlpatterns = [
     
 
     path('portfolio_at_risk_report_view/', views.portfolio_at_risk_report_view, name='portfolio_at_risk_report_view'),
+
+
+    
 ]

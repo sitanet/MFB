@@ -30,17 +30,20 @@ class BalanceSheetForm(forms.Form):
 
 
 
-
 from django import forms
-from company.models import Company
+from company.models import Branch  # Use Branch instead of Company
 from accounts.models import User
 from accounts_admin.models import Account
 
 class TransactionForm(forms.Form):
     start_date = forms.DateField(required=True, widget=forms.TextInput(attrs={'type': 'date'}))
     end_date = forms.DateField(required=True, widget=forms.TextInput(attrs={'type': 'date'}))
-    branch = forms.ModelChoiceField(queryset=Company.objects.all(), required=False)
+    
+    # Use Branch instead of Company
+    branch = forms.ModelChoiceField(queryset=Branch.objects.all(), required=False, empty_label="Select Branch")
+
     user = forms.ModelChoiceField(queryset=User.objects.all(), required=False)
+    
     code = forms.ChoiceField(
         choices=[
             ('DP', 'Deposit'),
@@ -51,11 +54,13 @@ class TransactionForm(forms.Form):
         required=False,
         widget=forms.Select(attrs={'placeholder': 'Select Code'})
     )
+    
     gl_no = forms.ModelChoiceField(
         queryset=Account.objects.all(),
         required=False,
         widget=forms.Select(attrs={'placeholder': 'Select GL Number'})
     )
+    
     ac_no = forms.CharField(
         required=False,
         widget=forms.TextInput(attrs={'type': 'number', 'placeholder': 'Enter Account Number'})
@@ -63,6 +68,46 @@ class TransactionForm(forms.Form):
 
 
 
+
+
+# reports/forms.py
+from django import forms
+from django.utils import timezone
+from company.models import Branch
+from accounts.models import User
+
+class TransactionSequenceReportForm(forms.Form):
+    start_date = forms.DateField(
+        widget=forms.DateInput(attrs={'type': 'date'}),
+        initial=timezone.now().replace(day=1)
+    )
+    end_date = forms.DateField(
+        widget=forms.DateInput(attrs={'type': 'date'}),
+        initial=timezone.now()
+    )
+    branches = forms.ModelMultipleChoiceField(
+        queryset=Branch.objects.all(),
+        required=False,
+        widget=forms.SelectMultiple(attrs={'class': 'form-control'})
+    )
+    users = forms.ModelMultipleChoiceField(
+        queryset=User.objects.all(),
+        required=False,
+        widget=forms.SelectMultiple(attrs={'class': 'form-control'})
+    )
+    TRANSACTION_TYPES = [
+        ('', 'All Types'),
+        ('N', 'Normal'),
+        ('S', 'Savings'),
+        ('L', 'Loan'),
+        ('D', 'Deposit'),
+        ('W', 'Withdrawal'),
+    ]
+    transaction_type = forms.ChoiceField(
+        choices=TRANSACTION_TYPES,
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
 
 from django import forms
 from customers.models import Customer
@@ -81,9 +126,8 @@ from accounts_admin.models import Account
 # forms.py
 
 from django import forms
-from company.models import Company
+from company.models import Branch
 from accounts_admin.models import  Account
-
 
 
 class LoanLedgerCardForm(forms.Form):
@@ -136,7 +180,7 @@ class LoanDisbursementReportForm(forms.Form):
     end_date = forms.DateField(widget=forms.TextInput(attrs={'type': 'date'}))
     
     # Filtering branches from the Company model
-    branch = forms.ModelChoiceField(queryset=Company.objects.all(), required=False, label="Branch")
+    branch = forms.ModelChoiceField(queryset=Branch.objects.all(), required=False, label="Branch")
     
     # Filtering GL numbers from the Account model
     gl_no = forms.ModelChoiceField(queryset=Account.objects.all(), required=False, label="GL Number")
@@ -150,13 +194,45 @@ from django import forms
 class LoanRepaymentReportForm(forms.Form):
     start_date = forms.DateField(widget=forms.DateInput(attrs={'type': 'date'}))
     end_date = forms.DateField(widget=forms.DateInput(attrs={'type': 'date'}))
-    branch = forms.ModelChoiceField(queryset=Company.objects.all(), required=False, empty_label="All Branches")
+    branch = forms.ModelChoiceField(queryset=Branch.objects.all(), required=False, empty_label="All Branches")
     gl_no = forms.ModelChoiceField(queryset=Account.objects.all(), required=False, empty_label="All Products")
 
 
 
 
+class LoanTillSheetForm(forms.Form):
+    start_date = forms.DateField(
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+        label='Start Date'
+    )
+    end_date = forms.DateField(
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+        label='End Date'
+    )
+    branch = forms.ModelChoiceField(
+        queryset=Branch.objects.all().order_by('branch_name'),
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control select2'}),
+        label='Branch',
+        empty_label="All Branches"
+    )
+    gl_no = forms.ModelChoiceField(
+        queryset=Account.objects.all().order_by('gl_name'),
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control select2'}),
+        label='GL Account',
+        empty_label="All Accounts"
+    )
 
+    def clean(self):
+        cleaned_data = super().clean()
+        start_date = cleaned_data.get('start_date')
+        end_date = cleaned_data.get('end_date')
+
+        if start_date and end_date and start_date > end_date:
+            raise forms.ValidationError("End date must be after start date")
+        
+        return cleaned_data
 # forms.py
 
 

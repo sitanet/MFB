@@ -2,110 +2,264 @@
 
 {% block content %}
 <div class="container-fluid">
-    <!-- Page Title -->
-    <div class="row mb-4">
-        <div class="col-md-12">
-            <div class="page_title">
-                <h2 class="text-center">{{ report_title }}</h2>
+    <!-- Report Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-0">{{ report_title }}</h2>
+            <div class="text-muted small">
+                Generated on: {{ current_date|date:"M d, Y H:i" }}
+                {% if reporting_date %} | Reporting Date: {{ reporting_date|date:"M d, Y" }}{% endif %}
+                {% if selected_branch %}
+                    | Branch: 
+                    {% for branch in branches %}
+                        {% if branch.id|stringformat:"s" == selected_branch %}
+                            {{ branch.branch_name }}
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
             </div>
+        </div>
+        <div>
+            <button id="print-report" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-print"></i> Print
+            </button>
+            <button id="export-excel" class="btn btn-sm btn-outline-secondary ml-2">
+                <i class="fas fa-file-excel"></i> Excel
+            </button>
         </div>
     </div>
 
-    <!-- Form Section -->
-    <div id="form-container" class="form-container {% if expected_repayments %}d-none{% endif %}">
-        <div class="card shadow-sm">
+    <!-- Filter Card -->
+    <div class="card mb-4 border-0 shadow-sm">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h6 class="mb-0">Report Filters</h6>
+            <button class="btn btn-sm btn-link" type="button" data-toggle="collapse" data-target="#filterCollapse">
+                <i class="fas fa-sliders-h"></i>
+            </button>
+        </div>
+        <div class="collapse show" id="filterCollapse">
             <div class="card-body">
                 <form method="post" action="{% url 'expected_repayment' %}">
                     {% csrf_token %}
-                    <div class="row">
-                        <div class="col-md-4 form-group">
-                            <label for="id_reporting_date">Reporting Date:</label>
-                            <input type="date" name="reporting_date" id="id_reporting_date" class="form-control" value="{{ reporting_date }}">
+                    <div class="form-row">
+                        <div class="form-group col-md-3">
+                            <label for="id_reporting_date" class="small font-weight-bold">Reporting Date</label>
+                            <input type="date" name="reporting_date" id="id_reporting_date" 
+                                   class="form-control form-control-sm" value="{{ reporting_date|date:'Y-m-d' }}">
                         </div>
-                        <div class="col-md-4 form-group">
-                            <label for="id_branch">Branch:</label>
-                            <select name="branch" id="id_branch" class="form-control">
-                                <option value="">Select Branch</option>
+                        <div class="form-group col-md-3">
+                            <label for="id_branch" class="small font-weight-bold">Branch</label>
+                            <select name="branch" id="id_branch" class="form-control form-control-sm">
+                                <option value="">All Branches</option>
                                 {% for branch in branches %}
-                                    <option value="{{ branch.branch_code }}" {% if selected_branch == branch.branch_code %}selected{% endif %}>{{ branch.branch_name }}</option>
+                                    <option value="{{ branch.id }}" 
+                                        {% if selected_branch == branch.id|stringformat:"s" %}selected{% endif %}>
+                                        {{ branch.branch_code }} - {{ branch.branch_name }}
+                                    </option>
                                 {% endfor %}
                             </select>
                         </div>
-                        <div class="col-md-4 form-group">
-                            <label for="id_gl_no">GL No (with GL Name):</label>
-                            <select name="gl_no" id="id_gl_no" class="form-control">
-                                <option value="">Select GL No</option>
+                        <div class="form-group col-md-3">
+                            <label for="id_gl_no" class="small font-weight-bold">GL Account</label>
+                            <select name="gl_no" id="id_gl_no" class="form-control form-control-sm">
+                                <option value="">All GL Accounts</option>
                                 {% for gl_account in gl_accounts %}
-                                    <option value="{{ gl_account.gl_no }}" {% if selected_gl_no == gl_account.gl_no %}selected{% endif %}>
+                                    <option value="{{ gl_account.gl_no }}" 
+                                        {% if selected_gl_no == gl_account.gl_no %}selected{% endif %}>
                                         {{ gl_account.gl_no }} - {{ gl_account.gl_name }}
                                     </option>
                                 {% endfor %}
                             </select>
                         </div>
-                    </div>
-                    <div class="form-group text-center mt-3">
-                        <button type="submit" class="btn btn-primary">Generate Report</button>
+                        <div class="form-group col-md-3 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary btn-sm w-100">
+                                <i class="fas fa-filter"></i> Apply Filters
+                            </button>
+                        </div>
                     </div>
                 </form>
             </div>
         </div>
     </div>
 
-    <!-- Report Section -->
-    <div id="report-container" class="report-container {% if not expected_repayments %}d-none{% endif %}">
-        {% if expected_repayments %}
-            <div class="card shadow-sm">
+    <!-- Report Summary Cards -->
+    {% if expected_repayments %}
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-left-primary shadow-sm h-100">
                 <div class="card-body">
-                    <div class="report-header mb-4">
-                        <h4 class="text-center">{{ report_title }}</h4>
-                        <p class="text-center mb-1">Date: {{ current_date }}</p>
-                        <p class="text-center">Reporting Date: {{ reporting_date }}</p>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="table table-bordered table-striped">
-                            <thead class="thead-dark">
-                                <tr>
-                                    <th>GL No</th>
-                                    <th>Account No</th>
-                                    <th>Customer Name</th>
-                                    <th>Loan Amount</th>
-                                    <th>Total Interest</th>
-                                    <th>Total Principal Paid</th>
-                                    <th>Total Interest Paid</th>
-                                    <th>Expected Principal Repayment</th>
-                                    <th>Expected Interest Repayment</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for repayment in expected_repayments %}
-                                    <tr>
-                                        <td>{{ repayment.gl_no }}</td>
-                                        <td>{{ repayment.ac_no }}</td>
-                                        <td>{{ repayment.customer_name }}</td>
-                                        <td>{{ repayment.loan_amount }}</td>
-                                        <td>{{ repayment.total_interest }}</td>
-                                        <td>{{ repayment.total_principal_paid }}</td>
-                                        <td>{{ repayment.total_interest_paid }}</td>
-                                        <td>{{ repayment.expected_principal_repayment }}</td>
-                                        <td>{{ repayment.expected_interest_repayment }}</td>
-                                    </tr>
-                                {% endfor %}
-                            </tbody>
-                            <tfoot class="thead-dark">
-                                <tr>
-                                    <td colspan="4" class="font-weight-bold">Grand Total:</td>
-                                    <td>{{ grand_total_interest }}</td>
-                                    <td>{{ grand_total_principal_paid }}</td>
-                                    <td>{{ grand_total_interest_paid }}</td>
-                                    <td>{{ grand_total_repayment }}</td>
-                                    <td></td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
+                    <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Total Loans</div>
+                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{ expected_repayments|length }}</div>
                 </div>
             </div>
-        {% endif %}
+        </div>
+        <div class="col-md-3">
+            <div class="card border-left-success shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Total Interest</div>
+                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{ grand_total_interest|floatformat:2 }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-left-warning shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Principal Due</div>
+                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{ grand_total_repayment|floatformat:2 }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-left-danger shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">Total Due</div>
+                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{ grand_total_expected|floatformat:2 }}</div>
+                </div>
+            </div>
+        </div>
     </div>
+    {% endif %}
+
+    <!-- Main Report Table -->
+    {% if expected_repayments %}
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover table-sm mb-0" id="reportTable" width="100%" cellspacing="0">
+                    <thead class="thead-light">
+                        <tr>
+                            <th>GL No</th>
+                            <th>Account No</th>
+                            <th>Customer Name</th>
+                            <th class="text-right">Loan Amount</th>
+                            <th class="text-right">Total Interest</th>
+                            <th class="text-right">Principal Paid</th>
+                            <th class="text-right">Interest Paid</th>
+                            <th class="text-right">Principal Due</th>
+                            <th class="text-right">Interest Due</th>
+                            <th class="text-right">Total Due</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for repayment in expected_repayments %}
+                        <tr>
+                            <td>{{ repayment.gl_no }}</td>
+                            <td>{{ repayment.ac_no }}</td>
+                            <td>{{ repayment.customer_name|truncatechars:20 }}</td>
+                            <td class="text-right">{{ repayment.loan_amount|floatformat:2 }}</td>
+                            <td class="text-right">{{ repayment.total_interest|floatformat:2 }}</td>
+                            <td class="text-right">{{ repayment.total_principal_paid|floatformat:2 }}</td>
+                            <td class="text-right">{{ repayment.total_interest_paid|floatformat:2 }}</td>
+                            <td class="text-right font-weight-bold">{{ repayment.expected_principal_repayment|floatformat:2 }}</td>
+                            <td class="text-right">{{ repayment.expected_interest_repayment|floatformat:2 }}</td>
+                            <td class="text-right font-weight-bold text-danger">{{ repayment.expected_total_repayment|floatformat:2 }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot class="bg-light">
+                        <tr>
+                            <th colspan="3">Totals</th>
+                            <th class="text-right">{{ grand_total_repayment|floatformat:2 }}</th>
+                            <th class="text-right">{{ grand_total_interest|floatformat:2 }}</th>
+                            <th class="text-right">{{ grand_total_principal_paid|floatformat:2 }}</th>
+                            <th class="text-right">{{ grand_total_interest_paid|floatformat:2 }}</th>
+                            <th class="text-right">{{ grand_total_repayment|floatformat:2 }}</th>
+                            <th class="text-right">{{ grand_total_interest_paid|floatformat:2 }}</th>
+                            <th class="text-right">{{ grand_total_expected|floatformat:2 }}</th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info mt-4">
+        <i class="fas fa-info-circle"></i> No repayment data found for the selected criteria. Please adjust your filters and try again.
+    </div>
+    {% endif %}
 </div>
+
+<!-- JavaScript for enhanced functionality -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+$(document).ready(function() {
+    // Print report functionality
+    $('#print-report').click(function() {
+        // Clone the report table
+        var printContents = $('#reportTable').clone();
+        
+        // Create a new window
+        var originalContents = $('body').html();
+        $('body').empty().append(printContents);
+        window.print();
+        $('body').html(originalContents);
+    });
+
+    // Export to Excel functionality
+    $('#export-excel').click(function() {
+        // Get the table
+        var table = document.getElementById('reportTable');
+        
+        // Create workbook
+        var wb = XLSX.utils.table_to_book(table, {sheet:"Repayment Report"});
+        
+        // Generate file and download
+        XLSX.writeFile(wb, 'Expected_Repayment_Report_{{ current_date|date:"Ymd" }}.xlsx');
+    });
+
+    // Initialize DataTable
+    $('#reportTable').DataTable({
+        dom: '<"top"Bf>rt<"bottom"lip><"clear">',
+        buttons: [
+            {
+                extend: 'print',
+                text: '<i class="fas fa-print"></i> Print',
+                title: '{{ report_title }}',
+                messageTop: 'Generated on: {{ current_date|date:"M d, Y H:i" }}',
+                exportOptions: {
+                    columns: ':visible'
+                }
+            },
+            {
+                extend: 'excel',
+                text: '<i class="fas fa-file-excel"></i> Excel',
+                title: '{{ report_title }}',
+                messageTop: 'Generated on: {{ current_date|date:"M d, Y H:i" }}',
+                filename: 'Expected_Repayment_Report_{{ current_date|date:"Ymd" }}'
+            }
+        ],
+        pageLength: 25,
+        order: [[3, 'desc']],  // Default sort by loan amount
+        responsive: true
+    });
+
+    // Auto-focus the first filter field
+    $('#id_reporting_date').focus();
+});
+</script>
+
+<style>
+@media print {
+    body * {
+        visibility: hidden;
+    }
+    #reportTable, #reportTable * {
+        visibility: visible;
+    }
+    #reportTable {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        font-size: 11pt;
+    }
+    .dataTables_info, .dataTables_length, .dataTables_filter {
+        display: none;
+    }
+    table {
+        width: 100% !important;
+        margin: 0 !important;
+    }
+}
+</style>
 {% endblock %}

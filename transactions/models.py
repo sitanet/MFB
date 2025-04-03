@@ -12,7 +12,8 @@ from company.models import Company, Branch
 class Memtrans(models.Model):
     # branch = models.ForeignKey(Branch, on_delete=models.CASCADE, related_name="branch_memtrans", 
     # null=True, blank=True)
-    branch = models.CharField(max_length=20, null=True, blank=True)
+    branch = models.ForeignKey(Branch, on_delete=models.CASCADE, related_name="memtrans_branch", null=True, blank=True)
+
     cust_branch = models.ForeignKey(Branch, on_delete=models.CASCADE, related_name="cust_branch", 
     null=True, blank=True)
     # account = models.ForeignKey(Account, on_delete=models.CASCADE, related_name='memtrans')

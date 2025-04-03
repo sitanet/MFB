@@ -552,6 +552,9 @@ def choose_to_direct_disburse(request):
     # Pass the customers data to the template
     return render(request, 'loans/choose_to_disburse.html', {'customers': customers})
 
+
+
+
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
 
@@ -573,7 +576,6 @@ def loan_disbursement(request, id):
     company_date = company.session_date.strftime('%Y-%m-%d') if company.session_date else ''
     customer_branch = customer.branch
     user_branch = request.user.branch
-
 
     if loan.appli_date:
         appli_date = loan.appli_date.strftime('%Y-%m-%d')
@@ -599,134 +601,193 @@ def loan_disbursement(request, id):
                     messages.warning(request, 'Transaction date cannot be greater than the session date.')
                     return redirect('choose_to_disburse')
                 
-                customer_id = customer.id  # Assuming the customer ID is in the form data
-                with transaction.atomic():
-                    if account.int_to_recev_gl_dr and account.int_to_recev_ac_dr and account.unearned_int_inc_gl and account.unearned_int_inc_ac:
-                        # Generate a unique transaction number
-                        unique_trx_no = generate_loan_disbursement_id()
+                # Define all required GL/AC parameters from Account model
+                required_gl_ac_params = [
+                    ('interest_gl', account.interest_gl),
+                    ('interest_ac', account.interest_ac),
+                    ('pen_gl_no', account.pen_gl_no),
+                    ('pen_ac_no', account.pen_ac_no),
+                    ('prov_cr_gl_no', account.prov_cr_gl_no),
+                    ('prov_cr_ac_no', account.prov_cr_ac_no),
+                    ('prov_dr_gl_no', account.prov_dr_gl_no),
+                    ('prov_dr_ac_no', account.prov_dr_ac_no),
+                    ('writ_off_dr_gl_no', account.writ_off_dr_gl_no),
+                    ('writ_off_dr_ac_no', account.writ_off_dr_ac_no),
+                    ('writ_off_cr_gl_no', account.writ_off_cr_gl_no),
+                    ('writ_off_cr_ac_no', account.writ_off_cr_ac_no),
+                    ('loan_com_gl_no', account.loan_com_gl_no),
+                    ('loan_com_ac_no', account.loan_com_ac_no),
+                    ('int_to_recev_gl_dr', account.int_to_recev_gl_dr),
+                    ('int_to_recev_ac_dr', account.int_to_recev_ac_dr),
+                    ('unearned_int_inc_gl', account.unearned_int_inc_gl),
+                    ('unearned_int_inc_ac', account.unearned_int_inc_ac),
+                    ('loan_com_gl_vat', account.loan_com_gl_vat),
+                    ('loan_com_ac_vat', account.loan_com_ac_vat),
+                    ('loan_proc_gl_vat', account.loan_proc_gl_vat),
+                    ('loan_proc_ac_vat', account.loan_proc_ac_vat),
+                    ('loan_appl_gl_vat', account.loan_appl_gl_vat),
+                    ('loan_appl_ac_vat', account.loan_appl_ac_vat),
+                    ('loan_commit_gl_vat', account.loan_commit_gl_vat),
+                    ('loan_commit_ac_vat', account.loan_commit_ac_vat)
+                ]
 
-                        # Debit transaction
-                        debit_transaction = Memtrans(
-                            branch=user_branch,  # Use the loan's branch (could also use user.branch)
-                            cust_branch=customer_branch,
-                            customer_id=customer_id,
-                            cycle=loan.cycle,
+                # Check if all required parameters are defined
+                missing_params = [name for name, value in required_gl_ac_params if not value]
+                if missing_params:
+                    messages.warning(
+                        request, 
+                        f'Please define all required loan parameters before disbursement. Missing: {", ".join(missing_params)}'
+                    )
+                    return redirect('choose_to_disburse')
+
+                # Verify all GL/AC numbers exist in Customer model
+                missing_customer_accounts = []
+                for name, gl_no in required_gl_ac_params[::2]:  # Get GL numbers (every even index)
+                    ac_name = name.replace('_gl', '_ac')  # Convert GL name to AC name
+                    ac_no = next((value for n, value in required_gl_ac_params if n == ac_name), None)
+                    
+                    if gl_no and ac_no:  # Only check if both GL and AC are defined
+                        try:
+                            Customer.objects.get(gl_no=gl_no, ac_no=ac_no)
+                        except Customer.DoesNotExist:
+                            missing_customer_accounts.append(f"{gl_no}/{ac_no}")
+
+                if missing_customer_accounts:
+                    messages.warning(
+                        request,
+                        f'The following GL/AC numbers do not exist in customer records: {", ".join(missing_customer_accounts)}'
+                    )
+                    return redirect('choose_to_disburse')
+
+                customer_id = customer.id
+                with transaction.atomic():
+                    # Generate a unique transaction number
+                    unique_trx_no = generate_loan_disbursement_id()
+
+                    # Debit transaction
+                    debit_transaction = Memtrans(
+                        branch=user_branch,
+                        cust_branch=customer_branch,
+                        customer_id=customer_id,
+                        cycle=loan.cycle,
+                        gl_no=loan.gl_no,
+                        ac_no=loan.ac_no,
+                        amount=-loan.loan_amount,
+                        description='Loan Disbursement - Debit',
+                        type='D',
+                        account_type='L',
+                        code='LD',
+                        sys_date=timezone.now(),
+                        ses_date=form.cleaned_data['ses_date'],
+                        app_date=form.cleaned_data['app_date'],
+                        trx_no=unique_trx_no,
+                        user=request.user
+                    )
+                    debit_transaction.save()
+
+                    # Credit transaction
+                    credit_transaction = Memtrans(
+                        branch=user_branch,
+                        cust_branch=customer_branch,
+                        customer_id=customer_id,
+                        cycle=loan.cycle,
+                        gl_no=form.cleaned_data['gl_no_cashier'],
+                        ac_no=form.cleaned_data['ac_no_cashier'],
+                        amount=loan.loan_amount,
+                        description=f'{customer.first_name}, {customer.last_name}, {customer.gl_no}-{customer.ac_no}',
+                        error='A',
+                        type='C',
+                        account_type='C',
+                        code='LD',
+                        sys_date=timezone.now(),
+                        ses_date=form.cleaned_data['ses_date'],
+                        app_date=form.cleaned_data['app_date'],
+                        trx_no=unique_trx_no,
+                        user=request.user
+                    )
+                    credit_transaction.save()
+
+                    # Calculate loan schedule
+                    loan_schedule = loan.calculate_loan_schedule()
+                    loan.approval_status = 'T'
+                    loan.disb_status = 'T'
+                    loan.cust_gl_no = form.cleaned_data['gl_no_cashier']
+                    loan.disbursement_date = disbursement_date
+                    loan.save()
+
+                    # Insert loan schedule into LoanHist
+                    for payment in loan_schedule:
+                        loanhist_entry = LoanHist(
+                            branch=loan.branch,
                             gl_no=loan.gl_no,
                             ac_no=loan.ac_no,
-                            amount=-loan.loan_amount,
-                            description='Loan Disbursement - Debit',
-                            type='D',
-                            account_type='L',
-                            code='LD',
-                            sys_date=timezone.now(),
-                            ses_date=form.cleaned_data['ses_date'],
-                            app_date=form.cleaned_data['app_date'],
-                            trx_no=unique_trx_no,
-                            user=request.user
-                        )
-                        debit_transaction.save()
-
-                        # Credit transaction
-                        credit_transaction = Memtrans(
-                            branch=user_branch,
-                            cust_branch=customer_branch,  # The branch from the form, or use loan.branch
-                            customer_id=customer_id,
                             cycle=loan.cycle,
-                            gl_no=form.cleaned_data['gl_no_cashier'],
-                            ac_no=form.cleaned_data['ac_no_cashier'],
-                            amount=loan.loan_amount,
-                            description=f'{customer.first_name}, {customer.last_name}, {customer.gl_no}-{customer.ac_no}',
-                            error='A',
-                            type='C',
-                            account_type='C',
-                            code='LD',
-                            sys_date=timezone.now(),
-                            ses_date=form.cleaned_data['ses_date'],
-                            app_date=form.cleaned_data['app_date'],
-                            trx_no=unique_trx_no,
-                            user=request.user
+                            period=payment['period'],
+                            trx_date=payment['payment_date'],
+                            trx_type='LD',
+                            trx_naration='Repayment Due',
+                            principal=payment['principal_payment'],
+                            interest=payment['interest_payment'],
+                            penalty=0,
+                            trx_no=unique_trx_no
                         )
-                        credit_transaction.save()
+                        loanhist_entry.save()
 
-                        # Calculate loan schedule
-                        loan_schedule = loan.calculate_loan_schedule()
-                        loan.disb_status = 'T'
-                        loan.cust_gl_no = form.cleaned_data['gl_no_cashier']
-                        loan.disbursement_date = disbursement_date
-                        loan.save()
+                    # Sum the interest from LoanHist
+                    total_interest = LoanHist.objects.filter(
+                        gl_no=loan.gl_no, 
+                        ac_no=loan.ac_no, 
+                        cycle=loan.cycle
+                    ).aggregate(total_interest=Sum('interest'))['total_interest'] or 0
 
-                        # Insert loan schedule into LoanHist
-                        for payment in loan_schedule:
-                            loanhist_entry = LoanHist(
-                                branch=loan.branch,  # Use the loan's branch
-                                gl_no=loan.gl_no,
-                                ac_no=loan.ac_no,
-                                cycle=loan.cycle,
-                                period=payment['period'],
-                                trx_date=payment['payment_date'],
-                                trx_type='LD',
-                                trx_naration='Repayment Due',
-                                principal=payment['principal_payment'],
-                                interest=payment['interest_payment'],
-                                penalty=0,
-                                trx_no=unique_trx_no
-                            )
-                            loanhist_entry.save()
+                    # Update loan balance in Loans model
+                    loan.total_loan = loan.loan_amount + total_interest
+                    loan.total_interest = total_interest
+                    loan.save()
 
-                        # Sum the interest from LoanHist
-                        total_interest = LoanHist.objects.filter(gl_no=loan.gl_no, ac_no=loan.ac_no, cycle=loan.cycle).aggregate(total_interest=Sum('interest'))['total_interest'] or 0
+                    # Additional debit and credit transactions for interest
+                    debit_transaction = Memtrans(
+                        branch=user_branch,
+                        cust_branch=customer_branch,
+                        customer_id=customer_id,
+                        cycle=loan.cycle,
+                        gl_no=account.int_to_recev_gl_dr,
+                        ac_no=account.int_to_recev_ac_dr,
+                        amount=-loan.total_interest,
+                        description=f'{customer.first_name}, {customer.last_name}, {customer.gl_no}-{customer.ac_no}, Total Interest',
+                        type='D',
+                        account_type='I',
+                        code='LD',
+                        sys_date=timezone.now(),
+                        ses_date=form.cleaned_data['ses_date'],
+                        app_date=form.cleaned_data['app_date'],
+                        trx_no=unique_trx_no,
+                        user=request.user
+                    )
+                    debit_transaction.save()
 
-                        # Update loan balance in Loans model
-                        loan.total_loan = loan.loan_amount + total_interest
-                        loan.total_interest = total_interest
-                        loan.save()
+                    credit_transaction = Memtrans(
+                        branch=user_branch,
+                        cust_branch=customer_branch,
+                        customer_id=customer_id,
+                        cycle=loan.cycle,
+                        gl_no=account.unearned_int_inc_gl,
+                        ac_no=account.unearned_int_inc_ac,
+                        amount=loan.total_interest,
+                        description=f'{customer.first_name}, {customer.last_name}, {customer.gl_no}-{customer.ac_no}, Total Interest on Loan - Credit',
+                        type='C',
+                        account_type='I',
+                        code='LD',
+                        sys_date=timezone.now(),
+                        ses_date=form.cleaned_data['ses_date'],
+                        app_date=form.cleaned_data['app_date'],
+                        trx_no=unique_trx_no,
+                        user=request.user
+                    )
+                    credit_transaction.save()
 
-                        # Additional debit and credit transactions for interest
-                        debit_transaction = Memtrans(
-                            branch=user_branch,
-                            cust_branch=customer_branch,  # Use the loan's branch
-                            customer_id=customer_id,
-                            cycle=loan.cycle,
-                            gl_no=account.int_to_recev_gl_dr,
-                            ac_no=account.int_to_recev_ac_dr,
-                            amount=-loan.total_interest,
-                            description=f'{customer.first_name}, {customer.last_name}, {customer.gl_no}-{customer.ac_no}, Total Interest',
-                            type='D',
-                            account_type='I',
-                            code='LD',
-                            sys_date=timezone.now(),
-                            ses_date=form.cleaned_data['ses_date'],
-                            app_date=form.cleaned_data['app_date'],
-                            trx_no=unique_trx_no,
-                            user=request.user
-                        )
-                        debit_transaction.save()
-
-                        credit_transaction = Memtrans(
-                            branch=user_branch, 
-                            cust_branch=customer_branch, # Use the branch from the form, or use loan.branch
-                            customer_id=customer_id,
-                            cycle=loan.cycle,
-                            gl_no=account.unearned_int_inc_gl,
-                            ac_no=account.unearned_int_inc_ac,
-                            amount=loan.total_interest,
-                            description=f'{customer.first_name}, {customer.last_name}, {customer.gl_no}-{customer.ac_no}, Total Interest on Loan - Credit',
-                            type='C',
-                            account_type='I',
-                            code='LD',
-                            sys_date=timezone.now(),
-                            ses_date=form.cleaned_data['ses_date'],
-                            app_date=form.cleaned_data['app_date'],
-                            trx_no=unique_trx_no,
-                            user=request.user
-                        )
-                        credit_transaction.save()
-
-                        messages.success(request, 'Loan Disbursed successfully!')
-                        return redirect('choose_to_disburse')
-                    else:
-                        messages.warning(request, 'Please define all required loan parameters before disbursement, check Loan Settings.')
-                        return redirect('choose_to_disburse')
+                    messages.success(request, 'Loan Disbursed successfully!')
+                    return redirect('choose_to_disburse')
         else:
             initial_data = {'gl_no': loan.gl_no}
             form = LoansModifyForm(instance=loan, initial=initial_data)
@@ -748,8 +809,6 @@ def loan_disbursement(request, id):
         'appli_date': appli_date,
         'approve_date': approve_date,
     })
-
-
 
 from django.db.models import Sum
 

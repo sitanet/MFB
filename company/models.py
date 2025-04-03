@@ -1,6 +1,9 @@
 from django.utils import timezone
 from django.db import models
 
+from django.db import models
+from django.utils.timezone import now  # Import the 'now' function
+
 class Company(models.Model):
     company_name = models.CharField(max_length=100, null=True, blank=True)
  
@@ -23,8 +26,6 @@ class Company(models.Model):
             return str(self.company_name)
     
 
-from django.db import models
-from django.utils.timezone import now  # Import the 'now' function
 
 
 class Branch(models.Model):

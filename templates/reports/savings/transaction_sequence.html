@@ -1,0 +1,136 @@
+<!-- reports/templates/reports/transaction_sequence.html -->
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid">
+    <h2>{{ report_title }}</h2>
+    
+    <!-- Filter Form -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h4>Filters</h4>
+        </div>
+        <div class="card-body">
+            <form method="get">
+                <div class="row">
+                    <div class="col-md-3">
+                        {{ form.start_date.label_tag }}
+                        {{ form.start_date }}
+                    </div>
+                    <div class="col-md-3">
+                        {{ form.end_date.label_tag }}
+                        {{ form.end_date }}
+                    </div>
+                    <div class="col-md-3">
+                        {{ form.branches.label_tag }}
+                        {{ form.branches }}
+                    </div>
+                    <div class="col-md-3">
+                        {{ form.users.label_tag }}
+                        {{ form.users }}
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-md-3">
+                        {{ form.transaction_type.label_tag }}
+                        {{ form.transaction_type }}
+                    </div>
+                    <div class="col-md-3 align-self-end">
+                        <button type="submit" class="btn btn-primary">Generate Report</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Report Results -->
+    {% if transactions %}
+    <div class="card">
+        <div class="card-header">
+            <div class="d-flex justify-content-between">
+                <h4>Report Results</h4>
+                <a href="?{{ request.GET.urlencode }}&export=csv" class="btn btn-sm btn-success">Export to CSV</a>
+            </div>
+        </div>
+        <div class="card-body">
+            <!-- Summary Section -->
+            {% if summary %}
+            <div class="mb-4">
+                <h5>Summary by Date</h5>
+                <table class="table table-bordered table-sm">
+                    <thead class="thead-light">
+                        <tr>
+                            <th>Session Date</th>
+                            <th>Total Transactions</th>
+                            <th>Total Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in summary %}
+                        <tr>
+                            <td>{{ item.ses_date|date:"Y-m-d" }}</td>
+                            <td>{{ item.total_transactions }}</td>
+                            <td>{{ item.total_amount|floatformat:2 }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+            
+            <!-- Detailed Transactions -->
+            <h5>Transaction Details</h5>
+            <div class="table-responsive">
+                <table class="table table-bordered table-striped table-sm">
+                    <thead class="thead-dark">
+                        <tr>
+                            <th>Date</th>
+                            <th>Trx No</th>
+                            <th>Branch</th>
+                            <th>Customer</th>
+                            <th>GL/AC No</th>
+                            <th>Amount</th>
+                            <th>Description</th>
+                            <th>Type</th>
+                            <th>User</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for trx in transactions %}
+                        <tr>
+                            <td>{{ trx.ses_date|date:"Y-m-d" }}</td>
+                            <td>{{ trx.trx_no }}</td>
+                            <td>{{ trx.branch }}</td>
+                            <td>
+                                {% if trx.customer %}
+                                    {{ trx.customer.name }}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if trx.gl_no %}{{ trx.gl_no }}{% endif %}
+                                {% if trx.ac_no %}/{{ trx.ac_no }}{% endif %}
+                            </td>
+                            <td class="text-right">{{ trx.amount|floatformat:2 }}</td>
+                            <td>{{ trx.description|default:"-" }}</td>
+                            <td>{{ trx.get_type_display }}</td>
+                            <td>
+                                {% if trx.user %}
+                                    {{ trx.user.get_full_name|default:trx.user.username }}
+                                {% else %}
+                                    System
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% elif request.GET %}
+    <div class="alert alert-info">No transactions found matching your criteria.</div>
+    {% endif %}
+</div>
+{% endblock %}

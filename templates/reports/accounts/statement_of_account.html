@@ -1,213 +1,325 @@
 {% extends 'base.html' %}
-
 {% load static %}
+{% load humanize %}
 
 {% block content %}
-    {% include 'includes/alerts.html' %}
+{% include 'includes/alerts.html' %}
 
-    <style>
-        /* Add your CSS styles here */
-        .container-fluid {
-            padding: 20px;
-        }
+<style>
+    :root {
+        --primary: #3498db;
+        --secondary: #2c3e50;
+        --success: #27ae60;
+        --danger: #e74c3c;
+        --light: #ecf0f1;
+        --dark: #34495e;
+        --gray: #95a5a6;
+    }
 
-        .column_title {
-            margin-bottom: 20px;
-        }
+    .report-container {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+    }
 
-        .page_title h2 {
-            margin: 0;
-            color: #333;
-        }
+    .report-header {
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        color: white;
+        padding: 1.5rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
 
-        h5 {
-            margin: 10px 0;
-            color: #555;
-        }
+    .report-title {
+        font-weight: 600;
+        letter-spacing: 0.5px;
+    }
 
-        .table-section {
-            margin-top: 20px;
-        }
+    .report-subtitle {
+        font-weight: 300;
+        opacity: 0.9;
+    }
 
-        p {
-            margin-bottom: 5px;
-            color: #666;
-        }
+    .client-name {
+        background: rgba(255, 255, 255, 0.2);
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        border-radius: 4px;
+        margin: 0.5rem 0;
+    }
 
-        .table {
-            width: 100%;
-            margin-top: 10px;
-        }
+    .report-period {
+        background: var(--light);
+        padding: 1rem;
+        border-radius: 5px;
+        margin: 1.5rem 0;
+    }
 
-        th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-        }
+    .report-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        font-size: 0.9rem;
+    }
 
-        th {
-            background-color: #333;
-            color: #fff;
-        }
+    .report-table thead th {
+        background: var(--secondary);
+        color: white;
+        padding: 0.75rem 1rem;
+        font-weight: 500;
+        position: sticky;
+        top: 0;
+    }
 
-        tr:hover {
-            background-color: #f5f5f5;
-        }
+    .report-table tbody td {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid #eee;
+        vertical-align: middle;
+    }
 
-        .total-row {
-            border-bottom: 3px solid #000;
-            border-top: 3px solid #000;
-        }
+    .report-table tbody tr:hover {
+        background: rgba(52, 152, 219, 0.05);
+    }
 
-        .total-row td {
-            font-weight: bold;
-            color: #333;
-        }
+    .text-success { color: var(--success); }
+    .text-danger { color: var(--danger); }
 
-        .office-address {
-            margin-bottom: 20px; /* Adjust the value as needed */
-        }
+    .total-row {
+        background: var(--light);
+        font-weight: 600;
+    }
 
-        /* Print-specific styles */
-        @media print {
-            .container-fluid {
-                padding: 0;
-            }
+    .total-row td {
+        border-top: 2px solid var(--dark);
+        border-bottom: 2px solid var(--dark);
+    }
 
-            .table {
-                border-collapse: collapse;
-            }
+    .form-container {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
 
-            th, td {
-                border: 1px solid #000;
-            }
+    .btn-print {
+        background: var(--secondary);
+        border: none;
+    }
 
-            .page_title {
-                text-align: center;
-                margin-bottom: 20px;
-            }
+    .btn-print:hover {
+        background: var(--dark);
+    }
 
-            .no-print {
-                display: none;
-            }
-        }
+    .btn-generate {
+        background: var(--success);
+        border: none;
+        padding: 0.5rem 1.5rem;
+    }
 
-        /* Button styling */
-        .print-button {
-            background-color: #149414; /* Navy green color */
-            color: #fff; /* White text */
-            border: none; /* Remove default border */
-            border-radius: 5px; /* Rounded corners */
-            padding: 10px 20px; /* Padding for better click area */
-            font-size: 16px; /* Font size */
-            cursor: pointer; /* Pointer cursor on hover */
-            transition: background-color 0.3s, box-shadow 0.3s; /* Smooth transition */
-        }
+    .amount {
+        font-family: 'Courier New', monospace;
+        text-align: right;
+    }
 
-        .print-button:hover {
-            background-color: #00332e; /* Darker navy green on hover */
-        }
+    @media print {
+        .no-print { display: none !important; }
+        .report-header { background: white !important; color: black !important; }
+        .report-table thead th { background: white !important; color: black !important; }
+        body { font-size: 11pt; }
+        .report-table { font-size: 10pt; }
+    }
+</style>
 
-        .print-button:focus {
-            outline: none; /* Remove default focus outline */
-        }
-
-        .print-button:active {
-            box-shadow: 0 0 5px rgba(0, 0, 0, 0.2); /* Shadow effect on click */
-        }
-    </style>
-
-    <div class="container-fluid">
-        <div class="row column_title">
-            <div class="col-md-12">
-                <div class="page_title">
-                    <h2>Statement of Account</h2>
-                </div>
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12 d-flex justify-content-between align-items-center">
+            <h2 class="mb-0">Statement of Account</h2>
+            <div class="no-print">
+                <button onclick="window.print()" class="btn btn-print text-white">
+                    <i class="fas fa-print mr-2"></i>Print
+                </button>
             </div>
         </div>
+    </div>
 
-        <!-- Print Button -->
-        <div class="text-right no-print">
-            <button class="print-button" onclick="window.print()">Print</button>
-        </div>
-
-        <!-- Statement of Account Content -->
-        <div class="col-md-12">
-            <div class="white_shd full margin_bottom_30">
-                <div class="table_section padding_infor_info">
-                    <div class="row">
-                        <div class="col-md-12 text-center">
-                            <h4>{{ company.company_name }}</h4>
-                            <p>{{ company.branch_name }}</p>
-                            <p class="office-address">{{ company.office_address }}</p>
+    <div class="row mb-4 no-print">
+        <div class="col-12">
+            <div class="form-container">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Start Date</label>
+                            <input type="date" class="form-control" name="start_date" 
+                                   value="{{ start_date|date:'Y-m-d' }}" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">End Date</label>
+                            <input type="date" class="form-control" name="end_date" 
+                                   value="{{ end_date|date:'Y-m-d' }}" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">GL Number</label>
+                            <input type="text" class="form-control" name="gl_no" 
+                                   value="{{ gl_no }}" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Account Number</label>
+                            <input type="text" class="form-control" name="ac_no" 
+                                   value="{{ ac_no }}" required>
+                        </div>
+                        <div class="col-12 text-end">
+                            <button type="submit" class="btn btn-generate text-white">
+                                <i class="fas fa-file-alt mr-2"></i>Generate Statement
+                            </button>
                         </div>
                     </div>
-                    <div class="row" style="padding: 10px; border-radius: 5px;">
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {% if statement_data %}
+    <div class="row">
+        <div class="col-12">
+            <div class="report-container">
+                <div class="report-header">
+                    <h3 class="report-title">STATEMENT OF ACCOUNT</h3>
+                    <h5 class="report-subtitle mb-0">
+                        {{ company.company_name|upper }} | {{ branch.branch_name|upper }}
+                    </h5>
+                    <div class="client-name">
+                        {{ full_name }}
+                    </div>
+                </div>
+
+                <div class="p-4">
+                    <div class="report-period">
                         <div class="row">
-                            <div class="col-md-12 text-center">
-                                <h5 style="color: #336699; text-align: center;">{{ full_name }}</h5>
+                            <div class="col-md-6">
+                                <strong>Period:</strong> 
+                                {{ start_date|date:"F d, Y" }} to {{ end_date|date:"F d, Y" }}
+                            </div>
+                            <div class="col-md-6 text-end">
+                                <strong>Generated:</strong> 
+                                {% now "F d, Y h:i A" %}
+                            </div>
+                            <div class="col-md-6">
+                                <strong>GL No:</strong> {{ gl_no }} | <strong>AC No:</strong> {{ ac_no }}
+                            </div>
+                            <div class="col-md-6 text-end">
+                                <strong>Branch:</strong> {{ branch.branch_name }}
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <p><strong>Start Date: </strong>{{ start_date }}</p>
-                            <p><strong>End Date:</strong> {{ end_date }}</p>
-                            <p><strong>GL No: </strong>{{ gl_no }}</p>
-                            <p><strong>AC No:</strong> {{ ac_no }}</p>
-                        </div>
-                        <div class="col-md-6">
-                            <p><strong>Opening Balance: </strong>{{ opening_balance }}</p>
-                            <p><strong>Closing Balance: </strong>{{ closing_balance }}</p>
-                            <p><strong>Debit Balance: </strong>{{ credit_amount }}</p>
-                            <p><strong>Credit Balance:</strong> {{ debit_amount }}</p>
-                        </div>
                     </div>
-                    
-                    <div class="table-responsive-sm">
-                        <table class="table">
-                            <thead class="thead-dark">
+
+                    <div class="table-responsive">
+                        <table class="report-table">
+                            <thead>
                                 <tr>
                                     <th>Date</th>
                                     <th>Description</th>
-                                    <th>Transaction No</th>
-                                    <th>Debit</th>
-                                    <th>Credit</th>
-                                    <th>Running Balance</th>
+                                    <th>Trx No</th>
+                                    <th class="text-end">Debit</th>
+                                    <th class="text-end">Credit</th>
+                                    <th class="text-end">Balance</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td>{{ start_date }}</td>
+                                    <td>{{ start_date|date:"M d, Y" }}</td>
                                     <td>Opening Balance</td>
-                                    <td>{{ entry.trx_no }}</td>
-                                    <td>0.00</td>
-                                    <td>0.00</td>
-                                    <td>{{ opening_balance }}</td>
+                                    <td></td>
+                                    <td class="amount">-</td>
+                                    <td class="amount">-</td>
+                                    <td class="amount">{{ opening_balance|floatformat:2|intcomma }}</td>
                                 </tr>
                                 {% for entry in statement_data %}
-                                    <tr>
-                                        <td>{{ entry.date }}</td>
-                                        <td>{{ entry.description }}</td>
-                                        <td>{{ entry.trx_no }}</td>
-                                        <td>{{ entry.credit }}</td>
-                                        <td>{{ entry.debit }}</td>
-                                        <td>{{ entry.running_balance }}</td>
-                                    </tr>
-                                {% endfor %}
-                                <tr class="total-row">
-                                    <td></td>
-                                    <td><strong>Total</strong></td>
+                                <tr>
+                                    <td>{{ entry.date|date:"M d, Y" }}</td>
+                                    <td>{{ entry.description }}</td>
                                     <td>{{ entry.trx_no }}</td>
-                                    <td>{{ credit_amount }}</td>
-                                    <td>{{ debit_amount }}</td>
-                                    <td><strong>{{ closing_balance }}</strong></td>
+                                    <td class="amount text-danger">{% if entry.debit %}{{ entry.debit|floatformat:2|intcomma }}{% else %}-{% endif %}</td>
+                                    <td class="amount text-success">{% if entry.credit %}{{ entry.credit|floatformat:2|intcomma }}{% else %}-{% endif %}</td>
+                                    <td class="amount">{{ entry.running_balance|floatformat:2|intcomma }}</td>
                                 </tr>
+                                {% endfor %}
                             </tbody>
+                            <tfoot>
+                                <tr class="total-row">
+                                    <td colspan="3" class="text-end fw-bold">TOTALS</td>
+                                    <td class="amount text-danger">{{ debit_amount|floatformat:2|intcomma }}</td>
+                                    <td class="amount text-success">{{ credit_amount|floatformat:2|intcomma }}</td>
+                                    <td class="amount">{{ closing_balance|floatformat:2|intcomma }}</td>
+                                </tr>
+                            </tfoot>
                         </table>
+                    </div>
+
+                    <div class="mt-4">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="alert alert-light">
+                                    <h6>Summary</h6>
+                                    <div class="d-flex justify-content-between">
+                                        <span>Opening Balance:</span>
+                                        <strong>{{ opening_balance|floatformat:2|intcomma }}</strong>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <span>Total Debits:</span>
+                                        <strong class="text-danger">{{ debit_amount|floatformat:2|intcomma }}</strong>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <span>Total Credits:</span>
+                                        <strong class="text-success">{{ credit_amount|floatformat:2|intcomma }}</strong>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <span>Closing Balance:</span>
+                                        <strong>{{ closing_balance|floatformat:2|intcomma }}</strong>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 text-muted small text-end">
+                                <div class="mb-2">
+                                    <strong>Note:</strong> 
+                                    Debit amounts represent deposits/positive transactions. 
+                                    Credit amounts represent withdrawals/negative transactions.
+                                </div>
+                                <div>
+                                    Generated by: {{ request.user.get_full_name|default:request.user.username }}
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-            <!-- End of Statement of Account Content -->
         </div>
     </div>
+    {% endif %}
+</div>
 
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Date validation
+    const startDate = document.querySelector('input[name="start_date"]');
+    const endDate = document.querySelector('input[name="end_date"]');
+    
+    if (startDate && endDate) {
+        startDate.addEventListener('change', function() {
+            if (endDate.value && this.value > endDate.value) {
+                alert('Start date cannot be after end date');
+                this.value = '';
+            }
+        });
+        
+        endDate.addEventListener('change', function() {
+            if (startDate.value && this.value < startDate.value) {
+                alert('End date cannot be before start date');
+                this.value = '';
+            }
+        });
+    }
+});
+</script>
 {% endblock %}

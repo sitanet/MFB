@@ -26,8 +26,9 @@
                     <div class="form-row">
                         <div class="col-md-2">
                             <label class="fw-bold" for="branch">Branch:</label>
-                            <input type="text" class="form-control bg-light" id="branch" name="branch" value="{{ user.branch }}" readonly>
+                            <input type="text" class="form-control bg-light" id="branch" name="branch" value="{{ user.branch.branch_code }}" readonly>
                         </div>
+                        
                         <div class="col-md-2">
                             <label class="fw-bold" for="branch">Customer Branch:</label>
                             <input type="text" class="form-control bg-light" id="branch"  value="{{ customer.branch}}" readonly>

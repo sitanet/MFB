@@ -1,411 +1,510 @@
 {% extends 'base.html' %}
-
 {% load static %}
 
 {% block content %}
 {% include 'includes/alerts.html' %}
 
 <style>
-   /* Add your CSS styles here */
-   .container-fluid {
-        padding: 20px;
+    :root {
+        --primary: #3498db;
+        --secondary: #2c3e50;
+        --success: #27ae60;
+        --danger: #e74c3c;
+        --light: #ecf0f1;
+        --dark: #34495e;
+        --gray: #95a5a6;
     }
 
-    .column_title {
-        margin-bottom: 20px;
+    .report-container {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+        overflow: hidden;
     }
 
-    .page_title h2 {
-        margin: 0;
-        color: #333;
+    .report-header {
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        color: white;
+        padding: 1.5rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     }
 
-    h5 {
-        margin: 10px 0;
-        color: #555;
+    .report-title {
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.5rem;
     }
 
-    .table-section {
-        margin-top: 20px;
+    .report-subtitle {
+        font-weight: 300;
+        opacity: 0.9;
+        margin-bottom: 0.25rem;
     }
 
-    p {
-        margin-bottom: 5px;
-        color: #666;
+    .report-period {
+        background: var(--light);
+        padding: 1rem;
+        border-radius: 5px;
+        margin: 1.5rem 0;
     }
 
-    .table {
+    .report-table {
         width: 100%;
-        margin-top: 10px;
+        border-collapse: separate;
+        border-spacing: 0;
+        font-size: 0.9rem;
     }
 
-    th,
-    td {
-        border: 1px solid #ddd;
-        padding: 8px;
-        text-align: left;
+    .report-table thead th {
+        background: var(--secondary);
+        color: white;
+        padding: 0.75rem 1rem;
+        font-weight: 500;
+        position: sticky;
+        top: 0;
     }
 
-    th {
-        background-color: #333;
-        color: #fff;
+    .report-table tbody td {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid #eee;
+        vertical-align: middle;
     }
 
-    tr:hover {
-        background-color: #f5f5f5;
+    .report-table tbody tr:hover {
+        background: rgba(52, 152, 219, 0.05);
     }
+
+    .text-success { color: var(--success); font-weight: 500; }
+    .text-danger { color: var(--danger); font-weight: 500; }
 
     .total-row {
-        border-bottom: 3px solid #000;
-        border-top: 3px solid #000;
+        background: var(--light);
+        font-weight: 600;
     }
 
     .total-row td {
-        font-weight: bold;
-        color: #333;
+        border-top: 2px solid var(--dark);
+        border-bottom: 2px solid var(--dark);
     }
 
-    .office-address {
-        margin-bottom: 20px;
+    .form-container {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
     }
 
-    .totals-section {
-        font-weight: bold;
-        margin-top: 20px;
-        display: flex;
-        justify-content: space-between;
-        flex-wrap: wrap;
+    .btn-print {
+        background: var(--secondary);
+        border: none;
     }
 
-    .totals-card {
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        padding: 15px;
-        background-color: #f8f9fa;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        width: 48%;
-        margin-bottom: 20px;
+    .btn-print:hover {
+        background: var(--dark);
     }
 
-    .totals-card p {
-        margin: 0;
-        font-size: 16px;
-        color: #333;
+    .btn-generate {
+        background: var(--success);
+        border: none;
+        padding: 0.5rem 1.5rem;
     }
 
-    .totals-card p strong {
-        color: #007bff;
+    .btn-new-search {
+        background: var(--primary);
+        border: none;
     }
 
-    .print-btn {
-        margin: 20px 0;
-        text-align: right;
+    .no-results {
+        text-align: center;
+        padding: 2rem;
+        color: var(--gray);
     }
 
     .hidden {
         display: none;
     }
 
+    .loading-spinner {
+        display: inline-block;
+        width: 1rem;
+        height: 1rem;
+        vertical-align: middle;
+        border: 0.2em solid currentColor;
+        border-right-color: transparent;
+        border-radius: 50%;
+        animation: spinner-border .75s linear infinite;
+        margin-right: 5px;
+    }
+
+    @keyframes spinner-border {
+        to { transform: rotate(360deg); }
+    }
+
     @media print {
+        .no-print { display: none !important; }
+        .report-header { background: white !important; color: black !important; }
+        .report-table thead th { background: white !important; color: black !important; }
         body * {
             visibility: hidden;
         }
-
-        .printable-area,
-        .printable-area * {
+        .report-container, .report-container * {
             visibility: visible;
         }
-
-        .printable-area {
+        .report-container {
             position: absolute;
             left: 0;
             top: 0;
             width: 100%;
-            padding: 20px;
-            box-sizing: border-box;
+            padding: 0;
+            background-color: white;
+            box-shadow: none;
         }
-
-        .print-btn {
-            display: none;
-        }
-
-        /* Ensure all styles are included in the print version */
-        .container-fluid,
-        .column_title,
-        .page_title,
-        h5,
-        .table-section,
-        p,
-        .table,
-        th,
-        td,
-        .total-row,
-        .office-address,
-        .totals-section,
-        .totals-card,
-        .totals-card p,
-        .totals-card p strong {
-            visibility: visible;
-        }
-
-        /* Add specific styles for printing the table header */
-        .table thead th {
-            background-color: #333 !important;
-            color: #fff !important;
-            -webkit-print-color-adjust: exact; /* Ensures colors are printed as specified */
-            print-color-adjust: exact; /* Ensures colors are printed as specified */
-        }
-
-        /* Reset styles for table */
-        .table, .table th, .table td {
-            border: 1px solid #ddd;
-            border-collapse: collapse;
-            padding: 8px;
-            text-align: left;
-        }
-    }
-
-    @media (max-width: 768px) {
-        .totals-card {
-            width: 100%;
-        }
-    }
-
-    .totals-card {
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        padding: 15px;
-        background-color: #f8f9fa;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        width: 100%;
-        margin-bottom: 20px;
-    }
-
-    .totals-row {
-        display: flex;
-        justify-content: space-between;
-        flex-wrap: wrap;
-    }
-
-    .totals-item {
-        flex: 1;
-        margin-right: 10px;
-        font-size: 16px;
-        color: #333;
-    }
-
-    .total-debits {
-        color: #007bff;
-        /* Blue color */
-    }
-
-    .total-credits {
-        color: #28a745;
-        /* Green color */
-    }
-    .date-time {
-        font-size: 12px;
-        margin-bottom: 20px;
-       
-        text-align: right; /* Aligns text to the right */
-        width: 100%; /* Ensures the div takes up the full width */
     }
 </style>
 
 <div class="container-fluid">
-    <div class="row column_title">
-        <div class="col-md-12">
-            <div class="page_title">
-                <h2>Cashier/Teller Cash Status By Session Date</h2>
+    <div class="row mb-4">
+        <div class="col-12 d-flex justify-content-between align-items-center">
+            <h2 class="mb-0">Cashier/Teller Cash Status By Transaction Date</h2>
+            <div class="no-print">
+                <button onclick="window.print()" class="btn btn-print text-white">
+                    <i class="fas fa-print mr-2"></i>Print
+                </button>
+                <button id="newSearchBtn" class="btn btn-new-search text-white {% if not report_data %}hidden{% endif %}">
+                    <i class="fas fa-search mr-2"></i>New Search
+                </button>
             </div>
         </div>
     </div>
 
-    <!-- Print Button -->
-    <div class="row print-btn">
-        <div class="col-md-12 text-right">
-            <button onclick="window.print()" class="btn btn-primary">Print</button>
-        </div>
-    </div>
-
-    <!-- Form for input -->
-    <form id="generateForm" method="post" action="{% url 'cashier_teller_cash_status_by_session_date' %}" class="chart_of_account p-5 shadow-lg rounded rounded-5 {% if report_data %}hidden{% endif %}">
-        {% csrf_token %}
-        <div class="form-row">
-            <div class="form-group col-md-3">
-                <label for="start_date">Select Start Date</label>
-                <input type="date" class="form-control bg-light" name="start_date" id="start_date" value="{{ start_date }}">
-            </div>
-            <div class="form-group col-md-3">
-                <label for="end_date">Select End Date</label>
-                <input type="date" class="form-control bg-light" name="end_date" id="end_date" value="{{ end_date }}">
-            </div>
-            <div class="form-group col-md-3">
-                <label for="branch">Select Branch</label>
-                <select class="form-control bg-light" name="branch" id="branch">
-                    <option value="">All Branches</option>
-                    {% for company in companies %}
-                        <option value="{{ company.id }}" {% if company.id|stringformat:"s" == selected_branch %}selected{% endif %}>{{ company.branch_name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="form-group col-md-3">
-                <label for="user">Select User</label>
-                <select class="form-control bg-light" name="user" id="user">
-                    <option value="">All Users</option>
-                    {% for user in users %}
-                        <option value="{{ user.id }}" {% if user.id|stringformat:"s" == selected_user %}selected{% endif %}>{{ user.username }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="form-group col-md-3">
-                <label for="gl_no">General Ledger</label>
-                <select class="form-control bg-light" name="gl_no" id="gl_no">
-                    <option value="">Select General Ledger</option>
-                    {% for ledger in form.gl_no.field.queryset %}
-                        <option value="{{ ledger.id }}" {% if ledger.id|stringformat:"s" == form.gl_no.value|stringformat:"s" %}selected{% endif %}>{{ ledger.gl_name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="form-group col-md-3">
-                <label for="ac_no">Account Number</label>
-                <input type="text" class="form-control bg-light" name="ac_no" id="ac_no" value="{{ ac_no }}">
-            </div>
-            <div class="form-group col-md-3">
-                <label for="code">Transaction Type</label>
-                <select class="form-control bg-light" name="code" id="code">
-                    <option value="">Select Transaction Type</option>
-                    <option value="DP" {% if code == 'DP' %}selected{% endif %}>Deposit</option>
-                    <option value="WD" {% if code == 'WD' %}selected{% endif %}>Withdrawal</option>
-                    <option value="GJ" {% if code == 'GJ' %}selected{% endif %}>General Journal</option>
-                    <option value="LD" {% if code == 'LD' %}selected{% endif %}>Loan Disbursement</option>
-                </select>
-            </div>
-        </div>
-        <button type="submit" class="btn btn-success mt-4 shadow-sm">Submit</button>
-    </form>
-    
-    <!-- Transaction Report Results -->
-    <div class="col-md-12 printable-area {% if not report_data %}hidden{% endif %}">
-        <div class="white_shd full margin_bottom_30">
-            <div class="table_section padding_infor_info">
-                <div class="row">
-                    <div class="col-md-12">
-                        <div class="date-time">
-                            {{ current_datetime|date:"d/m/Y" }} <br>
-                            {{ current_datetime|date:"h:i A" }}
+    <div class="row mb-4 no-print">
+        <div class="col-12">
+            <div class="form-container {% if report_data %}hidden{% endif %}">
+                <form id="generateForm" method="post" action="{% url 'cashier_teller_cash_status_by_trx_date' %}">
+                    {% csrf_token %}
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Start Transaction Date</label>
+                            <input type="date" class="form-control" name="start_date" 
+                                   value="{{ start_date|date:'Y-m-d' }}" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">End Transaction Date</label>
+                            <input type="date" class="form-control" name="end_date" 
+                                   value="{{ end_date|date:'Y-m-d' }}" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Branch</label>
+                            <select class="form-select" name="branch">
+                                <option value="">All Branches</option>
+                                {% for branch in branches %}
+                                <option value="{{ branch.id }}" {% if selected_branch and branch.id == selected_branch %}selected{% endif %}>
+                                    {{ branch.branch_name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Teller</label>
+                            <select class="form-select" name="user">
+                                <option value="">All Tellers</option>
+                                {% for user in users %}
+                                <option value="{{ user.id }}" {% if user_id == user.id %}selected{% endif %}>
+                                    {{ user.get_full_name|default:user.username }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">GL Number</label>
+                            <select class="form-select" name="gl_no" id="gl_no_select">
+                                <option value="">All GL Numbers</option>
+                                {% for account in accounts %}
+                                <option value="{{ account.gl_no }}" {% if gl_no == account.gl_no %}selected{% endif %}>
+                                    {{ account.gl_no }}
+                                </option>
+                                {% endfor %}
+                                <option value="custom" {% if gl_no and gl_no not in account_gl_numbers %}selected{% endif %}>Custom...</option>
+                            </select>
+                            <input type="text" class="form-control mt-2 {% if not gl_no or gl_no in account_gl_numbers %}hidden{% endif %}" 
+                                   name="gl_no_custom" id="gl_no_custom" value="{% if gl_no and gl_no not in account_gl_numbers %}{{ gl_no }}{% endif %}" 
+                                   placeholder="Enter custom GL number">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Account Number</label>
+                            <input type="text" class="form-control" name="ac_no" value="{{ ac_no }}" placeholder="Enter account number">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Transaction Code</label>
+                            <select class="form-select" name="code">
+                                <option value="">All Codes</option>
+                                <option value="DP" {% if code == 'DP' %}selected{% endif %}>Deposit</option>
+                                <option value="WD" {% if code == 'WD' %}selected{% endif %}>Withdrawal</option>
+                                <option value="GJ" {% if code == 'GJ' %}selected{% endif %}>General Journal</option>
+                                <option value="LD" {% if code == 'LD' %}selected{% endif %}>Loan Disbursement</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end">
+                            <button type="submit" class="btn btn-generate text-white w-100">
+                                <i class="fas fa-file-alt mr-2"></i>Generate Report
+                            </button>
                         </div>
                     </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {% if report_data %}
+    <div class="row">
+        <div class="col-12">
+            <div class="report-container">
+                <div class="report-header">
+                    <h3 class="report-title">CASHIER/TELLER CASH STATUS REPORT</h3>
+                    <h5 class="report-subtitle">
+                        {% if selected_branch_obj %}
+                            {{ selected_branch_obj.branch_name|upper }}
+                        {% else %}
+                            ALL BRANCHES - CONSOLIDATED
+                        {% endif %}
+                    </h5>
                 </div>
-                
-                <div class="row">
-                    <div class="col-md-12 text-center">
-                        <h4>
-                            {% if selected_company %}
-                                {{ selected_company.company_name }}
-                            {% else %}
-                                Company Overview
-                            {% endif %}
-                        </h4>
-                        <p>{{ selected_company.branch_name }}</p>
-                        <p class="office-address">{{ selected_company.office_address }}</p>
-                        
-                        <h5 style="color: #1115f0;">Cashier/Teller Cash Status By Session Date</h5>
-                        <div class="row justify-content-center">
-                            <div class="col-md-6 text-center">
-                                <p>Reporting from <strong>{{ start_date }}</strong> To <strong>{{ end_date }}</strong></p>
+
+                <div class="p-4">
+                    <div class="report-period">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <strong>Reporting Period:</strong> 
+                                {{ start_date|date:"F d, Y" }} to {{ end_date|date:"F d, Y" }}
+                                {% if gl_no or ac_no or code %}
+                                <br>
+                                <strong>Filters:</strong>
+                                {% if gl_no %}GL No: {{ gl_no }}{% endif %}
+                                {% if ac_no %}{% if gl_no %}, {% endif %}Account No: {{ ac_no }}{% endif %}
+                                {% if code %}{% if gl_no or ac_no %}, {% endif %}Code: {{ code }}{% endif %}
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6 text-end">
+                                <strong>Generated:</strong> 
+                                {{ current_datetime|date:"F d, Y H:i" }}
+                                <br>
+                                <strong>By:</strong> {{ request.user.get_full_name|default:request.user.username }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="report-table">
+                            <thead>
+                                <tr>
+                                    <th>Trx No</th>
+                                    <th>Transaction Date</th>
+                                    <th>GL/Account No</th>
+                                    <th>Customer Name</th>
+                                    <th>Code</th>
+                                    <th>Session Date</th>
+                                    <th class="text-end">Debit</th>
+                                    <th class="text-end">Credit</th>
+                                    <th class="text-end">Balance</th>
+                                    <th>Teller</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for transaction in page_obj %}
+                                <tr>
+                                    <td>{{ transaction.trx_no|default:"-" }}</td>
+                                    <td>{{ transaction.app_date|date:"M d, Y" }}</td>
+                                    <td>
+                                        <div>GL: {{ transaction.gl_no|default:"-" }}</div>
+                                        <div>AC: {{ transaction.ac_no|default:"-" }}</div>
+                                    </td>
+                                    <td>{{ transaction.customer_name|default:"-"|truncatechars:20 }}</td>
+                                    <td>{{ transaction.code|default:"-" }}</td>
+                                    <td>{{ transaction.ses_date|date:"M d, Y" }}</td>
+                                    <td class="text-end text-danger">
+                                        {% if transaction.amount < 0 %}
+                                            {{ transaction.amount|floatformat:2|cut:"-" }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end text-success">
+                                        {% if transaction.amount > 0 %}
+                                            {{ transaction.amount|floatformat:2 }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">{{ transaction.running_balance|floatformat:2 }}</td>
+                                    <td>{{ transaction.user.first_name|default:transaction.user.username }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="10" class="no-results">
+                                        <i class="fas fa-info-circle fa-2x mb-3"></i>
+                                        <h5>No transactions found</h5>
+                                        <p>Try adjusting your search criteria</p>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot>
+                                <tr class="total-row">
+                                    <td colspan="6" class="text-end"><strong>TOTALS</strong></td>
+                                    <td class="text-end text-danger">{{ total_debit|floatformat:2 }}</td>
+                                    <td class="text-end text-success">{{ total_credit|floatformat:2 }}</td>
+                                    <td class="text-end">
+                                        {% if page_obj %}
+                                            {{ page_obj.last.running_balance|floatformat:2 }}
+                                        {% else %}
+                                            0.00
+                                        {% endif %}
+                                    </td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+
+                    {% if page_obj.paginator.num_pages > 1 %}
+                    <div class="d-flex justify-content-center mt-3">
+                        <nav aria-label="Page navigation">
+                            <ul class="pagination pagination-sm">
+                                {% if page_obj.has_previous %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page=1" aria-label="First">
+                                            <span aria-hidden="true">&laquo;&laquo;</span>
+                                        </a>
+                                    </li>
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}" aria-label="Previous">
+                                            <span aria-hidden="true">&laquo;</span>
+                                        </a>
+                                    </li>
+                                {% endif %}
+                                
+                                {% for num in page_obj.paginator.page_range %}
+                                    {% if page_obj.number == num %}
+                                        <li class="page-item active"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
+                                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                        <li class="page-item"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
+                                    {% endif %}
+                                {% endfor %}
+                                
+                                {% if page_obj.has_next %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ page_obj.next_page_number }}" aria-label="Next">
+                                            <span aria-hidden="true">&raquo;</span>
+                                        </a>
+                                    </li>
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}" aria-label="Last">
+                                            <span aria-hidden="true">&raquo;&raquo;</span>
+                                        </a>
+                                    </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                    </div>
+                    {% endif %}
+
+                    <div class="mt-4 text-muted small">
+                        <div class="d-flex justify-content-between flex-wrap">
+                            <div>
+                                <strong>Note:</strong> 
+                                Shows cash transactions with running balances. Debits in red, credits in green.
+                            </div>
+                            <div class="mt-2 mt-md-0">
+                                <strong>Records:</strong> 
+                                Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }}
                             </div>
                         </div>
                     </div>
                 </div>
-
-                <div class="table-responsive-sm">
-                    <table class="table">
-                        <thead class="thead-dark">
-                            <tr>
-                                <th>Transaction No.</th>
-                                <th>GL No.</th>
-                                <th>Account No.</th>
-                                <th>Name</th>
-                                <th>Code</th>
-                                <th>Session Date</th>
-                                <th>Transaction Date</th>
-                                <th>Debit</th>
-                                <th>Credit</th>
-                                <th>Running Balance</th>
-                                <th>User Name</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for transaction in report_data %}
-                            <tr>
-                                <td>{{ transaction.trx_no }}</td>
-                                <td>{{ transaction.gl_no }}</td>
-                                <td>{{ transaction.ac_no }}</td>
-                                <td>{{ transaction.customer_name }}</td>
-                                <td>{{ transaction.code }}</td>
-                                <td>{{ transaction.ses_date }}</td>
-                                <td>{{ transaction.app_date }}</td>
-                                <td>{% if transaction.type == 'D' %}{{ transaction.amount }}{% else %}0{% endif %}</td>
-                                <td>{% if transaction.type == 'C' %}{{ transaction.amount }}{% else %}0{% endif %}</td>
-                                <td>{{ transaction.running_balance }}</td>
-                                <td>{{ transaction.user.first_name }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                        <tfoot>
-                            <tr class="total-row">
-                                <td colspan="7" style="text-align: right;"><strong>Total:</strong></td>
-                                <td style="font-weight: bold;">{{ total_debit }}</td>
-                                <td style="font-weight: bold;">{{ total_credit }}</td>
-                                <td style="font-weight: bold;"></td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                    <div class="totals-section">
-                        <div class="totals-card">
-                            <p class="totals-item total-debits"><strong>Total Debits:</strong> {{ total_debit }}</p>
-                            <p class="totals-item total-credits"><strong>Total Credits:</strong> {{ total_credit }}</p>
-                        </div>
-                    </div>
-                </div>
-                
             </div>
         </div>
     </div>
+    {% endif %}
 </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        var startDateInput = document.getElementById('start_date');
-        var endDateInput = document.getElementById('end_date');
-        var generateForm = document.getElementById('generateForm');
-        var resultsArea = document.querySelector('.printable-area');
-        var companyDate = '{{ company_date }}'; // Assuming company_date is in the 'YYYY-MM-DD' format
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('generateForm');
+    const results = document.querySelector('.report-container');
+    const newSearchBtn = document.getElementById('newSearchBtn');
+    const searchForm = document.getElementById('searchForm');
+    const startDateInput = form.querySelector('input[name="start_date"]');
+    const endDateInput = form.querySelector('input[name="end_date"]');
+    const glNoSelect = document.getElementById('gl_no_select');
+    const glNoCustom = document.getElementById('gl_no_custom');
 
-        // Show/hide form and results based on report_data
-        if ({{ report_data|yesno:"true,false" }}) {
-            resultsArea.classList.remove('hidden');
-            generateForm.classList.add('hidden');
-        }
+    // Form submission loading indicator
+    if (form) {
+        form.addEventListener('submit', function() {
+            const submitBtn = this.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="loading-spinner"></span> Generating...';
+        });
+    }
 
+    // New search button
+    if (newSearchBtn) {
+        newSearchBtn.addEventListener('click', function() {
+            document.querySelector('.form-container').classList.remove('hidden');
+            if (results) results.classList.add('hidden');
+            this.classList.add('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+    }
+
+    // GL Number dropdown functionality
+    if (glNoSelect && glNoCustom) {
+        glNoSelect.addEventListener('change', function() {
+            if (this.value === 'custom') {
+                glNoCustom.classList.remove('hidden');
+                glNoCustom.focus();
+            } else {
+                glNoCustom.classList.add('hidden');
+                glNoCustom.value = '';
+            }
+        });
+    }
+
+    // Date validation
+    if (startDateInput && endDateInput) {
+        const today = new Date().toISOString().split('T')[0];
+        
+        startDateInput.max = today;
+        endDateInput.max = today;
+        
         startDateInput.addEventListener('change', function() {
-            validateDate(startDateInput);
+            if (endDateInput.value && this.value > endDateInput.value) {
+                alert('Start date cannot be after end date');
+                this.value = '';
+            }
+            endDateInput.min = this.value;
         });
 
         endDateInput.addEventListener('change', function() {
-            validateDate(endDateInput);
-        });
-
-        function validateDate(input) {
-            var selectedDate = new Date(input.value);
-            var companyDateObj = new Date(companyDate);
-
-            if (selectedDate > companyDateObj) {
-                alert('Please select a date not greater than the session date.');
-                input.value = companyDate; // Reset the input value
+            if (startDateInput.value && this.value < startDateInput.value) {
+                alert('End date cannot be before start date');
+                this.value = '';
             }
-        }
-    });
+        });
+    }
+
+    // Preserve form data when returning from pagination
+    if (window.location.search.includes('page=')) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const page = urlParams.get('page');
+        
+        const pageInput = document.createElement('input');
+        pageInput.type = 'hidden';
+        pageInput.name = 'page';
+        pageInput.value = page;
+        form.appendChild(pageInput);
+    }
+});
 </script>
 {% endblock %}
