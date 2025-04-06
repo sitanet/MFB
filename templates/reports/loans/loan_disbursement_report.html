@@ -5,149 +5,320 @@
 {% block content %}
 <style>
     :root {
-        --primary: #3498db;
-        --secondary: #2c3e50;
-        --success: #27ae60;
-        --danger: #e74c3c;
-        --light: #ecf0f1;
-        --dark: #34495e;
-        --gray: #95a5a6;
+        --primary: #4361ee;
+        --primary-light: #3f37c9;
+        --secondary: #3a0ca3;
+        --success: #4cc9f0;
+        --danger: #f72585;
+        --warning: #f8961e;
+        --info: #4895ef;
+        --light: #f8f9fa;
+        --dark: #212529;
+        --gray: #6c757d;
     }
 
     .report-container {
         background: white;
-        border-radius: 10px;
-        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+        border-radius: 12px;
+        box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.08);
         overflow: hidden;
-        margin-top: 20px;
+        transition: all 0.3s ease;
+    }
+
+    .report-container:hover {
+        box-shadow: 0 0.5rem 2rem rgba(0, 0, 0, 0.12);
     }
 
     .report-header {
         background: linear-gradient(135deg, var(--primary), var(--secondary));
         color: white;
-        padding: 1.5rem;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 1.75rem 2rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.15);
     }
 
     .report-title {
-        font-weight: 600;
+        font-weight: 700;
         letter-spacing: 0.5px;
+        margin-bottom: 0.25rem;
+        font-size: 1.5rem;
+    }
+
+    .report-subtitle {
+        opacity: 0.9;
+        font-weight: 400;
     }
 
     .form-container {
         background: white;
-        border-radius: 10px;
-        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
-        padding: 1.5rem;
-        margin-bottom: 1.5rem;
+        border-radius: 12px;
+        box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.08);
+        padding: 2rem;
+        margin-bottom: 2rem;
+        border: 1px solid rgba(0, 0, 0, 0.05);
     }
 
     .btn-generate {
-        background: var(--success);
+        background: var(--primary);
         border: none;
-        padding: 0.5rem 1.5rem;
+        padding: 0.75rem 2rem;
+        font-weight: 500;
+        letter-spacing: 0.5px;
+        transition: all 0.3s ease;
+    }
+
+    .btn-generate:hover {
+        background: var(--primary-light);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(67, 97, 238, 0.3);
     }
 
     .report-table {
         width: 100%;
         border-collapse: separate;
         border-spacing: 0;
-        font-size: 0.9rem;
+        font-size: 0.925rem;
     }
 
     .report-table thead th {
         background: var(--secondary);
         color: white;
-        padding: 0.75rem 1rem;
+        padding: 1rem 1.25rem;
         font-weight: 500;
+        position: sticky;
+        top: 0;
+        border: none;
+    }
+
+    .report-table tbody tr {
+        transition: all 0.2s ease;
+    }
+
+    .report-table tbody tr:hover {
+        background-color: rgba(67, 97, 238, 0.05);
+        transform: scale(1.005);
     }
 
     .report-table tbody td {
-        padding: 0.75rem 1rem;
-        border-bottom: 1px solid #eee;
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
         vertical-align: middle;
     }
 
+    /* GL Number Badge Styling */
+    .gl-badge {
+        background-color: #f0f2f5;
+        color: var(--primary);
+        padding: 0.35rem 0.65rem;
+        border-radius: 6px;
+        font-weight: 500;
+    
+        font-size: 0.85rem;
+        display: inline-block;
+        border: 1px solid rgba(67, 97, 238, 0.2);
+        transition: all 0.2s ease;
+    }
+
+    .gl-badge:hover {
+        background-color: rgba(67, 97, 238, 0.1);
+        transform: translateY(-1px);
+    }
+
     .amount {
-        font-family: 'Courier New', monospace;
+        font-family: 'Roboto Mono', monospace;
         text-align: right;
+        font-weight: 500;
     }
 
     .total-row {
-        background: var(--light);
+        background: rgba(67, 97, 238, 0.08);
         font-weight: 600;
     }
 
     .total-row td {
-        border-top: 2px solid var(--dark);
-        border-bottom: 2px solid var(--dark);
+        border-top: 2px solid var(--primary);
+        border-bottom: 2px solid var(--primary);
     }
 
-    .badge {
-        padding: 0.35em 0.65em;
-        font-size: 0.75em;
-        font-weight: 700;
-        border-radius: 0.25rem;
+    .overdue {
+        color: var(--danger);
+        font-weight: 600;
+        position: relative;
     }
 
-    .bg-success { background-color: var(--success); }
-    .bg-warning { background-color: #f39c12; }
-    .bg-danger { background-color: var(--danger); }
-    .bg-info { background-color: #17a2b8; }
-    .bg-secondary { background-color: var(--secondary); }
+    .overdue::after {
+        content: "";
+        position: absolute;
+        bottom: -2px;
+        left: 0;
+        width: 100%;
+        height: 2px;
+        background: var(--danger);
+        transform: scaleX(0);
+        transform-origin: right;
+        transition: transform 0.3s ease;
+    }
+
+    .overdue:hover::after {
+        transform: scaleX(1);
+        transform-origin: left;
+    }
+
+    .summary-card {
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        transition: all 0.3s ease;
+        border: none;
+        overflow: hidden;
+    }
+
+    .summary-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+    }
+
+    .summary-card .card-body {
+        padding: 1.5rem;
+    }
+
+    .summary-card .card-title {
+        font-size: 1rem;
+        font-weight: 500;
+        margin-bottom: 0.75rem;
+        opacity: 0.9;
+    }
+
+    .summary-card .card-text {
+        font-size: 1.5rem;
+        font-weight: 600;
+    }
+
+    .filter-label {
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+        color: var(--dark);
+        font-size: 0.925rem;
+    }
+
+    .form-control {
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+    }
+
+    .form-control:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 0.25rem rgba(67, 97, 238, 0.15);
+    }
+
+    @media print {
+        .form-container, .no-print {
+            display: none !important;
+        }
+        .report-container {
+            box-shadow: none;
+            border-radius: 0;
+            border: none;
+        }
+        .report-header {
+            background: #fff !important;
+            color: #000 !important;
+            border-bottom: 2px solid #000 !important;
+        }
+        .report-table thead th {
+            background: #f8f9fa !important;
+            color: #000 !important;
+            border-bottom: 2px solid #000 !important;
+        }
+        .gl-badge {
+            background: transparent !important;
+            border: 1px solid #000 !important;
+            color: #000 !important;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .form-container {
+            padding: 1.5rem;
+        }
+        .report-header {
+            padding: 1.25rem;
+        }
+        .report-table thead th, 
+        .report-table tbody td {
+            padding: 0.75rem;
+        }
+        .summary-card .card-body {
+            padding: 1rem;
+        }
+    }
 </style>
 
 <div class="container-fluid">
+    <!-- Page Header -->
     <div class="row mb-4">
         <div class="col-12">
-            <h2 class="mb-0">Loan Disbursement Report</h2>
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="mb-1">Loan Dues vs Repayment Report</h2>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb bg-transparent p-0">
+                            <li class="breadcrumb-item"><a href="#">Reports</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">Loan Dues</li>
+                        </ol>
+                    </nav>
+                </div>
+                <div class="d-flex">
+                    <button onclick="window.print()" class="btn btn-outline-primary btn-sm no-print mr-2">
+                        <i class="fas fa-print mr-1"></i>Print
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm no-print">
+                        <i class="fas fa-question-circle mr-1"></i>Help
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- Form Section -->
+    <!-- Filter Form -->
     <div class="row mb-4">
         <div class="col-12">
             <div class="form-container">
-                <form method="post">
+                <form method="post" id="reportForm">
                     {% csrf_token %}
-                    <div class="row g-3">
+                    <div class="row g-4">
                         <div class="col-md-3">
-                            <label class="form-label">Branch</label>
-                            <select class="form-control" name="branch" id="id_branch">
+                            <label class="filter-label">Reporting Date</label>
+                            <input type="date" class="form-control" name="reporting_date" 
+                                   value="{{ reporting_date|date:'Y-m-d' }}" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="filter-label">Branch</label>
+                            <select class="form-control" name="branch" id="branchSelect">
                                 <option value="">All Branches</option>
-                                {% for branch in form.branch.field.queryset %}
-                                    <option value="{{ branch.id }}" 
-                                        {% if form.branch.value == branch.id %}selected{% endif %}>
+                                {% for branch in branches %}
+                                    <option value="{{ branch.branch_code }}"
+                                        {% if selected_branch == branch.branch_code %}selected{% endif %}>
                                         {{ branch.branch_name }}
                                     </option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label">GL Number</label>
-                            <select class="form-control" name="gl_no" id="id_gl_no">
-                                <option value="">All GL Numbers</option>
-                                {% for gl in form.gl_no.field.queryset %}
-                                    <option value="{{ gl.id }}" 
-                                        {% if form.gl_no.value == gl.id %}selected{% endif %}>
-                                        {{ gl.gl_code }} - {{ gl.gl_name }}
+                            <label class="filter-label">GL Account</label>
+                            <select class="form-control" name="gl_no" id="glSelect">
+                                <option value="">All GL Accounts</option>
+                                {% for gl_account in gl_accounts %}
+                                    <option value="{{ gl_account.gl_no }}"
+                                        {% if selected_gl_no == gl_account.gl_no %}selected{% endif %}>
+                                        {{ gl_account.gl_no }} - {{ gl_account.gl_name }}
                                     </option>
                                 {% endfor %}
                             </select>
                         </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Start Date</label>
-                            <input type="date" class="form-control" name="start_date" id="id_start_date" 
-                                   value="{{ form.start_date.value|default:'' }}">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">End Date</label>
-                            <input type="date" class="form-control" name="end_date" id="id_end_date" 
-                                   value="{{ form.end_date.value|default:'' }}">
-                        </div>
-                        <div class="col-12 text-end">
-                            <button type="submit" class="btn btn-generate text-white">
-                                <i class="fas fa-file-alt mr-2"></i>Generate Report
+                        <div class="col-md-3 d-flex align-items-end">
+                            <button type="submit" class="btn btn-generate text-white w-100">
+                                <i class="fas fa-sync-alt mr-2"></i>Generate Report
                             </button>
                         </div>
                     </div>
@@ -156,62 +327,88 @@
         </div>
     </div>
 
-    {% if loans %}
+    {% if expected_repayments %}
     <!-- Report Section -->
     <div class="row">
         <div class="col-12">
             <div class="report-container">
                 <div class="report-header">
-                    <h3 class="report-title">LOAN DISBURSEMENT REPORT</h3>
-                    <h5 class="report-subtitle mb-0">
-                        {% if selected_branch %}
-                            {{ selected_branch.branch_name|upper }} Branch
-                        {% else %}
-                            ALL BRANCHES
-                        {% endif %}
-                        | Generated on {{ current_date }}
-                    </h5>
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h3 class="report-title">LOAN DUES VS REPAYMENT REPORT</h3>
+                            <h5 class="report-subtitle mb-0">
+                                {% if selected_branch %}
+                                    {% for branch in branches %}
+                                        {% if branch.branch_code == selected_branch %}
+                                            {{ branch.branch_name|upper }}
+                                        {% endif %}
+                                    {% endfor %}
+                                {% else %}
+                                    ALL BRANCHES
+                                {% endif %}
+                                | As of {{ reporting_date|date:"F d, Y" }}
+                            </h5>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-white-50 mb-1">Generated on</div>
+                            <div class="font-weight-500">{{ current_date|date:"M d, Y h:i A" }}</div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="p-4">
                     <!-- Summary Cards -->
-                    <div class="row mb-4">
-                        <div class="col-md-4">
-                            <div class="card text-white bg-primary mb-3">
+                    <div class="row mb-4 g-4">
+                        <div class="col-xl-3 col-md-6">
+                            <div class="card text-white bg-primary summary-card h-100">
                                 <div class="card-body">
-                                    <h5 class="card-title">Total Loans</h5>
-                                    <p class="card-text h4">{{ loans.count }}</p>
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <h5 class="card-title">Total Loans</h5>
+                                            <p class="card-text">{{ expected_repayments|length }}</p>
+                                        </div>
+                                        <i class="fas fa-file-invoice fa-2x opacity-50"></i>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-4">
-                            <div class="card text-white bg-success mb-3">
+                        <div class="col-xl-3 col-md-6">
+                            <div class="card text-white bg-success summary-card h-100">
                                 <div class="card-body">
-                                    <h5 class="card-title">Total Loan Amount</h5>
-                                    <p class="card-text h4">{{ total_loan_amount|floatformat:2|intcomma }}</p>
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <h5 class="card-title">Principal Paid</h5>
+                                            <p class="card-text">{{ grand_total_principal_paid|floatformat:2|intcomma }}</p>
+                                        </div>
+                                        <i class="fas fa-hand-holding-usd fa-2x opacity-50"></i>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-4">
-                            <div class="card text-white bg-info mb-3">
+                        <div class="col-xl-3 col-md-6">
+                            <div class="card text-white bg-info summary-card h-100">
                                 <div class="card-body">
-                                    <h5 class="card-title">Total Interest</h5>
-                                    <p class="card-text h4">{{ total_interest|floatformat:2|intcomma }}</p>
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <h5 class="card-title">Interest Paid</h5>
+                                            <p class="card-text">{{ grand_total_interest_paid|floatformat:2|intcomma }}</p>
+                                        </div>
+                                        <i class="fas fa-percentage fa-2x opacity-50"></i>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-
-                    <!-- Period Information -->
-                    <div class="alert alert-light mb-4">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <strong>Report Period:</strong> 
-                                {{ start_date|date:"F d, Y" }} to {{ end_date|date:"F d, Y" }}
-                            </div>
-                            <div class="col-md-6 text-end">
-                                <strong>Generated by:</strong> 
-                                {{ request.user.get_full_name|default:request.user.username }}
+                        <div class="col-xl-3 col-md-6">
+                            <div class="card text-white bg-warning summary-card h-100">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <h5 class="card-title">Total Due</h5>
+                                            <p class="card-text">{{ grand_total_repayment|floatformat:2|intcomma }}</p>
+                                        </div>
+                                        <i class="fas fa-exclamation-triangle fa-2x opacity-50"></i>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -221,61 +418,65 @@
                         <table class="report-table">
                             <thead>
                                 <tr>
-                                    <th>#</th>
-                                    <th>Loan ID</th>
-                                    <th>Customer</th>
-                                    <th>Branch</th>
-                                    <th>Loan Officer</th>
+                                    <th>GL No</th>
+                                    <th>Account No</th>
+                                    <th>Customer Name</th>
                                     <th class="text-end">Loan Amount</th>
-                                    <th class="text-end">Interest</th>
-                                    <th>Disbursed On</th>
-                                    <th>Status</th>
+                                    <th class="text-end">Total Interest</th>
+                                    <th class="text-end">Principal Paid</th>
+                                    <th class="text-end">Interest Paid</th>
+                                    <th class="text-end">Principal Due</th>
+                                    <th class="text-end">Interest Due</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for loan in loans %}
+                                {% for repayment in expected_repayments %}
                                 <tr>
-                                    <td>{{ forloop.counter }}</td>
-                                    <td>{{ loan.loan_number }}</td>
-                                    <td>{{ loan.customer.get_full_name }}</td>
-                                    <td>{{ loan.branch.branch_name }}</td>
-                                    <td>{{ loan.loan_officer.get_full_name }}</td>
-                                    <td class="amount">{{ loan.loan_amount|floatformat:2|intcomma }}</td>
-                                    <td class="amount">{{ loan.total_interest|floatformat:2|intcomma }}</td>
-                                    <td>{{ loan.disbursement_date|date:"M d, Y" }}</td>
-                                    <td>
-                                        {% if loan.status == 'disbursed' %}
-                                            <span class="badge bg-success">Disbursed</span>
-                                        {% elif loan.status == 'approved' %}
-                                            <span class="badge bg-info">Approved</span>
-                                        {% elif loan.status == 'rejected' %}
-                                            <span class="badge bg-danger">Rejected</span>
-                                        {% else %}
-                                            <span class="badge bg-secondary">{{ loan.status|title }}</span>
-                                        {% endif %}
+                                    <td><span class="gl-badge">{{ repayment.gl_no }}</span></td>
+                                    <td>{{ repayment.ac_no }}</td>
+                                    <td>{{ repayment.customer_name }}</td>
+                                    <td class="amount">{{ repayment.loan_amount|floatformat:2|intcomma }}</td>
+                                    <td class="amount">{{ repayment.total_interest|floatformat:2|intcomma }}</td>
+                                    <td class="amount">{{ repayment.total_principal_paid|floatformat:2|intcomma }}</td>
+                                    <td class="amount">{{ repayment.total_interest_paid|floatformat:2|intcomma }}</td>
+                                    <td class="amount {% if repayment.expected_principal_repayment > 0 %}overdue{% endif %}">
+                                        {{ repayment.expected_principal_repayment|floatformat:2|intcomma }}
+                                    </td>
+                                    <td class="amount {% if repayment.expected_interest_repayment > 0 %}overdue{% endif %}">
+                                        {{ repayment.expected_interest_repayment|floatformat:2|intcomma }}
                                     </td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
                             <tfoot>
                                 <tr class="total-row">
-                                    <td colspan="5" class="text-end fw-bold">TOTALS</td>
-                                    <td class="amount">{{ total_loan_amount|floatformat:2|intcomma }}</td>
-                                    <td class="amount">{{ total_interest|floatformat:2|intcomma }}</td>
-                                    <td colspan="2"></td>
+                                    <td colspan="3" class="text-end">TOTALS</td>
+                                    <td class="amount">{{ grand_totals.loan_amount|floatformat:2|intcomma }}</td>
+                                    <td class="amount">{{ grand_total_interest|floatformat:2|intcomma }}</td>
+                                    <td class="amount">{{ grand_total_principal_paid|floatformat:2|intcomma }}</td>
+                                    <td class="amount">{{ grand_total_interest_paid|floatformat:2|intcomma }}</td>
+                                    <td class="amount overdue">{{ grand_total_repayment|floatformat:2|intcomma }}</td>
+                                    <td class="amount overdue">{{ grand_total_interest|add:grand_total_interest_paid|floatformat:2|intcomma }}</td>
                                 </tr>
                             </tfoot>
                         </table>
                     </div>
 
-                    <div class="mt-4 text-muted small">
-                        <div class="d-flex justify-content-between">
-                            <div>
-                                <strong>Note:</strong> 
-                                This report shows all loan disbursements within the selected period.
-                            </div>
-                            <div>
-                                Generated on: {% now "F d, Y h:i A" %}
+                    <!-- Report Footer -->
+                    <div class="mt-4">
+                        <div class="alert alert-light">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1"><i class="fas fa-info-circle mr-2"></i>Report Summary</h6>
+                                    <p class="small mb-0">
+                                        This report compares expected repayments against actual payments as of {{ reporting_date|date:"F d, Y" }}.
+                                        Amounts in red indicate overdue payments that require attention.
+                                    </p>
+                                </div>
+                                <div class="text-right">
+                                    <div class="small text-muted mb-1">Generated by</div>
+                                    <div class="font-weight-500">{{ request.user.get_full_name|default:request.user.username }}</div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -288,25 +489,39 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Date validation
-    const startDate = document.querySelector('input[name="start_date"]');
-    const endDate = document.querySelector('input[name="end_date"]');
-    
-    if (startDate && endDate) {
-        startDate.addEventListener('change', function() {
-            if (endDate.value && this.value > endDate.value) {
-                alert('Start date cannot be after end date');
-                this.value = '';
-            }
-        });
-        
-        endDate.addEventListener('change', function() {
-            if (startDate.value && this.value < startDate.value) {
-                alert('End date cannot be before start date');
-                this.value = '';
+    // Form submission loading state
+    const reportForm = document.getElementById('reportForm');
+    if (reportForm) {
+        reportForm.addEventListener('submit', function() {
+            const submitBtn = this.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Generating...';
+                submitBtn.disabled = true;
             }
         });
     }
+
+    // Add animation to overdue cells
+    document.querySelectorAll('.overdue').forEach(cell => {
+        cell.addEventListener('mouseenter', function() {
+            this.style.transform = 'scale(1.05)';
+        });
+        cell.addEventListener('mouseleave', function() {
+            this.style.transform = 'scale(1)';
+        });
+    });
+
+    // Add hover effect to GL badges
+    document.querySelectorAll('.gl-badge').forEach(badge => {
+        badge.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-2px)';
+            this.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+        });
+        badge.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+            this.style.boxShadow = 'none';
+        });
+    });
 });
 </script>
 {% endblock %}

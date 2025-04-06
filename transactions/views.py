@@ -137,7 +137,7 @@ def deposit(request, id):
                         )
                         customer_transaction.save()
 
-                        unique_id = f"DP{timezone.now().strftime('%Y%m%d%H%M%S')}"
+                        unique_id = generate_deposit_id()
                         customer_transaction.trx_no = unique_id
                         customer_transaction.save()
 

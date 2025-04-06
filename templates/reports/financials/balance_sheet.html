@@ -138,8 +138,8 @@
                     <label for="branch">Select Branch</label>
                     <select class="form-control bg-light" name="branch" id="branch">
                         <option value="">All Branches</option>
-                        {% for company in companies %}
-                            <option value="{{ company.id }}" {% if company.id|stringformat:"s" == selected_branch %}selected{% endif %}>{{ company.branch_name }}</option>
+                        {% for branch in branches %}
+                            <option value="{{ branch.id }}" {% if branch.id|stringformat:"s" == selected_branch %}selected{% endif %}>{{ branch.branch_name }}</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -153,9 +153,9 @@
                 <div class="table_section padding_infor_info">
                     <div class="row">
                         <div class="col-md-12 text-center">
-                            <h4>{{ company.company_name }}</h4>
-                            <p>{{ company.branch_name }}</p>
-                            <p class="office-address">{{ company.office_address }}</p>
+                            <h4>{{ branch.company_name }}</h4>
+                            <p>{{ branch.branch_name }}</p>
+                            <p class="office-address">{{ branch.office_address }}</p>
                             <h5 style="color: #1115f0;">Balance Sheet</h5>
                         </div>
                     </div>
@@ -227,7 +227,7 @@
             var endDateInput = document.getElementById('end_date');
             var generateForm = document.getElementById('generateForm');
             var resultsArea = document.querySelector('.printable-area');
-            var companyDate = '{{ company_date }}'; // Assuming company_date is in the 'YYYY-MM-DD' format
+            var branchDate = '{{ branch_date }}'; // Changed from company_date to branch_date
 
             // Hide the results area if there is no data
             {% if balance_sheet_data %}
@@ -237,21 +237,21 @@
 
             startDateInput.addEventListener('change', function() {
                 var selectedDate = new Date(startDateInput.value);
-                var companyDateObj = new Date(companyDate);
+                var branchDateObj = new Date(branchDate);
 
-                if (selectedDate > companyDateObj) {
+                if (selectedDate > branchDateObj) {
                     alert('Please select a date not greater than the session date.');
-                    startDateInput.value = '{{ company_date }}'; // Clear the input value
+                    startDateInput.value = '{{ branch_date }}'; // Changed from company_date to branch_date
                 }
             });
 
             endDateInput.addEventListener('change', function() {
                 var selectedDate = new Date(endDateInput.value);
-                var companyDateObj = new Date(companyDate);
+                var branchDateObj = new Date(branchDate);
 
-                if (selectedDate > companyDateObj) {
+                if (selectedDate > branchDateObj) {
                     alert('Please select a date not greater than the session date.');
-                    endDateInput.value = '{{ company_date }}'; // Clear the input value
+                    endDateInput.value = '{{ branch_date }}'; // Changed from company_date to branch_date
                 }
             });
         });

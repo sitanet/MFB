@@ -572,8 +572,10 @@ def generate_trial_balance(start_date, end_date, branch_code=None):
 
     return sorted_trial_balance_data, subtotal_1, subtotal_2, subtotal_3, subtotal_4, subtotal_5, total_debit, total_credit, total_balance
 
+
+
 def trial_balance(request):
-    companies = Company.objects.all()
+    branches = Branch.objects.all()  # Changed from Company to Branch
 
     if request.method == 'POST':
         form = TrialBalanceForm(request.POST)
@@ -585,7 +587,7 @@ def trial_balance(request):
             # When branch_id is None, set branch_code to None to indicate "All Branches"
             branch_code = None
             if branch_id is not None:
-                branch = get_object_or_404(Company, id=branch_id)
+                branch = get_object_or_404(Branch, id=branch_id)  # Changed from Company to Branch
                 branch_code = branch.branch_code
 
             # Generate trial balance data
@@ -593,7 +595,7 @@ def trial_balance(request):
             
             return render(request, 'reports/financials/trial_balance.html', {
                 'form': form,
-                'companies': companies,
+                'branches': branches,  # Changed from companies to branches
                 'trial_balance_data': trial_balance_data,
                 'subtotal_1': subtotal_1,
                 'subtotal_2': subtotal_2,
@@ -606,17 +608,16 @@ def trial_balance(request):
                 'start_date': start_date,
                 'end_date': end_date,
                 'selected_branch': branch_id,
-                'company': companies.first(),  # You might want to consider how you handle multiple companies here.
+                'branch': branches.first() if branches.exists() else None,  # Changed from company to branch
             })
     else:
         form = TrialBalanceForm()
 
     return render(request, 'reports/financials/trial_balance.html', {
         'form': form,
-        'companies': companies,
+        'branches': branches,  # Changed from companies to branches
         'selected_branch': None,
     })
-
 
 from django.shortcuts import render, get_object_or_404
 from transactions.models import Memtrans
@@ -3224,8 +3225,10 @@ def generate_balance_sheet(start_date, end_date, branch_code=None):
 
     return sorted_balance_sheet_data, subtotal_4, subtotal_5, total_debit, total_credit, total_balance, net_income
 
+
+
 def balance_sheet(request):
-    companies = Company.objects.all()
+    branches = Branch.objects.all()  # Changed from Company to Branch
 
     if request.method == 'POST':
         form = TrialBalanceForm(request.POST)
@@ -3237,15 +3240,15 @@ def balance_sheet(request):
             # When branch_id is None, set branch_code to None to indicate "All Branches"
             branch_code = None
             if branch_id is not None:
-                branch = get_object_or_404(Company, id=branch_id)
+                branch = get_object_or_404(Branch, id=branch_id)  # Changed from Company to Branch
                 branch_code = branch.branch_code
 
             # Generate balance sheet data
             balance_sheet_data, subtotal_4, subtotal_5, total_debit, total_credit, total_balance, net_income = generate_balance_sheet(start_date, end_date, branch_code)
-
+            
             return render(request, 'reports/financials/balance_sheet.html', {
                 'form': form,
-                'companies': companies,
+                'branches': branches,  # Changed from companies to branches
                 'balance_sheet_data': balance_sheet_data,
                 'subtotal_4': subtotal_4,
                 'subtotal_5': subtotal_5,
@@ -3256,17 +3259,16 @@ def balance_sheet(request):
                 'start_date': start_date,
                 'end_date': end_date,
                 'selected_branch': branch_id,
-                'company': companies.first(),  # You might want to consider how you handle multiple companies here.
+                'branch': branches.first() if branches.exists() else None,  # Changed from company to branch
             })
     else:
         form = TrialBalanceForm()
 
     return render(request, 'reports/financials/balance_sheet.html', {
         'form': form,
-        'companies': companies,
+        'branches': branches,  # Changed from companies to branches
         'selected_branch': None,
     })
-
 
 
 
@@ -3345,7 +3347,7 @@ def generate_profit_and_loss(start_date, end_date, branch_code=None):
     return sorted_profit_and_loss_data, subtotal_4, subtotal_5, total_debit, total_credit, net_income
 
 def profit_and_loss(request):
-    companies = Company.objects.all()
+    branches = Branch.objects.all()  # Changed from Company to Branch
 
     if request.method == 'POST':
         form = TrialBalanceForm(request.POST)
@@ -3357,15 +3359,17 @@ def profit_and_loss(request):
             # Determine branch code if a specific branch is selected
             branch_code = None
             if branch_id is not None:
-                branch = get_object_or_404(Company, id=branch_id)
+                branch = get_object_or_404(Branch, id=branch_id)  # Changed from Company to Branch
                 branch_code = branch.branch_code
 
             # Generate profit and loss data
-            profit_and_loss_data, subtotal_4, subtotal_5, total_debit, total_credit, net_income = generate_profit_and_loss(start_date, end_date, branch_code)
+            profit_and_loss_data, subtotal_4, subtotal_5, total_debit, total_credit, net_income = generate_profit_and_loss(
+                start_date, end_date, branch_code
+            )
 
             return render(request, 'reports/financials/profit_and_loss.html', {
                 'form': form,
-                'companies': companies,
+                'branches': branches,  # Changed from companies to branches
                 'balance_sheet_data': profit_and_loss_data,
                 'subtotal_4': subtotal_4,
                 'subtotal_5': subtotal_5,
@@ -3375,17 +3379,16 @@ def profit_and_loss(request):
                 'start_date': start_date,
                 'end_date': end_date,
                 'selected_branch': branch_id,
-                'company': companies.first(),  # You might want to consider how you handle multiple companies here.
+                'branch': branch if branch_id else branches.first(),  # Changed from company to branch
             })
     else:
         form = TrialBalanceForm()
 
     return render(request, 'reports/financials/profit_and_loss.html', {
         'form': form,
-        'companies': companies,
+        'branches': branches,  # Changed from companies to branches
         'selected_branch': None,
     })
-
 
     
 from django.shortcuts import render, get_object_or_404, redirect
@@ -4511,81 +4514,93 @@ def loan_till_sheet(request):
     }
     return render(request, 'reports/loans/loan_till_sheet.html', context)
 
+
+
 def loan_due_vs_repayment_report(request):
     # Initialize variables
     expected_repayments = []
-    grand_total_repayment = 0
-    grand_total_interest = 0
-    grand_total_principal_paid = 0
-    grand_total_interest_paid = 0
-    reporting_date = ''
+    grand_totals = {
+        'loan_amount': 0,
+        'total_interest': 0,
+        'total_principal_paid': 0,
+        'total_interest_paid': 0,
+        'expected_principal_repayment': 0,
+        'expected_interest_repayment': 0,
+    }
+    
+    reporting_date = timezone.now().date()
     selected_branch = ''
     selected_gl_no = ''
 
     if request.method == 'POST':
         # Get form data
-        reporting_date = request.POST.get('reporting_date', '')
+        reporting_date_str = request.POST.get('reporting_date', '')
         selected_branch = request.POST.get('branch', '')
         selected_gl_no = request.POST.get('gl_no', '')
 
         # Validate reporting_date
-        if reporting_date:
+        if reporting_date_str:
             try:
-                reporting_date = timezone.datetime.strptime(reporting_date, '%Y-%m-%d').date()
+                reporting_date = timezone.datetime.strptime(reporting_date_str, '%Y-%m-%d').date()
             except ValueError:
                 return HttpResponseBadRequest("Invalid date format. Please use YYYY-MM-DD.")
-        else:
-            reporting_date = timezone.now().date()
 
-        # Initialize queryset
-        loans = Loans.objects.all()
-
-        # Apply filters based on reporting date
-        if reporting_date:
-            loans = loans.filter(disbursement_date__lte=reporting_date)
-
-        # Apply additional filters if provided
+        # Initialize queryset with filters
+        loans = Loans.objects.filter(disbursement_date__lte=reporting_date)
+        
+        # Apply branch filter if provided
         if selected_branch:
-            loans = loans.filter(branch=selected_branch)  # Corrected filter for branch field
+            loans = loans.filter(
+                Q(branch_id=selected_branch) | 
+                Q(branch__branch_code=selected_branch)
+            )
+        
+        # Apply GL filter if provided
         if selected_gl_no:
             loans = loans.filter(gl_no=selected_gl_no)
 
-        # Prepare list for output
+        # Prepare report data
         for loan in loans:
-            total_disbursements = LoanHist.objects.filter(
+            # Get all disbursements
+            disbursements = LoanHist.objects.filter(
                 gl_no=loan.gl_no,
                 ac_no=loan.ac_no,
                 cycle=loan.cycle,
                 trx_type='LD',
                 trx_date__lte=reporting_date
-            ).aggregate(total_disbursements=Sum('principal'))['total_disbursements'] or 0
-
-            total_principal_paid = LoanHist.objects.filter(
+            ).aggregate(
+                total_principal=Sum('principal'),
+                total_interest=Sum('interest')
+            )
+            
+            # Get all repayments
+            repayments = LoanHist.objects.filter(
                 gl_no=loan.gl_no,
                 ac_no=loan.ac_no,
                 cycle=loan.cycle,
                 trx_type='LP',
                 trx_date__lte=reporting_date
-            ).aggregate(total_principal_paid=Sum('principal'))['total_principal_paid'] or 0
+            ).aggregate(
+                total_principal_paid=Sum('principal'),
+                total_interest_paid=Sum('interest')
+            )
 
-            total_interest_paid = LoanHist.objects.filter(
-                gl_no=loan.gl_no,
-                ac_no=loan.ac_no,
-                cycle=loan.cycle,
-                trx_type='LP',
-                trx_date__lte=reporting_date
-            ).aggregate(total_interest_paid=Sum('interest'))['total_interest_paid'] or 0
-
-            total_interest = LoanHist.objects.filter(
-                gl_no=loan.gl_no,
-                ac_no=loan.ac_no,
-                cycle=loan.cycle,
-                trx_type='LD',
-                trx_date__lte=reporting_date
-            ).aggregate(total_interest=Sum('interest'))['total_interest'] or 0
-
+            # Calculate values (handle None cases)
+            total_disbursements = disbursements['total_principal'] or 0
+            total_interest = disbursements['total_interest'] or 0
+            total_principal_paid = repayments['total_principal_paid'] or 0
+            total_interest_paid = repayments['total_interest_paid'] or 0
+            
             expected_principal_repayment = total_disbursements + total_principal_paid
             expected_interest_repayment = total_interest + total_interest_paid
+
+            # Update grand totals
+            grand_totals['loan_amount'] += loan.loan_amount
+            grand_totals['total_interest'] += total_interest
+            grand_totals['total_principal_paid'] += total_principal_paid
+            grand_totals['total_interest_paid'] += total_interest_paid
+            grand_totals['expected_principal_repayment'] += expected_principal_repayment
+            grand_totals['expected_interest_repayment'] += expected_interest_repayment
 
             expected_repayments.append({
                 'gl_no': loan.gl_no,
@@ -4593,36 +4608,26 @@ def loan_due_vs_repayment_report(request):
                 'customer_name': f"{loan.customer.first_name} {loan.customer.middle_name or ''} {loan.customer.last_name}" if loan.customer else 'N/A',
                 'loan_amount': loan.loan_amount,
                 'total_disbursements': total_disbursements,
+                'total_interest': total_interest,
                 'total_principal_paid': total_principal_paid,
                 'total_interest_paid': total_interest_paid,
-                'total_interest': total_interest,
                 'expected_principal_repayment': expected_principal_repayment,
                 'expected_interest_repayment': expected_interest_repayment,
             })
 
-            grand_total_repayment += expected_principal_repayment
-            grand_total_interest += total_interest
-            grand_total_principal_paid += total_principal_paid
-            grand_total_interest_paid += total_interest_paid
-
     context = {
         'report_title': 'Loan Dues vs Repayment Report',
-        'expected_repayments': expected_repayments if request.method == 'POST' else None, 
-        'grand_total_repayment': grand_total_repayment,
-        'grand_total_interest': grand_total_interest,
-        'grand_total_principal_paid': grand_total_principal_paid,
-        'grand_total_interest_paid': grand_total_interest_paid,
+        'expected_repayments': expected_repayments if request.method == 'POST' else None,
+        'grand_totals': grand_totals,
         'current_date': timezone.now(),
         'reporting_date': reporting_date,
-        'branches': Company.objects.all(),
+        'branches': Branch.objects.all(),
         'gl_accounts': Account.objects.all(),
         'selected_branch': selected_branch,
         'selected_gl_no': selected_gl_no
     }
 
     return render(request, 'reports/loans/loan_due_vs_repayment_report.html', context)
-
-
 
 
 from django.shortcuts import render
