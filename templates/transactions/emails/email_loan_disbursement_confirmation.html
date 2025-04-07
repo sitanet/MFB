@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loan Disbursement Confirmation | GlobalTrust Bank</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #333333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 0;
+            background-color: #f7f9fc;
+        }
+        .email-container {
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+            margin: 20px auto;
+        }
+        .header {
+            background-color: #0056b3;
+            padding: 30px 20px;
+            text-align: center;
+            color: white;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+        }
+        .logo {
+            height: 40px;
+            margin-bottom: 15px;
+        }
+        .content {
+            padding: 30px;
+        }
+        .greeting {
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+        .transaction-card {
+            background-color: #f8fafc;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 25px 0;
+            border-left: 4px solid #28a745;
+        }
+        .transaction-title {
+            color: #28a745;
+            font-size: 18px;
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+        .detail-row {
+            display: flex;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eaeef2;
+        }
+        .detail-row:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        .detail-label {
+            font-weight: 600;
+            color: #55657e;
+            width: 180px;
+        }
+        .detail-value {
+            flex: 1;
+        }
+        .amount {
+            font-weight: 700;
+            color: #28a745;
+        }
+        .repayment-schedule {
+            margin-top: 20px;
+        }
+        .schedule-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+        .schedule-table th {
+            background-color: #f2f2f2;
+            text-align: left;
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        .schedule-table td {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            background-color: #f1f5f9;
+            font-size: 13px;
+            color: #64748b;
+        }
+        .signature {
+            margin-top: 25px;
+        }
+        .thank-you {
+            color: #0056b3;
+            font-weight: 600;
+            margin: 25px 0;
+        }
+        .important-note {
+            background-color: #fff8e1;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+            font-size: 14px;
+            border-left: 4px solid #ffc107;
+        }
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #0056b3;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="header">
+            <!-- Replace with your actual logo -->
+            <img src="https://www.yourbank.com/logo.png" alt="GlobalTrust Bank" class="logo">
+            <h1>Loan Disbursement Confirmation</h1>
+        </div>
+        
+        <div class="content">
+            <div class="greeting">Dear {{ customer_name }},</div>
+            
+            <p>We are pleased to confirm that your loan application has been approved and the funds have been successfully disbursed to your account.</p>
+            
+            <div class="transaction-card">
+                <h3 class="transaction-title">Loan Details</h3>
+                
+                <div class="detail-row">
+                    <div class="detail-label">Reference Number:</div>
+                    <div class="detail-value">{{ transaction_id }}</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Loan Amount:</div>
+                    <div class="detail-value"><span class="amount">{{ loan_amount }}</span></div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Account Number:</div>
+                    <div class="detail-value">{{ loan_account }}</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Interest Rate:</div>
+                    <div class="detail-value">{{ interest_rate }}%</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Loan Term:</div>
+                    <div class="detail-value">{{ loan_term }} months</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Disbursement Date:</div>
+                    <div class="detail-value">{{ disbursement_date }}</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Total Repayment:</div>
+                    <div class="detail-value">{{ total_repayment }}</div>
+                </div>
+            </div>
+
+            <div class="repayment-schedule">
+                <h3>Repayment Schedule</h3>
+                <table class="schedule-table">
+                    <thead>
+                        <tr>
+                            <th>Installment #</th>
+                            <th>Due Date</th>
+                            <th>Principal</th>
+                            <th>Interest</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for payment in repayment_schedule %}
+                        <tr>
+                            <td>{{ payment.period }}</td>
+                            <td>{{ payment.payment_date }}</td>
+                            <td>{{ payment.principal_payment }}</td>
+                            <td>{{ payment.interest_payment }}</td>
+                            <td>{{ payment.total_payment }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="important-note">
+                <p><strong>Important:</strong></p>
+                <ul>
+                    <li>Please ensure timely repayment to avoid penalties</li>
+                    <li>Late payments may affect your credit score</li>
+                    <li>Contact us immediately if you notice any discrepancies</li>
+                </ul>
+            </div>
+
+            <p>You can view your loan details anytime through our internet banking portal or mobile app.</p>
+            
+            <a href="https://www.yourbank.com/loans" class="button">View Loan Details</a>
+            
+            <div class="thank-you">Thank you for choosing GlobalTrust Bank</div>
+            
+            <div class="signature">
+                <p>Sincerely,</p>
+                <p><strong>The Loans Department<br>GlobalTrust Bank</strong></p>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>© {% now "Y" %} GlobalTrust Bank. All rights reserved.</p>
+            <p>Loan Services: +1 (800) 123-4567 | loans@globaltrustbank.com</p>
+            <p>This is an automated message. Please do not reply directly to this email.</p>
+        </div>
+    </div>
+</body>
+</html>

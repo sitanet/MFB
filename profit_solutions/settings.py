@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-%f1%grgx3u=j1#pklxrabzx$eas@ao=$^wh)s#f83zq9^&sp-%
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost','127.0.0.1','165.22.19.154','www.financeflex.sitanetorbit.com','financeflex.sitanetorbit.com']
+ALLOWED_HOSTS = ['localhost','127.0.0.1','134.209.239.230','www.financeflex.sitanetorbit.com','financeflex.sitanetorbit.com']
 
 
 # Application definition
@@ -104,20 +104,30 @@ WSGI_APPLICATION = 'profit_solutions.wsgi.application'
 
 
 
+# LOCAL DATABASE
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': 'FinanceFlex',
+#         'USER': 'postgres',
+#         'PASSWORD': 'People',
+#         'HOST': 'localhost',
+#         # 'HOST': 'finance-flex.ctqg0cgman7j.af-south-1.rds.amazonaws.com',  # Or your database host
+#         'PORT': '5432',          
+#     }
+# }
 
+# PRODUCTION DATABASE
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'FinanceFlex',
-        'USER': 'postgres',
-        'PASSWORD': 'People',
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': 'demo_db',
+        'USER': 'demo_user',
+        'PASSWORD': 'Completed1234',
         'HOST': 'localhost',
-        # 'HOST': 'finance-flex.ctqg0cgman7j.af-south-1.rds.amazonaws.com',  # Or your database host
-        'PORT': '5432',          
+        'PORT': '',
     }
 }
-
-
 
 
 

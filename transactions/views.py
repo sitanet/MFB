@@ -186,7 +186,7 @@ def deposit(request, id):
                             ac_no=cashier_customer.ac_no
                         ).update(balance=sum_of_amounts)
 
-                        # Send notification
+                        # Send SMS notification
                         if customer.sms:
                             current_balance = Customer.objects.get(
                                 gl_no=customer.gl_no,
@@ -194,6 +194,33 @@ def deposit(request, id):
                             ).balance
                             sms_message = f"Dear {customer.first_name}, your deposit of {amount} has been successful. Your new balance is {current_balance}."
                             send_sms(customer.phone_no, sms_message)
+                        
+                        # Send email notification if email_alert is True and email exists
+                        if customer.email_alert and customer.email:
+                            current_balance = Customer.objects.get(
+                                gl_no=customer.gl_no,
+                                ac_no=customer.ac_no
+                            ).balance
+                            
+                            email_context = {
+                                'customer_name': customer.first_name,
+                                'amount': amount,
+                                'new_balance': current_balance,
+                                'transaction_date': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
+                                'transaction_id': unique_id,
+                                'description': description,
+                            }
+                            
+                            try:
+                                send_email(
+                                    to_email=customer.email,
+                                    subject=f"Deposit Confirmation - Transaction #{unique_id}",
+                                    template_name='transactions/emails/deposit_email.html',  # You'll need to create this template
+                                    context=email_context
+                                )
+                            except Exception as e:
+                                # Log the email error but don't fail the transaction
+                                print(f"Failed to send email notification: {str(e)}")
 
                         messages.success(request, 'Deposit successful!')
                         return redirect('deposit', id=id)
@@ -222,8 +249,6 @@ def deposit(request, id):
             branch=user_branch  # Branch instance
         ).order_by('-id').first(),
     })
-
-
     
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
@@ -252,7 +277,7 @@ def withdraw(request, id):
         error='A'
     ).order_by('-id').first()
 
-    # Initial form values (matches deposit exactly)
+    # Initial form values
     initial_values = {
         'branch': user_branch,
         'gl_no_cashier': cashier_customer.gl_no,
@@ -261,7 +286,7 @@ def withdraw(request, id):
         'ac_no_cust': customer.ac_no,
     }
 
-    # Compute balances EXACTLY like in deposit function
+    # Compute balances
     sum_of_amount_cash = Memtrans.objects.filter(
         gl_no=initial_values['gl_no_cashier'],
         ac_no=initial_values['ac_no_cashier'],
@@ -273,7 +298,6 @@ def withdraw(request, id):
         gl_no=initial_values['gl_no_cust'],
         ac_no=initial_values['ac_no_cust'],
         error='A',
-    
     ).aggregate(total_amount2=Sum('amount'))['total_amount2'] or 0
 
     # Check session status
@@ -284,16 +308,16 @@ def withdraw(request, id):
     if request.method == 'POST':
         form = MemtransForm(request.POST)
         if form.is_valid():
-            form.cleaned_data['branch'] = user_branch  # Ensure branch is set
+            form.cleaned_data['branch'] = user_branch
             
             amount = form.cleaned_data['amount']
             app_date = form.cleaned_data['app_date']
 
-            # Validate application date (same as deposit)
+            # Validate application date
             if app_date and company.session_date and app_date > company.session_date:
                 form.add_error('app_date', 'Application date cannot be greater than the company session date.')
             else:
-                # Check sufficient balance (using the same calculation as deposit)
+                # Check sufficient balance
                 if sum_of_amount_cust < amount:
                     messages.warning(request, 'Insufficient Balance!')
                     return redirect('choose_withdrawal')
@@ -302,37 +326,37 @@ def withdraw(request, id):
                     # Generate unique ID
                     unique_id = generate_withdrawal_id()
 
-                    # Customer transaction (debit) - opposite of deposit
+                    # Customer transaction (debit)
                     customer_transaction = Memtrans(
                         branch=user_branch,
                         cust_branch=customer_branch,
                         gl_no=customer.gl_no,
                         ac_no=customer.ac_no,
-                        amount=-amount,  # Negative for withdrawal
+                        amount=-amount,
                         description=form.cleaned_data['description'],
                         error='A',
                         account_type=customer.label,
-                        type='D',  # Debit for withdrawal
+                        type='D',
                         ses_date=form.cleaned_data['ses_date'],
                         app_date=form.cleaned_data['app_date'],
                         sys_date=timezone.now(),
                         customer=customer,
-                        code='WD',  # Withdrawal code
+                        code='WD',
                         user=user,
                         trx_no=unique_id
                     )
                     customer_transaction.save()
 
-                    # Cashier transaction (credit) - opposite of deposit
+                    # Cashier transaction (credit)
                     cashier_transaction = Memtrans(
                         branch=user_branch,
                         cust_branch=user_branch,
                         gl_no=cashier_customer.gl_no,
                         ac_no=cashier_customer.ac_no,
-                        amount=amount,  # Positive for cashier
+                        amount=amount,
                         description=f'{customer.first_name}, {customer.last_name}, {customer.gl_no}-{customer.ac_no}',
                         error='A',
-                        type='C',  # Credit for cashier
+                        type='C',
                         account_type=cashier_customer.label,
                         customer=cashier_customer,
                         code='WD',
@@ -344,7 +368,7 @@ def withdraw(request, id):
                     )
                     cashier_transaction.save()
 
-                    # Update balances EXACTLY like in deposit function
+                    # Update balances
                     sum_of_amounts = Memtrans.objects.filter(
                         gl_no=customer.gl_no,
                         ac_no=customer.ac_no,
@@ -375,7 +399,7 @@ def withdraw(request, id):
                         cashier_to_update.balance = sum_of_amounts
                         cashier_to_update.save()
 
-                    # Send SMS if enabled (same pattern as deposit)
+                    # Send SMS if enabled
                     if customer.sms:
                         current_balance = Customer.objects.get(
                             gl_no=customer.gl_no,
@@ -383,14 +407,41 @@ def withdraw(request, id):
                         ).balance
                         sms_message = f"Dear {customer.first_name}, your withdrawal of {amount} has been successful. Your new balance is {current_balance}."
                         send_sms(customer.phone_no, sms_message)
+                    
+                    # Send email notification if email_alert is True and email exists
+                    if customer.email_alert and customer.email:
+                        current_balance = Customer.objects.get(
+                            gl_no=customer.gl_no,
+                            ac_no=customer.ac_no
+                        ).balance
+                        
+                        email_context = {
+                            'customer_name': customer.first_name,
+                            'amount': amount,
+                            'new_balance': current_balance,
+                            'transaction_date': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
+                            'transaction_id': unique_id,
+                            'description': form.cleaned_data['description'],
+                            'transaction_type': 'Withdrawal',  # Added for email template
+                        }
+                        
+                        try:
+                            send_email(
+                                to_email=customer.email,
+                                subject=f"Withdrawal Confirmation - Transaction #{unique_id}",
+                                template_name='transactions/emails/withdrawal_email.html',  # Separate template for withdrawals
+                                context=email_context
+                            )
+                        except Exception as e:
+                            # Log the email error but don't fail the transaction
+                            print(f"Failed to send email notification: {str(e)}")
 
                     messages.success(request, 'Withdrawal successful!')
                     return redirect('withdraw', id=id)
     else:
         form = MemtransForm(initial=initial_values)
-        form.fields['branch'].disabled = True  # Disable branch field
+        form.fields['branch'].disabled = True
 
-    # Context matches deposit exactly with same variable names
     return render(request, 'transactions/cash_trans/withdraw.html', {
         'form': form,
         'data': data,

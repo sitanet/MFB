@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deposit Confirmation | GlobalTrust Bank</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 0;
+            background-color: #f7f9fc;
+        }
+        .email-container {
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+            margin: 20px auto;
+        }
+        .header {
+            background-color: #0056b3;
+            padding: 30px 20px;
+            text-align: center;
+            color: white;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+        }
+        .logo {
+            height: 40px;
+            margin-bottom: 15px;
+        }
+        .content {
+            padding: 30px;
+        }
+        .greeting {
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+        .transaction-card {
+            background-color: #f8fafc;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 25px 0;
+            border-left: 4px solid #0056b3;
+        }
+        .transaction-title {
+            color: #0056b3;
+            font-size: 18px;
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+        .detail-row {
+            display: flex;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eaeef2;
+        }
+        .detail-row:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        .detail-label {
+            font-weight: 600;
+            color: #55657e;
+            width: 140px;
+        }
+        .detail-value {
+            flex: 1;
+        }
+        .amount {
+            font-weight: 700;
+            color: #28a745;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            background-color: #f1f5f9;
+            font-size: 13px;
+            color: #64748b;
+        }
+        .signature {
+            margin-top: 25px;
+        }
+        .thank-you {
+            color: #0056b3;
+            font-weight: 600;
+            margin: 25px 0;
+        }
+        .security-note {
+            font-size: 13px;
+            color: #64748b;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #eaeef2;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="header">
+            <!-- Replace with your bank's logo -->
+            <img src="https://example.com/logo.png" alt="FinanceFlex" class="logo">
+            <h1>Deposit Transaction Confirmation</h1>
+        </div>
+        
+        <div class="content">
+            <div class="greeting">Dear {{ customer_name }},</div>
+            
+            <p>We're pleased to confirm that your deposit has been successfully processed and your account has been credited.</p>
+            
+            <div class="transaction-card">
+                <h3 class="transaction-title">Transaction Summary</h3>
+                
+                <div class="detail-row">
+                    <div class="detail-label">Transaction ID:</div>
+                    <div class="detail-value">{{ transaction_id }}</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Amount:</div>
+                    <div class="detail-value"><span class="amount">{{ amount }}</span></div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Description:</div>
+                    <div class="detail-value">{{ description }}</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Date & Time:</div>
+                    <div class="detail-value">{{ transaction_date }}</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Available Balance:</div>
+                    <div class="detail-value">{{ new_balance }}</div>
+                </div>
+            </div>
+            
+            <div class="thank-you">Thank you for banking with FinanceFlex </div>
+            
+            <div class="signature">
+                <p>Sincerely,</p>
+                <p><strong>The FinanceFlex Team</strong></p>
+            </div>
+            
+            <div class="security-note">
+                <p><strong>Security Note:</strong> For your protection, please do not share this email with anyone. If you did not initiate this transaction, please contact our customer support immediately.</p>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>© {% now "Y" %} FinanceFlex . All rights reserved.</p>
+            <p>Customer Service: +1 (800) 123-4567 | support@globaltrustbank.com</p>
+            <p>This is an automated message. Please do not reply directly to this email.</p>
+        </div>
+    </div>
+</body>
+</html>
