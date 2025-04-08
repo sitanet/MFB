@@ -86,6 +86,14 @@ TEMPLATES = [
 WSGI_APPLICATION = 'profit_solutions.wsgi.application'
 
 
+
+# settings.py
+# settings.py
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+    }
+}
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
@@ -105,29 +113,29 @@ WSGI_APPLICATION = 'profit_solutions.wsgi.application'
 
 
 # LOCAL DATABASE
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': 'FinanceFlex',
-#         'USER': 'postgres',
-#         'PASSWORD': 'People',
-#         'HOST': 'localhost',
-#         # 'HOST': 'finance-flex.ctqg0cgman7j.af-south-1.rds.amazonaws.com',  # Or your database host
-#         'PORT': '5432',          
-#     }
-# }
-
-# PRODUCTION DATABASE
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'demo_db',
-        'USER': 'demo_user',
-        'PASSWORD': 'Completed@1234',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'FinanceFlex',
+        'USER': 'postgres',
+        'PASSWORD': 'People',
         'HOST': 'localhost',
-        'PORT': '',
+        # 'HOST': 'finance-flex.ctqg0cgman7j.af-south-1.rds.amazonaws.com',  # Or your database host
+        'PORT': '5432',          
     }
 }
+
+# PRODUCTION DATABASE
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql_psycopg2',
+#         'NAME': 'demo_db',
+#         'USER': 'demo_user',
+#         'PASSWORD': 'Completed@1234',
+#         'HOST': 'localhost',
+#         'PORT': '',
+#     }
+# }
 
 
 

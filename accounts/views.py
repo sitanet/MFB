@@ -244,94 +244,97 @@ def edit_user(request, id):
 
 
 
+# accounts/views.py
+import logging
+import random
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.contrib.auth import authenticate
+from django.utils import timezone
+from django.core.cache import cache
+from .models import Branch, User
+from django.conf import settings
+
+
+
+logger = logging.getLogger(__name__)
 
 from django.contrib.auth import authenticate, login as auth_login
+from django.shortcuts import render, redirect
+from django.contrib import messages
 from django.utils import timezone
-import random  # For generating OTP
-from django.core.cache import cache  # To store OTP temporarily
-from .utils import send_sms  # Custom function to send SMS (integrate with an SMS gateway)
 
 def login(request):
     if request.user.is_authenticated:
-        messages.warning(request, 'You are already logged in!')
         return redirect('myAccount')
 
     if request.method == 'POST':
         email = request.POST.get('email')
         password = request.POST.get('password')
 
-        user = authenticate(email=email, password=password)
+        try:
+            user = authenticate(email=email, password=password)
+            if not user:
+                raise ValueError("Invalid credentials")
 
-        if user is not None:
-            try:
-                if not hasattr(user, 'branch'):
-                    messages.error(request, "Your account is not linked to a branch. Please contact your administrator.")
-                    return redirect('login')
+            # Check if user has a branch
+            if not hasattr(user, 'branch'):
+                raise ValueError("No branch assigned")
 
-                # Check branch and license
-                company = Branch.objects.get(pk=user.branch.pk)
-                expiration_date = company.company.expiration_date
-                today = timezone.now().date()
+            # License validity check
+            if user.branch.company.expiration_date < timezone.now().date():
+                raise ValueError("License expired")
 
-                if expiration_date < today:
-                    messages.error(request, "Your company's license has expired. Please contact your vendor.")
-                    return redirect('login')
-                elif today + timezone.timedelta(days=30) >= expiration_date:
-                    messages.warning(
-                        request,
-                        f"Your company's license will expire on {expiration_date}. Please contact your vendor."
-                    )
+            # Log the user in
+            auth_login(request, user)
+            return redirect('myAccount')
 
-                # Generate OTP
-                otp = random.randint(100000, 999999)  # 6-digit OTP
-                cache.set(f'otp_{user.id}', otp, timeout=300)  # Store OTP in cache for 5 minutes
-                
-                # Send OTP via SMS
-                phone_number = user.phone_number  # Assuming user profile has phone number
-                if not phone_number:
-                    messages.error(request, "No phone number linked to your account. Please contact support.")
-                    return redirect('login')
-                
-                send_sms(phone_number, f"Your verification code is {otp}. It will expire in 5 minutes.")  # SMS sending logic
-
-                # Redirect to OTP verification page
-                request.session['temp_user_id'] = user.id
-                return redirect('verify_otp')
-
-            except Branch.DoesNotExist:
-                messages.error(request, "Company details not found. Please contact your vendor.")
-                return redirect('login')
-
-        else:
-            messages.error(request, 'Invalid login credentials')
+        except Exception as e:
+            messages.error(request, str(e))
             return redirect('login')
 
     return render(request, 'accounts/login.html')
 
+
+
 def verify_otp(request):
-    user_id = request.session.get('temp_user_id')
-    if not user_id:
-        messages.error(request, "Session expired. Please login again.")
+    # Check if user came from login flow
+    if 'otp_data' not in request.session:
+        messages.error(request, "OTP session expired. Login again.")
         return redirect('login')
 
-    if request.method == 'POST':
-        input_otp = request.POST.get('otp')
-        cached_otp = cache.get(f'otp_{user_id}')
+    otp_data = request.session['otp_data']
+    user_id = otp_data['user_id']
 
-        if str(input_otp) == str(cached_otp):
-            # OTP is valid
-            user = User.objects.get(pk=user_id)
-            auth_login(request, user)
-            cache.delete(f'otp_{user_id}')  # Clear OTP from cache
-            del request.session['temp_user_id']  # Clear session
-            messages.success(request, "Login successful!")
-            return redirect('myAccount')
+    if request.method == 'POST':
+        user_entered_otp = request.POST.get('otp')
+
+        # Check both cache and session storage
+        cache_otp = cache.get(f'otp_{user_id}')
+        session_otp = otp_data['otp']
+
+        logger.debug(f"Verifying OTP for {user_id}. Cache: {cache_otp}, Session: {session_otp}, Entered: {user_entered_otp}")
+
+        # CORRECTED LINE (removed extra parenthesis)
+        if user_entered_otp and str(user_entered_otp) == str(session_otp):
+            try:
+                user = User.objects.get(pk=user_id)
+                from django.contrib.auth import login as auth_login
+                auth_login(request, user)
+                
+                # Cleanup
+                cache.delete(f'otp_{user_id}')
+                del request.session['otp_data']
+                
+                messages.success(request, "Logged in successfully!")
+                return redirect('myAccount')
+
+            except User.DoesNotExist:
+                messages.error(request, "User not found!")
         else:
-            messages.error(request, "Invalid or expired OTP.")
-            return redirect('verify_otp')
+            messages.error(request, "Invalid OTP!")
 
     return render(request, 'accounts/verify_otp.html')
-
 
 from django.shortcuts import redirect
 from django.contrib import messages
