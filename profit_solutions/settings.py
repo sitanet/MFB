@@ -113,29 +113,29 @@ CACHES = {
 
 
 # LOCAL DATABASE
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'FinanceFlex',
-        'USER': 'postgres',
-        'PASSWORD': 'People',
-        'HOST': 'localhost',
-        # 'HOST': 'finance-flex.ctqg0cgman7j.af-south-1.rds.amazonaws.com',  # Or your database host
-        'PORT': '5432',          
-    }
-}
-
-# PRODUCTION DATABASE
 # DATABASES = {
 #     'default': {
-#         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-#         'NAME': 'demo_db',
-#         'USER': 'demo_user',
-#         'PASSWORD': 'Completed@1234',
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': 'FinanceFlex',
+#         'USER': 'postgres',
+#         'PASSWORD': 'People',
 #         'HOST': 'localhost',
-#         'PORT': '',
+#         # 'HOST': 'finance-flex.ctqg0cgman7j.af-south-1.rds.amazonaws.com',  # Or your database host
+#         'PORT': '5432',          
 #     }
 # }
+
+# PRODUCTION DATABASE
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': 'demo_db',
+        'USER': 'demo_user',
+        'PASSWORD': 'Completed@1234',
+        'HOST': 'localhost',
+        'PORT': '',
+    }
+}
 
 
 
