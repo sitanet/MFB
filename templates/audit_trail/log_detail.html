@@ -1,0 +1,181 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <style>
+    .audit-log-detail {
+      margin: 20px;
+    }
+    .log-header {
+      background-color: #f8f9fa;
+      padding: 15px;
+      border-radius: 4px;
+      margin-bottom: 20px;
+    }
+    .log-property {
+      margin-bottom: 10px;
+    }
+    .log-property strong {
+      display: inline-block;
+      width: 120px;
+    }
+    .diff-container {
+      margin-top: 30px;
+    }
+    .diff-section {
+      margin-bottom: 20px;
+    }
+    .diff-title {
+      font-weight: bold;
+      margin-bottom: 10px;
+      padding: 5px;
+      border-bottom: 1px solid #eee;
+    }
+    .diff-content {
+      padding: 10px;
+      background-color: #f8f9fa;
+      border-radius: 4px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 3px 7px;
+      font-size: 12px;
+      font-weight: bold;
+      line-height: 1;
+      color: white;
+      text-align: center;
+      white-space: nowrap;
+      vertical-align: middle;
+      border-radius: 10px;
+    }
+    .badge-create { background-color: #5cb85c; }
+    .badge-update { background-color: #5bc0de; }
+    .badge-delete { background-color: #d9534f; }
+    .badge-view { background-color: #777; }
+    .badge-login { background-color: #5cb85c; }
+    .badge-logout { background-color: #d9534f; }
+    .badge-access { background-color: #f0ad4e; }
+    .object-link {
+      color: #447e9b;
+      text-decoration: none;
+    }
+    .object-link:hover {
+      text-decoration: underline;
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+  <div class="audit-log-detail">
+    <div class="log-header">
+      <h2>Audit Log Details</h2>
+      
+      <div class="log-property">
+        <strong>Action:</strong>
+        <span class="badge badge-{{ log.action|lower }}">
+          {{ log.get_action_display }}
+        </span>
+      </div>
+      
+      <div class="log-property">
+        <strong>Timestamp:</strong>
+        {{ log.timestamp }}
+      </div>
+      
+      <div class="log-property">
+        <strong>User:</strong>
+        {% if log.user %}
+          {{ log.user.get_username }} ({{ log.user.get_full_name|default:"No name" }})
+        {% else %}
+          System
+        {% endif %}
+      </div>
+      
+      <div class="log-property">
+        <strong>IP Address:</strong>
+        {{ log.ip_address|default:"-" }}
+      </div>
+      
+      <div class="log-property">
+        <strong>Object:</strong>
+        {% if log.content_object %}
+          <a href="{{ log.content_object.get_absolute_url }}" class="object-link">
+            {{ log.content_object }}
+          </a>
+          ({{ log.content_type }})
+        {% else %}
+          Not available
+        {% endif %}
+      </div>
+      
+      <div class="log-property">
+        <strong>Message:</strong>
+        {{ log.message }}
+      </div>
+    </div>
+    
+    {% if log.before or log.after %}
+      <div class="diff-container">
+        <h3>Changes</h3>
+        
+        {% if log.before %}
+          <div class="diff-section">
+            <div class="diff-title">Before</div>
+            <div class="diff-content">
+              <pre>{{ log.before|pprint }}</pre>
+            </div>
+          </div>
+        {% endif %}
+        
+        {% if log.after %}
+          <div class="diff-section">
+            <div class="diff-title">After</div>
+            <div class="diff-content">
+              <pre>{{ log.after|pprint }}</pre>
+            </div>
+          </div>
+        {% endif %}
+        
+        {% if log.before and log.after %}
+          <div class="diff-section">
+            <div class="diff-title">Differences</div>
+            <div class="diff-content">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Field</th>
+                    <th>Before</th>
+                    <th>After</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for field, before_value in log.before.items %}
+                    <tr>
+                      <td>{{ field }}</td>
+                      <td>{{ before_value }}</td>
+                      <td>{{ log.after|get_item:field }}</td>
+                    </tr>
+                  {% endfor %}
+                  {% for field, after_value in log.after.items %}
+                    {% if field not in log.before %}
+                      <tr>
+                        <td>{{ field }}</td>
+                        <td>-</td>
+                        <td>{{ after_value }}</td>
+                      </tr>
+                    {% endif %}
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        {% endif %}
+      </div>
+    {% endif %}
+    
+    <div class="submit-row">
+      <a href="{% url 'audit_log_list' %}" class="button">Back to List</a>
+    </div>
+  </div>
+{% endblock %}

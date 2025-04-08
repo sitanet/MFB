@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'end_of_periods',
     'fixed_assets',
     'fixed_deposit',
+    'audit_trail.apps.AuditTrailConfig',
    
 ]
 
@@ -61,6 +62,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'audit_trail.middleware.AuditMiddleware',
 
 ]
 

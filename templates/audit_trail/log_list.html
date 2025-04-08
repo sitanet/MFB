@@ -1,0 +1,351 @@
+{% extends "base.html" %}
+{% load static humanize %}
+
+{% block title %}Audit Logs - {{ block.super }}{% endblock %}
+
+{% block header %}
+<div class="container-fluid bg-dark text-white p-4 mb-4">
+    <div class="container">
+        <h1><i class="fas fa-clipboard-list"></i> Audit Logs</h1>
+        <p class="lead">Track all system activities and changes</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Filters Sidebar - Collapsible on mobile -->
+        <div class="col-lg-3 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <button class="btn btn-link text-white d-lg-none" type="button" data-toggle="collapse" data-target="#filterCollapse">
+                        <i class="fas fa-filter"></i> Filters
+                    </button>
+                    <span class="d-none d-lg-block"><i class="fas fa-filter"></i> Filters</span>
+                </div>
+                <div class="collapse show" id="filterCollapse">
+                    <div class="card-body">
+                        <form method="get">
+                            <!-- Date Range -->
+                            <div class="form-group">
+                                <label for="date_range">Date Range</label>
+                                <select class="form-control" id="date_range" name="date_range">
+                                    <option value="">All Time</option>
+                                    <option value="today" {% if request.GET.date_range == 'today' %}selected{% endif %}>Today</option>
+                                    <option value="yesterday" {% if request.GET.date_range == 'yesterday' %}selected{% endif %}>Yesterday</option>
+                                    <option value="week" {% if request.GET.date_range == 'week' %}selected{% endif %}>Last 7 Days</option>
+                                    <option value="month" {% if request.GET.date_range == 'month' %}selected{% endif %}>Last 30 Days</option>
+                                </select>
+                            </div>
+
+                            <!-- Custom Date Range -->
+                            <div class="form-group">
+                                <label>Custom Range</label>
+                                <div class="input-group mb-2">
+                                    <input type="date" class="form-control" name="start_date" 
+                                           value="{{ request.GET.start_date }}" placeholder="Start date">
+                                </div>
+                                <div class="input-group">
+                                    <input type="date" class="form-control" name="end_date" 
+                                           value="{{ request.GET.end_date }}" placeholder="End date">
+                                </div>
+                            </div>
+
+                            <!-- Action Type -->
+                            <div class="form-group">
+                                <label for="action">Action Type</label>
+                                <select class="form-control" id="action" name="action">
+                                    <option value="">All Actions</option>
+                                    <option value="CREATE" {% if request.GET.action == 'CREATE' %}selected{% endif %}>Create</option>
+                                    <option value="UPDATE" {% if request.GET.action == 'UPDATE' %}selected{% endif %}>Update</option>
+                                    <option value="DELETE" {% if request.GET.action == 'DELETE' %}selected{% endif %}>Delete</option>
+                                    <option value="VIEW" {% if request.GET.action == 'VIEW' %}selected{% endif %}>View</option>
+                                    <option value="LOGIN" {% if request.GET.action == 'LOGIN' %}selected{% endif %}>Login</option>
+                                    <option value="LOGOUT" {% if request.GET.action == 'LOGOUT' %}selected{% endif %}>Logout</option>
+                                </select>
+                            </div>
+
+                            <!-- User Role -->
+                            <div class="form-group">
+                                <label for="role">User Role</label>
+                                <select class="form-control" id="role" name="role">
+                                    <option value="">All Roles</option>
+                                    <option value="admin" {% if request.GET.role == 'admin' %}selected{% endif %}>Administrator</option>
+                                    <option value="manager" {% if request.GET.role == 'manager' %}selected{% endif %}>Manager</option>
+                                    <option value="staff" {% if request.GET.role == 'staff' %}selected{% endif %}>Staff</option>
+                                </select>
+                            </div>
+
+                            <!-- Search -->
+                            <div class="form-group">
+                                <label for="search">Search</label>
+                                <input type="text" class="form-control" id="search" name="search" 
+                                       value="{{ request.GET.search }}" placeholder="Search logs...">
+                            </div>
+
+                            <div class="d-flex justify-content-between">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-search"></i> Apply
+                                </button>
+                                <a href="?" class="btn btn-outline-secondary">
+                                    <i class="fas fa-undo"></i> Reset
+                                </a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Summary Card -->
+            <div class="card shadow-sm mt-4">
+                <div class="card-header bg-info text-white">
+                    <i class="fas fa-chart-pie"></i> Summary
+                </div>
+                <div class="card-body">
+                    <div class="small">Total Logs: <strong>{{ total_logs|intcomma }}</strong></div>
+                    <div class="small">Today: <strong>{{ today_count|intcomma }}</strong></div>
+                    <div class="small">This Week: <strong>{{ week_count|intcomma }}</strong></div>
+                    <hr>
+                    <div class="small">Creates: <span class="badge badge-success">{{ create_count|intcomma }}</span></div>
+                    <div class="small">Updates: <span class="badge badge-info">{{ update_count|intcomma }}</span></div>
+                    <div class="small">Deletes: <span class="badge badge-danger">{{ delete_count|intcomma }}</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="col-lg-9">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="fas fa-list"></i> Log Entries
+                    </div>
+                    <div>
+                        <a href="{% url 'export_audit_logs' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" 
+                           class="btn btn-sm btn-outline-success">
+                            <i class="fas fa-file-export"></i> Export
+                        </a>
+                    </div>
+                </div>
+
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th>Timestamp</th>
+                                    <th>User</th>
+                                    <th>Action</th>
+                                    <th>Object</th>
+                                    <th>Details</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for log in logs %}
+                                <tr class="clickable-row" data-toggle="collapse" data-target="#log-{{ log.id }}">
+                                    <td>
+                                        <span class="d-block">{{ log.timestamp|date:"M j, Y" }}</span>
+                                        <small class="text-muted">{{ log.timestamp|date:"H:i:s" }}</small>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="mr-2">
+                                                <i class="fas fa-user-circle fa-lg {% if log.user %}text-primary{% else %}text-secondary{% endif %}"></i>
+                                            </div>
+                                            <div>
+                                                <div>{{ log.user|default:"System" }}</div>
+                                                {% if log.user_role %}
+                                                <small class="text-muted">{{ log.user_role }}</small>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge 
+                                            {% if log.action == 'CREATE' %}badge-success
+                                            {% elif log.action == 'UPDATE' %}badge-info
+                                            {% elif log.action == 'DELETE' %}badge-danger
+                                            {% elif log.action == 'LOGIN' %}badge-primary
+                                            {% elif log.action == 'LOGOUT' %}badge-warning
+                                            {% else %}badge-secondary{% endif %}">
+                                            {{ log.get_action_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if log.content_type %}
+                                        <span class="d-block">{{ log.content_type.model|capfirst }}</span>
+                                        <small class="text-muted">ID: {{ log.object_id }}</small>
+                                        {% else %}
+                                        <span class="text-muted">N/A</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary" data-toggle="collapse" data-target="#log-{{ log.id }}">
+                                            <i class="fas fa-chevron-down"></i> Details
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr class="collapse" id="log-{{ log.id }}">
+                                    <td colspan="5" class="bg-light">
+                                        <div class="p-3">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <h6><i class="fas fa-info-circle"></i> Metadata</h6>
+                                                    <ul class="list-unstyled">
+                                                        <li><strong>IP Address:</strong> {{ log.ip_address|default:"Unknown" }}</li>
+                                                        <li><strong>User Agent:</strong> {{ log.user_agent|default:"Unknown"|truncatechars:50 }}</li>
+                                                        <li><strong>Branch:</strong> {{ log.user_branch|default:"N/A" }}</li>
+                                                    </ul>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <h6><i class="fas fa-comment"></i> Message</h6>
+                                                    <p>{{ log.message|default:"No message" }}</p>
+                                                </div>
+                                            </div>
+
+                                            {% if log.before or log.after %}
+                                            <div class="row mt-3">
+                                                {% if log.before %}
+                                                <div class="col-md-6">
+                                                    <h6><i class="fas fa-arrow-left text-danger"></i> Before</h6>
+                                                    <div class="bg-white p-2 border rounded">
+                                                        <pre class="mb-0">{{ log.before|pprint }}</pre>
+                                                    </div>
+                                                </div>
+                                                {% endif %}
+                                                {% if log.after %}
+                                                <div class="col-md-6">
+                                                    <h6><i class="fas fa-arrow-right text-success"></i> After</h6>
+                                                    <div class="bg-white p-2 border rounded">
+                                                        <pre class="mb-0">{{ log.after|pprint }}</pre>
+                                                    </div>
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center py-4">
+                                        <i class="fas fa-exclamation-circle fa-2x text-muted mb-3"></i>
+                                        <h5>No audit logs found</h5>
+                                        <p class="text-muted">Try adjusting your filters</p>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Pagination -->
+                {% if is_paginated %}
+                <div class="card-footer bg-white">
+                    <nav aria-label="Log navigation">
+                        <ul class="pagination justify-content-center mb-0">
+                            {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page=1{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                    <i class="fas fa-angle-double-left"></i>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                    <i class="fas fa-angle-left"></i>
+                                </a>
+                            </li>
+                            {% endif %}
+
+                            {% for num in page_obj.paginator.page_range %}
+                                {% if page_obj.number == num %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ num }}</span>
+                                </li>
+                                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ num }}{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ num }}</a>
+                                </li>
+                                {% endif %}
+                            {% endfor %}
+
+                            {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                    <i class="fas fa-angle-right"></i>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                    <i class="fas fa-angle-double-right"></i>
+                                </a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block styles %}
+<style>
+    .clickable-row {
+        cursor: pointer;
+    }
+    .clickable-row:hover {
+        background-color: #f8f9fa;
+    }
+    .badge {
+        font-size: 0.8em;
+        font-weight: 500;
+        padding: 0.35em 0.65em;
+    }
+    pre {
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        font-size: 0.85rem;
+        background-color: #f8f9fa;
+        padding: 0.75rem;
+        border-radius: 0.25rem;
+    }
+    .table th {
+        border-top: none;
+        font-weight: 500;
+    }
+    .card-header {
+        font-weight: 500;
+    }
+    @media (max-width: 991.98px) {
+        #filterCollapse {
+            display: none;
+        }
+        #filterCollapse.show {
+            display: block;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    // Make entire row clickable
+    $('.clickable-row').click(function(e) {
+        // Don't trigger if clicking on a button or link
+        if ($(e.target).is('button, a, input, select')) {
+            return;
+        }
+        $(this).next('tr').collapse('toggle');
+    });
+
+    // Initialize tooltips
+    $('[data-toggle="tooltip"]').tooltip();
+});
+</script>
+{% endblock %}
