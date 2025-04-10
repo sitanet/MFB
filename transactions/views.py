@@ -192,7 +192,7 @@ def deposit(request, id):
                                 gl_no=customer.gl_no,
                                 ac_no=customer.ac_no
                             ).balance
-                            sms_message = f"Dear {customer.first_name}, your deposit of {amount} has been successful. Your new balance is {current_balance}."
+                            sms_message = f"Dear {customer.first_name}, Credit of {amount} with A/C XXXXX{customer.ac_no} has been successful. Bal:NGN{current_balance}."
                             send_sms(customer.phone_no, sms_message)
                         
                         # Send email notification if email_alert is True and email exists
@@ -226,7 +226,7 @@ def deposit(request, id):
                         return redirect('deposit', id=id)
             except Exception as e:
                 messages.error(request, f'Error processing deposit: {str(e)}')
-                return redirect('transaction_error')
+                return redirect('deposit', id=id)
     else:
         form = MemtransForm(initial=initial_values)
         form.fields['branch'].disabled = True
@@ -405,7 +405,7 @@ def withdraw(request, id):
                             gl_no=customer.gl_no,
                             ac_no=customer.ac_no
                         ).balance
-                        sms_message = f"Dear {customer.first_name}, your withdrawal of {amount} has been successful. Your new balance is {current_balance}."
+                        sms_message = f"Dear {customer.first_name}, Debit of {amount} with A/C XXXXX{customer.ac_no} has been successful. Bal:NGN{current_balance}."
                         send_sms(customer.phone_no, sms_message)
                     
                     # Send email notification if email_alert is True and email exists

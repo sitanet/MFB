@@ -3,6 +3,12 @@
 {% block content %}
 <div class="alert alert-danger">
     <h2>Transaction Error</h2>
-    <p>An error occurred while processing your request.</p>
+    <p>{{ error_message }}</p>
+    {% if request.user.is_staff %}
+    <p>Error code: {{ status_code }}</p>
+    {% endif %}
+    <a href="{% url 'audit_log_list' %}" class="btn btn-primary">
+        Return to Audit Logs
+    </a>
 </div>
 {% endblock %}

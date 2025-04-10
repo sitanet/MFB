@@ -49,7 +49,7 @@ INSTALLED_APPS = [
     'end_of_periods',
     'fixed_assets',
     'fixed_deposit',
-    'audit_trail.apps.AuditTrailConfig',
+    # 'audit_trail',
    
 ]
 
@@ -62,7 +62,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'audit_trail.middleware.AuditMiddleware',
+    # 'audit_trail.middleware.AuditMiddleware',
 
 ]
 
@@ -115,29 +115,29 @@ CACHES = {
 
 
 # LOCAL DATABASE
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': 'FinanceFlex',
-#         'USER': 'postgres',
-#         'PASSWORD': 'People',
-#         'HOST': 'localhost',
-#         # 'HOST': 'finance-flex.ctqg0cgman7j.af-south-1.rds.amazonaws.com',  # Or your database host
-#         'PORT': '5432',          
-#     }
-# }
-
-# PRODUCTION DATABASE
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'demo_db',
-        'USER': 'demo_user',
-        'PASSWORD': 'Completed@1234',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'FinanceFlex',
+        'USER': 'postgres',
+        'PASSWORD': 'People',
         'HOST': 'localhost',
-        'PORT': '',
+        # 'HOST': 'finance-flex.ctqg0cgman7j.af-south-1.rds.amazonaws.com',  # Or your database host
+        'PORT': '5432',          
     }
 }
+
+# PRODUCTION DATABASE
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql_psycopg2',
+#         'NAME': 'demo_db',
+#         'USER': 'demo_user',
+#         'PASSWORD': 'Completed@1234',
+#         'HOST': 'localhost',
+#         'PORT': '',
+#     }
+# }
 
 
 # Password validation
@@ -205,5 +205,5 @@ DEFAULT_FROM_EMAIL = "FinanceFlex <izekor@sitanetorbit.com>"
 
 # SMS API Configuration
 TERMII_API_KEY = "TLDfcyAogBKwuMYnxvPHatThWJqfkOFffeNMTNJaucRjzaoSSeTHugQkzIgDDS"
-TERMII_SENDER_ID = "FinanceFlex"
+TERMII_SENDER_ID = "N-Alert"
 TERMII_SMS_URL = "https://api.ng.termii.com/api/sms/send"
