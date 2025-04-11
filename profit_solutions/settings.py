@@ -176,14 +176,14 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-# STATICFILES_DIRS = [
-#     'BASE_DIR/static',
-   
-# ]
 
-# MEDIA_URL = '/media/'
-# MEDIA_ROOT = BASE_DIR /'media'
+# This is where collectstatic will gather all static files for production
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+# This tells Django to look in your project-level static/ folder (next to manage.py)
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'static'),
+]
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
