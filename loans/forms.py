@@ -50,30 +50,39 @@ class LoansRejectForm(forms.ModelForm):
         model = Loans
         exclude = ['customer']  # Exclude the 'customer' field
 
-
 class MemtransForm(forms.ModelForm):
     gl_no_cashier = forms.CharField(max_length=100, widget=forms.TextInput(attrs={'readonly': 'readonly'}))
     ac_no_cashier = forms.CharField(max_length=100, widget=forms.TextInput(attrs={'readonly': 'readonly'}))
     gl_no = forms.CharField(max_length=100, widget=forms.TextInput(attrs={'readonly': 'readonly'}))
     ac_no = forms.CharField(max_length=100, widget=forms.TextInput(attrs={'readonly': 'readonly'}))
+    mgt_fee = forms.DecimalField(
+        required=False,
+        label="Management Fee",
+        max_digits=12,
+        decimal_places=2,
+        initial=0.00,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter management fee amount'
+        })
+    )
+
     class Meta:
         model = Memtrans
-        fields = ['gl_no', 'ac_no','ses_date','app_date', 'amount','gl_no_cashier','ac_no_cashier','description']
+        fields = ['gl_no', 'ac_no', 'ses_date', 'app_date', 'amount', 
+                 'gl_no_cashier', 'ac_no_cashier', 'description', 'mgt_fee']
 
-
-
-
-       
-
-
-    # Add any additional form customization here, if needed
+    def clean_mgt_fee(self):
+        mgt_fee = self.cleaned_data.get('mgt_fee', 0) or 0
+        if mgt_fee < 0:
+            raise forms.ValidationError("Management fee cannot be negative.")
+        return mgt_fee
 
     def clean_loan_amount(self):
-        loan_amount = self.cleaned_data.get('loan_amount')  # Use get() to handle None
+        loan_amount = self.cleaned_data.get('loan_amount')
         if loan_amount is not None and loan_amount <= 0:
             raise forms.ValidationError("Loan amount must be greater than zero.")
         return loan_amount
-    
 
 
 from django import forms

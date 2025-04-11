@@ -83,7 +83,7 @@
 
                                        <div class="input-field">
                                            <label>Registration Date</label>
-                                           <input type="date" id="ses_date" name="appli_date" value="{{ company_date }}" required>
+                                           <input type="date" id="ses_date" name="appli_date" value="{{ company_date|date:'Y-m-d' }}" required>
                                        </div>
                                        <div class="input-field">
                                         <label for="deposit_description">Loan Amount:</label>

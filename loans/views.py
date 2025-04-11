@@ -77,89 +77,81 @@ from django.utils import timezone
 def loan_application(request, id):
     # Get customer by ID
     customer = get_object_or_404(Customer, id=id)
-    cust_branch=customer.branch
+    cust_branch = customer.branch
 
     # Filter loan accounts based on GL number
-    loan_account = Account.objects.filter(gl_no__startswith='104').exclude(gl_no='10400').exclude(gl_no='104100').exclude(gl_no='104200')
+    loan_account = Account.objects.filter(gl_no__startswith='104').exclude(
+        gl_no='10400').exclude(gl_no='104100').exclude(gl_no='104200')
 
     # Set initial values for the form
     initial_values = {'gl_no_cust': customer.gl_no, 'ac_no_cust': customer.ac_no}
 
     # Get the logged-in user's branch information
     user = request.user
-    branch = get_object_or_404(Branch, id=user.branch_id)  # Fetch the Branch instance
+    branch = get_object_or_404(Branch, id=user.branch_id)
     company = get_object_or_404(Company, id=branch.id)
     company_date = company.session_date.strftime('%Y-%m-%d') if company.session_date else ''
 
     # Check if the company's session status is closed
     if company.session_status == 'Closed':
-        return HttpResponse("You can not post any transaction. Session is closed.")
-    else:
-        if request.method == 'POST':
-            form = LoansForm(request.POST, request.FILES)
-            if form.is_valid():
-                gl_no = form.cleaned_data['gl_no']
-                ac_no = form.cleaned_data['ac_no']
+        return HttpResponse("You cannot post any transaction. Session is closed.")
+    
+    if request.method == 'POST':
+        form = LoansForm(request.POST, request.FILES)
+        if form.is_valid():
+            # Date validation
+            appli_date = form.cleaned_data.get('appli_date')
+            ses_date = company.session_date
+            
+            if ses_date and appli_date and appli_date > ses_date:
+                messages.error(request, "Application date cannot be after the current session date.")
+                return render(request, 'loans/loans_application.html', {
+                    'form': form,
+                    'customer': customer,
+                    'loan_account': loan_account,
+                    'company': company,
+                    'company_date': company_date,
+                })
+            
+            gl_no = form.cleaned_data['gl_no']
+            ac_no = form.cleaned_data['ac_no']
 
-                with transaction.atomic():
-                    # Check if there is an existing loan with the same 'gl_no' and 'ac_no'
-                    existing_loan = Loans.objects.filter(gl_no=gl_no, ac_no=ac_no).last()
+            with transaction.atomic():
+                # Check for existing loan
+                existing_loan = Loans.objects.filter(gl_no=gl_no, ac_no=ac_no).last()
 
-                    # Create a new loan instance
-                    if existing_loan:
-                        # If an existing loan is found, increment the cycle
-                        new_loan = Loans(
-                            branch=cust_branch,  # Assign the Branch instance
-                            appli_date=form.cleaned_data.get('appli_date'),
-                            loan_amount=form.cleaned_data.get('loan_amount', 0),
-                            interest_rate=form.cleaned_data.get('interest_rate', 0),
-                            payment_freq=form.cleaned_data.get('payment_freq', 0),
-                            interest_calculation_method=form.cleaned_data.get('interest_calculation_method', 0),
-                            loan_officer=form.cleaned_data.get('loan_officer', 0),
-                            business_sector=form.cleaned_data.get('business_sector', 0),
-                            customer=customer,
-                            gl_no=gl_no,
-                            ac_no=ac_no,
-                            num_install=form.cleaned_data.get('num_install', 0),
-                            cycle=existing_loan.cycle + 1 if existing_loan.cycle is not None else 1,
-                        )
-                    else:
-                        # If no existing loan is found, start with cycle 1
-                        new_loan = Loans(
-                            branch=cust_branch,  # Assign the Branch instance
-                            appli_date=form.cleaned_data.get('appli_date'),
-                            loan_amount=form.cleaned_data.get('loan_amount', 0),
-                            interest_rate=form.cleaned_data.get('interest_rate', 0),
-                            payment_freq=form.cleaned_data.get('payment_freq', 0),
-                            interest_calculation_method=form.cleaned_data.get('interest_calculation_method', 0),
-                            loan_officer=form.cleaned_data.get('loan_officer', 0),
-                            business_sector=form.cleaned_data.get('business_sector', 0),
-                            customer=customer,
-                            gl_no=gl_no,
-                            ac_no=ac_no,
-                            num_install=form.cleaned_data.get('num_install', 0),
-                            cycle=1,
-                        )
+                # Create new loan instance
+                new_loan = Loans(
+                    branch=cust_branch,
+                    appli_date=appli_date,
+                    loan_amount=form.cleaned_data.get('loan_amount', 0),
+                    interest_rate=form.cleaned_data.get('interest_rate', 0),
+                    payment_freq=form.cleaned_data.get('payment_freq'),
+                    interest_calculation_method=form.cleaned_data.get('interest_calculation_method'),
+                    loan_officer=form.cleaned_data.get('loan_officer'),
+                    business_sector=form.cleaned_data.get('business_sector'),
+                    customer=customer,
+                    gl_no=gl_no,
+                    ac_no=ac_no,
+                    num_install=form.cleaned_data.get('num_install', 0),
+                    cycle=existing_loan.cycle + 1 if existing_loan else 1,
+                )
 
-                    # Save the new loan to the database
-                    new_loan.save()
+                # Save the new loan
+                new_loan.save()
 
-                    # Update customer loan status
-                    customer.loan = 'T'
-                    customer.save()
+                # Update customer loan status
+                customer.loan = 'T'
+                customer.save()
 
-                    # Display success message
-                    messages.success(request, 'Loan Applied successfully!')
-                    return redirect('choose_to_apply_loan')
+                messages.success(request, 'Loan applied successfully!')
+                return redirect('choose_to_apply_loan')
 
-            else:
-                # Display error message if the form is invalid
-                messages.error(request, 'Form is not valid. Please check the entered data.')
         else:
-            # Initialize the form with initial values
-            form = LoansForm(initial=initial_values)
+            messages.error(request, 'Form is not valid. Please check the entered data.')
+    else:
+        form = LoansForm(initial=initial_values)
 
-    # Render the loan application page
     return render(request, 'loans/loans_application.html', {
         'form': form,
         'customer': customer,
@@ -167,8 +159,6 @@ def loan_application(request, id):
         'company': company,
         'company_date': company_date,
     })
-
-
 
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
@@ -255,39 +245,55 @@ def choose_loan_approval(request):
 
 def loan_approval(request, id):
     customer = get_object_or_404(Loans, id=id)
-    cust_data = Account.objects.filter(gl_no__startswith='200').exclude(gl_no='200100').exclude(gl_no='200200').exclude(gl_no='200000')
-    gl_no = Account.objects.all().values_list('gl_no', flat=True).filter(gl_no__startswith='200')
+    cust_data = Account.objects.filter(gl_no__startswith='200').exclude(
+        gl_no='200100').exclude(gl_no='200200').exclude(gl_no='200000')
+    gl_no = Account.objects.filter(gl_no__startswith='200').values_list('gl_no', flat=True)
     cust_branch = Company.objects.all()
     customers = customer.customer
     officer = Account_Officer.objects.all()
     user = User.objects.get(id=request.user.id)
     branch_id = user.branch_id
     company = get_object_or_404(Branch, id=branch_id)
-    # Assuming 'loans' is an instance of a Django model
-    if customer.appli_date:
-        appli_date = customer.appli_date.strftime('%Y-%m-%d')
-    else:
-        appli_date = ''
-
+    
+    # Format dates for display
+    appli_date = customer.appli_date.strftime('%Y-%m-%d') if customer.appli_date else ''
     company_date = company.session_date.strftime('%Y-%m-%d') if company.session_date else ''
     
-    
     if company.session_status == 'Closed':
-        
-        return HttpResponse("You can not post any transaction. Session is closed.") 
-    else:
-        if request.method == 'POST':
-            form = LoansApproval(request.POST, request.FILES, instance=customer)
-            if form.is_valid():
-                customer.approval_status = 'T'
-                customer.save()
-                form.save()
+        return HttpResponse("You cannot post any transaction. Session is closed.") 
+    
+    if request.method == 'POST':
+        form = LoansApproval(request.POST, request.FILES, instance=customer)
+        if form.is_valid():
+            # Get the approval date from the form
+            approval_date = form.cleaned_data.get('approval_date')
+            ses_date = company.session_date
+            
+            # Validate that approval date is not after session date
+            if ses_date and approval_date and approval_date > ses_date:
+                messages.error(request, "Approval date cannot be after the current session date.")
+                return render(request, 'loans/loan_approval.html', {
+                    'form': form,
+                    'customer': customer,
+                    'customers': customers,
+                    'cust_data': cust_data,
+                    'cust_branch': cust_branch,
+                    'gl_no': gl_no,
+                    'officer': officer,
+                    'appli_date': appli_date,
+                    'company_date': company_date,
+                })
+            
+            # Proceed with approval if dates are valid
+            customer.approval_status = 'T'
+            customer.save()
+            form.save()
 
-                messages.success(request, 'Loan Approved successfully!')
-                return redirect('choose_loan_approval')
-        else:
-            initial_data = {'gl_no': customer.gl_no}
-            form = LoansApproval(instance=customer, initial=initial_data)
+            messages.success(request, 'Loan Approved successfully!')
+            return redirect('choose_loan_approval')
+    else:
+        initial_data = {'gl_no': customer.gl_no}
+        form = LoansApproval(instance=customer, initial=initial_data)
 
     return render(request, 'loans/loan_approval.html', {
         'form': form,
@@ -297,10 +303,9 @@ def loan_approval(request, id):
         'cust_branch': cust_branch,
         'gl_no': gl_no,
         'officer': officer,
-        'appli_date':appli_date,
-        'company_date':company_date,
+        'appli_date': appli_date,
+        'company_date': company_date,
     })
-
 
 
 @login_required(login_url='login')

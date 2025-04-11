@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-%f1%grgx3u=j1#pklxrabzx$eas@ao=$^wh)s#f83zq9^&sp-%
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost','127.0.0.1','178.128.205.249','www.financeflex.sitanetorbit.com','financeflex.sitanetorbit.com']
+ALLOWED_HOSTS = ['localhost','127.0.0.1','178.128.205.249','financeflex.sitanetorbit.com']
 
 
 # Application definition
