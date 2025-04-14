@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+  <h3>Assign a Customer to Group</h3>
+
+  <form method="post">
+    {% csrf_token %}
+
+    {% if messages %}
+    <div class="alert alert-info">
+        {% for message in messages %}
+            <p>{{ message }}</p>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="mb-3">
+      <label for="group" class="form-label">Select Group</label>
+      <select name="group" id="group" class="form-select">
+        {% for group in form.fields.group.queryset %}
+          <option value="{{ group.id }}">{{ group.group_name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="mb-3">
+      <label for="customer" class="form-label">Select Customer</label>
+      <select name="customer" id="customer" class="form-select">
+        {% for customer in form.fields.customer.queryset %}
+          <option value="{{ customer.id }}">
+            {{ customer.first_name }} {{ customer.last_name }} ({{ customer.ac_no }})
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Assign to Group</button>
+  </form>
+
+  <hr>
+  <h4>Customers Assigned to Groups</h4>
+  <table class="table table-bordered table-hover">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Account No</th>
+        <th>Group</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for customer in customers_with_group %}
+      <tr>
+        <td>{{ customer.first_name }} {{ customer.last_name }}</td>
+        <td>{{ customer.ac_no }}</td>
+        <td>{{ customer.group.group_name }}</td>
+        <td>
+          <a href="{% url 'remove_from_group' customer.id %}" class="btn btn-danger btn-sm"
+             onclick="return confirm('Are you sure you want to remove this customer from the group?');">
+             Remove
+          </a>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="4">No customers assigned to groups.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <!-- Optional: Select2 for searchable dropdowns -->
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+  <script>
+    $(document).ready(function() {
+      $('#group, #customer').select2({
+        width: '100%',
+        placeholder: 'Search and select'
+      });
+    });
+  </script>
+</div>
+{% endblock %}

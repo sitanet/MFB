@@ -566,7 +566,7 @@ def choose_to_direct_disburse(request):
 def loan_disbursement(request, id):
     loan = get_object_or_404(Loans, id=id)
     account = get_object_or_404(Account, gl_no=loan.gl_no)
-    customer = loan.customer  # Assuming loan.customer is a ForeignKey to Customer model
+    customer = loan.customer
     
     cust_data = Account.objects.filter(gl_no__startswith='20').exclude(gl_no__in=['20100', '20200', '20000'])
     gl_no = Account.objects.filter(gl_no__startswith='200').values_list('gl_no', flat=True)
@@ -576,7 +576,7 @@ def loan_disbursement(request, id):
     officer = Account_Officer.objects.all()
     
     user = request.user
-    branch_id = user.branch_id  # Get the logged-in user's branch ID
+    branch_id = user.branch_id
     company = get_object_or_404(Branch, id=branch_id)
     company_date = company.session_date.strftime('%Y-%m-%d') if company.session_date else ''
     customer_branch = customer.branch
@@ -598,15 +598,26 @@ def loan_disbursement(request, id):
         if request.method == 'POST':
             form = MemtransForm(request.POST, request.FILES)
             if form.is_valid():
+                try:
+                    # Get VAT and application fee amounts from POST data
+                    loan_appl_vat = Decimal(request.POST.get('loan_appl_vat', '0'))
+                    application_fee = Decimal(request.POST.get('application_fee', '0'))
+                    
+                    if loan_appl_vat < 0 or application_fee < 0:
+                        raise ValueError("Amounts cannot be negative")
+                        
+                except (ValueError, InvalidOperation) as e:
+                    messages.error(request, f"Invalid amount: {str(e)}")
+                    return redirect('choose_to_disburse')
+
                 ses_date = form.cleaned_data['ses_date']
                 disbursement_date = request.POST.get('disbursement_date')
 
-                # Check if the session date is greater than the disbursement date
                 if ses_date > company.session_date:
                     messages.warning(request, 'Transaction date cannot be greater than the session date.')
                     return redirect('choose_to_disburse')
                 
-                # Define all required GL/AC parameters from Account model
+                # Define all required GL/AC parameters
                 required_gl_ac_params = [
                     ('interest_gl', account.interest_gl),
                     ('interest_ac', account.interest_ac),
@@ -636,22 +647,22 @@ def loan_disbursement(request, id):
                     ('loan_commit_ac_vat', account.loan_commit_ac_vat)
                 ]
 
-                # Check if all required parameters are defined
+                # Check required parameters
                 missing_params = [name for name, value in required_gl_ac_params if not value]
                 if missing_params:
                     messages.warning(
                         request, 
-                        f'Please define all required loan parameters before disbursement. Missing: {", ".join(missing_params)}'
+                        f'Missing required parameters: {", ".join(missing_params)}'
                     )
                     return redirect('choose_to_disburse')
 
-                # Verify all GL/AC numbers exist in Customer model
+                # Verify GL/AC numbers exist
                 missing_customer_accounts = []
-                for name, gl_no in required_gl_ac_params[::2]:  # Get GL numbers (every even index)
-                    ac_name = name.replace('_gl', '_ac')  # Convert GL name to AC name
+                for name, gl_no in required_gl_ac_params[::2]:
+                    ac_name = name.replace('_gl', '_ac')
                     ac_no = next((value for n, value in required_gl_ac_params if n == ac_name), None)
                     
-                    if gl_no and ac_no:  # Only check if both GL and AC are defined
+                    if gl_no and ac_no:
                         try:
                             Customer.objects.get(gl_no=gl_no, ac_no=ac_no)
                         except Customer.DoesNotExist:
@@ -660,17 +671,101 @@ def loan_disbursement(request, id):
                 if missing_customer_accounts:
                     messages.warning(
                         request,
-                        f'The following GL/AC numbers do not exist in customer records: {", ".join(missing_customer_accounts)}'
+                        f'Missing customer accounts: {", ".join(missing_customer_accounts)}'
                     )
                     return redirect('choose_to_disburse')
 
                 customer_id = customer.id
                 with transaction.atomic():
-                    # Generate a unique transaction number
                     unique_trx_no = generate_loan_disbursement_id()
 
+                    # ===== APPLICATION FEE PROCESSING =====
+                    if application_fee > 0:
+                        # 1. Debit Customer (loan account)
+                        Memtrans.objects.create(
+                            branch=user_branch,
+                            cust_branch=customer_branch,
+                            customer_id=customer_id,
+                            cycle=loan.cycle,
+                            gl_no=form.cleaned_data['gl_no_cashier'],
+                            ac_no=form.cleaned_data['ac_no_cashier'],
+                            amount=-application_fee,
+                            description=f'Loan Application Fee - {customer.first_name}',
+                            type='D',
+                            account_type='L',
+                            code='LA',
+                            sys_date=timezone.now(),
+                            ses_date=ses_date,
+                            app_date=form.cleaned_data['app_date'],
+                            trx_no=unique_trx_no,
+                            user=request.user
+                        )
+
+                        # 2. Credit Application Fee Account
+                        Memtrans.objects.create(
+                            branch=user_branch,
+                            cust_branch=customer_branch,
+                            customer_id=customer_id,
+                            cycle=loan.cycle,
+                            gl_no=account.loan_appl_fee_gl_vat,
+                            ac_no=account.loan_appl_fee_ac_vat,
+                            amount=application_fee,
+                            description=f'App Fee from {customer.gl_no}-{customer.ac_no}',
+                            type='C',
+                            account_type='I',
+                            code='LA',
+                            sys_date=timezone.now(),
+                            ses_date=ses_date,
+                            app_date=form.cleaned_data['app_date'],
+                            trx_no=unique_trx_no,
+                            user=request.user
+                        )
+
+                    # ===== VAT PROCESSING =====
+                    if loan_appl_vat > 0:
+                        # 1. Debit Customer (loan account)
+                        Memtrans.objects.create(
+                            branch=user_branch,
+                            cust_branch=customer_branch,
+                            customer_id=customer_id,
+                            cycle=loan.cycle,
+                            gl_no=form.cleaned_data['gl_no_cashier'],
+                            ac_no=form.cleaned_data['ac_no_cashier'],
+                            amount=-loan_appl_vat,
+                            description=f'Loan VAT - {customer.first_name}',
+                            type='D',
+                            account_type='L',
+                            code='LV',
+                            sys_date=timezone.now(),
+                            ses_date=ses_date,
+                            app_date=form.cleaned_data['app_date'],
+                            trx_no=unique_trx_no,
+                            user=request.user
+                        )
+
+                        # 2. Credit VAT Account
+                        Memtrans.objects.create(
+                            branch=user_branch,
+                            cust_branch=customer_branch,
+                            customer_id=customer_id,
+                            cycle=loan.cycle,
+                            gl_no=account.loan_appl_gl_vat,
+                            ac_no=account.loan_appl_ac_vat,
+                            amount=loan_appl_vat,
+                            description=f'VAT from {customer.gl_no}-{customer.ac_no}',
+                            type='C',
+                            account_type='V',
+                            code='LV',
+                            sys_date=timezone.now(),
+                            ses_date=ses_date,
+                            app_date=form.cleaned_data['app_date'],
+                            trx_no=unique_trx_no,
+                            user=request.user
+                        )
+
+                    # ===== MAIN LOAN DISBURSEMENT =====
                     # Debit transaction
-                    debit_transaction = Memtrans(
+                    Memtrans.objects.create(
                         branch=user_branch,
                         cust_branch=customer_branch,
                         customer_id=customer_id,
@@ -683,15 +778,14 @@ def loan_disbursement(request, id):
                         account_type='L',
                         code='LD',
                         sys_date=timezone.now(),
-                        ses_date=form.cleaned_data['ses_date'],
+                        ses_date=ses_date,
                         app_date=form.cleaned_data['app_date'],
                         trx_no=unique_trx_no,
                         user=request.user
                     )
-                    debit_transaction.save()
 
                     # Credit transaction
-                    credit_transaction = Memtrans(
+                    Memtrans.objects.create(
                         branch=user_branch,
                         cust_branch=customer_branch,
                         customer_id=customer_id,
@@ -699,20 +793,19 @@ def loan_disbursement(request, id):
                         gl_no=form.cleaned_data['gl_no_cashier'],
                         ac_no=form.cleaned_data['ac_no_cashier'],
                         amount=loan.loan_amount,
-                        description=f'{customer.first_name}, {customer.last_name}, {customer.gl_no}-{customer.ac_no}',
+                        description=f'{customer.first_name} {customer.last_name}',
                         error='A',
                         type='C',
                         account_type='C',
                         code='LD',
                         sys_date=timezone.now(),
-                        ses_date=form.cleaned_data['ses_date'],
+                        ses_date=ses_date,
                         app_date=form.cleaned_data['app_date'],
                         trx_no=unique_trx_no,
                         user=request.user
                     )
-                    credit_transaction.save()
 
-                    # Calculate loan schedule
+                    # Calculate and save loan schedule
                     loan_schedule = loan.calculate_loan_schedule()
                     loan.approval_status = 'T'
                     loan.disb_status = 'T'
@@ -720,9 +813,9 @@ def loan_disbursement(request, id):
                     loan.disbursement_date = disbursement_date
                     loan.save()
 
-                    # Insert loan schedule into LoanHist
+                    # Save schedule to LoanHist
                     for payment in loan_schedule:
-                        loanhist_entry = LoanHist(
+                        LoanHist.objects.create(
                             branch=loan.branch,
                             gl_no=loan.gl_no,
                             ac_no=loan.ac_no,
@@ -736,22 +829,21 @@ def loan_disbursement(request, id):
                             penalty=0,
                             trx_no=unique_trx_no
                         )
-                        loanhist_entry.save()
 
-                    # Sum the interest from LoanHist
+                    # Calculate total interest
                     total_interest = LoanHist.objects.filter(
                         gl_no=loan.gl_no, 
                         ac_no=loan.ac_no, 
                         cycle=loan.cycle
                     ).aggregate(total_interest=Sum('interest'))['total_interest'] or 0
 
-                    # Update loan balance in Loans model
+                    # Update loan totals
                     loan.total_loan = loan.loan_amount + total_interest
                     loan.total_interest = total_interest
                     loan.save()
 
-                    # Additional debit and credit transactions for interest
-                    debit_transaction = Memtrans(
+                    # Interest accounting entries
+                    Memtrans.objects.create(
                         branch=user_branch,
                         cust_branch=customer_branch,
                         customer_id=customer_id,
@@ -759,19 +851,18 @@ def loan_disbursement(request, id):
                         gl_no=account.int_to_recev_gl_dr,
                         ac_no=account.int_to_recev_ac_dr,
                         amount=-loan.total_interest,
-                        description=f'{customer.first_name}, {customer.last_name}, {customer.gl_no}-{customer.ac_no}, Total Interest',
+                        description=f'Interest for {customer.gl_no}-{customer.ac_no}',
                         type='D',
                         account_type='I',
                         code='LD',
                         sys_date=timezone.now(),
-                        ses_date=form.cleaned_data['ses_date'],
+                        ses_date=ses_date,
                         app_date=form.cleaned_data['app_date'],
                         trx_no=unique_trx_no,
                         user=request.user
                     )
-                    debit_transaction.save()
 
-                    credit_transaction = Memtrans(
+                    Memtrans.objects.create(
                         branch=user_branch,
                         cust_branch=customer_branch,
                         customer_id=customer_id,
@@ -779,20 +870,28 @@ def loan_disbursement(request, id):
                         gl_no=account.unearned_int_inc_gl,
                         ac_no=account.unearned_int_inc_ac,
                         amount=loan.total_interest,
-                        description=f'{customer.first_name}, {customer.last_name}, {customer.gl_no}-{customer.ac_no}, Total Interest on Loan - Credit',
+                        description=f'Interest Income for {customer.gl_no}-{customer.ac_no}',
                         type='C',
                         account_type='I',
                         code='LD',
                         sys_date=timezone.now(),
-                        ses_date=form.cleaned_data['ses_date'],
+                        ses_date=ses_date,
                         app_date=form.cleaned_data['app_date'],
                         trx_no=unique_trx_no,
                         user=request.user
                     )
-                    credit_transaction.save()
 
-                    messages.success(request, 'Loan Disbursed successfully!')
+                    success_msg = 'Loan disbursed successfully'
+                    if application_fee > 0:
+                        success_msg += ' with application fee'
+                    if loan_appl_vat > 0:
+                        success_msg += ' and VAT'
+                    messages.success(request, success_msg + '!')
+                    
                     return redirect('choose_to_disburse')
+            else:
+                messages.error(request, 'Form is not valid')
+                return redirect('choose_to_disburse')
         else:
             initial_data = {'gl_no': loan.gl_no}
             form = LoansModifyForm(instance=loan, initial=initial_data)
@@ -813,7 +912,11 @@ def loan_disbursement(request, id):
         'company_date': company_date,
         'appli_date': appli_date,
         'approve_date': approve_date,
+        'default_vat': getattr(loan, 'application_fee_vat', 0),
+        'default_app_fee': getattr(loan, 'application_fee', 0)
     })
+
+
 
 from django.db.models import Sum
 

@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+  <h3>Group: {{ group.group_name }}</h3>
+
+  {% if messages %}
+    <div class="alert alert-info">
+      {% for message in messages %}
+        <p>{{ message }}</p>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  {% if customers %}
+  <table class="table table-bordered">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Account No</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for customer in customers %}
+      <tr>
+        <td>{{ customer.first_name }} {{ customer.last_name }}</td>
+        <td>{{ customer.ac_no }}</td>
+        <td>
+          <a href="{% url 'remove_from_group' customer.id %}" class="btn btn-danger btn-sm"
+             onclick="return confirm('Are you sure you want to remove this customer?');">Remove</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>No customers assigned to this group.</p>
+  {% endif %}
+
+  <a href="{% url 'group_list' %}" class="btn btn-secondary mt-3">← Back</a>
+</div>
+{% endblock %}

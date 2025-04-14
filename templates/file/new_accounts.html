@@ -2,6 +2,37 @@
 
 {% block content %}
 
+
+<style>
+  .icon-customer {
+    font-size: 3rem;
+    background: linear-gradient(45deg, #ff4e50, #f9d423);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .icon-corporate {
+    font-size: 3rem;
+    background: linear-gradient(45deg, #1e90ff, #00bfff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .icon-group {
+    font-size: 3rem;
+    background: linear-gradient(45deg, #32cd32, #7fff00);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .icon-transfer {
+    font-size: 3rem;
+    background: linear-gradient(45deg, #8e2de2, #4a00e0);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+</style>
+
 <div class="container-fluid">
   <div class="row">
   </div>
@@ -18,16 +49,77 @@
         </div>
       </div>
 
+
+      
+ 
+      
       <div class="col-md-3 mb-3">
         <div class="account_setting py-5 fs-1 bg-white">
-          <div class="couter_icon col-md-12">
-            <i class="couter_icon fa fa-users text-primary"></i>
+          <div class="couter_icon col-md-12 text-center">
+            <i class="fa fa-user-circle icon-customer"></i>
           </div>
           <a href="{% url 'customers' %}" class="text-center">
             <h5 class="my-2">Customer Account</h5>
           </a>
         </div>
       </div>
+      
+      <div class="col-md-3 mb-3">
+        <div class="account_setting py-5 fs-1 bg-white">
+          <div class="couter_icon col-md-12 text-center">
+            <i class="fa fa-building icon-corporate"></i>
+          </div>
+          <a href="{% url 'company_reg' %}" class="text-center">
+            <h5 class="my-2">Corporate Account</h5>
+          </a>
+        </div>
+      </div>
+      
+      <div class="col-md-3 mb-3">
+        <div class="account_setting py-5 fs-1 bg-white">
+          <div class="couter_icon col-md-12 text-center">
+            <i class="fa fa-users icon-group"></i>
+          </div>
+          <a href="{% url 'create_group' %}" class="text-center">
+            <h5 class="my-2">Create A Joint Group</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-3 mb-3">
+        <div class="account_setting py-5 fs-1 bg-white">
+          <div class="couter_icon col-md-12 text-center">
+            <i class="fa fa-users icon-group"></i>
+          </div>
+          <a href="{% url 'create_group' %}" class="text-center">
+            <h5 class="my-2">Create Group</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-3 mb-3">
+        <div class="account_setting py-5 fs-1 bg-white">
+          <div class="couter_icon col-md-12 text-center">
+            <i class="fa fa-users icon-group"></i>
+          </div>
+          <a href="{% url 'group_list' %}" class="text-center">
+            <h5 class="my-2">Group List</h5>
+          </a>
+        </div>
+      </div>
+      
+      <div class="col-md-3 mb-3">
+        <div class="account_setting py-5 fs-1 bg-white">
+          <div class="couter_icon col-md-12 text-center">
+            <i class="fa fa-random icon-transfer"></i>
+          </div>
+          <a href="{% url 'assign_customers_to_group' %}" class="text-center">
+            <h5 class="my-2">Transfer to Group</h5>
+          </a>
+        </div>
+      </div>
+      
+      
 
       <div class="col-md-3 mb-3">
         <div class="account_setting py-5 fs-1 bg-white">

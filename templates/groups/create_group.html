@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+  <h3>Create New Group</h3>
+  <form method="post">
+    {% csrf_token %}
+    <div class="mb-3">
+      <label for="group_name" class="form-label">Group Name</label>
+      <input type="text" name="group_name" id="group_name" class="form-control" required>
+    </div>
+    <div class="mb-3">
+      <label for="group_code" class="form-label">Group Code</label>
+      <input type="text" name="group_code" id="group_code" class="form-control" required>
+    </div>
+    <div class="mb-3">
+      <label for="description" class="form-label">Description</label>
+      <textarea name="description" id="description" class="form-control" rows="3"></textarea>
+    </div>
+    <button type="submit" class="btn btn-primary">Create Group</button>
+  </form>
+</div>
+{% endblock %}

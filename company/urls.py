@@ -3,7 +3,7 @@ from . import views
 
 urlpatterns = [
     path('company_list/', views.company_list, name='company_list'),
-    path('update_company/<int:id>/', views.update_company, name='update_company'),
+    path('update_company/<int:company_id>/', views.update_company, name='update_company'),
     path('branch_list/', views.branch_list, name='branch_list'),
     path('<int:pk>/', views.company_detail, name='company_detail'),
     # URL pattern for branch detail

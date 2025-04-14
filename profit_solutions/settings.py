@@ -26,8 +26,11 @@ SECRET_KEY = 'django-insecure-%f1%grgx3u=j1#pklxrabzx$eas@ao=$^wh)s#f83zq9^&sp-%
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['104.248.251.250','financeflex.sitanetorbit.com']
+# PRODUCTION
+# ALLOWED_HOSTS = ['104.248.251.250','financeflex.sitanetorbit.com']
 
+# LOCAL
+ALLOWED_HOSTS = ['*']
 
 # Application definition
 
@@ -116,29 +119,30 @@ CACHES = {
 
 
 # LOCAL DATABASE
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': 'FinanceFlex',
-#         'USER': 'postgres',
-#         'PASSWORD': 'People',
-#         'HOST': 'localhost',
-#         # 'HOST': 'finance-flex.ctqg0cgman7j.af-south-1.rds.amazonaws.com',  # Or your database host
-#         'PORT': '5432',          
-#     }
-# }
-
-# PRODUCTION DATABASE
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'demo_db',
-        'USER': 'demo_user',
-        'PASSWORD': 'Completed@1234',
+        'ENGINE': 'django.db.backends.postgresql',
+        # 'NAME': 'FinanceFlex',
+        'NAME': 'ENUGU_DEMO',
+        'USER': 'postgres',
+        'PASSWORD': 'People',
         'HOST': 'localhost',
-        'PORT': '',
+        # 'HOST': 'finance-flex.ctqg0cgman7j.af-south-1.rds.amazonaws.com',  # Or your database host
+        'PORT': '5432',          
     }
 }
+
+# PRODUCTION DATABASE
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql_psycopg2',
+#         'NAME': 'demo_db',
+#         'USER': 'demo_user',
+#         'PASSWORD': 'Completed@1234',
+#         'HOST': 'localhost',
+#         'PORT': '',
+#     }
+# }
 
 
 # Password validation

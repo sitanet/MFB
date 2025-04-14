@@ -5,6 +5,21 @@ from accounts_admin.models import Account, Account_Officer, Category, Id_card_ty
 from company.models import Company, Branch
 from django.db.models import UniqueConstraint
 
+
+
+
+
+
+class Group(models.Model):
+    group_name = models.CharField(max_length=100, unique=True)
+    group_code = models.CharField(max_length=50, unique=True)
+    created_date = models.DateField(auto_now_add=True)
+    description = models.TextField(blank=True)
+
+    def __str__(self):
+        return self.group_name
+
+        
 class Customer(models.Model):
     photo = models.ImageField(upload_to='photo/customer', default='images/avatar.jpg')  # Customer Photo
     sign = models.ImageField(upload_to='sign/customer', default='images/avatar.jpg') 
@@ -48,6 +63,23 @@ class Customer(models.Model):
     sms = models.BooleanField(default=False)
     email_alert = models.BooleanField(default=True)
 
+
+# Group
+    group = models.ForeignKey(Group, on_delete=models.SET_NULL, null=True, blank=True, related_name='members')
+
+
+
+# Corporate
+    registration_number = models.CharField(max_length=100, unique=True, blank=True, null=True)
+    contact_person_name = models.CharField(max_length=255, blank=True, null=True)
+    contact_person_phone = models.CharField(max_length=20, blank=True, null=True)
+    contact_person_email = models.EmailField(blank=True, null=True)
+    office_address = models.TextField(blank=True, null=True)
+    office_phone = models.CharField(max_length=20, blank=True, null=True)
+    office_email = models.EmailField(blank=True, null=True)
+    date_registered = models.DateField(auto_now_add=True, blank=True, null=True)
+    is_company = models.BooleanField(default=False)
+
     class Meta:
         constraints = [
             UniqueConstraint(fields=['first_name', 'middle_name', 'last_name', 'gl_no', 'branch'], 
@@ -62,10 +94,18 @@ class Customer(models.Model):
     def __str__(self):
         return self.get_full_name()
 
+    # def get_full_name(self):
+    #     if self.middle_name:
+    #         return f"{self.first_name} {self.middle_name} {self.last_name}"
+    #     return f"{self.first_name} {self.last_name}"
+
     def get_full_name(self):
+        if self.is_company:
+            return self.registration_number or "Unnamed Company"
         if self.middle_name:
             return f"{self.first_name} {self.middle_name} {self.last_name}"
         return f"{self.first_name} {self.last_name}"
+
 
     def save(self, *args, **kwargs):
         if self.branch:
@@ -90,6 +130,15 @@ class Customer(models.Model):
                 )
 
         super().save(*args, **kwargs)
+
+
+
+
+
+
+
+
+
 
 
 

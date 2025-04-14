@@ -4734,3 +4734,9 @@ def portfolio_at_risk_report_view(request):
         'report': report,
         'reporting_date': reporting_date  # Pass reporting date to template for display
     })
+
+
+
+
+
+

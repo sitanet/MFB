@@ -1,0 +1,168 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+{% include 'includes/alerts.html' %}
+
+<div class="container-fluid">
+    <div class="row column_title">
+        <div class="col-md-12">
+            <div class="page_title">
+                <h2>Company Registration</h2>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <header>Company Details</header>
+        <form method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            {% if messages %}
+            <ul class="messages">
+                {% for message in messages %}
+                <li style="font-size: 20px; color: brown; font-weight: bold;" {% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+
+            <div class="form first">
+                <div class="details personal">
+                    <div class="fields">
+
+                        <!-- Hidden User Field -->
+                        <input type="hidden" value="{{ member.team_sup.username}}" name="user" required>
+
+
+                        <!-- Passport Upload -->
+<div class="input-field">
+    <label>Upload Passport Photo*</label>
+    {{ form.photo }}
+</div>
+
+<!-- Signature Upload -->
+<div class="input-field">
+    <label>Upload Signature*</label>
+    {{ form.sign }}
+</div>
+
+                        <!-- Company Name -->
+                        <div class="input-field">
+                            <label>Company Name*</label>
+                            <input type="text" placeholder="Enter Company Name" name="first_name" value="{{ form.first_name.value|default:'' }}" required>
+                        </div>
+
+                        <!-- Contact Person -->
+                        <div class="input-field">
+                            <label>Contact Person*</label>
+                            <input type="text" placeholder="Enter Contact Person" name="contact_person" value="{{ form.middle_name.value|default:'' }}" required>
+                        </div>
+
+                        <!-- Email -->
+                        <div class="input-field">
+                            <label>Email*</label>
+                            <input type="email" placeholder="Enter Company Email" name="email" value="{{ form.email.value|default:'' }}" required>
+                        </div>
+
+                        <!-- Phone Number -->
+                        <div class="input-field">
+                            <label>Phone Number*</label>
+                            <input type="text" placeholder="Enter Phone Number" name="phone_no" value="{{ form.phone_no.value|default:'' }}" required>
+                        </div>
+
+                        <!-- Office Address -->
+                        <div class="input-field">
+                            <label>Office Address*</label>
+                            <textarea name="address" rows="3" required>{{ form.address.value|default:'' }}</textarea>
+                        </div>
+
+                        <!-- State -->
+                        <div class="input-field">
+                            <label>State*</label>
+                            <input type="text" name="state" value="{{ form.state.value|default:'' }}" required>
+                        </div>
+
+                        <!-- Nationality -->
+                        <div class="input-field">
+                            <label>Country*</label>
+                            <input type="text" name="nationality" value="{{ form.nationality.value|default:'' }}" required>
+                        </div>
+
+                        <!-- Registration Date -->
+                        <div class="input-field">
+                            <label>Registration Date</label>
+                            <input type="date" name="reg_date" value="{{ form.reg_date|date:'Y-m-d' }}" required>
+                        </div>
+
+                        <!-- License Key -->
+                        <div class="input-field">
+                            <label>License Key</label>
+                            <input type="text" name="license_key" value="{{ form.license_key.value|default:'' }}">
+                        </div>
+
+                        <div class="input-field">
+                            <label for="gl_no">Account Type</label>
+                            <select id="gl_no" name="gl_no" required>
+                                <option value="">Select Account Type</option>
+                                {% for item in cust_data %}
+                                    <option value="{{ item.gl_no }}"
+                                        {% if form.gl_no.value|stringformat:"s" == item.gl_no|stringformat:"s" %}selected{% endif %}>
+                                        {{ item.gl_name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+
+                        <!-- Status -->
+                        <div class="input-field">
+                            <label>Status*</label>
+                            {{ form.status }}
+                        </div>
+
+                        <!-- Submit Button -->
+                        <button class="sumbit">
+                            <span class="btnText">Submit</span>
+                            <i class="uil uil-navigator"></i>
+                        </button>
+
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+<style>
+    .input-field {
+        margin-bottom: 15px;
+    }
+    .input-field label {
+        display: block;
+        margin-bottom: 5px;
+    }
+    .input-field input,
+    .input-field select,
+    .input-field textarea {
+        width: 100%;
+        padding: 8px;
+        box-sizing: border-box;
+    }
+    .sumbit {
+        display: block;
+        width: 100%;
+        padding: 10px;
+        background-color: green;
+        color: white;
+        border: none;
+        cursor: pointer;
+    }
+
+    .input-field input[type="file"] {
+        padding: 5px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        background-color: #fff;
+    }
+</style>

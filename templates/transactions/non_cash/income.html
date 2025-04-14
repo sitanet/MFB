@@ -24,24 +24,25 @@
                     {{ form.errors }}
                     
                     <div class="form-row">
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <label class="fw-bold" for="branch">Branch:</label>
-                            <input type="text" class="form-control bg-light" id="branch"  value="{{ user.branch }}" readonly>
+                            <input type="text" class="form-control bg-light" id="branch" name="branch" value="{{ user.branch.branch_code }}" readonly>
                         </div>
-                        <div class="col-md-3">
+                        
+                        <div class="col-md-2">
                             <label class="fw-bold" for="branch">Customer Branch:</label>
-                            <input type="text" class="form-control bg-light" id="branch"  value="{{ customer.branch }}" readonly>
+                            <input type="text" class="form-control bg-light" id="branch"  value="{{ customer.branch}}" readonly>
                         </div>
                         
                         <div class="col-md-2">
                             <label class="fw-bold" for="branch">Transaction No:</label>
-                            <input type="text" class="form-control bg-light" id="branch" value="{{last_transaction.trx_no}}" readonly>
+                            <input type="text" class="form-control bg-light" id="branch" value="{{data.trx_no}}" readonly>
                         </div>
-                        <div class="col-md-2 col-md-offset-9">
+                        <div class="col-md-3 col-md-offset-9">
                             <label class="fw-bold" for="ses_date">Session Date:</label>
                             <input type="date" class="form-control bg-light" id="ses_date" name="ses_date" value="{{ company_date }}" readonly>
                         </div>
-                        <div class="col-md-2 col-md-offset-9">
+                        <div class="col-md-3 col-md-offset-9">
                             <label class="fw-bold" for="ses_date">Transaction Date:</label>
                             <input type="date" class="form-control {% if form.app_date.errors %}is-invalid{% endif %}" id="app_date" name="app_date" value="{{ form.app_date.value }}">
                             {% if form.app_date.errors %}

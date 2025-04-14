@@ -86,9 +86,24 @@
                             <label for="deposit_description">Loan Amount:</label>
                             <input type="text" class="form-control bg-light" name="amount" value="{{ loan.loan_amount }}" readonly>
                         </div>
+
+                        <!-- <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="loan_appl_vat">VAT Amount</label>
+                                <input type="number" 
+                                       class="form-control" 
+                                       id="loan_appl_vat" 
+                                       name="loan_appl_vat" 
+                                       value="{{ default_vat|default:'0' }}" 
+                                       step="0.01" 
+                                       min="0">
+                              
+                            </div>
+                        </div> -->
+                        
                         <div class="input-field">
                             <label for="deposit_description">Loan Proc/Mgt/Admin Fee:</label>
-                            <input type="text" class="form-control bg-light" name="mgt_fee" placeholder="Please Enter Fee" >
+                            <input type="text" class="form-control bg-light" name="loan_appl_vat" placeholder="Please Enter Fee" >
                         </div>
                         <div class="input-field">
                             <label for="deposit_description">Annual Int Rate:</label>

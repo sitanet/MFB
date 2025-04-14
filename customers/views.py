@@ -111,6 +111,358 @@ def customers(request):
     })
 
 
+
+
+
+
+def company_reg(request):
+    user_company = request.user.branch.company
+
+    # Get GL accounts that start with '20' but not exactly '20100', '20200', '20000'
+    cust_data = Account.objects.filter(gl_no__startswith='20', branch__company=user_company) \
+        .exclude(gl_no__in=['20100', '20200', '20000'])
+
+    # Get list of GL numbers (flat values)
+    gl_no = cust_data.values_list('gl_no', flat=True)
+
+    officer = Account_Officer.objects.filter(branch__company=user_company)
+    region = Region.objects.filter(branch__company=user_company)
+    category = Category.objects.filter(branch__company=user_company)
+    id_card = Id_card_type.objects.filter(branch__company=user_company)
+
+    # Get branches under this company
+    cust_branch = user_company.branches.all()
+
+    # Get most recent customer
+    customer = Customer.objects.all().order_by('-gl_no', '-ac_no').first()
+
+    if request.method == 'POST':
+        form = CustomerForm(request.POST, request.FILES)
+
+        if form.is_valid():
+            ac_no = generate_unique_6_digit_number()
+            form.instance.ac_no = ac_no
+            form.instance.branch = request.user.branch
+
+            # Set is_company to True before saving
+            form.instance.is_company = True
+            form.instance.label = 'C'
+
+            try:
+                new_record = form.save()
+                ac_no = new_record.ac_no
+                gl_no = new_record.gl_no
+
+                # If SMS is checked
+                if new_record.sms:
+                    phone_number = new_record.phone_no
+                    message = f"Hello {new_record.first_name}, Enjoy {gl_no}{ac_no}."
+
+                    print(f"Sending SMS to: {phone_number}")
+                    print(f"Message: {message}")
+
+                    sms_response = send_sms(phone_number, message)
+
+                    if 'error' in sms_response:
+                        messages.error(request, f"SMS failed: {sms_response['error']}")
+                    else:
+                        messages.success(request, "SMS sent successfully!")
+
+                return render(request, 'file/customer/account_no.html', {
+                    'ac_no': ac_no,
+                    'gl_no': gl_no,
+                })
+
+            except Exception as e:
+                messages.error(request, f"Error saving customer or sending SMS: {e}")
+                form.add_error(None, f"Error saving customer or sending SMS: {e}")
+        else:
+            messages.error(request, "There were errors in the form submission. Please correct them.")
+            print(f"Form errors: {form.errors}")
+
+    else:
+        form = CustomerForm()
+
+    return render(request, 'file/customer/company_reg.html', {
+        'form': form,
+        'cust_data': cust_data,
+        'cust_branch': cust_branch,
+        'gl_no': gl_no,
+        'officer': officer,
+        'region': region,
+        'category': category,
+        'customer': customer,
+        'id_card': id_card,
+    })
+
+def edit_company_reg(request, customer_id):
+    # Fetch the user company and branches as in the original function
+    user_company = request.user.branch.company
+    cust_data = Account.objects.filter(gl_no__startswith='104') \
+        .exclude(gl_no__in=['20100', '20200', '20000'])
+    gl_no = cust_data.values_list('gl_no', flat=True)
+    
+    officer = Account_Officer.objects.filter(branch__company=user_company)
+    region = Region.objects.filter(branch__company=user_company)
+    category = Category.objects.filter(branch__company=user_company)
+    id_card = Id_card_type.objects.filter(branch__company=user_company)
+    
+    # Get branches under this company
+    cust_branch = user_company.branches.all()
+
+    # Fetch the customer to edit
+    try:
+        customer = Customer.objects.get(id=customer_id)
+    except Customer.DoesNotExist:
+        messages.error(request, "Customer not found.")
+        return redirect('some-fallback-view')  # Redirect to an appropriate page if customer doesn't exist
+
+    # Fetch customer-related account info for display
+    ac_no = customer.ac_no
+    gl_no = customer.gl_no
+
+    if request.method == 'POST':
+        form = CustomerForm(request.POST, request.FILES, instance=customer)
+
+        if form.is_valid():
+            form.instance.branch = request.user.branch
+
+            # Set is_company to True before saving if not already set
+            if not form.instance.is_company:
+                form.instance.is_company = True
+                form.instance.label = 'C'
+
+            # If ac_no is not set (for new customers or empty), generate a unique 6-digit number
+            if not form.instance.ac_no:
+                form.instance.ac_no = generate_unique_6_digit_number()
+
+            try:
+                updated_customer = form.save()
+                ac_no = updated_customer.ac_no  # Update ac_no after save
+                gl_no = updated_customer.gl_no  # Update gl_no after save
+
+                # If SMS is checked
+                if updated_customer.sms:
+                    phone_number = updated_customer.phone_no
+                    message = f"Hello {updated_customer.first_name}, Enjoy {gl_no}{ac_no}."
+
+                    print(f"Sending SMS to: {phone_number}")
+                    print(f"Message: {message}")
+
+                    sms_response = send_sms(phone_number, message)
+
+                    if 'error' in sms_response:
+                        messages.error(request, f"SMS failed: {sms_response['error']}")
+                    else:
+                        messages.success(request, "SMS sent successfully!")
+
+                return render(request, 'file/customer/account_no.html', {
+                    'ac_no': ac_no,
+                    'gl_no': gl_no,
+                })
+
+            except Exception as e:
+                messages.error(request, f"Error updating customer or sending SMS: {e}")
+                form.add_error(None, f"Error updating customer or sending SMS: {e}")
+        else:
+            messages.error(request, "There were errors in the form submission. Please correct them.")
+            print(f"Form errors: {form.errors}")
+    
+    else:
+        form = CustomerForm(instance=customer)
+
+    return render(request, 'file/customer/company_reg.html', {
+        'form': form,
+        'cust_data': cust_data,
+        'cust_branch': cust_branch,
+        'gl_no': gl_no,
+        'officer': officer,
+        'region': region,
+        'category': category,
+        'customer': customer,
+        'id_card': id_card,
+        'ac_no': ac_no,  # Add ac_no to context to ensure it's available
+        'gl_no': gl_no,  # Add gl_no to context to ensure it's available
+    })
+
+
+
+
+
+
+def add_company_reg(request):
+    # Fetch the user company and branches as in the original function
+    user_company = request.user.branch.company
+    cust_data = Account.objects.filter(gl_no__startswith='104') \
+        .exclude(gl_no__in=['20100', '20200', '20000'])
+    gl_no = cust_data.values_list('gl_no', flat=True)
+    
+    officer = Account_Officer.objects.filter(branch__company=user_company)
+    region = Region.objects.filter(branch__company=user_company)
+    category = Category.objects.filter(branch__company=user_company)
+    id_card = Id_card_type.objects.filter(branch__company=user_company)
+    
+    # Get branches under this company
+    cust_branch = user_company.branches.all()
+
+    # Handle new customer addition
+    if request.method == 'POST':
+        form = CustomerForm(request.POST, request.FILES)
+
+        if form.is_valid():
+            form.instance.branch = request.user.branch
+
+            # Set is_company to True before saving if not already set
+            if not form.instance.is_company:
+                form.instance.is_company = True
+                form.instance.label = 'C'
+
+            # If ac_no is not set (for new customers), generate a unique 6-digit number
+            if not form.instance.ac_no:
+                form.instance.ac_no = generate_unique_6_digit_number()
+
+            try:
+                # Save the new customer
+                new_customer = form.save()
+                ac_no = new_customer.ac_no  # Get the ac_no after save
+                gl_no = new_customer.gl_no  # Get the gl_no after save
+
+                # If SMS is checked
+                if new_customer.sms:
+                    phone_number = new_customer.phone_no
+                    message = f"Hello {new_customer.first_name}, Enjoy {gl_no}{ac_no}."
+
+                    print(f"Sending SMS to: {phone_number}")
+                    print(f"Message: {message}")
+
+                    sms_response = send_sms(phone_number, message)
+
+                    if 'error' in sms_response:
+                        messages.error(request, f"SMS failed: {sms_response['error']}")
+                    else:
+                        messages.success(request, "SMS sent successfully!")
+
+                return render(request, 'file/customer/account_no.html', {
+                    'ac_no': ac_no,
+                    'gl_no': gl_no,
+                })
+
+            except Exception as e:
+                messages.error(request, f"Error creating customer or sending SMS: {e}")
+                form.add_error(None, f"Error creating customer or sending SMS: {e}")
+        else:
+            messages.error(request, "There were errors in the form submission. Please correct them.")
+            print(f"Form errors: {form.errors}")
+    
+    else:
+        form = CustomerForm()
+
+    return render(request, 'file/customer/company_reg.html', {
+        'form': form,
+        'cust_data': cust_data,
+        'cust_branch': cust_branch,
+        'gl_no': gl_no,
+        'officer': officer,
+        'region': region,
+        'category': category,
+        'id_card': id_card,
+    })
+
+# views.py
+
+from django.shortcuts import render, redirect
+from .models import Group, Customer
+from .forms import GroupForm, AssignCustomerForm
+
+def create_group(request):
+    form = GroupForm(request.POST or None)
+    if form.is_valid():
+        form.save()
+        return redirect('assign_customers_to_group')
+    return render(request, 'groups/create_group.html', {'form': form})
+
+
+from django.shortcuts import render, redirect
+from .forms import AssignCustomerForm
+from .models import Customer
+
+# groups/views.py
+# groups/views.py
+
+# groups/views.py
+
+from django.shortcuts import render, redirect
+from .forms import AssignCustomerForm
+from .models import Customer, Group
+
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from .forms import AssignCustomerForm
+from .models import Customer, Group
+
+# Assign customer to group view
+def assign_customers_to_group(request):
+    if request.method == 'POST':
+        form = AssignCustomerForm(request.POST)
+        if form.is_valid():
+            # Get the group and customer from the form
+            group = form.cleaned_data['group']
+            customer = form.cleaned_data['customer']
+            
+            # Assign the group to the customer and save
+            customer.group = group
+            customer.save()
+
+            # Add a success message
+            messages.success(request, f"{customer.first_name} {customer.last_name} has been assigned to {group.group_name}.")
+            return redirect('assign_customers_to_group')  # Redirect to avoid re-posting on refresh
+        else:
+            # Print form errors for debugging purposes
+            print("Form errors:", form.errors)
+            messages.error(request, "There was an error with the form. Please try again.")
+
+    else:
+        form = AssignCustomerForm()
+    
+    return render(request, 'groups/assign_customers.html', {'form': form})
+
+
+def remove_from_group(request, customer_id):
+    try:
+        customer = Customer.objects.get(id=customer_id)
+        group_id = customer.group.id if customer.group else None
+        customer.group = None
+        customer.save()
+
+        messages.success(request, f"{customer.first_name} {customer.last_name} has been removed from the group.")
+        if group_id:
+            return redirect('group_customers', group_id=group_id)
+        else:
+            return redirect('assign_customers_to_group')
+    except Customer.DoesNotExist:
+        messages.error(request, "Customer not found.")
+        return redirect('assign_customers_to_group')
+
+
+
+# Remove customer from group
+from django.shortcuts import get_object_or_404
+
+def group_customers(request, group_id):
+    group = get_object_or_404(Group, id=group_id)
+    customers = Customer.objects.filter(group=group)
+
+    return render(request, 'groups/group_customers.html', {
+        'group': group,
+        'customers': customers
+    })
+
+
+def group_list(request):
+    groups = Group.objects.all()
+    return render(request, 'groups/group_list.html', {'groups': groups})
+
+
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
 def edit_customer(request, id):
@@ -335,6 +687,27 @@ def choose_to_create_loan(request):
             'total_amount': total_amount or 0.0,
         })
     return render(request, 'loans/choose_to_create_loan.html',{'data': data, 'total_amounts': total_amounts})
+
+
+
+
+
+@login_required(login_url='login')
+@user_passes_test(check_role_admin)
+def choose_to_create_company_loan(request):
+    data = Memtrans.objects.all().order_by('-id').first()
+    customers = Customer.objects.filter(label='C').order_by('-id')
+    
+    total_amounts = []
+
+    for customer in customers:
+        # Calculate the total amount for each customer
+        total_amount = Memtrans.objects.filter(gl_no=customer.gl_no, ac_no=customer.ac_no, error='A').aggregate(total_amount=Sum('amount'))['total_amount']
+        total_amounts.append({
+            'customer': customer,
+            'total_amount': total_amount or 0.0,
+        })
+    return render(request, 'loans/choose_to_create_company_loan.html',{'data': data, 'total_amounts': total_amounts})
 
 
 

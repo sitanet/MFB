@@ -33,6 +33,16 @@ urlpatterns = [
     path("register-fixed-deposit-account/", views.register_fixed_deposit_account, name="register_fixed_deposit_account"),
     path("customer-sms-email-alert/", views.customer_sms_email_alert, name="customer_sms_email_alert"),
 
+    path('register-customer/', views.company_reg, name='company_reg'),
+
+    path('create-group/', views.create_group, name='create_group'),
+    path('assign-customers/', views.assign_customers_to_group, name='assign_customers_to_group'),
+    path('remove/<int:customer_id>/', views.remove_from_group, name='remove_from_group'),
+    path('group/<int:group_id>/', views.group_customers, name='group_customers'),
+
+    path('groups/', views.group_list, name='group_list'),
+    path('edit_customer/<int:customer_id>/', views.edit_company_reg, name='edit_company_reg'),
+    path('choose_to_create_company_loan/', views.choose_to_create_company_loan, name='choose_to_create_company_loan'),
+    
 ]
    
-
