@@ -19,14 +19,14 @@ class UserForm(forms.ModelForm):
     phone_number = forms.CharField(widget=forms.TextInput(attrs={'placeholder': 'Enter Phone Number', 'required': 'required'}))
     
     # If the branch field is needed:
-    branch = forms.ModelChoiceField(queryset=Branch.objects.all(), empty_label="Select Branch", required=True)
+    # branch = forms.ModelChoiceField(queryset=Branch.objects.all(), empty_label="Select Branch", required=True)
     
     cashier_gl = forms.CharField(widget=forms.TextInput(attrs={'placeholder': 'Enter Cashier GL', 'required': 'required'}))
     cashier_ac = forms.CharField(widget=forms.TextInput(attrs={'placeholder': 'Enter Cashier AC', 'required': 'required'}))
 
     class Meta:
         model = User
-        fields = ['profile_picture', 'first_name', 'last_name', 'username', 'email', 'role', 'phone_number', 'password', 'cashier_gl', 'cashier_ac', 'branch']  # Add branch to the list of fields
+        fields = ['profile_picture', 'first_name', 'last_name', 'username', 'email', 'role', 'phone_number', 'password', 'cashier_gl', 'cashier_ac']  # Add branch to the list of fields
 
     def clean(self):
         cleaned_data = super(UserForm, self).clean()

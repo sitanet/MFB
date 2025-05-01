@@ -16,4 +16,10 @@ urlpatterns = [
     path('<int:id>/delete/', views.branch_delete, name='branch_delete'),
     path('session_mgt/<int:branch_id>/update/', views.session_mgt, name='session_mgt'),
     path('users/', views.display_users_and_branches, name='display_users_and_branches'),
+
+
+    path('verify-phone/', views.verify_phone, name='verify_phone'),
+
+    path('sms-webhook/', views.sms_delivery_webhook, name='sms_webhook'),
+    path('sms-troubleshoot/', views.sms_troubleshoot, name='sms_troubleshoot'),
 ]

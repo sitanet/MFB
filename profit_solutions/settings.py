@@ -210,5 +210,7 @@ DEFAULT_FROM_EMAIL = "FinanceFlex <izekor@sitanetorbit.com>"
 
 # SMS API Configuration
 TERMII_API_KEY = "TLDfcyAogBKwuMYnxvPHatThWJqfkOFffeNMTNJaucRjzaoSSeTHugQkzIgDDS"
-TERMII_SENDER_ID = "N-Alert"
+# TERMII_SENDER_ID = "N-Alert"
+TERMII_SENDER_ID = "FinanceFlex"
 TERMII_SMS_URL = "https://api.ng.termii.com/api/sms/send"
+SMS_DELIVERY_WEBHOOK_URL = None

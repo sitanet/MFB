@@ -1,6 +1,7 @@
 from django.utils import timezone
 from django.db import models
-
+from django.conf import settings  # Add this import
+from django.contrib.auth.models import User  # Import the User model
 from django.db import models
 from django.utils.timezone import now  # Import the 'now' function
 
@@ -27,6 +28,7 @@ class Company(models.Model):
     
 
 
+from django.utils.timezone import now, timedelta
 
 class Branch(models.Model):
     PLAN_CHOICES = [
@@ -38,16 +40,66 @@ class Branch(models.Model):
         ("Enterprise", "Enterprise"),
     ]
 
-    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name="branches")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.CASCADE, 
+        related_name="branches"
+    )
+
+    company_name = models.CharField(max_length=100)
+    company = models.CharField(max_length=100, blank=True, null=True)
     branch_code = models.CharField(max_length=6)
     branch_name = models.CharField(max_length=90)
-    plan = models.CharField(max_length=15, choices=PLAN_CHOICES, default="Starter")  # Added plan field
+    logo = models.ImageField(upload_to='branch_logos/', blank=True, null=True)
+    address = models.TextField()
+    cac_number = models.CharField(max_length=100)
+    license_number = models.CharField(max_length=100)
+    company_type = models.CharField(max_length=50)
+    bvn_number = models.CharField(max_length=11)
+    phone_number = models.CharField(max_length=20)
+    phone_verified = models.BooleanField(default=False)
+    otp_code = models.CharField(max_length=6, null=True, blank=True)
+    plan = models.CharField(max_length=15, choices=PLAN_CHOICES, default="Starter")
     session_date = models.DateField(null=True, blank=True, default=now)
     system_date_date = models.DateField(null=True, blank=True)
     session_status = models.CharField(max_length=10, null=True, blank=True)
 
+    # ✅ New expire date field
+    expire_date = models.DateField(null=True, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    def save(self, *args, **kwargs):
+        # Automatically set company = branch_name
+        self.company = self.branch_name
+
+        # If expire_date is not set yet (new branch), set it to 30 days from today
+        if not self.expire_date:
+            self.expire_date = now().date() + timedelta(days=30)
+
+        super().save(*args, **kwargs)
+
     def __str__(self):
-        return f"{self.branch_code} - {self.plan}"
+        return f"{self.company_name} - {self.branch_name} - {self.plan}"
+
+
+class SmsDelivery(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('sent', 'Sent'),
+        ('delivered', 'Delivered'),
+        ('failed', 'Failed'),
+        ('error', 'Error')
+    ]
+    
+    branch = models.ForeignKey(Branch, on_delete=models.CASCADE, null=True)
+    phone_number = models.CharField(max_length=20)
+    message = models.TextField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    message_id = models.CharField(max_length=100, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"SMS to {self.phone_number} ({self.status})"

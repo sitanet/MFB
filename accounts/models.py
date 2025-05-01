@@ -122,6 +122,7 @@ class User(AbstractBaseUser):
     phone_number = models.CharField(max_length=16, blank=True, null=True)
     role = models.PositiveSmallIntegerField(choices=ROLE_CHOICE, blank=True, null=True)
     branch = models.ForeignKey(Branch, on_delete=models.CASCADE, null=True, blank=True, related_name="users")
+
     cashier_gl = models.CharField(max_length=6, blank=True, null=True)
     cashier_ac = models.CharField(max_length=1, blank=True, null=True)
 
@@ -134,6 +135,7 @@ class User(AbstractBaseUser):
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     is_superadmin = models.BooleanField(default=False)
+    verified = models.BooleanField(default=False)
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username', 'first_name', 'last_name']

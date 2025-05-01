@@ -40,9 +40,204 @@ def create_company(request):
     return render(request, 'company/create_company.html', {'form': form})
 
 
+from django.db import transaction
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.shortcuts import render, redirect
+from .models import Branch
+from .forms import BranchForm
+from django.contrib.auth import get_user_model
+import random
+import requests
+from django.conf import settings
+import logging
+
+logger = logging.getLogger(__name__)
+User = get_user_model()
 
 
+
+
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+
+@csrf_exempt
+def sms_delivery_webhook(request):
+    """Handle delivery reports from Termii"""
+    try:
+        data = json.loads(request.body)
+        logger.info(f"Delivery webhook: {data}")
+        
+        # Update delivery status
+        SmsDelivery.objects.filter(
+            message_id=data.get('message_id')
+        ).update(
+            status=data.get('status', 'failed'),
+            updated_at=timezone.now()
+        )
+        
+        return JsonResponse({'status': 'received'})
+    except Exception as e:
+        logger.error(f"Webhook error: {str(e)}")
+        return JsonResponse({'status': 'error'}, status=400)
+
+
+
+@login_required
+def sms_troubleshoot(request):
+    """View to help diagnose SMS issues"""
+    deliveries = SmsDelivery.objects.filter(
+        phone_number=request.user.phone_number
+    ).order_by('-created_at')[:5]
+    
+    return render(request, 'sms_troubleshoot.html', {
+        'deliveries': deliveries,
+        'user_phone': request.user.phone_number
+    })
+
+
+from django.db import transaction
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.shortcuts import render, redirect
+from .models import Branch, SmsDelivery
+from .forms import BranchForm
+from django.contrib.auth import get_user_model
+import random
+import requests
+from django.conf import settings
+import logging
+
+logger = logging.getLogger(__name__)
+User = get_user_model()
+
+def _send_otp_sms(phone_number, message, branch=None):
+    """Send OTP via Termii API with basic logging"""
+    try:
+        if not phone_number or not phone_number.startswith('+'):
+            logger.error(f"Invalid phone number: {phone_number}")
+            return False
+
+        response = requests.post(
+            settings.TERMII_SMS_URL,
+            json={
+                "api_key": settings.TERMII_API_KEY,
+                "to": phone_number,
+                "from": settings.TERMII_SENDER_ID,
+                "sms": message,
+                "type": "plain",
+                "channel": "generic"
+            },
+            timeout=15
+        )
+        response_data = response.json()
+
+        # Create delivery record
+        SmsDelivery.objects.create(
+            branch=branch,
+            phone_number=phone_number,
+            message=message,
+            status='sent' if response_data.get('code') == 'ok' else 'failed'
+        )
+
+        return response_data.get('code') == 'ok'
+        
+    except Exception as e:
+        logger.error(f"SMS error: {str(e)}")
+        SmsDelivery.objects.create(
+            branch=branch,
+            phone_number=phone_number,
+            message=message,
+            status='error'
+        )
+        return False
+@login_required
 def create_branch(request):
+    try:
+        if request.user.branch:
+
+            messages.warning(request, 'Your account already has a branch.')
+            return redirect('dashboard')
+
+        if request.method == 'POST':
+            form = BranchForm(request.POST, request.FILES)
+            if form.is_valid():
+                try:
+                    with transaction.atomic():
+                        branch = form.save(commit=False)
+                        branch.user = request.user
+                        branch.company_name = branch.branch_name
+                        branch.phone_verified = False
+                        branch.otp_code = str(random.randint(100000, 999999))
+                        branch.save()
+
+                        # ✅ Link user to branch BEFORE sending SMS
+                        request.user.branch = branch
+
+                        request.user.save()
+
+                        # Send OTP
+                        phone_number = request.user.phone_number
+                        if not phone_number:
+                            raise ValueError("Phone number is required")
+
+                        sms_sent = _send_otp_sms(
+                            phone_number,
+                            f"Your verification code: {branch.otp_code}",
+                            branch
+                        )
+
+                        if sms_sent:
+                            messages.success(request, 'Verification code sent to your phone.')
+                        else:
+                            messages.warning(request, 'OTP could not be sent. You can request it again later.')
+
+                        return redirect('verify_phone')
+
+                except ValueError as e:
+                    messages.error(request, str(e))
+                except Exception as e:
+                    messages.error(request, "System error. Please try again.")
+
+            else:
+                messages.error(request, "Please correct the form errors.")
+        else:
+            form = BranchForm(initial={
+                'branch_name': f"{request.user.first_name or request.user.username}'s Branch",
+                'phone_number': request.user.phone_number
+            })
+
+        return render(request, 'branch/create_branch.html', {
+            'form': form,
+            'phone_valid': request.user.phone_number and request.user.phone_number.startswith('+')
+        })
+
+    except Exception as e:
+        messages.error(request, "A system error occurred. Please contact support.")
+        return redirect('dashboard')
+# views.py
+from django.contrib.auth.decorators import login_required
+
+@login_required
+def verify_phone(request):
+    user = request.user
+    if not user.branch:
+        return redirect('create_branch')
+    
+    branch = user.branch
+    
+    if request.method == 'POST':
+        entered_otp = request.POST.get('otp', '')
+        if entered_otp == branch.otp_code:
+            branch.phone_verified = True
+            branch.save()
+            messages.success(request, 'Phone verification successful!')
+            return redirect('dashboard')
+        messages.error(request, 'Invalid OTP. Please try again.')
+    
+    return render(request, 'branch/verify_phone.html')
+
+def create_branch_old(request):
     companies = Company.objects.all()
     if request.method == "POST":
         form = BranchForm(request.POST)

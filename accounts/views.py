@@ -9,6 +9,7 @@ from accounts.utils import detectUser, send_verification_email
 from accounts_admin.models import Account
 from customers.models import Customer
 
+from django.urls import reverse
 
 
 from .forms import UserForm, UserProfileForm, UserProfilePictureForm, EdituserForm
@@ -24,6 +25,12 @@ from django.core.exceptions import PermissionDenied
 import datetime
 
 from company.models import Company, Branch
+
+
+
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
+from django.contrib.auth.tokens import default_token_generator
 
 # Create your views here.
 
@@ -106,6 +113,74 @@ def registeruser(request):
     }
 
     return render(request, 'accounts/registeruser.html', context)
+
+
+
+
+from django.core.mail import send_mail
+from django.conf import settings
+from django.utils.http import urlsafe_base64_encode
+from django.urls import reverse
+from django.contrib import messages
+from django.shortcuts import redirect, render
+from django.contrib.auth import get_user_model
+from django.contrib.auth.tokens import default_token_generator
+
+User = get_user_model()
+
+def register(request):
+    if request.method == 'POST':
+        form = UserForm(request.POST)
+        if form.is_valid():
+            # Create user but mark as inactive and unverified
+            user = form.save(commit=False)
+            user.set_password(form.cleaned_data['password'])
+            user.is_active = True  # User can login but not access privileged areas
+            user.verified = False  # Will be set to True after branch creation
+            user.save()
+
+            # Send activation email
+            uid = urlsafe_base64_encode(str(user.pk).encode())
+            token = default_token_generator.make_token(user)
+            activation_link = request.build_absolute_uri(
+                reverse('activate', kwargs={'uidb64': uid, 'token': token})
+            )
+
+            subject = 'Complete Your Registration'
+            message = f'''
+Dear {user.first_name},
+
+Thank you for registering. To complete your setup, please click the link below 
+to create your branch and activate your account:
+
+{activation_link}
+
+This link will expire in 24 hours.
+
+Regards,
+Admin Team
+'''
+            try:
+                send_mail(
+                    subject,
+                    message,
+                    settings.DEFAULT_FROM_EMAIL,
+                    [user.email],
+                    fail_silently=False
+                )
+                messages.success(request, 'Registration successful! Please check your email to complete setup.')
+            except Exception as e:
+                messages.warning(request, f'User created, but email could not be sent. Please contact support. Error: {str(e)}')
+                # Consider logging this error for admin
+                return redirect('contact_support')  # You should have some fallback
+
+            return redirect('login')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = UserForm()
+
+    return render(request, 'accounts/public_reg.html', {'form': form})
 
 
 
@@ -264,6 +339,7 @@ from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.utils import timezone
 
+
 def login(request):
     if request.user.is_authenticated:
         return redirect('myAccount')
@@ -273,28 +349,27 @@ def login(request):
         password = request.POST.get('password')
 
         try:
-            user = authenticate(email=email, password=password)
-            if not user:
+            user = authenticate(request, username=email, password=password)
+            if user is None:
                 raise ValueError("Invalid credentials")
 
-            # Check if user has a branch
-            if not hasattr(user, 'branch'):
-                raise ValueError("No branch assigned")
+            # Check if user is verified
+            if not user.verified:
+                raise ValueError("Account not verified")
 
-            # License validity check
-            if user.branch.company.expiration_date < timezone.now().date():
-                raise ValueError("License expired")
+            # Check if branch exists — but allow if none, to let them log in and create
+            if user.branch and user.branch.expire_date < timezone.now().date():
+                raise ValueError("Branch license expired")
 
-            # Log the user in
+            # Log in user
             auth_login(request, user)
-            return redirect('myAccount')
+            return redirect('dashboard')
 
         except Exception as e:
             messages.error(request, str(e))
             return redirect('login')
 
     return render(request, 'accounts/login.html')
-
 
 
 def verify_otp(request):
@@ -397,28 +472,31 @@ def profile(request):
 #         form = UserProfilePictureForm(instance=user_profile)
 
 #     return render(request, 'accounts/profile.html', {'form': form})
-
-
-
+from django.contrib.auth import get_user_model
+from django.shortcuts import redirect
+from django.contrib import messages
+from django.utils.http import urlsafe_base64_decode
+from django.utils.encoding import force_str
+from django.contrib.auth.tokens import default_token_generator
+from django.contrib.auth import login as auth_login
 
 def activate(request, uidb64, token):
-    # Activate the user by setting the is_active status to True
     try:
         uid = urlsafe_base64_decode(uidb64).decode()
-        user = User._default_manager.get(pk=uid)
-    except(TypeError, ValueError, OverflowError, User.DoesNotExist):
+        user = get_user_model().objects.get(pk=uid)
+    except (TypeError, ValueError, OverflowError, get_user_model().DoesNotExist):
         user = None
 
     if user is not None and default_token_generator.check_token(user, token):
-        user.is_active = True
-        user.save()
-        messages.success(request, 'Congratulation! Your account is activated.')
-        return redirect('myAccount')
+        # Log them in but DON'T verify yet
+        auth_login(request, user)
+        
+        # Always redirect to create branch (even if they have one)
+        messages.info(request, 'Please create a branch to complete your registration.')
+        return redirect('create_branch')
     else:
-        messages.error(request, 'Invalid activation link')
-        return redirect('myAccount')
-
-
+        messages.error(request, 'The activation link is invalid or has expired.')
+        return redirect('login')
 
 def forgot_password(request):
     if request.method == 'POST':
