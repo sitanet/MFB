@@ -1,38 +1,59 @@
 {% extends "base.html" %}
-
-
+{% load static %}
 
 {% block content %}
-
-
-
 <div class="container-fluid">
-  <div class="row">
+    <!-- Header with Back Button -->
+    <div class="row column_title">
         <div class="col-md-12">
-              <div class="page_title">
-                    <h2>Create Internal Account</h2>
-              </div>
+            <div class="page_title d-flex justify-content-between align-items-center">
+                <h2>Create Internal Account</h2>
+                <a href="{% url 'new_accounts' %}" class="btn btn-outline-secondary">
+                    <i class="fa fa-arrow-left mr-2"></i> Back to Menu
+                </a>
+            </div>
         </div>
-        <!-- form -->
-        <form method="POST" class="chart_of_account p-5 shadow-lg rounded rounded-5">
-            {% csrf_token %}
-            {% if messages %}
-    <ul class="messages">
-        {% for message in messages %}
-            <li style="font-size: 30px; color: brown; font-weight: bold;"  {% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
-        {% endfor %}
-    </ul>
-{% endif %}
-            <h6 style="color: red;" >{{ form.errors }}</h6>
-              <div class="form-row">
+    </div>
 
-                  <!-- <div class="form-group col-md-6">
-                        <label for="fName">Branch</label>
-                        <span class="form-control bg-light">{{ user.branch }}</span>
-                        <input type="hidden" name="branch" value="{{ user.branch }}">
-                    </div> -->
+    <!-- Main Form Content -->
+    <div class="row">
+        <div class="col-md-12">
+            <form method="POST" class="chart_of_account p-5 shadow-lg rounded rounded-5">
+                {% csrf_token %}
+                
+                <!-- Messages Display -->
+                {% if messages %}
+                    <ul class="messages mb-4">
+                        {% for message in messages %}
+                            <li class="{{ message.tags }} alert alert-dismissible fade show" 
+                                style="font-size: 16px; 
+                                       color: #856404;
+                                       background-color: #fff3cd;
+                                       border-color: #ffeeba;
+                                       list-style: none;
+                                       padding: 12px;
+                                       border-radius: 5px;">
+                                {{ message }}
+                                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+                
+                <!-- Form Errors -->
+                {% if form.errors %}
+                    <div class="alert alert-danger mb-4">
+                        <strong>Error!</strong> Please correct the following:
+                        {{ form.errors }}
+                    </div>
+                {% endif %}
+
+                <!-- Form Fields -->
+                <div class="form-row">
                     <div class="form-group col-md-4">
-                        <label for="general_ledger_accout_no">General Ledger Name (COA).</label>
+                        <label for="general_ledger_type">General Ledger Name (COA)</label>
                         <select class="form-control bg-light" id="general_ledger_type" name="gl_no" required>
                             {% for gl_no in gl_no %}
                                 {% if gl_no.gl_no|slice:"-1" != "0" %}
@@ -44,90 +65,82 @@
                     
                     <div class="form-group col-md-4">
                         <label for="general_ledger_accout_name">General Ledger Name</label>
-                        <input type="text" class="form-control bg-light" id="general_ledger_accout_name" name="first_name" value="">
+                        <input type="text" class="form-control bg-light" 
+                               id="general_ledger_accout_name" 
+                               name="first_name" 
+                               placeholder="Will auto-fill from selection">
                     </div>
+                    
                     <div class="form-group col-md-4">
-                          <label for="general_ledger_accout_name">Account No</label>
-                          <input type="text" class="form-control bg-light"
-                                id="general_ledger_accout_name"
-                                name="ac_no" >
-                    </div>
-
-                    <div class="form-group col-md-4">
-                        <label for="general_ledger_accout_name">Ref No</label>
+                        <label for="ac_no">Account No</label>
                         <input type="text" class="form-control bg-light"
-                              id="general_ledger_accout_name"
-                              name="ref_no" >
-                  </div>
-
-                  <div class="form-group col-md-4">
-                        <label for="general_ledger_accout_no">Registration Date.</label>
-                        <input type="date" class="form-control bg-light"
-                              id="general_ledger_accout_no"
-                              name="reg_date">
-                  </div>
-
-                  <div class="input-field">
-                                        
-                        <input type="text"  name="label" value="I" hidden>
+                              id="ac_no"
+                              name="ac_no"
+                              placeholder="Enter account number">
                     </div>
-               
 
-                  <div class="form-group col-md-4">
-                        <label for="">status</label>
-                        <select class="form-control bg-light" id="header" name="status">
-                              <option value="">---------</option>  <!-- Add a default empty option -->
-                              {% for choice in form.status.field.choices %}
-                                  <option value="{{ choice.0 }}" {% if choice.0 == form.status.value %}selected{% endif %}>
-                                      {{ choice.1 }}
-                                  </option>
-                              {% endfor %}
-                          </select>
-                  </div>
+                    <div class="form-group col-md-4">
+                        <label for="ref_no">Ref No</label>
+                        <input type="text" class="form-control bg-light"
+                              id="ref_no"
+                              name="ref_no"
+                              placeholder="Enter reference number">
+                    </div>
+
+                    <div class="form-group col-md-4">
+                        <label for="reg_date">Registration Date</label>
+                        <input type="date" class="form-control bg-light"
+                              id="reg_date"
+                              name="reg_date">
+                    </div>
+
+                    <div class="form-group col-md-4">
+                        <label for="status">Status</label>
+                        <select class="form-control bg-light" id="status" name="status">
+                            <option value="">---------</option>
+                            {% for choice in form.status.field.choices %}
+                                <option value="{{ choice.0 }}" {% if choice.0 == form.status.value %}selected{% endif %}>
+                                    {{ choice.1 }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <input type="hidden" name="label" value="I">
+                </div>
+
+                <!-- Form Actions -->
+                <div class="d-flex justify-content-between align-items-center mt-4">
+                    <div>
+                        <button type="submit" class="btn btn-success shadow-sm">
+                            <i class="fa fa-plus mr-2"></i> Add Internal Account
+                        </button>
+                    </div>
                     
-                  
-
-                   
-                    
-                          
-                    <!-- <button type="submit"
-                          class="btn w- btn-success mt-4 shadow-sm">Delete</button> -->
-                        
-              </div>
-              <button type="submit"
-              class="btn w- btn-success mt-4 shadow-sm">Add</button>
-              <div></div>
-              <a href="{% url 'internal_list' %}" style="color: green; font-weight: bold;">Back to Internal List</a>
-                          
-        </form>
-       
-
-        <div>
-              <!-- Chart of Accoutwill come here -->
+                    <div>
+                        <a href="{% url 'internal_list' %}" class="btn btn-outline-primary">
+                            <i class="fa fa-list mr-2"></i> Back to Internal List
+                        </a>
+                    </div>
+                </div>
+            </form>
         </div>
-
-
-  </div>
-
+    </div>
 </div>
-<!-- <h1>Chart of Account</h1> -->
-
 
 <script>
-      // Function to capitalize the first letter of each word
-      function capitalizeFirstLetter(str) {
-          return str.toLowerCase().replace(/(?:^|\s)\w/g, function(match) {
-              return match.toUpperCase();
-          });
-      }
-  
-      document.getElementById('general_ledger_type').addEventListener('change', function() {
-          var selectedOption = this.options[this.selectedIndex];
-          var glName = selectedOption.textContent.split('--')[1];
-          glName = capitalizeFirstLetter(glName.trim()); // Capitalize first letter of each word
-          document.getElementById('general_ledger_accout_name').value = glName;
-      });
-  </script>
-  
-    
-    {% endblock %}
+    // Function to capitalize the first letter of each word
+    function capitalizeFirstLetter(str) {
+        return str.toLowerCase().replace(/(?:^|\s)\w/g, function(match) {
+            return match.toUpperCase();
+        });
+    }
+
+    document.getElementById('general_ledger_type').addEventListener('change', function() {
+        var selectedOption = this.options[this.selectedIndex];
+        var glName = selectedOption.textContent.split('--')[1];
+        glName = capitalizeFirstLetter(glName.trim());
+        document.getElementById('general_ledger_accout_name').value = glName;
+    });
+</script>
+{% endblock %}

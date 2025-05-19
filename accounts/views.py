@@ -117,62 +117,60 @@ def registeruser(request):
 
 
 
-from django.core.mail import send_mail
-from django.conf import settings
-from django.utils.http import urlsafe_base64_encode
-from django.urls import reverse
+from django.shortcuts import render, redirect
 from django.contrib import messages
-from django.shortcuts import redirect, render
-from django.contrib.auth import get_user_model
+from django.core.mail import EmailMessage
+from django.urls import reverse
+from django.utils.http import urlsafe_base64_encode
+from django.utils.encoding import force_bytes
 from django.contrib.auth.tokens import default_token_generator
+from django.template.loader import render_to_string
+from django.conf import settings
+from accounts.forms import UserForm
+import logging
 
-User = get_user_model()
+logger = logging.getLogger(__name__)
 
 def register(request):
     if request.method == 'POST':
         form = UserForm(request.POST)
         if form.is_valid():
-            # Create user but mark as inactive and unverified
             user = form.save(commit=False)
             user.set_password(form.cleaned_data['password'])
-            user.is_active = True  # User can login but not access privileged areas
-            user.verified = False  # Will be set to True after branch creation
+            user.is_active = True
+            user.verified = False
             user.save()
 
-            # Send activation email
-            uid = urlsafe_base64_encode(str(user.pk).encode())
+            # Build activation link
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
             token = default_token_generator.make_token(user)
             activation_link = request.build_absolute_uri(
                 reverse('activate', kwargs={'uidb64': uid, 'token': token})
             )
 
             subject = 'Complete Your Registration'
-            message = f'''
-Dear {user.first_name},
 
-Thank you for registering. To complete your setup, please click the link below 
-to create your branch and activate your account:
+            # Render HTML email content
+            html_content = render_to_string('accounts/email/activation_email.html', {
+                'user': user,
+                'activation_link': activation_link
+            })
 
-{activation_link}
+            email = EmailMessage(
+                subject=subject,
+                body=html_content,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                to=[user.email],
+            )
+            email.content_subtype = "html"  # Important to set content type to HTML
 
-This link will expire in 24 hours.
-
-Regards,
-Admin Team
-'''
             try:
-                send_mail(
-                    subject,
-                    message,
-                    settings.DEFAULT_FROM_EMAIL,
-                    [user.email],
-                    fail_silently=False
-                )
+                email.send(fail_silently=False)
                 messages.success(request, 'Registration successful! Please check your email to complete setup.')
             except Exception as e:
-                messages.warning(request, f'User created, but email could not be sent. Please contact support. Error: {str(e)}')
-                # Consider logging this error for admin
-                return redirect('contact_support')  # You should have some fallback
+                logger.exception(f"Activation email sending failed for user {user.email}")
+                messages.warning(request, 'User created, but email could not be sent. Please contact support.')
+                return redirect('contact_support')
 
             return redirect('login')
         else:
@@ -181,6 +179,7 @@ Admin Team
         form = UserForm()
 
     return render(request, 'accounts/public_reg.html', {'form': form})
+
 
 
 
@@ -269,15 +268,18 @@ def change_password(request):
 @user_passes_test(check_role_admin)
 def user_admin(request):
     return render(request, 'accounts/user_admin.html')
-
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
 def display_all_user(request):
-    # users = User.objects.all()
-    users = User.objects.filter(branch__company__company_name=request.user.branch.company.company_name)
+    # Assuming request.user is linked to a Branch instance via a ForeignKey
+    branch = request.user.branch  # Get the branch associated with the logged-in user
+    company_name = branch.company_name  # Extract the company name
 
+    # Filter users whose branch's company_name matches the current user's company_name
+    users = User.objects.filter(branch__company_name=company_name)
 
     return render(request, 'accounts/display_all_user.html', {'users': users})
+
 
 
 @login_required(login_url='login')
@@ -489,6 +491,7 @@ def activate(request, uidb64, token):
 
     if user is not None and default_token_generator.check_token(user, token):
         # Log them in but DON'T verify yet
+        user.verified = True
         auth_login(request, user)
         
         # Always redirect to create branch (even if they have one)
@@ -567,3 +570,12 @@ def delete_user(request, id):
     return redirect('display_all_user')  # Redirect to the user list page after deletion
 
     # return render(request, 'delete_user.html', {'user': user})
+
+
+
+
+
+from django.shortcuts import render
+
+def contact_support(request):
+    return render(request, 'contact_support.html')  # Create this template

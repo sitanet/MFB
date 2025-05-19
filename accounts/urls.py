@@ -29,6 +29,7 @@ urlpatterns = [
 
 
     path('register/', views.register, name='register'),
+    path('contact-support/', views.contact_support, name='contact_support'),
   
  
     

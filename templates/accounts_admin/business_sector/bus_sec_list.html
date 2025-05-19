@@ -1,87 +1,68 @@
 {% extends 'base.html' %}
-
 {% load static %}
 
 {% block content %}
-            
-                    
-                       
+    {% include 'includes/alerts.html' %}
+    
+    <!-- dashboard inner -->
+    <div class="container-fluid">
+        <!-- Header with Back Button -->
+        <div class="row column_title">
+            <div class="col-md-12">
+                <div class="page_title d-flex justify-content-between align-items-center">
+                    <h2>Business Sector Management</h2>
+                    <a href="{% url 'user_define' %}" class="btn btn-outline-secondary">
+                        <i class="fa fa-arrow-left mr-2"></i> Back to Menu
+                    </a>
+                </div>
+            </div>
+        </div>
 
-                
-                       
-                        {% include 'includes/alerts.html' %}
-                        
-                            {{ form.errors }}
-                        
-                        <!-- dashboard inner -->
-            
-                        
-                            <div class="container-fluid">
-                               <div class="row column_title">
-                                  <div class="col-md-12">
-                                     <div class="page_title">
-                                        <h2>Business Sector</h2>
-                                     </div>
-                                  </div>
-                               </div>
-             
-             
-             
-                               <!-- table -->
-                               <div class="col-md-12">
-                                  <div class="white_shd full margin_bottom_30">
-             
-                                     <div class="table_section padding_infor_info">
-                                        <div class="table-responsive-sm">
-                                           
-                                            <table class="table">
-                                                <thead class="thead-dark">
-                                                   <tr>
-                                               
-                                                      <th>Business Name</th>
-                                                     
-                                                      <th>Action</th>
-                                                    
-                                                      
-                                                   </tr>
-                                                </thead>
-                                                <tbody>
-                                                  {% for bus_sec in bus_sec %}
-                                                     <tr>
-                                                        <!-- <td><img style="width: 40px; height: 50px;" class="img-responsive rounded-circle" src="{{ member.image.url }}" 
-                                                           onerror="this.src='{% static 'images/avatar.jpg' %}'"  alt="#" /></td> -->
-                                                        <td>{{ bus_sec.sector_name }}</td>
-                                                       
-                                                        <td><a href="{% url 'update_bus_sector' bus_sec.id %}"style="font-weight: bold; color: blue;" >Edit</a>/<a href="{% url 'bus_sec_delete' bus_sec.id %}" style="font-weight: bold; color: red;" >Delete</a></td>
-                                                       
-
-                                                       
-                                                        
-                                                     </tr>
-                                                     {% endfor %}
-                                              
-               
-                                                </tbody>
-                                             </table>
-                                           <a href="{% url 'create_bus_sector' %}" style="color: green; font-weight: bold;">Create a New Business Sector</a>
-                                        </div>
-                                     </div>
-                                  </div>
-                               </div>
+        <!-- Main Content -->
+        <div class="row">
+            <div class="col-md-12">
+                <div class="white_shd full margin_bottom_30">
+                    <div class="table_section padding_infor_info">
+                        <div class="table-responsive-sm">
+                            <table class="table table-hover">
+                                <thead class="thead-dark">
+                                    <tr>
+                                        <th>Business Sector Name</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for sector in bus_sec %}
+                                    <tr>
+                                        <td>{{ sector.sector_name }}</td>
+                                        <td>
+                                            <div class="btn-group">
+                                                <a href="{% url 'update_bus_sector' sector.id %}" class="btn btn-sm btn-primary">
+                                                    <i class="fa fa-edit"></i> Edit
+                                                </a>
+                                                <a href="{% url 'bus_sec_delete' sector.id %}" class="btn btn-sm btn-danger">
+                                                    <i class="fa fa-trash"></i> Delete
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                            
+                            <!-- Action Buttons -->
+                            <div class="mt-4 d-flex justify-content-between align-items-center">
+                                <a href="{% url 'create_bus_sector' %}" class="btn btn-success">
+                                    <i class="fa fa-plus mr-2"></i> Create New Business Sector
+                                </a>
+                                <a href="{% url 'user_define' %}" class="btn btn-outline-secondary">
+                                    <i class="fa fa-arrow-left mr-2"></i> Back to Menu
+                                </a>
                             </div>
-                       
-
-             
-                               <!-- footer -->
-                             
-                            </div>
-                            <!-- end dashboard inner -->
-                         </div>
-                    
-
-
-                    
-     
-
-
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 {% endblock %}

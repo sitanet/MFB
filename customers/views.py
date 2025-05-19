@@ -33,25 +33,28 @@ from .sms_service import send_sms
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
 
-
 def customers(request):
-    user_company = request.user.branch.company  # Get the user's company
+    user_branch = request.user.branch  # Get the user's branch
 
-    cust_data = Account.objects.filter(gl_no__startswith='20', branch__company=user_company) \
+    # Filter accounts using the user's branch
+    cust_data = Account.objects.filter(gl_no__startswith='20', branch=user_branch) \
         .exclude(gl_no='20100') \
         .exclude(gl_no='20200') \
         .exclude(gl_no='20000')
 
-    gl_no = Account.objects.filter(branch__company=user_company) \
+    gl_no = Account.objects.filter(branch=user_branch) \
         .values_list('gl_no', flat=True).filter(gl_no__startswith='20')
 
-    officer = Account_Officer.objects.filter(branch__company=user_company)
-    region = Region.objects.filter(branch__company=user_company)  # Ensure Region has a `branch` field
-    category = Category.objects.filter(branch__company=user_company)  # Ensure Category has a `branch` field
-    id_card = Id_card_type.objects.filter(branch__company=user_company)  # Ensure Id_card_type has a `branch` field
-    cust_branch = Company.objects.filter(branches__company=user_company)  # Ensure `branches` is the related_name in Company
+    officer = Account_Officer.objects.filter(branch=user_branch)
+    region = Region.objects.filter(branch=user_branch)  # Make sure Region has a ForeignKey to Branch
+    category = Category.objects.filter(branch=user_branch)  # Make sure Category has a ForeignKey to Branch
+    id_card = Id_card_type.objects.filter(branch=user_branch)  # Ensure Id_card_type has a ForeignKey to Branch
 
-    customer = Customer.objects.all().order_by('-gl_no', '-ac_no').first()
+    # Since you're not using a Company model, fetch the current branch only
+    cust_branch = [user_branch]
+
+    # Get the most recent customer
+    customer = Customer.objects.filter(branch=user_branch).order_by('-gl_no', '-ac_no').first()
 
     if request.method == 'POST':
         form = CustomerForm(request.POST, request.FILES)
@@ -59,14 +62,13 @@ def customers(request):
         if form.is_valid():
             ac_no = generate_unique_6_digit_number()
             form.instance.ac_no = ac_no
-            form.instance.branch = request.user.branch
+            form.instance.branch = user_branch
 
             try:
                 new_record = form.save()
                 ac_no = new_record.ac_no
                 gl_no = new_record.gl_no
 
-                # If SMS is checked, send an SMS
                 if new_record.sms:
                     phone_number = new_record.phone_no
                     message = f"Hello {new_record.first_name}, Enjoy {gl_no}{ac_no}."
@@ -81,7 +83,6 @@ def customers(request):
                     else:
                         messages.success(request, "SMS sent successfully!")
 
-                # Redirect to show account number
                 return render(request, 'file/customer/account_no.html', {
                     'ac_no': ac_no,
                     'gl_no': gl_no,
@@ -93,7 +94,7 @@ def customers(request):
 
         else:
             messages.error(request, "There were errors in the form submission. Please correct them.")
-            print(f"Form errors: {form.errors}")  # Print form errors for debugging
+            print(f"Form errors: {form.errors}")
 
     else:
         form = CustomerForm()
@@ -109,8 +110,6 @@ def customers(request):
         'customer': customer,
         'id_card': id_card
     })
-
-
 
 
 

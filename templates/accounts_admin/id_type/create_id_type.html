@@ -1,87 +1,90 @@
 {% extends 'base.html' %}
-
 {% load static %}
 
 {% block content %}
-            
-                    
-                       
+    {% include 'includes/alerts.html' %}
+    
+    <!-- dashboard inner -->
+    <div class="container-fluid">
+        <!-- Header with Back Button -->
+        <div class="row column_title">
+            <div class="col-md-12">
+                <div class="page_title d-flex justify-content-between align-items-center">
+                    <h2>Create ID Card Type</h2>
+                    <a href="{% url 'user_define' %}" class="btn btn-outline-secondary">
+                        <i class="fa fa-arrow-left mr-2"></i> Back to Menu
+                    </a>
+                </div>
+            </div>
+        </div>
 
-                
-                       
-                        {% include 'includes/alerts.html' %}
-                        
+        <!-- Main Form Content -->
+        <div class="row">
+            <div class="col-md-12">
+                <form method="POST" class="chart_of_account p-5 shadow-lg rounded rounded-5">
+                    {% csrf_token %}
+                    
+                    <!-- Messages Display -->
+                    {% if messages %}
+                        <ul class="messages mb-4">
+                            {% for message in messages %}
+                                <li class="{{ message.tags }} alert alert-dismissible fade show" 
+                                    style="font-size: 16px; 
+                                           color: #856404;
+                                           background-color: #fff3cd;
+                                           border-color: #ffeeba;
+                                           list-style: none;
+                                           padding: 12px;
+                                           border-radius: 5px;">
+                                    {{ message }}
+                                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                    
+                    <!-- Form Errors -->
+                    {% if form.errors %}
+                        <div class="alert alert-danger mb-4">
+                            <strong>Error!</strong> Please correct the following:
                             {{ form.errors }}
+                        </div>
+                    {% endif %}
+
+                    <!-- Form Fields -->
+                    <div class="form-row">
+                        <div class="form-group col-md-8">
+                            <label for="id_card_name">ID Card Type Name</label>
+                            <input type="text" 
+                                   class="form-control bg-light"
+                                   id="id_card_name"
+                                   name="id_card_name"
+                                   placeholder="Enter ID card type name">
+                        </div>
                         
-                        <!-- dashboard inner -->
-            
+                        <div class="form-group col-md-4">
+                            <!-- Empty column for layout balance -->
+                        </div>
+                    </div>
+
+                    <!-- Form Actions -->
+                    <div class="d-flex justify-content-between align-items-center mt-4">
+                        <div>
+                            <button type="submit" class="btn btn-success shadow-sm">
+                                <i class="fa fa-plus mr-2"></i> Add ID Card Type
+                            </button>
+                        </div>
                         
-                        <div class="container-fluid">
-                               <div class="row column_title">
-                                  <div class="col-md-12">
-                                     <div class="page_title">
-                                        <h2>Create ID Card Type</h2>
-                                     </div>
-                                  </div>
-                               </div>
-             
-             
-             
-                               <!-- table -->
-                               <form method="POST" class="chart_of_account p-5 shadow-lg rounded rounded-5">
-                                    {% csrf_token %}
-                                    {% if messages %}
-                            <ul class="messages">
-                                {% for message in messages %}
-                                    <li style="font-size: 30px; color: brown; font-weight: bold;"  {% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
-                                {% endfor %}
-                            </ul>
-                                {% endif %}
-                                <h6 style="color: red;" >{{ form.errors }}</h6>
-                              <div class="form-row">
-                                
-                                    
-                                          <div class="form-group col-md-4">
-                                             <label for="general_ledger_accout_name">ID Card Type </label>
-                                             <input type="text" class="form-control bg-light"
-                                                   id="general_ledger_accout_name"
-                                                   name="id_card_name">
-                                       </div>
-                         
-                      
-                                  
-                      
-                                          <div class="form-group col-md-4">
-                                          
-                                          </div>
-                      
-                           
-                            
-                      
-                      
-                                      
-                      
-                                     
-                                      
-                                            
-                                      <!-- <button type="submit"
-                                            class="btn w- btn-success mt-4 shadow-sm">Delete</button> -->
-                                </div>
-                                <button type="submit"
-                                            class="btn w- btn-success mt-4 shadow-sm">Add</button>
-                                     <div></div>
-                                      <a href="{% url 'id_type_list' %}" style="color: green; font-weight: bold;">Back to ID Card List</a>
-                                </form>
-                            </div>
-                     
-                         </div>
-                     
-                         
-                    
-
-
-                    
-     
-
-
+                        <div>
+                            <a href="{% url 'id_type_list' %}" class="btn btn-outline-primary">
+                                <i class="fa fa-list mr-2"></i> Back to ID Card List
+                            </a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 {% endblock %}

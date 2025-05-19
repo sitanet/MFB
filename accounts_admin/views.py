@@ -206,9 +206,9 @@ def account_officer_list(request):
     # Filter Account_Officer based on the user's branch code
     officers = Account_Officer.objects.filter(region__branch__branch_code=user_branch.branch_code)
 
-    # Filter branches based on the company of the user's branch
+    # Filter branches based on the company_name of the user's branch
     branches = Region.objects.filter(
-        branch__company__company_name=request.user.branch.company.company_name
+        branch__company_name=user_branch.company_name
     )
 
     return render(

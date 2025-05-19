@@ -1,62 +1,87 @@
 {% extends "base.html" %}
+{% load static %}
+
 {% block content %}
 <div class="container-fluid">
-    <div class="row">
-          <div class="col-md-12">
-                <div class="page_title">
-                      <h2>Create Business Sector</h2>
-                </div>
-          </div>
-          <!-- form -->
-          <form method="POST" class="chart_of_account p-5 shadow-lg rounded rounded-5">
-            {% csrf_token %}
-            {% if messages %}
-    <ul class="messages">
-        {% for message in messages %}
-            <li style="font-size: 30px; color: brown; font-weight: bold;"  {% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
-        {% endfor %}
-    </ul>
-{% endif %}
-            {{ form.errors }}
-              <div class="form-row">
-                  <div class="form-group col-md-8">
-                        <label for="general_ledger_accout_name">Busniess Name </label>
-                        <input type="text" class="form-control bg-light"
-                              id="general_ledger_accout_name"
-                              name="sector_name">
-                  </div>
-                    <div class="form-group col-md-4">
-                  
-                    </div>
-                 
-
-                  
-
-                
-
-         
-          
-
-
-                    
-
-                  <button type="submit"
-                  class="btn w- btn-success mt-4 shadow-sm">Add</button>
-                    
-                          
-                    <!-- <button type="submit"
-                          class="btn w- btn-success mt-4 shadow-sm">Delete</button> -->
-              </div>
-             
-              <a href="{% url 'bus_sec_list' %}" style="color: green; font-weight: bold;">Back to Bisness Sector List</a>
-        </form>
-      
-  
-                <!-- Chart of Accoutwill come here -->
-          </div>
-  
-  
+    <!-- Header with Back Button -->
+    <div class="row column_title">
+        <div class="col-md-12">
+            <div class="page_title d-flex justify-content-between align-items-center">
+                <h2>Create Business Sector</h2>
+                <a href="{% url 'user_define' %}" class="btn btn-outline-secondary">
+                    <i class="fa fa-arrow-left mr-2"></i> Back to Menu
+                </a>
+            </div>
+        </div>
     </div>
-  
 
+    <!-- Main Form Content -->
+    <div class="row">
+        <div class="col-md-12">
+            <form method="POST" class="chart_of_account p-5 shadow-lg rounded rounded-5">
+                {% csrf_token %}
+                
+                <!-- Messages Display -->
+                {% if messages %}
+                    <ul class="messages mb-4">
+                        {% for message in messages %}
+                            <li class="{{ message.tags }} alert alert-dismissible fade show" 
+                                style="font-size: 16px; 
+                                       color: #856404;
+                                       background-color: #fff3cd;
+                                       border-color: #ffeeba;
+                                       list-style: none;
+                                       padding: 12px;
+                                       border-radius: 5px;">
+                                {{ message }}
+                                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+                
+                <!-- Form Errors -->
+                {% if form.errors %}
+                    <div class="alert alert-danger mb-4">
+                        <strong>Error!</strong> Please correct the following:
+                        {{ form.errors }}
+                    </div>
+                {% endif %}
+
+                <!-- Form Fields -->
+                <div class="form-row">
+                    <div class="form-group col-md-8">
+                        <label for="sector_name">Business Sector Name</label>
+                        <input type="text" 
+                               class="form-control bg-light"
+                               id="sector_name"
+                               name="sector_name"
+                               placeholder="Enter business sector name">
+                    </div>
+                    
+                    <div class="form-group col-md-4">
+                        <!-- Empty column for layout balance -->
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="d-flex justify-content-between align-items-center mt-4">
+                    <div>
+                        <button type="submit" class="btn btn-success shadow-sm">
+                            <i class="fa fa-plus mr-2"></i> Add Business Sector
+                        </button>
+                    </div>
+                    
+                    <div>
+                        <a href="{% url 'bus_sec_list' %}" class="btn btn-outline-primary">
+                            <i class="fa fa-list mr-2"></i> Back to Business Sector List
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 {% endblock %}

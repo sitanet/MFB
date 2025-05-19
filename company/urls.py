@@ -22,4 +22,6 @@ urlpatterns = [
 
     path('sms-webhook/', views.sms_delivery_webhook, name='sms_webhook'),
     path('sms-troubleshoot/', views.sms_troubleshoot, name='sms_troubleshoot'),
+
+    path('resend-otp/', views.resend_otp, name='resend_otp'),
 ]

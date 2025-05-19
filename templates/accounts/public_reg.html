@@ -1,183 +1,285 @@
+{% load static %}
+
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8">
-  <title>FinanceFlex Registration</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Basic meta tags -->
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1">
+    <title>Register</title>
 
-  <!-- Bootstrap CSS -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="{% static 'css/style.css' %}" />
 
-  <style>
-    body {
-      background-color: #f4fdf7;
-      font-family: 'Segoe UI', sans-serif;
-    }
-    .form-container {
-      max-width: 700px;
-      margin: auto;
-      background-color: #ffffff;
-      padding: 35px;
-      border-radius: 16px;
-      box-shadow: 0 0 15px rgba(0, 128, 0, 0.05);
-    }
-    .btn-green {
-      background-color: #2e7d32;
-      border-color: #2e7d32;
-      color: #fff;
-    }
-    .btn-green:hover {
-      background-color: #27642a;
-    }
-    .modal-header {
-      background-color: #2e7d32;
-      color: #fff;
-    }
-    .modal-body a {
-      color: #f57c00;
-    }
-  </style>
+    <!-- Optional: Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" />
+
+    <style>
+        body {
+            background-image: url('{% static "images/savings.jpg" %}');
+            background-size: cover;
+            background-position: center;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        .registration-form {
+            background-color: rgba(255, 255, 255, 0.8); /* Semi-transparent background */
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .registration-form h3 {
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            color: #2d6a4f; /* Green */
+            margin-bottom: 20px;
+        }
+
+        .registration-form .form-control {
+            border-radius: 5px;
+            box-shadow: none;
+            margin-bottom: 15px;
+        }
+
+        .registration-form .btn-primary {
+            background-color: #ff6f00; /* Orange */
+            border: none;
+            font-weight: bold;
+            padding: 10px;
+            border-radius: 5px;
+            width: 100%;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .registration-form .btn-primary:hover {
+            background-color: #ff8f00; /* Lighter Orange */
+        }
+
+        .registration-form a {
+            color: #2d6a4f; /* Green */
+            text-decoration: none;
+            font-size: 14px;
+            display: block;
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        .registration-form a:hover {
+            text-decoration: underline;
+        }
+
+        .row-spacing {
+            margin-bottom: 10px;
+        }
+
+        /* Reduced gap between fields */
+        .row.g-2 .col-md-6 {
+            padding-left: 5px;
+            padding-right: 5px;
+        }
+
+        /* Beautify Modal */
+        .modal-content {
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+        }
+
+        .modal-header {
+            background-color: #2d6a4f; /* Green */
+            color: white;
+            border-top-left-radius: 10px;
+            border-top-right-radius: 10px;
+        }
+
+        .modal-body {
+            font-size: 16px;
+            line-height: 1.6;
+        }
+
+        .modal-footer {
+            background-color: #f8f9fa;
+            border-bottom-left-radius: 10px;
+            border-bottom-right-radius: 10px;
+        }
+
+        .modal-footer .btn {
+            background-color: #2d6a4f; /* Green */
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+        }
+
+        .modal-footer .btn:hover {
+            background-color: #22543d; /* Darker Green */
+        }
+
+        /* Modal close button style */
+        .btn-close-white {
+            color: white;
+        }
+
+    </style>
 </head>
+
 <body>
+    <div class="container-fluid">
+        <div class="row justify-content-center align-items-center" style="height: 100vh;">
+            <div class="col-12 col-md-4">
+                <div class="registration-form">
+                    <h3>Register</h3>
 
-<div class="container py-5">
-  <h2 class="text-center mb-4 fw-bold text-success">FinanceFlex User Registration</h2>
+                    {% if messages %}
+                    <ul class="messages">
+                        {% for message in messages %}
+                        <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
 
-  <div class="form-container border border-success">
-    <form action="{% url 'register' %}" method="post">
-      {% csrf_token %}
+                    <form method="POST" enctype="multipart/form-data" action="{% url 'register' %}">
+                        {% csrf_token %}
 
-      <!-- <div class="mb-3">
-        <label class="form-label fw-semibold">Branch</label>
-        <select class="form-control bg-light" name="branch" id="branch" required>
-            <option value="">Select Branch</option>
-            {% for branch in branches %}
-                <option value="{{ branch.id }}" {% if branch.id == form.branch.value %}selected{% endif %}>
-                    {{ branch.branch_name }}
-                </option>
+
+                        {% if form.errors %}
+    <div class="alert alert-danger">
+        <ul>
+            {% for field in form %}
+                {% for error in field.errors %}
+                    <li><strong>{{ field.label }}:</strong> {{ error }}</li>
+                {% endfor %}
             {% endfor %}
-        </select>
-      </div> -->
-
-      <div class="row">
-        <div class="col-md-6 mb-3">
-          <label class="form-label fw-semibold">First Name</label>
-          <input type="text" class="form-control" name="first_name" required>
-        </div>
-        <div class="col-md-6 mb-3">
-          <label class="form-label fw-semibold">Last Name</label>
-          <input type="text" class="form-control" name="last_name" required>
-        </div>
-      </div>
-
-      <div class="mb-3">
-        <label class="form-label fw-semibold">Email</label>
-        <input type="email" class="form-control" name="email" required>
-      </div>
-
-      <div class="mb-3">
-        <label class="form-label fw-semibold">Phone Number</label>
-        <input type="tel" class="form-control" name="phone_number" required>
-      </div>
-
-      <div class="mb-3">
-        <label class="form-label fw-semibold">Role</label>
-        <select class="form-control bg-light" name="role" id="" required>
-            <option value="">Select Role</option>
-            {% for choice in form.role.field.choices %}
-            <option value="{{ choice.0 }}" {% if choice.0 == form.role.value %}selected{% endif %}>
-                {{ choice.1 }}
-            </option>
-        {% endfor %}
-
-         </select>
-      </div>
-
-      <div class="mb-3">
-        <label class="form-label fw-semibold">Username</label>
-        <input type="text" class="form-control" name="username" required>
-      </div>
-
-      <div class="row">
-        <div class="col-md-6 mb-3">
-          <label class="form-label fw-semibold">Cashier GL</label>
-          <input type="text" class="form-control" name="cashier_gl">
-        </div>
-        <div class="col-md-6 mb-3">
-          <label class="form-label fw-semibold">Cashier AC</label>
-          <input type="text" class="form-control" name="cashier_ac">
-        </div>
-      </div>
-
-      <div class="row">
-        <div class="col-md-6 mb-3">
-          <label class="form-label fw-semibold">Password</label>
-          <input type="password" class="form-control" name="password" required>
-        </div>
-        <div class="col-md-6 mb-3">
-          <label class="form-label fw-semibold">Confirm Password</label>
-          <input type="password" class="form-control" name="confirm_password" required>
-        </div>
-      </div>
-
-      <button type="submit" class="btn btn-green w-100">
-        <i class="bi bi-person-check me-2"></i> Register
-      </button>
-    </form>
-  </div>
-</div>
-
-<!-- Modal -->
-<div class="modal fade" id="infoModal" tabindex="-1" aria-labelledby="infoModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="infoModalLabel">Welcome to FinanceFlex</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body text-secondary">
-        <p><strong>FinanceFlex</strong> is a modern core banking platform available as a service for financial institutions across various countries and currencies. <strong>Note:</strong> FinanceFlex does <strong>not</strong> provide loans.</p>
-        <p>We bill in <strong>USD</strong>, with the flexibility to accept payments in your local currency.</p>
-
-        <p>Eligible organizations include:</p>
-        <ul>
-          <li>Microfinance Banks (MFBs)</li>
-          <li>Microfinance Institutions (MFIs)</li>
-          <li>Fintechs, Neobanks, Cooperative Societies</li>
-          <li>Saccos, Lenders, Financial NGOs, Funds Managers</li>
+            {% for error in form.non_field_errors %}
+                <li>{{ error }}</li>
+            {% endfor %}
         </ul>
-
-        <p>Organizations must submit valid business or license documents. If you don’t yet have a financial license, visit <a href="https://corporatepermit.com" target="_blank">corporatepermit.com</a> to apply.</p>
-
-        <p><strong>Registration Fee:</strong> $15 (one-time) with KYC documentation required.</p>
-
-        <p>Need help? Contact:</p>
-        <ul>
-          <li><i class="bi bi-telephone"></i> <a href="tel:+2349020206672">+234 902 020 6672</a></li>
-          <li><i class="bi bi-envelope"></i> <a href="mailto:support@wbalite.com">support@wbalite.com</a></li>
-        </ul>
-
-        <hr>
-        <p><strong>Useful Links:</strong></p>
-
-      </div>
     </div>
-  </div>
-</div>
+{% endif %}
 
-<!-- Bootstrap JS -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-  // Show modal on page load
-  document.addEventListener('DOMContentLoaded', function () {
-    var infoModal = new bootstrap.Modal(document.getElementById('infoModal'), {
-      backdrop: 'static',
-      keyboard: false
-    });
-    infoModal.show();
-  });
-</script>
+                        <!-- First and Last Name on the same row -->
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <input class="form-control" type="text" name="first_name" placeholder="First Name" required>
+                            </div>
+                            <div class="col-md-6">
+                                <input class="form-control" type="text" name="last_name" placeholder="Last Name" required>
+                            </div>
+                        </div>
 
+                        <!-- Email and Phone Number on the same row -->
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <input class="form-control" type="email" name="email" placeholder="Email Address" required>
+                            </div>
+                            <div class="col-md-6">
+                                <input class="form-control" type="tel" name="phone_number" placeholder="Phone Number" required>
+                            </div>
+                        </div>
+
+                        <!-- Role and Username on the same row -->
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <select class="form-control" name="role" required>
+                                    <option value="" disabled selected>Select Role</option>
+                                    {% for value, label in form.role.field.choices %}
+                                    <option value="{{ value }}">{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <input class="form-control" type="text" name="username" placeholder="Username" required>
+                            </div>
+                        </div>
+
+                        <!-- Password and Confirm Password on the same row -->
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <input class="form-control" type="password" name="password" placeholder="Password" required>
+                            </div>
+                            <div class="col-md-6">
+                                <input class="form-control" type="password" name="confirm_password" placeholder="Confirm Password" required>
+                            </div>
+                        </div>
+
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <input class="form-control mt-3" type="text" name="cashier_gl" value="10101">
+                            </div>
+                            <div class="col-md-6">
+                                <input class="form-control mt-3" type="text" name="cashier_ac" value="1" >
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary mt-4">Register</button>
+                    </form>
+
+                    <a href="{% url 'login' %}">Already have an account? Login</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for displaying welcome information -->
+    <div class="modal fade" id="infoModal" tabindex="-1" aria-labelledby="infoModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="infoModalLabel">Welcome to FinanceFlex</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-secondary">
+                    <p><strong>FinanceFlex</strong> is a modern core banking platform available as a service for financial institutions across various countries and currencies. <strong>Note:</strong> FinanceFlex does <strong>not</strong> provide loans.</p>
+                    <p>We bill in <strong>USD</strong>, with the flexibility to accept payments in your local currency.</p>
+
+                    <p>Eligible organizations include:</p>
+                    <ul>
+                        <li>Microfinance Banks (MFBs)</li>
+                        <li>Microfinance Institutions (MFIs)</li>
+                        <li>Fintechs, Neobanks, Cooperative Societies</li>
+                        <li>Saccos, Lenders, Financial NGOs, Funds Managers</li>
+                    </ul>
+
+                    <p>Organizations must submit valid business or license documents. If you don’t yet have a financial license, visit <a href="https://corporatepermit.com" target="_blank">corporatepermit.com</a> to apply.</p>
+
+                    <p><strong>Registration Fee:</strong> $15 (one-time) with KYC documentation required.</p>
+
+                    <p>Need help? Contact:</p>
+                    <ul>
+                        <li><i class="bi bi-telephone"></i> <a href="tel:+2348066311516">+234 806 663 11516</a></li>
+                        <li><i class="bi bi-envelope"></i> <a href="mailto:support@sitanetorbit.com">support@sitanetorbit.com</a></li>
+                    </ul>
+
+                    <hr>
+                    <p><strong>Useful Links:</strong></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- jQuery and Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // Show the modal when the page loads
+        $(document).ready(function() {
+            $('#infoModal').modal('show');
+        });
+    </script>
 </body>
+
 </html>

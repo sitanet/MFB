@@ -559,6 +559,7 @@ def choose_to_direct_disburse(request):
 
 
 
+from decimal import InvalidOperation
 
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
@@ -651,8 +652,9 @@ def loan_disbursement(request, id):
                 missing_params = [name for name, value in required_gl_ac_params if not value]
                 if missing_params:
                     messages.warning(
-                        request, 
-                        f'Missing required parameters: {", ".join(missing_params)}'
+                        request,
+                        f'Please define all required loan paramenters before disbursement' 
+                        # f'Missing required parameters: {", ".join(missing_params)}'
                     )
                     return redirect('choose_to_disburse')
 

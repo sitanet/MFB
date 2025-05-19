@@ -154,8 +154,13 @@ def _send_otp_sms(phone_number, message, branch=None):
 @login_required
 def create_branch(request):
     try:
-        if request.user.branch:
+        # Remove the authentication check
+        # if not request.user.is_authenticated:
+        #     messages.error(request, 'You must be logged in to create a branch.')
+        #     return redirect('login')
 
+        # If user is authenticated and already has a branch, prevent creation
+        if request.user.is_authenticated and hasattr(request.user, 'branch') and request.user.branch:
             messages.warning(request, 'Your account already has a branch.')
             return redirect('dashboard')
 
@@ -165,56 +170,75 @@ def create_branch(request):
                 try:
                     with transaction.atomic():
                         branch = form.save(commit=False)
-                        branch.user = request.user
-                        branch.company_name = branch.branch_name
-                        branch.phone_verified = False
-                        branch.otp_code = str(random.randint(100000, 999999))
-                        branch.save()
+                        
+                        # Only link to user if authenticated
+                        if request.user.is_authenticated:
+                            branch.user = request.user
+                            branch.company_name = branch.branch_name
+                            branch.phone_verified = False
+                            branch.otp_code = str(random.randint(100000, 999999))
+                            branch.save()
 
-                        # ✅ Link user to branch BEFORE sending SMS
-                        request.user.branch = branch
+                            # Link user to branch
+                            request.user.branch = branch
+                            request.user.save()
 
-                        request.user.save()
-
-                        # Send OTP
-                        phone_number = request.user.phone_number
-                        if not phone_number:
-                            raise ValueError("Phone number is required")
-
-                        sms_sent = _send_otp_sms(
-                            phone_number,
-                            f"Your verification code: {branch.otp_code}",
-                            branch
-                        )
-
-                        if sms_sent:
-                            messages.success(request, 'Verification code sent to your phone.')
+                            # Send OTP only if user has a phone number
+                            if hasattr(request.user, 'phone_number') and request.user.phone_number:
+                                phone_number = request.user.phone_number
+                                sms_sent = _send_otp_sms(
+                                    phone_number,
+                                    f"Your verification code: {branch.otp_code}",
+                                    branch
+                                )
+                                if sms_sent:
+                                    messages.success(request, 'Verification code sent to your phone.')
+                                    return redirect('verify_phone')
+                                else:
+                                    messages.warning(request, 'OTP could not be sent. You can request it again later.')
+                            else:
+                                messages.warning(request, 'No phone number found for OTP verification.')
                         else:
-                            messages.warning(request, 'OTP could not be sent. You can request it again later.')
-
-                        return redirect('verify_phone')
+                            # Handle unauthenticated branch creation
+                            branch.save()
+                            messages.success(request, 'Branch created successfully!')
+                            return redirect('some_public_page')  # Redirect to a public page
 
                 except ValueError as e:
                     messages.error(request, str(e))
                 except Exception as e:
+                    print(f"Error creating branch: {e}")  # Debugging
                     messages.error(request, "System error. Please try again.")
-
             else:
-                messages.error(request, "Please correct the form errors.")
+                # Show form errors
+                for field, errors in form.errors.items():
+                    for error in errors:
+                        messages.error(request, f"{field}: {error}")
         else:
-            form = BranchForm(initial={
-                'branch_name': f"{request.user.first_name or request.user.username}'s Branch",
-                'phone_number': request.user.phone_number
-            })
+            # Pre-fill form only if user is authenticated
+            initial_data = {}
+            if request.user.is_authenticated:
+                initial_data = {
+                    'branch_name': f"{request.user.first_name or request.user.username}'s Branch",
+                    'phone_number': getattr(request.user, 'phone_number', '')
+                }
+            form = BranchForm(initial=initial_data)
 
         return render(request, 'branch/create_branch.html', {
             'form': form,
-            'phone_valid': request.user.phone_number and request.user.phone_number.startswith('+')
+            'phone_valid': request.user.is_authenticated and 
+                         hasattr(request.user, 'phone_number') and 
+                         request.user.phone_number and 
+                         request.user.phone_number.startswith('+')
         })
 
     except Exception as e:
+        print(f"Unexpected error: {e}")  # Debugging
         messages.error(request, "A system error occurred. Please contact support.")
-        return redirect('dashboard')
+        return redirect('home')  # Redirect to a safe public page
+
+
+        
 # views.py
 from django.contrib.auth.decorators import login_required
 
@@ -236,6 +260,36 @@ def verify_phone(request):
         messages.error(request, 'Invalid OTP. Please try again.')
     
     return render(request, 'branch/verify_phone.html')
+
+
+
+
+
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import redirect
+from django.contrib import messages
+import random
+
+@login_required
+def resend_otp(request):
+    user = request.user
+    if not user.branch:
+        return redirect('create_branch')
+
+    branch = user.branch
+    # Generate a new 6-digit OTP
+    new_otp = str(random.randint(100000, 999999))
+    branch.otp_code = new_otp
+    branch.save()
+
+    # TODO: Replace with actual SMS sending logic
+    print(f"Resending OTP {new_otp} to {branch.phone_number}")
+
+    # Show a success message and redirect to the verify phone page
+    messages.success(request, 'A new OTP has been sent to your phone number.')
+    return redirect('verify_phone')
+
+
 
 def create_branch_old(request):
     companies = Company.objects.all()
