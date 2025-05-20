@@ -54,6 +54,7 @@ def check_role_team_member(user):
         return True
     else:
         raise PermissionDenied
+        
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
 def registeruser(request):
@@ -332,15 +333,16 @@ from django.core.cache import cache
 from .models import Branch, User
 from django.conf import settings
 
-
-
-logger = logging.getLogger(__name__)
-
-from django.contrib.auth import authenticate, login as auth_login
 from django.shortcuts import render, redirect
+from django.contrib.auth import authenticate, login as auth_login
 from django.contrib import messages
 from django.utils import timezone
-
+from django.core.mail import EmailMessage
+from django.template.loader import render_to_string
+from django.conf import settings
+from random import randint
+from .utils import _send_otp_sms
+ # or User if using default
 
 def login(request):
     if request.user.is_authenticated:
@@ -355,17 +357,44 @@ def login(request):
             if user is None:
                 raise ValueError("Invalid credentials")
 
-            # Check if user is verified
             if not user.verified:
                 raise ValueError("Account not verified")
 
-            # Check if branch exists — but allow if none, to let them log in and create
             if user.branch and user.branch.expire_date < timezone.now().date():
                 raise ValueError("Branch license expired")
 
-            # Log in user
-            auth_login(request, user)
-            return redirect('dashboard')
+            # ✅ Generate OTP
+            otp = randint(100000, 999999)
+            otp_message = f"Your verification code: {otp}"
+
+            # ✅ Store in session
+            request.session['otp_data'] = {
+                'user_id': user.id,
+                'otp': otp,
+                'timestamp': timezone.now().isoformat()
+            }
+
+            # ✅ Send SMS
+            if hasattr(user, 'phone') and user.phone:
+                _send_otp_sms(user.phone, otp_message, branch=user.branch)
+
+            # ✅ Send Email
+            subject = "Your One-Time Password (OTP)"
+            html_content = render_to_string('accounts/email/otp_email.html', {
+                'user': user,
+                'otp': otp
+            })
+
+            email_message = EmailMessage(
+                subject=subject,
+                body=html_content,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                to=[user.email],
+            )
+            email_message.content_subtype = "html"
+            email_message.send()
+
+            return redirect('verify_otp')
 
         except Exception as e:
             messages.error(request, str(e))
@@ -374,44 +403,56 @@ def login(request):
     return render(request, 'accounts/login.html')
 
 
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.contrib.auth import login as auth_login
+from django.core.cache import cache
+from django.utils import timezone
+import logging
+from .models import User  # Adjust to your actual User model
+
+logger = logging.getLogger(__name__)
+
 def verify_otp(request):
-    # Check if user came from login flow
+    # ✅ Step 1: Ensure session data is present
     if 'otp_data' not in request.session:
-        messages.error(request, "OTP session expired. Login again.")
+        messages.error(request, "OTP session expired. Please log in again.")
         return redirect('login')
 
     otp_data = request.session['otp_data']
-    user_id = otp_data['user_id']
+    user_id = otp_data.get('user_id')
+    session_otp = otp_data.get('otp')
+    otp_timestamp = otp_data.get('timestamp')  # Optional for expiry check
 
     if request.method == 'POST':
-        user_entered_otp = request.POST.get('otp')
+        entered_otp = request.POST.get('otp')
 
-        # Check both cache and session storage
+        # ✅ Step 2: Check cache
         cache_otp = cache.get(f'otp_{user_id}')
-        session_otp = otp_data['otp']
+        logger.debug(f"Verifying OTP for user {user_id}: Cache={cache_otp}, Session={session_otp}, Entered={entered_otp}")
 
-        logger.debug(f"Verifying OTP for {user_id}. Cache: {cache_otp}, Session: {session_otp}, Entered: {user_entered_otp}")
-
-        # CORRECTED LINE (removed extra parenthesis)
-        if user_entered_otp and str(user_entered_otp) == str(session_otp):
+        # ✅ Step 3: Validate OTP
+        if entered_otp and (str(entered_otp) == str(session_otp) or str(entered_otp) == str(cache_otp)):
             try:
                 user = User.objects.get(pk=user_id)
-                from django.contrib.auth import login as auth_login
                 auth_login(request, user)
-                
-                # Cleanup
+
+                # ✅ Step 4: Cleanup
                 cache.delete(f'otp_{user_id}')
-                del request.session['otp_data']
-                
+                request.session.pop('otp_data', None)
+
                 messages.success(request, "Logged in successfully!")
                 return redirect('myAccount')
 
             except User.DoesNotExist:
-                messages.error(request, "User not found!")
+                messages.error(request, "User not found.")
+                return redirect('login')
+
         else:
-            messages.error(request, "Invalid OTP!")
+            messages.error(request, "Invalid OTP.")
 
     return render(request, 'accounts/verify_otp.html')
+
 
 from django.shortcuts import redirect
 from django.contrib import messages

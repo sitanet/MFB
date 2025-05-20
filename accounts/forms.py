@@ -17,7 +17,7 @@ class UserForm(forms.ModelForm):
     username = forms.CharField(widget=forms.TextInput(attrs={'placeholder': 'Enter Username', 'required': 'required'}))
     email = forms.EmailField(widget=forms.EmailInput(attrs={'placeholder': 'Enter Email', 'required': 'required'}))
     phone_number = forms.CharField(widget=forms.TextInput(attrs={'placeholder': 'Enter Phone Number', 'required': 'required'}))
-    
+    branch = forms.ModelChoiceField(queryset=Branch.objects.all(), empty_label="Select Branch", required=False)
     # If the branch field is needed:
     # branch = forms.ModelChoiceField(queryset=Branch.objects.all(), empty_label="Select Branch", required=True)
     

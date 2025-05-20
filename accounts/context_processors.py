@@ -18,13 +18,12 @@ def soon_to_expire(request):
         if cached_message is not None:
             return {'soon_expire_message': cached_message}
 
-        if not hasattr(request.user, 'branch') or request.user.branch is None:
+        branch = getattr(request.user, 'branch', None)
+        if branch is None:
             logger.warning(f"User {request.user} has no branch assigned")
             soon_expire_message = "No branch assigned to user"
-            cache.set(cache_key, soon_expire_message, 3600)
             return {'soon_expire_message': soon_expire_message}
 
-        branch = Branch.objects.get(branch_code=request.user.branch.branch_code)
         expiration_date = branch.expire_date
         today = timezone.now().date()
 
@@ -37,12 +36,8 @@ def soon_to_expire(request):
         else:
             soon_expire_message = None
 
-        # Cache the result for 1 hour
         cache.set(cache_key, soon_expire_message, 3600)
 
-    except Branch.DoesNotExist:
-        logger.error(f"Branch not found for user {request.user}")
-        soon_expire_message = "Branch not found"
     except Exception as e:
         logger.exception("Unexpected error in soon_to_expire:")
         soon_expire_message = "System error occurred"

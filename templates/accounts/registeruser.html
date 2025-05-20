@@ -34,8 +34,8 @@
                            </div> -->
                            <div class="form-group col-md-6">
                               <label for="branch">Branch</label>
-                              <select class="form-control bg-light" name="branch" id="branch" required>
-                                  <option value="">Select Branch</option>
+                              <select class="form-control bg-light" name="branch" id="branch" required disabled>
+                                 
                                   {% for branch in branches %}
                                       <option value="{{ branch.id }}" {% if branch.id == form.branch.value %}selected{% endif %}>
                                           {{ branch.branch_name }}

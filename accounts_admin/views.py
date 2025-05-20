@@ -53,11 +53,12 @@ from django.shortcuts import render
 
 
 
+@login_required
 def chart_of_accounts(request):
-    # Retrieve accounts specific to the user's company
+    # Retrieve accounts specific to the user's company_name
     accounts = Account.objects.filter(
         header=None,
-        branch__company=request.user.branch.company  # Changed to filter by company
+        branch__company_name=request.user.branch.company_name
     ).order_by('gl_no')
     
     if request.method == 'POST':
@@ -77,14 +78,17 @@ def chart_of_accounts(request):
     else:
         form = AccountForm()
 
-    # Retrieve accounts for the logged-in user's company
-    account = Account.objects.filter(branch__company=request.user.branch.company).order_by('gl_no')
+    # Retrieve all accounts within the user's company_name
+    account = Account.objects.filter(
+        branch__company_name=request.user.branch.company_name
+    ).order_by('gl_no')
 
     return render(request, 'accounts_admin/chart_of_accounts.html', {
         'account': account,
         'accounts': accounts,
         'form': form,
     })
+
 
 
 
@@ -169,15 +173,15 @@ def software_reg(request):
 
 @login_required
 def create_account_officer(request):
-    # Get the branch associated with the current user
-    user_branch = request.user.branch  # Assuming the user has a 'branch' attribute
+    # Get the company_name associated with the current user
+    user_company_name = request.user.branch.company_name  # Assuming user has a branch with company_name
 
-    # Filter Region based on the user's branch code
-    officer = Region.objects.filter(branch__branch_code=user_branch.branch_code)
-    
-    # Filter Users who are associated with the same branch
-    user_officer = User.objects.filter(branch=user_branch)
-    
+    # Filter Region based on company_name instead of branch
+    officer = Region.objects.filter(branch__company_name=user_company_name)
+
+    # Filter Users who are associated with branches having the same company_name
+    user_officer = User.objects.filter(branch__company_name=user_company_name)
+
     if request.method == "POST":
         form = CreditOfficerForm(request.POST)
         if form.is_valid():
@@ -186,10 +190,10 @@ def create_account_officer(request):
             # Assign the user's branch to the new account officer
             account_officer.branch = request.user.branch
             account_officer.save()
-            return redirect('account_officer_list')  # Redirect to the account officer list page
+            return redirect('account_officer_list')
     else:
         form = CreditOfficerForm()
-    
+
     return render(request, 'accounts_admin/account_officer/create_account_officer.html', {
         'form': form,
         'officer': officer,
@@ -203,19 +207,18 @@ def account_officer_list(request):
     # Get the branch associated with the current user
     user_branch = request.user.branch  # Assuming user has a 'branch' attribute
 
-    # Filter Account_Officer based on the user's branch code
-    officers = Account_Officer.objects.filter(region__branch__branch_code=user_branch.branch_code)
+    # Filter Account_Officer based on the user's company_name (through region -> branch)
+    officers = Account_Officer.objects.filter(region__branch__company_name=user_branch.company_name)
 
-    # Filter branches based on the company_name of the user's branch
-    branches = Region.objects.filter(
-        branch__company_name=user_branch.company_name
-    )
+    # Filter regions (branches) based on the same company_name
+    branches = Region.objects.filter(branch__company_name=user_branch.company_name)
 
     return render(
         request, 
         'accounts_admin/account_officer/account_officer_list.html', 
         {'officers': officers, 'branches': branches}
     )
+
 
 
 @login_required(login_url='login')
@@ -255,7 +258,7 @@ def create_region(request):
     user_branch = request.user.branch  # Assuming the user has a 'branch' attribute
 
     # Filter Region based on the user's branch
-    region = Region.objects.filter(branch=user_branch)
+    # region = Region.objects.filter(branch=user_branch)
     
     if request.method == "POST":
         form = RegionForm(request.POST)
@@ -271,20 +274,20 @@ def create_region(request):
     
     return render(request, 'accounts_admin/region/create_region.html', {
         'form': form,
-        'region': region,
+        # 'region': region,
     })
-
 
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
 def region_list(request):
-    # Get the branch associated with the current user
-    user_branch = request.user.branch  # Assuming the user has a 'branch' attribute
+    # Get the company_name associated with the current user's branch
+    user_company_name = request.user.branch.company_name
 
-    # Filter Region based on the user's branch
-    region = Region.objects.filter(branch=user_branch)
+    # Filter Region based on branches with the same company_name
+    region = Region.objects.filter(branch__company_name=user_company_name)
     
     return render(request, 'accounts_admin/region/region_list.html', {'region': region})
+
 
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
@@ -340,9 +343,14 @@ def create_category(request):
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
 def category_list(request):
-    # Filter categories based on the user's branch
-    category = Category.objects.filter(branch=request.user.branch)
+    # Get the company_name associated with the current user's branch
+    user_company_name = request.user.branch.company_name
+
+    # Filter categories based on the user's company_name
+    category = Category.objects.filter(branch__company_name=user_company_name)
+    
     return render(request, 'accounts_admin/customer_category/category_list.html', {'category': category})
+
 
 
 
@@ -393,9 +401,14 @@ def create_id_type(request):
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
 def id_type_list(request):
-    # Filter the Id_card_type by the user's branch
-    id_type = Id_card_type.objects.filter(branch=request.user.branch)
+    # Get the company_name associated with the current user's branch
+    user_company_name = request.user.branch.company_name
+
+    # Filter Id_card_type by branches with the same company_name
+    id_type = Id_card_type.objects.filter(branch__company_name=user_company_name)
+    
     return render(request, 'accounts_admin/id_type/id_type_list.html', {'id_type': id_type})
+
 
 
 
@@ -434,14 +447,14 @@ def user_define(request):
     return render(request, 'accounts_admin/user_define.html')
 
 
-
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
-
-
 def create_bus_sector(request):
-    # Retrieve all existing business sectors (if needed for the page)
-    region = Business_Sector.objects.all()
+    # Get the company_name of the logged-in user's branch
+    user_company_name = request.user.branch.company_name
+
+    # Retrieve all existing business sectors for the same company
+    region = Business_Sector.objects.filter(branch__company_name=user_company_name)
 
     if request.method == "POST":
         form = BusinessSectorForm(request.POST)
@@ -452,13 +465,10 @@ def create_bus_sector(request):
             bus_sector.branch = request.user.branch
             # Save the instance to the database
             bus_sector.save()
-            # Redirect to the business sector list page after successful creation
             return redirect('bus_sec_list')
     else:
-        # Initialize an empty form for GET requests
         form = BusinessSectorForm()
 
-    # Render the page with the form and any additional context (e.g., region)
     return render(request, 'accounts_admin/business_sector/create_bus_sector.html', {
         'form': form,
         'region': region,
@@ -468,13 +478,15 @@ def create_bus_sector(request):
 
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
-
 def bus_sec_list(request):
-    # Filter business sectors based on the logged-in user's branch
-    bus_sec = Business_Sector.objects.filter(branch=request.user.branch)
+    # Get the company name of the logged-in user's branch
+    user_company_name = request.user.branch.company_name
 
-    # Render the template with the filtered business sectors
+    # Filter business sectors by all branches under the same company
+    bus_sec = Business_Sector.objects.filter(branch__company_name=user_company_name)
+
     return render(request, 'accounts_admin/business_sector/bus_sec_list.html', {'bus_sec': bus_sec})
+
 
 
 
@@ -631,38 +643,37 @@ def update_account_old(request):
     accounts = Account.objects.all()
     return render(request, 'update_account.html', {'form': form, 'accounts': accounts})
 
-
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
 def account_list(request):
-    accounts = Account.objects.order_by('gl_no') 
-    
+    # Get the company name from the user's branch
+    user_company_name = request.user.branch.company_name
+
+    # Filter accounts by company name and order by GL number
+    accounts = Account.objects.filter(branch__company_name=user_company_name).order_by('gl_no')
+
     return render(request, 'account_list.html', {'accounts': accounts})
 
 
 
+
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
-
 def update_account(request, id):
-    # Fetch the account to update
-    account = get_object_or_404(Account, id=id)
-    cust_branch = Branch.objects.all()  # Fetch all branches for reference (optional)
-
-    # Get the user's branch and the corresponding company
-    user_branch = getattr(request.user, 'branch', None)  # Ensure the user is linked to a branch
-    if user_branch:
-        user_company = user_branch.company  # Get the company from the user's branch
-    else:
-        messages.error(request, "You are not assigned to a branch or company. Please contact the administrator.")
+    # Ensure the user is assigned to a branch
+    user_branch = getattr(request.user, 'branch', None)
+    if not user_branch:
+        messages.error(request, "You are not assigned to any branch. Contact the administrator.")
         return redirect('account_list')
 
-    # Ensure that the account's branch belongs to the same company as the user's branch
-    if account.branch and account.branch.company != user_company:
-        messages.error(request, "You can only edit accounts within your branch's company.")
-        return redirect('account_list')
+    user_company = user_branch.company  # Get the user's company
 
-    # Handle form submission
+    # Get the account, ensuring it belongs to the same company
+    account = get_object_or_404(Account, id=id, branch__company=user_company)
+
+    # Optional: Fetch only branches in the user's company for dropdown or reference
+    cust_branch = Branch.objects.filter(company=user_company)
+
     if request.method == 'POST':
         form = loanProductSettingsForm(request.POST, instance=account)
         if form.is_valid():
@@ -676,8 +687,9 @@ def update_account(request, id):
     return render(request, 'update_account.html', {
         'form': form,
         'account': account,
-        'cust_branch': cust_branch,  # Pass all available branches (optional)
+        'cust_branch': cust_branch,
     })
+
 
 
 @login_required(login_url='login')
@@ -766,8 +778,19 @@ def add_loan_provision(request):
 from django.shortcuts import render
 from .models import LoanProvision
 
+@login_required(login_url='login')
+@user_passes_test(check_role_admin)
 def loan_provision_list(request):
-    provisions = LoanProvision.objects.all()  # Fetch all loan provisions from the database
+    user_branch = getattr(request.user, 'branch', None)
+    if not user_branch:
+        messages.error(request, "You are not assigned to any branch. Contact the administrator.")
+        return redirect('home')  # Or appropriate redirect
+
+    user_company = user_branch.company
+
+    # Filter provisions by branches belonging to the user's company
+    provisions = LoanProvision.objects.filter(branch__company=user_company)
+
     return render(request, 'accounts_admin/loan_provision/loan_provision_list.html', {'provisions': provisions})
 
 

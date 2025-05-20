@@ -9,7 +9,7 @@ class ExpiredLicenseBlockerMiddleware:
     def __call__(self, request):
         if request.user.is_authenticated:
             try:
-                company = Company.objects.get(associated_user=request.user)  # You'll need this relation
+                company = Branch.objects.get(associated_user=request.user)  # You'll need this relation
                 if company.session_status == 'expired':
                     if not request.path == reverse('license_expired_page'):
                         return HttpResponseForbidden("Your license has expired")

@@ -113,3 +113,48 @@ def send_sms(phone_number, message):
     except requests.exceptions.RequestException as e:
         logger.error(f"🚨 Network Error while sending SMS: {e}")
         return False
+
+
+
+
+
+import requests
+import logging
+from django.conf import settings
+from company.models import SmsDelivery  # Optional: if tracking delivery
+
+logger = logging.getLogger(__name__)
+
+def _send_otp_sms(phone_number, message, branch=None):
+    """Send OTP via Termii API"""
+    try:
+        if not phone_number or not phone_number.startswith('+'):
+            logger.error(f"Invalid phone number: {phone_number}")
+            return False
+
+        payload = {
+            "api_key": settings.TERMII_API_KEY,
+            "to": phone_number,
+            "from": settings.TERMII_SENDER_ID,
+            "sms": message,
+            "type": "plain",
+            "channel": "dnd"
+        }
+
+        response = requests.post(
+            settings.TERMII_SMS_URL,
+            json=payload,
+            timeout=15
+        )
+
+        if response.status_code == 200:
+            logger.info(f"OTP sent to {phone_number}")
+            # Optional: save to SmsDelivery
+            return True
+        else:
+            logger.error(f"Failed to send SMS: {response.text}")
+            return False
+
+    except Exception as e:
+        logger.exception("Error sending OTP SMS")
+        return False

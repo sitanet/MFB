@@ -111,39 +111,65 @@ import logging
 logger = logging.getLogger(__name__)
 User = get_user_model()
 
+import requests
+import logging
+from django.conf import settings
+from .models import SmsDelivery  # Make sure SmsDelivery is correctly imported
+
+logger = logging.getLogger(__name__)
+
 def _send_otp_sms(phone_number, message, branch=None):
-    """Send OTP via Termii API with basic logging"""
+    """Send OTP via Termii API with debug print statements"""
     try:
+        print(f"🔍 Starting OTP send to: {phone_number}")  # Debug
+
         if not phone_number or not phone_number.startswith('+'):
+            print(f"❌ Invalid phone number format: {phone_number}")  # Debug
             logger.error(f"Invalid phone number: {phone_number}")
             return False
 
+        payload = {
+            "api_key": settings.TERMII_API_KEY,
+            "to": phone_number,
+            "from": settings.TERMII_SENDER_ID,
+            "sms": message,
+            "type": "plain",
+            "channel": "dnd"
+        }
+
+        print(f"📦 Payload being sent to Termii: {payload}")  # Debug
+
         response = requests.post(
             settings.TERMII_SMS_URL,
-            json={
-                "api_key": settings.TERMII_API_KEY,
-                "to": phone_number,
-                "from": settings.TERMII_SENDER_ID,
-                "sms": message,
-                "type": "plain",
-                "channel": "generic"
-            },
+            json=payload,
             timeout=15
         )
-        response_data = response.json()
 
-        # Create delivery record
+        print(f"📬 HTTP response status: {response.status_code}")  # Debug
+
+        try:
+            response_data = response.json()
+        except ValueError:
+            response_data = {}
+            print("❌ Failed to parse response JSON.")  # Debug
+
+        print(f"📨 Response from Termii: {response_data}")  # Debug
+
+        status = 'sent' if response_data.get('code') == 'ok' else 'failed'
         SmsDelivery.objects.create(
             branch=branch,
             phone_number=phone_number,
             message=message,
-            status='sent' if response_data.get('code') == 'ok' else 'failed'
+            status=status
         )
+        print(f"✅ SMS delivery status saved as: {status}")  # Debug
 
         return response_data.get('code') == 'ok'
-        
+
     except Exception as e:
+        print(f"💥 Exception during OTP sending: {e}")  # Debug
         logger.error(f"SMS error: {str(e)}")
+
         SmsDelivery.objects.create(
             branch=branch,
             phone_number=phone_number,
@@ -151,16 +177,24 @@ def _send_otp_sms(phone_number, message, branch=None):
             status='error'
         )
         return False
+
+
+
+
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.shortcuts import render, redirect
+from django.db import transaction
+import random
+
+from .forms import BranchForm
+ # Update this if you use a different import
+
 @login_required
 def create_branch(request):
     try:
-        # Remove the authentication check
-        # if not request.user.is_authenticated:
-        #     messages.error(request, 'You must be logged in to create a branch.')
-        #     return redirect('login')
-
-        # If user is authenticated and already has a branch, prevent creation
-        if request.user.is_authenticated and hasattr(request.user, 'branch') and request.user.branch:
+        # Prevent duplicate branch creation
+        if hasattr(request.user, 'branch') and request.user.branch:
             messages.warning(request, 'Your account already has a branch.')
             return redirect('dashboard')
 
@@ -170,22 +204,23 @@ def create_branch(request):
                 try:
                     with transaction.atomic():
                         branch = form.save(commit=False)
-                        
-                        # Only link to user if authenticated
-                        if request.user.is_authenticated:
-                            branch.user = request.user
-                            branch.company_name = branch.branch_name
-                            branch.phone_verified = False
-                            branch.otp_code = str(random.randint(100000, 999999))
-                            branch.save()
 
-                            # Link user to branch
-                            request.user.branch = branch
-                            request.user.save()
+                        # Link to authenticated user
+                        branch.user = request.user
+                        branch.company_name = branch.branch_name
+                        branch.phone_verified = False
+                        branch.otp_code = str(random.randint(100000, 999999))
+                        branch.save()
 
-                            # Send OTP only if user has a phone number
-                            if hasattr(request.user, 'phone_number') and request.user.phone_number:
-                                phone_number = request.user.phone_number
+                        # ✅ Save branch reference to user
+                        request.user.branch = branch
+                        request.user.save()
+                        print("Branch assigned to user successfully.")
+
+                        # ✅ Send OTP if phone number exists
+                        phone_number = getattr(request.user, 'phone_number', None)
+                        if phone_number:
+                            try:
                                 sms_sent = _send_otp_sms(
                                     phone_number,
                                     f"Your verification code: {branch.otp_code}",
@@ -196,47 +231,40 @@ def create_branch(request):
                                     return redirect('verify_phone')
                                 else:
                                     messages.warning(request, 'OTP could not be sent. You can request it again later.')
-                            else:
-                                messages.warning(request, 'No phone number found for OTP verification.')
+                            except Exception as e:
+                                print(f"SMS sending error: {e}")
+                                messages.warning(request, 'OTP sending failed due to system error.')
                         else:
-                            # Handle unauthenticated branch creation
-                            branch.save()
-                            messages.success(request, 'Branch created successfully!')
-                            return redirect('some_public_page')  # Redirect to a public page
+                            messages.warning(request, 'No phone number found for OTP verification.')
 
                 except ValueError as e:
                     messages.error(request, str(e))
                 except Exception as e:
-                    print(f"Error creating branch: {e}")  # Debugging
+                    print(f"Error creating branch: {e}")
                     messages.error(request, "System error. Please try again.")
             else:
-                # Show form errors
                 for field, errors in form.errors.items():
                     for error in errors:
                         messages.error(request, f"{field}: {error}")
         else:
-            # Pre-fill form only if user is authenticated
-            initial_data = {}
-            if request.user.is_authenticated:
-                initial_data = {
-                    'branch_name': f"{request.user.first_name or request.user.username}'s Branch",
-                    'phone_number': getattr(request.user, 'phone_number', '')
-                }
+            # GET method: pre-fill form if user is authenticated
+            initial_data = {
+                'branch_name': f"{request.user.first_name or request.user.username}'s Branch",
+                'phone_number': getattr(request.user, 'phone_number', '')
+            }
             form = BranchForm(initial=initial_data)
 
         return render(request, 'branch/create_branch.html', {
             'form': form,
-            'phone_valid': request.user.is_authenticated and 
-                         hasattr(request.user, 'phone_number') and 
-                         request.user.phone_number and 
-                         request.user.phone_number.startswith('+')
+            'phone_valid': hasattr(request.user, 'phone_number') and 
+                           request.user.phone_number and 
+                           request.user.phone_number.startswith('+')
         })
 
     except Exception as e:
-        print(f"Unexpected error: {e}")  # Debugging
+        print(f"Unexpected error: {e}")
         messages.error(request, "A system error occurred. Please contact support.")
-        return redirect('home')  # Redirect to a safe public page
-
+        return redirect('home')
 
         
 # views.py

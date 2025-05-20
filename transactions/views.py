@@ -799,86 +799,102 @@ def expense(request, id):
     return render(request, 'transactions/non_cash/expense.html', context)
 
 
+# @login_required(login_url='login')
+# @user_passes_test(check_role_admin)
+# def choose_deposit(request):
+#     user_company_name = request.user.branch.company_name  # get logged-in user's company name
+    
+#     # Filter customers whose company_name matches user's branch company name
+#     customers = Customer.objects.filter(label='C', company_name=user_company_name).order_by('-id')
+    
+#     # Prepare GL/AC pairs for customers filtered by company
+#     gl_ac_pairs = customers.values_list('gl_no', 'ac_no')
+    
+#     # Get all balances for these customers
+#     balances = Memtrans.objects.filter(
+#         gl_no__in=[pair[0] for pair in gl_ac_pairs],
+#         ac_no__in=[pair[1] for pair in gl_ac_pairs],
+#         error='A'
+#     ).values('gl_no', 'ac_no').annotate(
+#         total_amount=Sum('amount')
+#     )
+    
+#     balance_dict = {
+#         (b['gl_no'], b['ac_no']): b['total_amount'] or 0.0
+#         for b in balances
+#     }
+    
+#     customer_data = []
+#     for customer in customers:
+#         balance = balance_dict.get((customer.gl_no, customer.ac_no), 0.0)
+#         customer_data.append({
+#             'customer': customer,
+#             'total_amount': balance,
+#             'formatted_balance': '{:,.2f}'.format(balance)
+#         })
+    
+#     latest_transaction = Memtrans.objects.order_by('-id').first()
+    
+#     context = {
+#         'data': latest_transaction,
+#         'customer_data': customer_data,
+#         'total_customers': customers.count(),
+#     }
+    
+#     return render(request, 'transactions/cash_trans/choose_deposit.html', context)
+
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
 def choose_deposit(request):
-    # Get the latest transaction (if any exists)
-    latest_transaction = Memtrans.objects.order_by('-id').first()
+    data = Memtrans.objects.all().order_by('-id').first()
     
-    # Get all customers with label 'C'
-    customers = Customer.objects.filter(label='C').order_by('-id')
+    # Get user's branch (assuming user has only one branch or adjust accordingly)
+    user_branch = Branch.objects.filter(user=request.user).first()
     
-    # Prepare GL/AC pairs for all customers
-    gl_ac_pairs = customers.values_list('gl_no', 'ac_no')
+    if user_branch:
+        # Filter customers whose branch matches user's branch
+        customers = Customer.objects.filter(label='C', branch=user_branch).order_by('-id')
+    else:
+        customers = Customer.objects.filter(label='C').order_by('-id')
     
-    # Get all balances in a single query (matches deposit view logic)
-    balances = Memtrans.objects.filter(
-        gl_no__in=[pair[0] for pair in gl_ac_pairs],
-        ac_no__in=[pair[1] for pair in gl_ac_pairs],
-        error='A'
-    ).values('gl_no', 'ac_no').annotate(
-        total_amount=Sum('amount')
-    )
-    
-    # Convert to a dictionary for quick lookup
-    balance_dict = {
-        (b['gl_no'], b['ac_no']): b['total_amount'] or 0.0 
-        for b in balances
-    }
-    
-    # Prepare customer data with formatted balances
-    customer_data = []
+    total_amounts = []
+
     for customer in customers:
-        balance = balance_dict.get((customer.gl_no, customer.ac_no), 0.0)
-        customer_data.append({
-            'customer': customer,
-            'total_amount': balance,
-            'formatted_balance': '{:,.2f}'.format(balance)  # Consistent formatting
-        })
-    
-    context = {
-        'data': latest_transaction,
-        'customer_data': customer_data,
-        'total_customers': customers.count(),
-    }
-    
-    return render(request, 'transactions/cash_trans/choose_deposit.html', context)
+        total_amount = Memtrans.objects.filter(
+            gl_no=customer.gl_no,
+            ac_no=customer.ac_no,
+            error='A'
+        ).aggregate(total_amount=Sum('amount'))['total_amount']
 
-
-
-@login_required(login_url='login')
-@user_passes_test(check_role_admin)
-def choose_deposit(request):
-   data = Memtrans.objects.all().order_by('-id').first()
-   customers = Customer.objects.filter(label='C').order_by('-id')
-    
-   total_amounts = []
-
-   for customer in customers:
-        # Calculate the total amount for each customer
-        total_amount = Memtrans.objects.filter(gl_no=customer.gl_no, ac_no=customer.ac_no, error='A').aggregate(total_amount=Sum('amount'))['total_amount']
         total_amounts.append({
             'customer': customer,
             'total_amount': total_amount or 0.0,
         })
-  
-   return render(request, 'transactions/cash_trans/choose_deposit.html', {'data': data, 'total_amounts': total_amounts})
 
-
+    return render(request, 'transactions/cash_trans/choose_deposit.html', {
+        'data': data,
+        'total_amounts': total_amounts,
+    })
 
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
 def choose_withdrawal(request):
     # Get the latest transaction (if any exists)
     latest_transaction = Memtrans.objects.order_by('-id').first()
-    
-    # Get all customers with label 'C' and prefetch related data
-    customers = Customer.objects.filter(label='C').order_by('-id')
-    
-    # Prepare GL/AC pairs for all customers
+
+    # Get company names of branches linked to logged-in user
+    user_company_names = Branch.objects.filter(user=request.user).values_list('company_name', flat=True)
+
+    # Filter customers with label 'C' whose branch's company_name is in user_company_names
+    customers = Customer.objects.filter(
+        label='C',
+        branch__company_name__in=user_company_names
+    ).order_by('-id')
+
+    # Prepare GL/AC pairs for all filtered customers
     gl_ac_pairs = customers.values_list('gl_no', 'ac_no')
-    
-    # Get all balances in a single query (matches deposit/withdrawal logic)
+
+    # Get all balances for these GL/AC pairs in one query
     balances = Memtrans.objects.filter(
         gl_no__in=[pair[0] for pair in gl_ac_pairs],
         ac_no__in=[pair[1] for pair in gl_ac_pairs],
@@ -886,30 +902,30 @@ def choose_withdrawal(request):
     ).values('gl_no', 'ac_no').annotate(
         total_amount=Sum('amount')
     )
-    
-    # Convert to a dictionary for quick lookup
+
+    # Create quick lookup dictionary for balances
     balance_dict = {
-        (b['gl_no'], b['ac_no']): b['total_amount'] or 0.0 
+        (b['gl_no'], b['ac_no']): b['total_amount'] or 0.0
         for b in balances
     }
-    
-    # Prepare customer data with formatted balances
+
+    # Prepare customer data including formatted balances and withdrawal eligibility
     customer_data = []
     for customer in customers:
         balance = balance_dict.get((customer.gl_no, customer.ac_no), 0.0)
         customer_data.append({
             'customer': customer,
             'total_amount': balance,
-            'formatted_balance': '{:,.2f}'.format(balance),  # Consistent formatting
-            'can_withdraw': balance > 0  # Add flag for withdraw eligibility
+            'formatted_balance': '{:,.2f}'.format(balance),
+            'can_withdraw': balance > 0
         })
-    
+
     context = {
         'data': latest_transaction,
         'customer_data': customer_data,
         'total_customers': customers.count(),
     }
-    
+
     return render(request, 'transactions/cash_trans/choose_withdrawal.html', context)
 
 @login_required(login_url='login')
