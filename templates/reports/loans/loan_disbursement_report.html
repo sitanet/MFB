@@ -111,7 +111,6 @@
         padding: 0.35rem 0.65rem;
         border-radius: 6px;
         font-weight: 500;
-    
         font-size: 0.85rem;
         display: inline-block;
         border: 1px solid rgba(67, 97, 238, 0.2);
@@ -211,6 +210,12 @@
         box-shadow: 0 0 0 0.25rem rgba(67, 97, 238, 0.15);
     }
 
+    .form-error {
+        color: var(--danger);
+        font-size: 0.8rem;
+        margin-top: 0.25rem;
+    }
+
     @media print {
         .form-container, .no-print {
             display: none !important;
@@ -260,7 +265,7 @@
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
-                    <h2 class="mb-1">Loan Dues vs Repayment Report</h2>
+                    <h2 class="mb-1">Loan Disbursement Report</h2>
                     <nav aria-label="breadcrumb">
                         <ol class="breadcrumb bg-transparent p-0">
                             <li class="breadcrumb-item"><a href="#">Reports</a></li>
@@ -286,35 +291,41 @@
             <div class="form-container">
                 <form method="post" id="reportForm">
                     {% csrf_token %}
+                    
+                    {% if form.errors %}
+                    <div class="alert alert-danger mb-4">
+                        <strong>Form Errors:</strong>
+                        <ul class="mb-0">
+                            {% for field, errors in form.errors.items %}
+                                {% for error in errors %}
+                                    <li>{{ field|title }}: {{ error }}</li>
+                                {% endfor %}
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+                    
                     <div class="row g-4">
                         <div class="col-md-3">
                             <label class="filter-label">Reporting Date</label>
-                            <input type="date" class="form-control" name="reporting_date" 
-                                   value="{{ reporting_date|date:'Y-m-d' }}" required>
+                            {{ form.reporting_date }}
+                            {% if form.reporting_date.errors %}
+                                <div class="form-error">{{ form.reporting_date.errors }}</div>
+                            {% endif %}
                         </div>
                         <div class="col-md-3">
                             <label class="filter-label">Branch</label>
-                            <select class="form-control" name="branch" id="branchSelect">
-                                <option value="">All Branches</option>
-                                {% for branch in branches %}
-                                    <option value="{{ branch.branch_code }}"
-                                        {% if selected_branch == branch.branch_code %}selected{% endif %}>
-                                        {{ branch.branch_name }}
-                                    </option>
-                                {% endfor %}
-                            </select>
+                            {{ form.branch }}
+                            {% if form.branch.errors %}
+                                <div class="form-error">{{ form.branch.errors }}</div>
+                            {% endif %}
                         </div>
                         <div class="col-md-3">
                             <label class="filter-label">GL Account</label>
-                            <select class="form-control" name="gl_no" id="glSelect">
-                                <option value="">All GL Accounts</option>
-                                {% for gl_account in gl_accounts %}
-                                    <option value="{{ gl_account.gl_no }}"
-                                        {% if selected_gl_no == gl_account.gl_no %}selected{% endif %}>
-                                        {{ gl_account.gl_no }} - {{ gl_account.gl_name }}
-                                    </option>
-                                {% endfor %}
-                            </select>
+                            {{ form.gl_no }}
+                            {% if form.gl_no.errors %}
+                                <div class="form-error">{{ form.gl_no.errors }}</div>
+                            {% endif %}
                         </div>
                         <div class="col-md-3 d-flex align-items-end">
                             <button type="submit" class="btn btn-generate text-white w-100">
@@ -492,11 +503,14 @@ document.addEventListener('DOMContentLoaded', function() {
     // Form submission loading state
     const reportForm = document.getElementById('reportForm');
     if (reportForm) {
-        reportForm.addEventListener('submit', function() {
+        reportForm.addEventListener('submit', function(e) {
             const submitBtn = this.querySelector('button[type="submit"]');
             if (submitBtn) {
-                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Generating...';
-                submitBtn.disabled = true;
+                // Only disable if form is valid
+                if (this.checkValidity()) {
+                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Generating...';
+                    submitBtn.disabled = true;
+                }
             }
         });
     }

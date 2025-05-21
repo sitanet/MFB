@@ -178,15 +178,15 @@
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">Product</label>
-                            <select class="form-control" name="gl_no">
-                                <option value="">All Products</option>
-                                {% for gl_account in gl_accounts %}
-                                <option value="{{ gl_account.gl_no }}" 
-                                    {% if selected_gl_no == gl_account.gl_no %}selected{% endif %}>
-                                    {{ gl_account.gl_no }} - {{ gl_account.gl_name }}
-                                </option>
-                                {% endfor %}
-                            </select>
+                 <select class="form-control" name="gl_no">
+                        <option value="">All Products</option>
+                        {% for gl_account in gl_accounts %}
+                        <option value="{{ gl_account.gl_no }}" 
+                            {% if selected_gl_no == gl_account.gl_no %}selected{% endif %}>
+                            {{ gl_account.gl_no }} - {{ gl_account.gl_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">Region</label>
@@ -195,7 +195,7 @@
                                 {% for region in regions %}
                                 <option value="{{ region.id }}" 
                                     {% if selected_region and region.id == selected_region.id %}selected{% endif %}>
-                                    {{ region.name }}
+                                    {{ region.region_name }}
                                 </option>
                                 {% endfor %}
                             </select>
@@ -207,7 +207,7 @@
                                 {% for officer in account_officers %}
                                 <option value="{{ officer.id }}" 
                                     {% if selected_officer and officer.id == selected_officer.id %}selected{% endif %}>
-                                    {{ officer.user.get_full_name }}
+                                    {{ officer.user}}
                                 </option>
                                 {% endfor %}
                             </select>

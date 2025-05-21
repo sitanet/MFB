@@ -1,137 +1,111 @@
 {% extends "base.html" %}
-
 {% block content %}
+<!-- Load Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Roboto :wght@400;500;700&display=swap" rel="stylesheet">
 
-<div class="container-fluid">
-  <!-- Header with Nigerian Theme -->
-  <!-- <div class="row mb-4">
+<style>
+  body {
+    font-family: 'Roboto', sans-serif;
+    background-color: #f8f9fa;
+  }
+
+  .card {
+    border-radius: 1rem;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+  }
+
+  .hover-scale {
+    transition: transform 0.2s ease-in-out;
+  }
+
+  .hover-scale:hover {
+    transform: scale(1.02);
+  }
+
+  .badge-success {
+    background-color: #1cc88a;
+  }
+
+  .badge-primary {
+    background-color: #1a6e1a;
+  }
+
+  .badge-warning {
+    background-color: #f6c23e;
+  }
+
+  .text-primary {
+    color: #1a6e1a !important;
+  }
+
+  .btn-primary {
+    background-color: #1a6e1a;
+    border-color: #1a6e1a;
+  }
+
+  .btn-primary:hover {
+    background-color: #0d4d0d;
+    border-color: #0d4d0d;
+  }
+
+  .chart-area canvas {
+    max-height: 300px;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #1a6e1a;
+    border-radius: 10px;
+  }
+</style>
+
+<div class="container-fluid py-4">
+  <!-- Header Section -->
+  <div class="row mb-4">
     <div class="col-md-12">
-      <div class="page-header p-4 rounded-lg" style="background: linear-gradient(135deg, #1a6e1a 0%, #0d4d0d 100%);">
-        <h2 class="font-weight-bold text-white"><i class="fas fa-university mr-2"></i>Nigerian Banking Dashboard</h2>
-        <p class="mb-0 text-white-50">Comprehensive overview of your financial institution's performance</p>
-      </div>
-    </div>
-  </div> -->
-
-  <!-- Summary Cards Row with Nigerian Colors -->
-  <div class="row">
-    <!-- Total Customers -->
-    <div class="col-xl-3 col-md-6 mb-4">
-      <div class="card border-left-success shadow h-100 py-2 hover-scale">
-        <div class="card-body">
-          <div class="row no-gutters align-items-center">
-              <div class="col mr-2">
-                  <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                      <i class="fas fa-users mr-1"></i> Total Customers</div>
-                  <div class="h5 mb-0 font-weight-bold text-gray-800">24,589</div>
-              </div>
-              <div class="col-auto">
-                  <i class="fas fa-user-friends fa-2x text-success"></i>
-              </div>
-          </div>
-          <div class="mt-2 text-xs text-muted">
-            <span class="text-success mr-2"><i class="fas fa-arrow-up"></i> 12%</span>
-            <span>vs last month</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Total Assets -->
-    <div class="col-xl-3 col-md-6 mb-4">
-      <div class="card border-left-primary shadow h-100 py-2 hover-scale">
-        <div class="card-body">
-          <div class="row no-gutters align-items-center">
-              <div class="col mr-2">
-                  <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                      <i class="fas fa-wallet mr-1"></i> Total Assets</div>
-                  <div class="h5 mb-0 font-weight-bold text-gray-800">₦4.78T</div>
-              </div>
-              <div class="col-auto">
-                  <i class="fas fa-money-bill-wave fa-2x text-primary"></i>
-              </div>
-          </div>
-          <div class="mt-2 text-xs text-muted">
-            <span class="text-success mr-2"><i class="fas fa-arrow-up"></i> 8.5%</span>
-            <span>vs last quarter</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Total Liabilities -->
-    <div class="col-xl-3 col-md-6 mb-4">
-      <div class="card border-left-warning shadow h-100 py-2 hover-scale">
-        <div class="card-body">
-          <div class="row no-gutters align-items-center">
-              <div class="col mr-2">
-                  <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                      <i class="fas fa-file-invoice mr-1"></i> Total Liabilities</div>
-                  <div class="h5 mb-0 font-weight-bold text-gray-800">₦3.92T</div>
-              </div>
-              <div class="col-auto">
-                  <i class="fas fa-hand-holding-usd fa-2x text-warning"></i>
-              </div>
-          </div>
-          <div class="mt-2 text-xs text-muted">
-            <span class="text-danger mr-2"><i class="fas fa-arrow-down"></i> 3.2%</span>
-            <span>vs last quarter</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Net Worth -->
-    <div class="col-xl-3 col-md-6 mb-4">
-      <div class="card border-left-info shadow h-100 py-2 hover-scale">
-        <div class="card-body">
-          <div class="row no-gutters align-items-center">
-              <div class="col mr-2">
-                  <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
-                      <i class="fas fa-piggy-bank mr-1"></i> Net Worth</div>
-                  <div class="h5 mb-0 font-weight-bold text-gray-800">₦860B</div>
-              </div>
-              <div class="col-auto">
-                  <i class="fas fa-chart-line fa-2x text-info"></i>
-              </div>
-          </div>
-          <div class="mt-2 text-xs text-muted">
-            <span class="text-success mr-2"><i class="fas fa-arrow-up"></i> 15.7%</span>
-            <span>vs last quarter</span>
-          </div>
-        </div>
+      <div class="page-header p-4 rounded-3 text-white"
+           style="background: linear-gradient(to right, rgb(241, 107, 58), #0d4d0d);">
+        <h2 class="font-weight-bold"><i class="fas fa-university mr-2"></i>FinanceFlex Banking Dashboard</h2>
+        <p class="mb-0">Comprehensive overview of your financial institution's performance</p>
       </div>
     </div>
   </div>
 
-  <!-- Charts and Detailed Metrics Row -->
+  <!-- Summary Cards -->
+  {% include "summary_cards.html" %}
+
+  <!-- Charts -->
   <div class="row">
-    <!-- Deposits vs Loans Chart -->
-    <div class="col-xl-8 col-lg-7">
-      <div class="card shadow mb-4 border-0">
-        <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between" style="background-color: #f8f9fa;">
+    <div class="col-xl-8 col-lg-7 mb-4">
+      <div class="card shadow-sm">
+        <div class="card-header d-flex justify-content-between align-items-center bg-white border-0">
           <h6 class="m-0 font-weight-bold text-primary">
             <i class="fas fa-chart-bar mr-1"></i> Deposits vs Loans Overview
           </h6>
           <div class="dropdown no-arrow">
-            <a class="dropdown-toggle" href="#" role="button" id="dropdownMenuLink" 
-               data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-              <i class="fas fa-ellipsis-v fa-sm fa-fw text-gray-400"></i>
-            </a>
-            <div class="dropdown-menu dropdown-menu-right shadow animated--fade-in" 
-                 aria-labelledby="dropdownMenuLink">
-              <div class="dropdown-header">View Options:</div>
-              <a class="dropdown-item" href="#">Last 30 Days</a>
-              <a class="dropdown-item" href="#">Last Quarter</a>
-              <a class="dropdown-item" href="#">Last Year</a>
-            </div>
+            <button class="btn btn-link btn-sm dropdown-toggle" type="button" id="dropdownMenuButton"
+                    data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="fas fa-ellipsis-v fa-sm text-gray-400"></i>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuButton">
+              <li><a class="dropdown-item" href="#">Last 30 Days</a></li>
+              <li><a class="dropdown-item" href="#">Last Quarter</a></li>
+              <li><a class="dropdown-item" href="#">Last Year</a></li>
+            </ul>
           </div>
         </div>
         <div class="card-body pt-0">
-          <div class="chart-area">
-            <canvas id="depositsLoansChart"></canvas>
-          </div>
-          <div class="mt-3 d-flex justify-content-between small text-muted">
+          <canvas id="depositsLoansChart"></canvas>
+          <div class="mt-3 small text-muted d-flex justify-content-between">
             <span><i class="fas fa-circle text-primary mr-1"></i> Deposits</span>
             <span><i class="fas fa-circle text-success mr-1"></i> Loans</span>
             <span><i class="fas fa-sync-alt mr-1"></i> Updated 1 hour ago</span>
@@ -140,32 +114,23 @@
       </div>
     </div>
 
-    <!-- Customer Segmentation -->
-    <div class="col-xl-4 col-lg-5">
-      <div class="card shadow mb-4 border-0">
-        <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between" style="background-color: #f8f9fa;">
+    <div class="col-xl-4 col-lg-5 mb-4">
+      <div class="card shadow-sm">
+        <div class="card-header d-flex justify-content-between align-items-center bg-white border-0">
           <h6 class="m-0 font-weight-bold text-primary">
             <i class="fas fa-users mr-1"></i> Customer Segmentation
           </h6>
           <i class="fas fa-user-tag text-primary"></i>
         </div>
         <div class="card-body">
-          <div class="chart-pie pt-4 pb-2">
-            <canvas id="customerSegmentationChart"></canvas>
-          </div>
+          <canvas id="customerSegmentationChart" height="120"></canvas>
           <div class="mt-4 text-center small">
-            <span class="mr-3">
-              <i class="fas fa-circle text-primary"></i> Retail (62%)
-            </span>
-            <span class="mr-3">
-              <i class="fas fa-circle text-success"></i> Business (28%)
-            </span>
-            <span>
-              <i class="fas fa-circle text-info"></i> Premium (10%)
-            </span>
+            <span class="mr-3"><i class="fas fa-circle text-primary"></i> Retail (62%)</span>
+            <span class="mr-3"><i class="fas fa-circle text-success"></i> Business (28%)</span>
+            <span><i class="fas fa-circle text-info"></i> Premium (10%)</span>
           </div>
           <div class="mt-3 text-center">
-            <button class="btn btn-sm btn-outline-primary">
+            <button class="btn btn-outline-primary btn-sm">
               <i class="fas fa-download mr-1"></i> Export Data
             </button>
           </div>
@@ -174,127 +139,22 @@
     </div>
   </div>
 
-  <!-- Additional Metrics Row -->
-  <div class="row">
-    <!-- Loan Performance -->
-    <div class="col-lg-6 mb-4">
-      <div class="card shadow mb-4 border-0">
-        <div class="card-header py-3" style="background-color: #f8f9fa;">
-          <h6 class="m-0 font-weight-bold text-primary">
-            <i class="fas fa-hand-holding-usd mr-1"></i> Loan Performance
-          </h6>
-        </div>
-        <div class="card-body">
-          <div class="row">
-            <div class="col-md-6 mb-4">
-              <div class="card border-left-success h-100 py-2 hover-scale-sm">
-                <div class="card-body">
-                  <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                    <i class="fas fa-check-circle mr-1"></i> Performing Loans</div>
-                  <div class="h5 mb-0 font-weight-bold text-gray-800">₦3.12T</div>
-                  <div class="mt-2 text-xs text-muted">
-                    94.7% of portfolio
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-6 mb-4">
-              <div class="card border-left-danger h-100 py-2 hover-scale-sm">
-                <div class="card-body">
-                  <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
-                    <i class="fas fa-exclamation-circle mr-1"></i> Non-Performing Loans</div>
-                  <div class="h5 mb-0 font-weight-bold text-gray-800">₦173B</div>
-                  <div class="mt-2 text-xs text-muted">
-                    5.3% of portfolio
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="progress mb-4" style="height: 20px; border-radius: 10px;">
-            <div class="progress-bar bg-success" role="progressbar" 
-                 style="width: 94.7%" 
-                 aria-valuenow="94.7" 
-                 aria-valuemin="0" aria-valuemax="100"></div>
-            <div class="progress-bar bg-danger" role="progressbar" 
-                 style="width: 5.3%" 
-                 aria-valuenow="5.3" 
-                 aria-valuemin="0" aria-valuemax="100"></div>
-          </div>
-          <div class="alert alert-success small mb-0">
-            <i class="fas fa-check-circle mr-1"></i> NPL ratio improved by 0.8% from last quarter
-          </div>
-        </div>
-      </div>
-    </div>
+  <!-- Additional Metrics -->
+  {% include "loan_transactions.html" %}
 
-    <!-- Recent Transactions -->
-    <div class="col-lg-6 mb-4">
-      <div class="card shadow mb-4 border-0">
-        <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between" style="background-color: #f8f9fa;">
-          <h6 class="m-0 font-weight-bold text-primary">
-            <i class="fas fa-exchange-alt mr-1"></i> Recent Transactions
-          </h6>
-          <a href="#" class="btn btn-sm btn-primary shadow-sm">
-            <i class="fas fa-list mr-1"></i> View All
-          </a>
-        </div>
-        <div class="card-body p-0">
-          <div class="list-group list-group-flush">
-            <div class="list-group-item d-flex justify-content-between align-items-center">
-              <div>
-                <div class="font-weight-bold">Mobile Transfer</div>
-                <small class="text-muted">Today • Acct: ****4523 • GTBank</small>
-              </div>
-              <span class="badge badge-success badge-pill">+₦245,000</span>
-            </div>
-            <div class="list-group-item d-flex justify-content-between align-items-center">
-              <div>
-                <div class="font-weight-bold">POS Payment</div>
-                <small class="text-muted">Today • Acct: ****6789 • Shoprite</small>
-              </div>
-              <span class="badge badge-danger badge-pill">-₦50,000</span>
-            </div>
-            <div class="list-group-item d-flex justify-content-between align-items-center">
-              <div>
-                <div class="font-weight-bold">Deposit</div>
-                <small class="text-muted">Yesterday • Acct: ****3210 • Ikeja Branch</small>
-              </div>
-              <span class="badge badge-success badge-pill">+₦123,050</span>
-            </div>
-            <div class="list-group-item d-flex justify-content-between align-items-center">
-              <div>
-                <div class="font-weight-bold">Loan Repayment</div>
-                <small class="text-muted">Yesterday • Acct: ****5555 • Auto-debit</small>
-              </div>
-              <span class="badge badge-success badge-pill">+₦187,525</span>
-            </div>
-            <div class="list-group-item d-flex justify-content-between align-items-center">
-              <div>
-                <div class="font-weight-bold">ATM Withdrawal</div>
-                <small class="text-muted">2 days ago • Acct: ****7890 • UBA ATM</small>
-              </div>
-              <span class="badge badge-danger badge-pill">-₦35,000</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Branch Performance -->
+  <!-- Branch Performance Table -->
   <div class="row">
     <div class="col-12">
-      <div class="card shadow mb-4 border-0">
-        <div class="card-header py-3" style="background-color: #f8f9fa;">
+      <div class="card shadow-sm">
+        <div class="card-header d-flex justify-content-between align-items-center bg-white border-0">
           <h6 class="m-0 font-weight-bold text-primary">
             <i class="fas fa-map-marker-alt mr-1"></i> Branch Performance
           </h6>
         </div>
         <div class="card-body">
           <div class="table-responsive">
-            <table class="table table-hover" id="branchPerformanceTable">
-              <thead class="thead-light">
+            <table class="table table-hover align-middle">
+              <thead class="table-light">
                 <tr>
                   <th>Branch</th>
                   <th>Location</th>
@@ -360,9 +220,9 @@
               </tbody>
             </table>
           </div>
-          <div class="mt-3 text-right">
+          <div class="mt-3 text-end">
             <button class="btn btn-primary">
-              <i class="fas fa-download mr-1"></i> Export Report
+              <i class="fas fa-download me-1"></i> Export Report
             </button>
           </div>
         </div>
@@ -371,265 +231,79 @@
   </div>
 </div>
 
-{% endblock %}
-
-{% block scripts %}
-<!-- Page level plugins -->
 <script src="/vendor/chart.js/Chart.min.js"></script>
-
-<!-- Page level custom scripts -->
 <script>
-// Deposits vs Loans Chart
-var ctx = document.getElementById("depositsLoansChart");
-var depositsLoansChart = new Chart(ctx, {
+  // Chart configuration (same as before)
+  var ctx = document.getElementById("depositsLoansChart");
+  new Chart(ctx, {
     type: 'line',
     data: {
-        labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
-        datasets: [{
-            label: "Deposits",
-            lineTension: 0.3,
-            backgroundColor: "rgba(78, 115, 223, 0.05)",
-            borderColor: "rgba(78, 115, 223, 1)",
-            pointRadius: 3,
-            pointBackgroundColor: "rgba(78, 115, 223, 1)",
-            pointBorderColor: "rgba(78, 115, 223, 1)",
-            pointHoverRadius: 3,
-            pointHoverBackgroundColor: "rgba(78, 115, 223, 1)",
-            pointHoverBorderColor: "rgba(78, 115, 223, 1)",
-            pointHitRadius: 10,
-            pointBorderWidth: 2,
-            data: [3.8, 3.9, 4.0, 4.1, 4.2, 4.3, 4.4, 4.5, 4.55, 4.6, 4.7, 4.78],
-        },
-        {
-            label: "Loans",
-            lineTension: 0.3,
-            backgroundColor: "rgba(28, 200, 138, 0.05)",
-            borderColor: "rgba(28, 200, 138, 1)",
-            pointRadius: 3,
-            pointBackgroundColor: "rgba(28, 200, 138, 1)",
-            pointBorderColor: "rgba(28, 200, 138, 1)",
-            pointHoverRadius: 3,
-            pointHoverBackgroundColor: "rgba(28, 200, 138, 1)",
-            pointHoverBorderColor: "rgba(28, 200, 138, 1)",
-            pointHitRadius: 10,
-            pointBorderWidth: 2,
-            data: [2.9, 3.0, 3.1, 3.2, 3.3, 3.4, 3.45, 3.5, 3.55, 3.6, 3.65, 3.7],
-        }],
+      labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+      datasets: [{
+        label: "Deposits",
+        lineTension: 0.3,
+        backgroundColor: "rgba(78, 115, 223, 0.05)",
+        borderColor: "rgba(78, 115, 223, 1)",
+        pointRadius: 3,
+        pointBackgroundColor: "rgba(78, 115, 223, 1)",
+        pointBorderColor: "rgba(78, 115, 223, 1)",
+        pointHoverRadius: 3,
+        pointHoverBackgroundColor: "rgba(78, 115, 223, 1)",
+        pointHitRadius: 10,
+        pointBorderWidth: 2,
+        data: [3.8, 3.9, 4.0, 4.1, 4.2, 4.3, 4.4, 4.5, 4.55, 4.6, 4.7, 4.78],
+      }, {
+        label: "Loans",
+        lineTension: 0.3,
+        backgroundColor: "rgba(28, 200, 138, 0.05)",
+        borderColor: "rgba(28, 200, 138, 1)",
+        pointRadius: 3,
+        pointBackgroundColor: "rgba(28, 200, 138, 1)",
+        pointBorderColor: "rgba(28, 200, 138, 1)",
+        pointHoverRadius: 3,
+        pointHoverBackgroundColor: "rgba(28, 200, 138, 1)",
+        pointHitRadius: 10,
+        pointBorderWidth: 2,
+        data: [2.9, 3.0, 3.1, 3.2, 3.3, 3.4, 3.45, 3.5, 3.55, 3.6, 3.65, 3.7],
+      }],
     },
     options: {
-        maintainAspectRatio: false,
-        layout: {
-            padding: {
-                left: 10,
-                right: 25,
-                top: 25,
-                bottom: 0
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        yAxes: [{
+          ticks: {
+            callback: function(value) {
+              return '₦' + value + 'T';
             }
-        },
-        scales: {
-            xAxes: [{
-                gridLines: {
-                    display: false,
-                    drawBorder: false
-                },
-                ticks: {
-                    maxTicksLimit: 12
-                }
-            }],
-            yAxes: [{
-                ticks: {
-                    callback: function(value, index, values) {
-                        return '₦' + value + 'T';
-                    }
-                },
-                gridLines: {
-                    color: "rgb(234, 236, 244)",
-                    zeroLineColor: "rgb(234, 236, 244)",
-                    drawBorder: false,
-                    borderDash: [2],
-                    zeroLineBorderDash: [2]
-                }
-            }],
-        },
-        legend: {
-            display: false
-        },
-        tooltips: {
-            backgroundColor: "rgb(255,255,255)",
-            bodyFontColor: "#858796",
-            titleMarginBottom: 10,
-            titleFontColor: '#6e707e',
-            titleFontSize: 14,
-            borderColor: '#dddfeb',
-            borderWidth: 1,
-            xPadding: 15,
-            yPadding: 15,
-            displayColors: false,
-            intersect: false,
-            mode: 'index',
-            caretPadding: 10,
-            callbacks: {
-                label: function(tooltipItem, chart) {
-                    var datasetLabel = chart.datasets[tooltipItem.datasetIndex].label || '';
-                    return datasetLabel + ': ₦' + tooltipItem.yLabel + 'T';
-                }
-            }
+          }
+        }]
+      },
+      tooltips: {
+        callbacks: {
+          label: function(tooltipItem, data) {
+            return data.datasets[tooltipItem.datasetIndex].label + ': ₦' + tooltipItem.yLabel + 'T';
+          }
         }
+      }
     }
-});
+  });
 
-// Customer Segmentation Chart
-var ctx2 = document.getElementById("customerSegmentationChart");
-var customerSegmentationChart = new Chart(ctx2, {
+  var ctx2 = document.getElementById("customerSegmentationChart");
+  new Chart(ctx2, {
     type: 'doughnut',
     data: {
-        labels: ["Retail", "Business", "Premium"],
-        datasets: [{
-            data: [62, 28, 10],
-            backgroundColor: ['#4e73df', '#1cc88a', '#36b9cc'],
-            hoverBackgroundColor: ['#2e59d9', '#17a673', '#2c9faf'],
-            hoverBorderColor: "rgba(234, 236, 244, 1)",
-        }],
+      labels: ["Retail", "Business", "Premium"],
+      datasets: [{
+        data: [62, 28, 10],
+        backgroundColor: ['#4e73df', '#1cc88a', '#36b9cc'],
+        hoverBackgroundColor: ['#2e59d9', '#17a673', '#2c9faf'],
+        hoverBorderColor: "rgba(234, 236, 244, 1)"
+      }]
     },
     options: {
-        maintainAspectRatio: false,
-        tooltips: {
-            backgroundColor: "rgb(255,255,255)",
-            bodyFontColor: "#858796",
-            borderColor: '#dddfeb',
-            borderWidth: 1,
-            xPadding: 15,
-            yPadding: 15,
-            displayColors: false,
-            caretPadding: 10,
-        },
-        legend: {
-            display: false
-        },
-        cutoutPercentage: 75,
-    },
-});
+      cutoutPercentage: 75
+    }
+  });
 </script>
-
-<style>
-/* Custom styles for enhanced appearance */
-.page-header {
-  box-shadow: 0 4px 20px 0 rgba(0,0,0,.1);
-}
-
-.hover-scale {
-  transition: transform 0.2s ease-in-out;
-  border-left: 4px solid transparent;
-}
-
-.hover-scale:hover {
-  transform: translateY(-5px);
-  border-left-color: #1a6e1a;
-}
-
-.hover-scale-sm {
-  transition: transform 0.2s ease-in-out;
-}
-
-.hover-scale-sm:hover {
-  transform: scale(1.02);
-}
-
-.card {
-  border-radius: 0.5rem;
-  transition: all 0.3s ease;
-}
-
-.card:hover {
-  box-shadow: 0 10px 20px rgba(0,0,0,.1);
-}
-
-.table-hover tbody tr:hover {
-  background-color: rgba(26, 110, 26, 0.05);
-}
-
-.badge-success {
-  background-color: #1cc88a;
-}
-
-.badge-primary {
-  background-color: #4e73df;
-}
-
-.badge-warning {
-  background-color: #f6c23e;
-}
-
-.text-success {
-  color: #1a6e1a !important;
-}
-
-.text-primary {
-  color: #1a6e1a !important;
-}
-
-.text-warning {
-  color: #f6c23e !important;
-}
-
-.list-group-item {
-  border-left: none;
-  border-right: none;
-}
-
-.list-group-item:first-child {
-  border-top: none;
-}
-
-.list-group-item:last-child {
-  border-bottom: none;
-}
-
-.progress {
-  box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
-}
-
-.btn-primary {
-  background-color: #1a6e1a;
-  border-color: #1a6e1a;
-}
-
-.btn-primary:hover {
-  background-color: #0d4d0d;
-  border-color: #0d4d0d;
-}
-
-.card-header {
-  border-bottom: 1px solid rgba(0,0,0,.05);
-}
-
-/* Nigerian flag colors for accent */
-.border-left-success {
-  border-left-color: #1a6e1a !important;
-}
-
-.border-left-primary {
-  border-left-color: #1a6e1a !important;
-}
-
-/* Modern scrollbar styling */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #1a6e1a;
-  border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #0d4d0d;
-}
-</style>
 {% endblock %}

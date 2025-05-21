@@ -127,18 +127,17 @@ from accounts_admin.models import Account
 
 from django import forms
 from company.models import Branch
-from accounts_admin.models import  Account
-
+from accounts_admin.models import Account
 
 class LoanLedgerCardForm(forms.Form):
     branch = forms.ModelChoiceField(
-        queryset=Company.objects.all(),
+        queryset=Branch.objects.none(),  # Start with empty queryset
         label='Branch',
         empty_label='Select a Branch',
         widget=forms.Select(attrs={'class': 'form-control'})
     )
     account = forms.ModelChoiceField(
-        queryset=Account.objects.all(),
+        queryset=Account.objects.none(),  # Start with empty queryset
         label='Account',
         empty_label='Select an Account',
         widget=forms.Select(attrs={'class': 'form-control'})
@@ -154,12 +153,15 @@ class LoanLedgerCardForm(forms.Form):
         widget=forms.TextInput(attrs={'class': 'form-control'})
     )
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, user_branch=None, **kwargs):
         super().__init__(*args, **kwargs)
+        # Filter branches by user's branch
+        if user_branch:
+            self.fields['branch'].queryset = Branch.objects.filter(id=user_branch.id)
+            self.fields['account'].queryset = Account.objects.filter(branch=user_branch)
+        
         # Customize the account field to display gl_no and gl_name in the dropdown
         self.fields['account'].label_from_instance = lambda obj: f"{obj.gl_no} - {obj.gl_name}"
-
-
 
 
 
@@ -173,31 +175,99 @@ from accounts_admin.models import Account
 
 
 
+from django import forms
+from company.models import Branch
+from accounts_admin.models import Account
+from django.db.models import Q
 
+
+from django import forms
+from company.models import Branch
+from accounts_admin.models import Account
 
 class LoanDisbursementReportForm(forms.Form):
-    start_date = forms.DateField(widget=forms.TextInput(attrs={'type': 'date'}))
-    end_date = forms.DateField(widget=forms.TextInput(attrs={'type': 'date'}))
-    
-    # Filtering branches from the Company model
-    branch = forms.ModelChoiceField(queryset=Branch.objects.all(), required=False, label="Branch")
-    
-    # Filtering GL numbers from the Account model
-    gl_no = forms.ModelChoiceField(queryset=Account.objects.all(), required=False, label="GL Number")
+    reporting_date = forms.DateField(
+        label='Reporting Date',
+        widget=forms.DateInput(attrs={
+            'class': 'form-control',
+            'type': 'date'
+        }),
+        required=True
+    )
+    branch = forms.ModelChoiceField(
+        queryset=Branch.objects.none(),
+        label='Branch',
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        empty_label="All Branches"
+    )
+    gl_no = forms.ModelChoiceField(
+        queryset=Account.objects.none(),
+        label='GL Account',
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        empty_label="All GL Accounts"
+    )
 
-
+    def __init__(self, *args, user_branch=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        if user_branch:
+            # Filter branches to only user's branch
+            self.fields['branch'].queryset = Branch.objects.filter(id=user_branch.id)
+            
+            # Filter accounts for the branch
+            self.fields['gl_no'].queryset = Account.objects.filter(
+                branch=user_branch
+            ).order_by('gl_no')
+            
+            # Format account display in dropdown
+            self.fields['gl_no'].label_from_instance = lambda obj: f"{obj.gl_no} - {obj.gl_name}"
 
 
 
 from django import forms
 
 class LoanRepaymentReportForm(forms.Form):
-    start_date = forms.DateField(widget=forms.DateInput(attrs={'type': 'date'}))
-    end_date = forms.DateField(widget=forms.DateInput(attrs={'type': 'date'}))
-    branch = forms.ModelChoiceField(queryset=Branch.objects.all(), required=False, empty_label="All Branches")
-    gl_no = forms.ModelChoiceField(queryset=Account.objects.all(), required=False, empty_label="All Products")
+    start_date = forms.DateField(
+        label='Start Date',
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'})
+    )
+    end_date = forms.DateField(
+        label='End Date',
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'})
+    )
+    branch = forms.ModelChoiceField(
+        queryset=Branch.objects.none(),
+        label='Branch',
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    gl_no = forms.ModelChoiceField(
+        queryset=Account.objects.none(),
+        label='GL Account',
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    cycle = forms.IntegerField(
+        label='Cycle',
+        required=False,
+        widget=forms.NumberInput(attrs={'class': 'form-control'})
+    )
 
-
+    def __init__(self, *args, user_branch=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        if user_branch:
+            # Filter branches by the same company as the user's branch
+            self.fields['branch'].queryset = Branch.objects.filter(
+                company_name=user_branch.company_name
+            ).order_by('branch_name')
+            
+            # Filter GL accounts by the same company
+            self.fields['gl_no'].queryset = Account.objects.filter(
+                branch__company_name=user_branch.company_name
+            ).order_by('gl_no')
 
 
 class LoanTillSheetForm(forms.Form):

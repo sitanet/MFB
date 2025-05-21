@@ -196,7 +196,7 @@
                                 {% for region in regions %}
                                 <option value="{{ region.id }}" 
                                     {% if selected_region and region.id == selected_region.id %}selected{% endif %}>
-                                    {{ region.name }}
+                                    {{ region.region_name }}
                                 </option>
                                 {% endfor %}
                             </select>
@@ -208,7 +208,7 @@
                                 {% for officer in account_officers %}
                                 <option value="{{ officer.id }}" 
                                     {% if selected_officer and officer.id == selected_officer.id %}selected{% endif %}>
-                                    {{ officer.user.get_full_name }}
+                                    {{ officer.user }}
                                 </option>
                                 {% endfor %}
                             </select>

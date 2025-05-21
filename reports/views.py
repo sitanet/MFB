@@ -629,12 +629,13 @@ from django.db.models.functions import Concat
 from django.utils import timezone
 from accounts.models import User
 
-def transaction_sequence_by_ses_date(request):
-    branches = Branch.objects.all()
-    users = User.objects.all()
-    current_datetime = timezone.now()
+from django.contrib.auth.decorators import login_required
 
-    form = TransactionForm(request.POST or None)
+
+
+@login_required
+def transaction_sequence_by_ses_date(request):
+    current_datetime = timezone.now()
     report_data = None
     selected_branch = None
     start_date = None
@@ -643,6 +644,23 @@ def transaction_sequence_by_ses_date(request):
     total_debit = 0
     total_credit = 0
 
+    # Get the logged-in user's branch to determine their company_name
+    try:
+        user_branch = Branch.objects.get(user=request.user)
+        user_company_name = user_branch.company_name
+
+        # ✅ Filter branches with same company_name
+        branches = Branch.objects.filter(company_name=user_company_name)
+
+        # ✅ Get user IDs from those branches
+        branch_users = User.objects.filter(branches__company_name=user_company_name).distinct()
+    except Branch.DoesNotExist:
+        branches = Branch.objects.none()
+        branch_users = User.objects.none()
+        user_company_name = None
+
+    form = TransactionForm(request.POST or None)
+
     if request.method == 'POST' and form.is_valid():
         start_date = form.cleaned_data['start_date']
         end_date = form.cleaned_data['end_date']
@@ -650,15 +668,11 @@ def transaction_sequence_by_ses_date(request):
         user_id = form.cleaned_data['user'].id if form.cleaned_data['user'] else None
         code = form.cleaned_data['code'] if form.cleaned_data['code'] else None
 
-        print(f"Start Date: {start_date}, End Date: {end_date}, Branch ID: {branch_id}, User ID: {user_id}, Code: {code}")
-
-        # Base Query (Filter transactions within date range)
         report_data = Memtrans.objects.filter(ses_date__range=(start_date, end_date)).select_related('user').order_by('ses_date')
 
-        # ✅ Fix: Branch Filtering (Use branch_code instead of ID)
         if branch_id:
             selected_branch = get_object_or_404(Branch, id=branch_id)
-            report_data = report_data.filter(branch=selected_branch.branch_code)  # ✅ Correct filtering
+            report_data = report_data.filter(branch=selected_branch.branch_code)
             session_date = selected_branch.session_date
         else:
             selected_branch = None
@@ -667,7 +681,112 @@ def transaction_sequence_by_ses_date(request):
             if user_id:
                 user = get_object_or_404(User, id=user_id)
                 company_branches = Branch.objects.filter(company=user.company).values_list('branch_code', flat=True)
-                report_data = report_data.filter(branch__in=company_branches)  # ✅ Filter using branch_code
+                report_data = report_data.filter(branch__in=company_branches)
+
+        if user_id:
+            report_data = report_data.filter(user_id=user_id)
+
+        if code:
+            report_data = report_data.filter(code=code)
+
+        report_data = report_data.annotate(
+            customer_name=Subquery(
+                Customer.objects.filter(
+                    gl_no=OuterRef('gl_no'),
+                    ac_no=OuterRef('ac_no')
+                ).annotate(
+                    full_name=Concat(
+                        'first_name',
+                        Value(' '),
+                        'middle_name',
+                        Value(' '),
+                        'last_name',
+                        output_field=CharField()
+                    )
+                ).values('full_name')[:1]
+            )
+        )
+
+        total_debit = report_data.filter(amount__lt=0).aggregate(total_debit=Sum('amount'))['total_debit'] or 0
+        total_credit = report_data.filter(amount__gte=0).aggregate(total_credit=Sum('amount'))['total_credit'] or 0
+
+    return render(request, 'reports/savings/transaction_sequence_by_ses_date.html', {
+        'form': form,
+        'start_date': start_date,
+        'end_date': end_date,
+        'report_data': report_data,
+        'branches': branches,
+        'users': branch_users,  # ✅ Only users under same company_name
+        'selected_branch': selected_branch,
+        'session_date': session_date,
+        'total_debit': total_debit,
+        'total_credit': total_credit,
+        'current_datetime': current_datetime,
+    })
+
+
+
+
+from django.shortcuts import render, get_object_or_404
+from transactions.models import Memtrans
+from company.models import Branch
+from customers.models import Customer
+from .forms import TransactionForm
+from django.db.models import Subquery, OuterRef, Value, CharField, Sum
+from django.db.models.functions import Concat
+from django.utils import timezone
+from accounts.models import User
+from django.contrib.auth.decorators import login_required
+from django.db.models import Subquery, OuterRef, Value, CharField
+from django.db.models.functions import Concat
+
+@login_required
+def transaction_sequence_by_trx_date(request):
+    current_datetime = timezone.now()
+    report_data = None
+    selected_branch = None
+    start_date = None
+    end_date = None
+    session_date = None
+    total_debit = 0
+    total_credit = 0
+
+    # ✅ Determine branches and users under the same company as current user
+    try:
+        user_branch = Branch.objects.get(user=request.user)
+        user_company = user_branch.company_name
+
+        branches = Branch.objects.filter(company_name=user_company)
+        users = User.objects.filter(branches__company_name=user_company).distinct()
+    except Branch.DoesNotExist:
+        branches = Branch.objects.none()
+        users = User.objects.none()
+
+    form = TransactionForm(request.POST or None)
+
+    if request.method == 'POST' and form.is_valid():
+        start_date = form.cleaned_data['start_date']
+        end_date = form.cleaned_data['end_date']
+        branch_id = form.cleaned_data['branch'].id if form.cleaned_data['branch'] else None
+        user_id = form.cleaned_data['user'].id if form.cleaned_data['user'] else None
+        code = form.cleaned_data['code'] if form.cleaned_data['code'] else None
+
+        # Base Query - Using sys_date instead of trx_date
+        report_data = Memtrans.objects.filter(sys_date__range=(start_date, end_date)).select_related('user', 'branch').order_by('sys_date')
+
+        # Branch Filtering
+        if branch_id:
+            selected_branch = get_object_or_404(Branch, id=branch_id)
+            report_data = report_data.filter(branch=selected_branch)
+            session_date = selected_branch.session_date
+        else:
+            selected_branch = None
+            session_date = None
+
+            if user_id:
+                user = get_object_or_404(User, id=user_id)
+                company_branches = Branch.objects.filter(company=user.company)
+                report_data = report_data.filter(branch__in=company_branches)
 
         # User Filtering
         if user_id:
@@ -700,10 +819,7 @@ def transaction_sequence_by_ses_date(request):
         total_debit = report_data.filter(amount__lt=0).aggregate(total_debit=Sum('amount'))['total_debit'] or 0
         total_credit = report_data.filter(amount__gte=0).aggregate(total_credit=Sum('amount'))['total_credit'] or 0
 
-        print(f"Total Debit: {total_debit}, Total Credit: {total_credit}")
-        print(report_data.query)  # Debugging: Print the generated SQL query
-
-    return render(request, 'reports/savings/transaction_sequence_by_ses_date.html', {
+    return render(request, 'reports/savings/transaction_sequence_by_trx_date.html', {
         'form': form,
         'start_date': start_date,
         'end_date': end_date,
@@ -716,27 +832,13 @@ def transaction_sequence_by_ses_date(request):
         'total_credit': total_credit,
         'current_datetime': current_datetime,
     })
-
-
-
-
-
-from django.shortcuts import render, get_object_or_404
-from transactions.models import Memtrans
-from company.models import Branch
-from customers.models import Customer
-from .forms import TransactionForm
-from django.db.models import Subquery, OuterRef, Value, CharField, Sum
+from django.contrib.auth.decorators import login_required
+from django.db.models import Subquery, OuterRef, Value, CharField
 from django.db.models.functions import Concat
-from django.utils import timezone
-from accounts.models import User
 
+@login_required
 def transaction_sequence_by_trx_date(request):
-    branches = Branch.objects.all()
-    users = User.objects.all()
     current_datetime = timezone.now()
-
-    form = TransactionForm(request.POST or None)
     report_data = None
     selected_branch = None
     start_date = None
@@ -744,6 +846,19 @@ def transaction_sequence_by_trx_date(request):
     session_date = None
     total_debit = 0
     total_credit = 0
+
+    # ✅ Determine branches and users under the same company as current user
+    try:
+        user_branch = Branch.objects.get(user=request.user)
+        user_company = user_branch.company_name
+
+        branches = Branch.objects.filter(company_name=user_company)
+        users = User.objects.filter(branches__company_name=user_company).distinct()
+    except Branch.DoesNotExist:
+        branches = Branch.objects.none()
+        users = User.objects.none()
+
+    form = TransactionForm(request.POST or None)
 
     if request.method == 'POST' and form.is_valid():
         start_date = form.cleaned_data['start_date']
@@ -755,7 +870,7 @@ def transaction_sequence_by_trx_date(request):
         # Base Query - Using sys_date instead of trx_date
         report_data = Memtrans.objects.filter(sys_date__range=(start_date, end_date)).select_related('user', 'branch').order_by('sys_date')
 
-        # Branch Filtering - Updated to use the ForeignKey relationship
+        # Branch Filtering
         if branch_id:
             selected_branch = get_object_or_404(Branch, id=branch_id)
             report_data = report_data.filter(branch=selected_branch)
@@ -817,13 +932,13 @@ def transaction_sequence_by_trx_date(request):
 
 from accounts.models import User
 
+from django.contrib.auth.decorators import login_required
+from django.db.models import Sum, Subquery, OuterRef, Value, CharField
+from django.db.models.functions import Concat
 
+@login_required
 def transaction_journal_listing_by_ses_date(request):
-    branches = Branch.objects.all()
-    users = User.objects.all()
     current_datetime = timezone.now()
-
-    form = TransactionForm(request.POST or None)
     report_data = None
     selected_branch = None
     start_date = None
@@ -832,6 +947,19 @@ def transaction_journal_listing_by_ses_date(request):
     total_debit = 0
     total_credit = 0
 
+    # ✅ Filter branches and users based on the logged-in user's company
+    try:
+        user_branch = Branch.objects.get(user=request.user)
+        user_company = user_branch.company_name
+
+        branches = Branch.objects.filter(company_name=user_company)
+        users = User.objects.filter(branches__company_name=user_company).distinct()
+    except Branch.DoesNotExist:
+        branches = Branch.objects.none()
+        users = User.objects.none()
+
+    form = TransactionForm(request.POST or None)
+
     if request.method == 'POST' and form.is_valid():
         start_date = form.cleaned_data['start_date']
         end_date = form.cleaned_data['end_date']
@@ -839,28 +967,28 @@ def transaction_journal_listing_by_ses_date(request):
         user_id = form.cleaned_data['user'].id if form.cleaned_data['user'] else None
         code = form.cleaned_data['code'] if form.cleaned_data['code'] else None
 
-        # Initialize base queryset
+        # Base queryset
         report_data = Memtrans.objects.all()
 
-        # Apply date filtering
+        # Date filtering
         if start_date and end_date:
             report_data = report_data.filter(ses_date__range=(start_date, end_date))
 
-        # Apply branch filtering
+        # Branch filtering
         if branch_id:
             selected_branch = get_object_or_404(Branch, id=branch_id)
             report_data = report_data.filter(branch=selected_branch)
             session_date = selected_branch.session_date
 
-        # Apply user filtering
+        # User filtering
         if user_id:
             report_data = report_data.filter(user_id=user_id)
 
-        # Apply code filtering
+        # Code filtering
         if code:
             report_data = report_data.filter(code=code)
 
-        # Optimize queryset
+        # Optimize and order
         report_data = report_data.select_related('user', 'branch').order_by('ses_date')
 
         # Annotate customer name
@@ -883,10 +1011,8 @@ def transaction_journal_listing_by_ses_date(request):
         )
 
         # Calculate totals
-        total_debit = report_data.filter(type='D').aggregate(
-            total=Sum('amount'))['total'] or 0
-        total_credit = report_data.filter(type='C').aggregate(
-            total=Sum('amount'))['total'] or 0
+        total_debit = report_data.filter(type='D').aggregate(total=Sum('amount'))['total'] or 0
+        total_credit = report_data.filter(type='C').aggregate(total=Sum('amount'))['total'] or 0
 
     return render(request, 'reports/savings/transaction_journal_listing_by_ses_date.html', {
         'form': form,
@@ -902,19 +1028,27 @@ def transaction_journal_listing_by_ses_date(request):
         'current_datetime': current_datetime,
     })
 
+
 from django.shortcuts import render, get_object_or_404
-from django.db.models import Sum, OuterRef, Subquery, CharField, Value, Q
-from django.db.models.functions import Concat
 from django.utils import timezone
-from transactions.models import Memtrans
-from customers.models import Customer 
-from company.models import Branch
-from accounts.models import User
+from django.db.models import Sum, Q, Value, OuterRef, Subquery, CharField
+from django.db.models.functions import Concat
 from .forms import TransactionForm
 
+from django.contrib.auth.models import User
+
+
 def transaction_journal_listing_by_trx_date(request):
-    branches = Branch.objects.select_related('company').all()
-    users = User.objects.all().only('id', 'username', 'first_name')
+    user_company_name = request.user.branches.first().company_name if request.user.branches.exists() else None
+
+    # Filter branches under the same company_name
+    branches = Branch.objects.filter(company_name=user_company_name)
+
+    # Filter users who have branches with the same company_name
+    users = User.objects.filter(
+        branches__company_name=user_company_name
+    ).distinct().only('id', 'username', 'first_name')
+
     current_datetime = timezone.now()
 
     form = TransactionForm(request.POST or None)
@@ -939,39 +1073,34 @@ def transaction_journal_listing_by_trx_date(request):
         user_id = form.cleaned_data['user'].id if form.cleaned_data['user'] else None
         code = form.cleaned_data['code'] if form.cleaned_data['code'] else None
 
-        # Modified queryset - removed 'particulars' from only() clause
         report_data = Memtrans.objects.select_related(
-            'user', 'branch', 'branch__company'
+            'user', 'branch'
         ).only(
-            'app_date', 'trx_no', 'code', 'gl_no', 'ac_no', 
-            'amount', 'user__username',
-            'branch__branch_name', 'branch__company__company_name'
+            'app_date', 'trx_no', 'code', 'gl_no', 'ac_no',
+            'amount', 'user__username', 'branch__branch_name'
         )
 
-        # Apply filters
         if start_date and end_date:
             report_data = report_data.filter(app_date__range=(start_date, end_date))
-        
+
         if branch_id:
             selected_branch = get_object_or_404(Branch, id=branch_id)
             report_data = report_data.filter(branch=selected_branch)
             context['selected_branch'] = selected_branch
             context['session_date'] = selected_branch.session_date
-        
+
         if user_id:
             report_data = report_data.filter(user_id=user_id)
-        
+
         if code:
             report_data = report_data.filter(code=code)
 
-        # Rest of your view remains the same...
         report_data = report_data.annotate(
             customer_name=Subquery(
                 Customer.objects.filter(
                     gl_no=OuterRef('gl_no'),
                     ac_no=OuterRef('ac_no')
-                ).only('first_name', 'middle_name', 'last_name')
-                .annotate(
+                ).annotate(
                     full_name=Concat(
                         'first_name', Value(' '),
                         'middle_name', Value(' '),
@@ -1000,19 +1129,16 @@ def transaction_journal_listing_by_trx_date(request):
 
 
 
-from django.shortcuts import render, get_object_or_404
-from django.db.models import Sum, OuterRef, Subquery, CharField, Value, Q
-from django.db.models.functions import Concat
-from django.utils import timezone
-from transactions.models import Memtrans
-from customers.models import Customer
-from company.models import Branch
-from accounts.models import User
-from .forms import TransactionForm
+
+
 
 def transaction_day_sheet_by_session_date(request):
-    branches = Branch.objects.select_related('company').all()
-    users = User.objects.all()
+    user_company_name = request.user.branches.first().company_name if request.user.branches.exists() else None
+
+    # Filter branches and users by company_name
+    branches = Branch.objects.filter(company_name=user_company_name)
+    users = User.objects.filter(branches__company_name=user_company_name).distinct()
+
     current_datetime = timezone.now()
 
     form = TransactionForm(request.POST or None)
@@ -1031,13 +1157,12 @@ def transaction_day_sheet_by_session_date(request):
         user_id = form.cleaned_data['user'].id if form.cleaned_data['user'] else None
         code = form.cleaned_data['code'] if form.cleaned_data['code'] else None
 
-        # Get transactions filtered by session date range
         report_data = Memtrans.objects.filter(
             ses_date__range=(start_date, end_date)
         ).select_related('user', 'branch').order_by('ses_date', 'app_date')
 
         if branch_id:
-            selected_branch = get_object_or_404(Branch, id=branch_id)
+            selected_branch = get_object_or_404(Branch, id=branch_id, company_name=user_company_name)
             report_data = report_data.filter(branch=selected_branch)
             session_date = selected_branch.session_date
 
@@ -1065,7 +1190,6 @@ def transaction_day_sheet_by_session_date(request):
             )
         )
 
-        # Calculate totals
         totals = report_data.aggregate(
             total_debit=Sum('amount', filter=Q(type='D')),
             total_credit=Sum('amount', filter=Q(type='C'))
@@ -1087,19 +1211,17 @@ def transaction_day_sheet_by_session_date(request):
         'current_datetime': current_datetime,
     })
 
-from django.shortcuts import render, get_object_or_404
-from django.db.models import Sum, OuterRef, Subquery, CharField, Value, Q
-from django.db.models.functions import Concat
-from django.utils import timezone
-from transactions.models import Memtrans
-from customers.models import Customer
-from company.models import Branch
-from accounts.models import User
-from .forms import TransactionForm
+
+
+from django.contrib.auth import get_user_model
+User = get_user_model()
 
 def transaction_day_sheet_by_trx_date(request):
-    branches = Branch.objects.select_related('company').all()
-    users = User.objects.all()
+    user_company_name = request.user.branches.first().company_name if request.user.branches.exists() else None
+
+    branches = Branch.objects.filter(company_name=user_company_name)
+    users = User.objects.filter(branches__company_name=user_company_name).distinct()
+
     current_datetime = timezone.now()
 
     form = TransactionForm(request.POST or None)
@@ -1118,13 +1240,12 @@ def transaction_day_sheet_by_trx_date(request):
         user_id = form.cleaned_data['user'].id if form.cleaned_data['user'] else None
         code = form.cleaned_data['code'] if form.cleaned_data['code'] else None
 
-        # Get transactions filtered by transaction date range
         report_data = Memtrans.objects.filter(
             app_date__range=(start_date, end_date)
         ).select_related('user', 'branch').order_by('app_date', 'ses_date')
 
         if branch_id:
-            selected_branch = get_object_or_404(Branch, id=branch_id)
+            selected_branch = get_object_or_404(Branch, id=branch_id, company_name=user_company_name)
             report_data = report_data.filter(branch=selected_branch)
             session_date = selected_branch.session_date
 
@@ -1134,7 +1255,6 @@ def transaction_day_sheet_by_trx_date(request):
         if code:
             report_data = report_data.filter(code=code)
 
-        # Annotate customer name
         report_data = report_data.annotate(
             customer_name=Subquery(
                 Customer.objects.filter(
@@ -1152,7 +1272,6 @@ def transaction_day_sheet_by_trx_date(request):
             )
         )
 
-        # Calculate totals
         totals = report_data.aggregate(
             total_debit=Sum('amount', filter=Q(type='D')),
             total_credit=Sum('amount', filter=Q(type='C'))
@@ -1174,96 +1293,138 @@ def transaction_day_sheet_by_trx_date(request):
         'current_datetime': current_datetime,
     })
 
+
 def general_trx_register_by_session_date(request):
-    # Initial data setup with optimized queries
-    branches = Branch.objects.select_related('company').all()
-    users = User.objects.all()
-    current_datetime = timezone.now()
-
-    form = TransactionForm(request.POST or None)
-    form.fields['branch'].queryset = branches  # Set the branch queryset
-
-    context = {
-        'form': form,
-        'branches': branches,
-        'users': users,
-        'current_datetime': current_datetime,
-        'report_data': None,
-        'selected_branch': None,
-        'start_date': None,
-        'end_date': None,
-        'session_date': None,
-        'total_debit': 0,
-        'total_credit': 0,
-    }
-
-    if request.method == 'POST' and form.is_valid():
-        start_date = form.cleaned_data['start_date']
-        end_date = form.cleaned_data['end_date']
-        branch_id = form.cleaned_data['branch'].id if form.cleaned_data['branch'] else None
-        user_id = form.cleaned_data['user'].id if form.cleaned_data['user'] else None
-        code = form.cleaned_data['code'] if form.cleaned_data['code'] else None
-
-        # Corrected queryset construction with proper method chaining
-        report_data = Memtrans.objects.filter(
-            ses_date__range=(start_date, end_date)
-        ).select_related(
-            'user', 'branch', 'branch__company'
-        ).order_by('ses_date')
-
-        if branch_id:
-            selected_branch = get_object_or_404(Branch, id=branch_id)
-            report_data = report_data.filter(branch=selected_branch)
-            context['selected_branch'] = selected_branch
-            context['session_date'] = selected_branch.session_date
-        
-        if user_id:
-            report_data = report_data.filter(user_id=user_id)
-        
-        if code:
-            report_data = report_data.filter(code=code)
-
-        report_data = report_data.annotate(
-            customer_name=Subquery(
-                Customer.objects.filter(
-                    gl_no=OuterRef('gl_no'),
-                    ac_no=OuterRef('ac_no')
-                ).annotate(
-                    full_name=Concat(
-                        'first_name', Value(' '),
-                        'middle_name', Value(' '),
-                        'last_name',
-                        output_field=CharField()
-                    )
-                ).values('full_name')[:1],
-                output_field=CharField()
-            )
-        )
-
-        totals = report_data.aggregate(
-            total_debit=Sum('amount', filter=Q(type='D')),
-            total_credit=Sum('amount', filter=Q(type='C'))
-        )
-
-        context.update({
-            'report_data': report_data,
-            'start_date': start_date,
-            'end_date': end_date,
-            'total_debit': totals['total_debit'] or 0,
-            'total_credit': totals['total_credit'] or 0,
-        })
-
-    return render(request, 'reports/savings/general_trx_register_by_session_date.html', context)
-
-def general_trx_register_by_trx_date(request):
-    # Fetch all branch and user records
-    branches = Branch.objects.select_related('company').all()
-    users = User.objects.all()
     current_datetime = timezone.now()
     
+    # Get the logged-in user's branch company
+    logged_in_user = request.user
+    user_branches = logged_in_user.branches.all()
+    
+    # If user has branches, get the company name (assuming all user's branches belong to same company)
+    company_name = user_branches.first().company_name if user_branches.exists() else None
+    
+    # Filter branches and users based on company_name
+    if company_name:
+        branches = Branch.objects.filter(company_name=company_name)
+        users = User.objects.filter(branches__company_name=company_name).distinct()
+    else:
+        branches = Branch.objects.none()
+        users = User.objects.none()
+
+    if request.method == 'POST':
+        # First get the selected branch id from POST data
+        branch_id = request.POST.get('branch')
+        selected_branch = Branch.objects.filter(id=branch_id).first() if branch_id else None
+
+        # Now instantiate form with POST, and override user queryset
+        form = TransactionForm(request.POST)
+        form.fields['branch'].queryset = branches
+        form.fields['user'].queryset = users
+
+        if form.is_valid():
+            # your existing filtering and context update here
+            start_date = form.cleaned_data['start_date']
+            end_date = form.cleaned_data['end_date']
+            branch = form.cleaned_data['branch']
+            user_id = form.cleaned_data['user'].id if form.cleaned_data['user'] else None
+            code = form.cleaned_data['code'] if form.cleaned_data['code'] else None
+
+            report_data = Memtrans.objects.filter(
+                ses_date__range=(start_date, end_date)
+                ).select_related('user', 'branch').order_by('ses_date')
+
+            if branch:
+                selected_branch = get_object_or_404(Branch, id=branch.id)
+                report_data = report_data.filter(branch=selected_branch)
+
+            if user_id:
+                report_data = report_data.filter(user_id=user_id)
+
+            if code:
+                report_data = report_data.filter(code=code)
+
+            # annotate customer_name etc...
+            report_data = report_data.annotate(
+                customer_name=Subquery(
+                    Customer.objects.filter(
+                        gl_no=OuterRef('gl_no'),
+                        ac_no=OuterRef('ac_no')
+                    ).annotate(
+                        full_name=Concat(
+                            'first_name', Value(' '),
+                            'middle_name', Value(' '),
+                            'last_name',
+                            output_field=CharField()
+                        )
+                    ).values('full_name')[:1],
+                    output_field=CharField()
+                )
+            )
+
+            totals = report_data.aggregate(
+                total_debit=Sum('amount', filter=Q(type='D')),
+                total_credit=Sum('amount', filter=Q(type='C'))
+            )
+
+            context = {
+                'form': form,
+                'branches': branches,
+                'users': users,
+                'current_datetime': current_datetime,
+                'report_data': report_data,
+                'selected_branch': selected_branch,
+                'start_date': start_date,
+                'end_date': end_date,
+                'session_date': selected_branch.session_date if selected_branch else None,
+                'total_debit': totals['total_debit'] or 0,
+                'total_credit': totals['total_credit'] or 0,
+            }
+            return render(request, 'reports/savings/general_trx_register_by_session_date.html', context)
+    else:
+        # GET request: show filtered users and branches
+        form = TransactionForm()
+        form.fields['branch'].queryset = branches
+        form.fields['user'].queryset = users
+        context = {
+            'form': form,
+            'branches': branches,
+            'users': users,
+            'current_datetime': current_datetime,
+            'report_data': None,
+            'selected_branch': None,
+            'start_date': None,
+            'end_date': None,
+            'session_date': None,
+            'total_debit': 0,
+            'total_credit': 0,
+        }
+        return render(request, 'reports/savings/general_trx_register_by_session_date.html', context)
+
+def general_trx_register_by_trx_date(request):
+    current_datetime = timezone.now()
+    
+    # Get the logged-in user
+    logged_in_user = request.user
+    
+    # Get all branches associated with the logged-in user
+    user_branches = logged_in_user.branches.all()
+    
+    # Get the company_name from the first branch (assuming all user's branches belong to same company)
+    company_name = user_branches.first().company_name if user_branches.exists() else None
+    
+    # Filter branches and users based on company_name
+    if company_name:
+        branches = Branch.objects.filter(company_name=company_name)
+        users = User.objects.filter(branches__company_name=company_name).distinct()
+    else:
+        branches = Branch.objects.none()
+        users = User.objects.none()
+
     # Initialize the form
     form = TransactionForm(request.POST or None)
-    form.fields['branch'].queryset = branches  # Set the branch queryset
+    form.fields['branch'].queryset = branches
+    form.fields['user'].queryset = users
 
     context = {
         'form': form,
@@ -1290,7 +1451,7 @@ def general_trx_register_by_trx_date(request):
         report_data = Memtrans.objects.filter(
             app_date__range=(start_date, end_date)
         ).select_related(
-            'user', 'branch', 'branch__company'
+            'user', 'branch'  # Removed branch__company as Company model no longer exists
         ).order_by('app_date')
 
         if branch_id:
@@ -1339,8 +1500,6 @@ def general_trx_register_by_trx_date(request):
 
     return render(request, 'reports/savings/general_trx_register_by_trx_date.html', context)
 
-
-
 from django.db.models import Sum, F, ExpressionWrapper, FloatField
 from django.shortcuts import render, get_object_or_404
 from django.utils import timezone
@@ -1363,9 +1522,18 @@ from django.core.paginator import Paginator
 from django.contrib import messages
 
 def cashier_teller_cash_status_by_session_date(request):
-    # Initialize base data
-    branches = Branch.objects.all()
-    users = User.objects.all()
+    # Initialize base data with company filtering
+    logged_in_user = request.user
+    user_branches = logged_in_user.branches.all()
+    company_name = user_branches.first().company_name if user_branches.exists() else None
+    
+    if company_name:
+        branches = Branch.objects.filter(company_name=company_name)
+        users = User.objects.filter(branches__company_name=company_name).distinct()
+    else:
+        branches = Branch.objects.none()
+        users = User.objects.none()
+    
     accounts = Account.objects.filter(gl_no__isnull=False).values('gl_no').distinct().order_by('gl_no')
     current_datetime = timezone.now()
     
@@ -1414,11 +1582,19 @@ def cashier_teller_cash_status_by_session_date(request):
             # Apply other filters
             branch_id = request.POST.get('branch')
             if branch_id:
+                # Ensure the selected branch belongs to the same company
+                if company_name:
+                    selected_branch = get_object_or_404(Branch, id=branch_id, company_name=company_name)
+                else:
+                    selected_branch = get_object_or_404(Branch, id=branch_id)
                 report_data = report_data.filter(branch_id=branch_id)
-                context['selected_branch_obj'] = Branch.objects.get(id=branch_id)
+                context['selected_branch_obj'] = selected_branch
             
             user_id = request.POST.get('user')
             if user_id:
+                # Ensure the selected user belongs to the same company
+                if company_name:
+                    get_object_or_404(User, id=user_id, branches__company_name=company_name)
                 report_data = report_data.filter(user_id=user_id)
             
             code = request.POST.get('code')
@@ -1505,18 +1681,26 @@ def cashier_teller_cash_status_by_session_date(request):
     
     return render(request, 'reports/savings/cashier_teller_cash_status_by_session_date.html', context)
 
-
-
 def cashier_teller_cash_status_by_trx_date(request):
-    # Initialize variables with Branch instead of Company
-    branches = Branch.objects.all()
-    users = User.objects.all()
+    # Get logged-in user's company information
+    logged_in_user = request.user
+    user_branches = logged_in_user.branches.all()
+    company_name = user_branches.first().company_name if user_branches.exists() else None
+
+    # Filter branches and users based on company_name
+    if company_name:
+        branches = Branch.objects.filter(company_name=company_name)
+        users = User.objects.filter(branches__company_name=company_name).distinct()
+    else:
+        branches = Branch.objects.none()
+        users = User.objects.none()
+
     accounts = Account.objects.filter(gl_no__isnull=False).values('gl_no').distinct().order_by('gl_no')
     current_datetime = timezone.now()
     
     # Initialize context with default values
     context = {
-        'branches': branches,  # Changed from companies to branches
+        'branches': branches,
         'users': users,
         'accounts': accounts,
         'account_gl_numbers': [acc['gl_no'] for acc in accounts],
@@ -1560,14 +1744,21 @@ def cashier_teller_cash_status_by_trx_date(request):
                 app_date__range=(start_date, end_date)
             ).select_related('user', 'branch').order_by('app_date', 'id')
 
-            # Apply filters - using Branch instead of Company
+            # Apply filters with company validation
             if branch_id:
-                selected_branch = get_object_or_404(Branch, id=branch_id)
+                # Ensure the selected branch belongs to the same company
+                if company_name:
+                    selected_branch = get_object_or_404(Branch, id=branch_id, company_name=company_name)
+                else:
+                    selected_branch = get_object_or_404(Branch, id=branch_id)
                 report_data = report_data.filter(branch=selected_branch)
                 context['selected_branch'] = selected_branch
-                context['selected_branch_obj'] = selected_branch  # For template compatibility
+                context['selected_branch_obj'] = selected_branch
 
             if user_id:
+                # Ensure the selected user belongs to the same company
+                if company_name:
+                    get_object_or_404(User, id=user_id, branches__company_name=company_name)
                 report_data = report_data.filter(user_id=user_id)
 
             if code:
@@ -1652,8 +1843,6 @@ def cashier_teller_cash_status_by_trx_date(request):
 
 
 
-
-
 # views.py
 # views.py
 
@@ -1690,70 +1879,93 @@ from datetime import datetime
 from customers.models import Customer
 
 def account_statement(request):
-    branches = Branch.objects.all()
-    gl_data = Account.objects.all().values('gl_no', 'gl_name')
+    # Get logged-in user and their associated branches
+    logged_in_user = request.user
+    user_branches = logged_in_user.branches.all()
+    
+    # Get distinct company names from user's branches
+    company_names = user_branches.values_list('company_name', flat=True).distinct()
+    
+    # Filter branches and accounts based on user's company
+    branches = Branch.objects.filter(company_name__in=company_names)
+    gl_data = Account.objects.filter(branch__in=user_branches).values('gl_no', 'gl_name').distinct()
+    
     gl_nos = [(item['gl_no'], item['gl_name']) for item in gl_data]
 
+    # Get form parameters
     gl_no = request.POST.get('gl_no')
     ac_no = request.POST.get('ac_no')
     start_date = request.POST.get('start_date')
     end_date = request.POST.get('end_date')
     branch_id = request.POST.get('branch')
 
-    # Convert start_date and end_date to date objects if provided
-    if start_date:
-        start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
-    if end_date:
-        end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
-
+    # Initialize variables
     transactions = []
     statement_data = []
-    balance = 0
-    opening_balance = 0
-    total_debit = 0
-    total_credit = 0
-    reporting_balance = 0
+    balance = opening_balance = total_debit = total_credit = reporting_balance = 0
     selected_branch = None
     customer = None
 
+    # Convert dates if provided
+    if start_date:
+        try:
+            start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+        except ValueError:
+            messages.error(request, "Invalid start date format")
+            start_date = None
+            
+    if end_date:
+        try:
+            end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+        except ValueError:
+            messages.error(request, "Invalid end date format")
+            end_date = None
+
+    # Process statement if all required fields are provided
     if gl_no and ac_no and start_date and end_date:
+        # Base transaction query with company filter
         transactions = Memtrans.objects.filter(
             gl_no=gl_no,
             ac_no=ac_no,
-            app_date__range=[start_date, end_date]
+            app_date__range=[start_date, end_date],
+            branch__in=user_branches
         )
 
+        # Apply branch filter if provided
         if branch_id:
-            selected_branch = get_object_or_404(Branch, id=branch_id)
+            # Ensure the selected branch belongs to user's branches
+            selected_branch = get_object_or_404(
+                Branch, 
+                id=branch_id,
+                company_name__in=company_names
+            )
             transactions = transactions.filter(branch=selected_branch)
         else:
-            selected_branch = branches.first()  # Default to the first branch if no branch is selected
+            selected_branch = user_branches.first()  # Default to user's first branch
 
-        # Get customer details
-        customer = get_object_or_404(Customer, gl_no=gl_no, ac_no=ac_no)
-
-        # Calculate the opening balance (sum of all transactions before the start date)
-        opening_balance_query = Memtrans.objects.filter(
+        # Get customer with validation
+        customer = get_object_or_404(
+            Customer,
             gl_no=gl_no,
             ac_no=ac_no,
-            app_date__lt=start_date
+            branch__in=user_branches
         )
 
-        if branch_id:
-            opening_balance_query = opening_balance_query.filter(branch=selected_branch)
+        # Calculate opening balance (transactions before start date)
+        opening_balance = Memtrans.objects.filter(
+            gl_no=gl_no,
+            ac_no=ac_no,
+            app_date__lt=start_date,
+            branch__in=(selected_branch.branches.all() if selected_branch else user_branches)
+        ).aggregate(total=Sum('amount'))['total'] or 0
 
-        opening_balance = opening_balance_query.aggregate(total=Sum('amount'))['total'] or 0
-
-        transactions = transactions.order_by('app_date')
-
-        # Start the running balance with the opening balance
+        # Process transactions
         balance = opening_balance
-
         previous_transaction_date = None
 
-        # Add the opening balance as the first entry in the report
+        # Add opening balance entry
         statement_data.append({
-            'branch': selected_branch.branch_name if selected_branch else 'All Branches',
+            'branch': selected_branch.branch_name if selected_branch else 'All Your Branches',
             'trx_date': start_date,
             'trx_no': 'Opening Balance',
             'description': 'Opening Balance',
@@ -1763,27 +1975,29 @@ def account_statement(request):
             'days_without_activity': '',
         })
 
-        for transaction in transactions:
-            debit = transaction.amount if transaction.amount < 0 else 0
-            credit = transaction.amount if transaction.amount >= 0 else 0
-            balance += credit - abs(debit)
+        for transaction in transactions.order_by('app_date'):
+            debit = abs(transaction.amount) if transaction.amount < 0 else 0
+            credit = transaction.amount if transaction.amount > 0 else 0
+            balance += (credit - debit)
 
-            total_debit += abs(debit)
+            total_debit += debit
             total_credit += credit
 
-            days_without_activity = 0
-            if previous_transaction_date:
-                days_without_activity = (transaction.app_date - previous_transaction_date).days
+            days_without_activity = (
+                (transaction.app_date - previous_transaction_date).days 
+                if previous_transaction_date 
+                else 0
+            )
 
             statement_data.append({
-                'branch': transaction.branch.branch_name if transaction.branch else '',
+                'branch': transaction.branch.branch_name,
                 'ses_date': transaction.ses_date,
                 'trx_date': transaction.app_date,
                 'trx_no': transaction.trx_no,
                 'description': transaction.description,
-                'debit': debit,
-                'credit': credit,
-                'balance': balance,
+                'debit': f"-{debit:,}" if debit else '',
+                'credit': f"{credit:,}" if credit else '',
+                'balance': f"{balance:,}",
                 'days_without_activity': days_without_activity
             })
 
@@ -1797,25 +2011,23 @@ def account_statement(request):
         'statement_data': statement_data,
         'gl_no': gl_no,
         'ac_no': ac_no,
-        'start_date': start_date,
-        'end_date': end_date,
+        'start_date': start_date.strftime('%Y-%m-%d') if start_date else '',
+        'end_date': end_date.strftime('%Y-%m-%d') if end_date else '',
         'branch': selected_branch,
-        'company': selected_branch.company if selected_branch else None,  # Include company through branch
+        'company': selected_branch.company_name if selected_branch else None,
         'current_datetime': timezone.now(),
-        'opening_balance': opening_balance,
-        'closing_balance': reporting_balance,
-        'total_debit': total_debit,
-        'total_credit': total_credit,
-        'reporting_balance': reporting_balance,
-        'full_name': f"{customer.first_name} {customer.middle_name} {customer.last_name}" if customer else '',
+        'opening_balance': f"{opening_balance:,}",
+        'closing_balance': f"{reporting_balance:,}",
+        'total_debit': f"{total_debit:,}",
+        'total_credit': f"{total_credit:,}",
+        'reporting_balance': f"{reporting_balance:,}",
+        'full_name': customer.get_full_name() if customer else '',
         'customer': customer,
     }
 
     return render(request, 'reports/savings_report/savings_account_statement.html', context)
 
-
-
-
+    
 from django.shortcuts import render, get_object_or_404
 from django.db.models import Sum
 from django.utils import timezone
@@ -1841,19 +2053,21 @@ from django.utils import timezone
 
 import pytz  # Optional: for timezone-aware datetime
 
-def all_customers_account_balances(request):
-    # Initialize variables
-    customer_data = {}
-    branches = Branch.objects.all()
-    regions = Region.objects.all()
-    account_officers = Account_Officer.objects.all()
-    gl_accounts = Account.objects.filter(gl_no__in=Customer.objects.values('gl_no').distinct())
+from django.shortcuts import render
+from django.db.models import Sum
+# from .models import Customer, Memtrans, Branch, Region, Account_Officer, Account
+from django.utils import timezone
+import datetime
 
-    # Default reporting date is the current date
+
+
+
+
+def all_customers_account_balances(request):
+    customer_data = {}
     default_reporting_date = timezone.now().date()
     current_datetime = timezone.now()
 
-    # Initialize form selections
     selected_branch = None
     selected_gl_no = None
     selected_region = None
@@ -1863,8 +2077,27 @@ def all_customers_account_balances(request):
     exclude_ac_no_one = False
     grand_total = 0
 
+    user_branch = None
+    if request.user.is_authenticated:
+        try:
+            user_branch = request.user.branch  # Assumes User has ForeignKey to Branch
+        except AttributeError:
+            pass
+
+    branches = []
+    regions = []
+    account_officers = []
+    gl_accounts = []
+
+    customers = Customer.objects.none()
+    if user_branch:
+        branches = [user_branch]  # Only show current user's branch
+        regions = Region.objects.filter(branch=user_branch)
+        account_officers = Account_Officer.objects.filter(branch=user_branch)
+        gl_accounts = Account.objects.filter(branch=user_branch).distinct('gl_no')
+        customers = Customer.objects.filter(branch=user_branch)
+
     if request.method == 'POST':
-        # Get filters from the form
         reporting_date_str = request.POST.get('reporting_date')
         branch_id = request.POST.get('branch')
         gl_no = request.POST.get('gl_no')
@@ -1874,72 +2107,86 @@ def all_customers_account_balances(request):
         exclude_ac_no_one = request.POST.get('exclude_ac_no_one') == 'on'
 
         if reporting_date_str:
-            reporting_date = datetime.strptime(reporting_date_str, '%Y-%m-%d').date()
+            reporting_date = datetime.datetime.strptime(reporting_date_str, '%Y-%m-%d').date()
         else:
             reporting_date = default_reporting_date
 
-        # Filter customers based on form input
-        customers = Customer.objects.all()
-        if branch_id:
-            selected_branch = Branch.objects.get(id=branch_id)
-            customers = customers.filter(branch=selected_branch)
-        
-        if gl_no:
-            customers = customers.filter(gl_no=gl_no)
-            selected_gl_no = gl_no
-        
-        if region_id:
-            selected_region = Region.objects.get(id=region_id)
-            customers = customers.filter(region=selected_region)
-        
-        if officer_id:
-            selected_officer = Account_Officer.objects.get(id=officer_id)
-            customers = customers.filter(credit_officer=selected_officer)
+        filtered_customers = customers
 
-        # Create a dictionary to map GL numbers and account numbers to customer details
+        if branch_id:
+            try:
+                selected_branch = Branch.objects.get(id=branch_id)
+                if selected_branch != user_branch:
+                    raise PermissionDenied("You do not have access to this branch.")
+                filtered_customers = filtered_customers.filter(branch=selected_branch)
+            except Branch.DoesNotExist:
+                selected_branch = None
+
+        if gl_no:
+            filtered_customers = filtered_customers.filter(gl_no=gl_no)
+            selected_gl_no = gl_no
+
+        if region_id:
+            try:
+                selected_region = Region.objects.get(id=region_id, branch=user_branch)
+                filtered_customers = filtered_customers.filter(region=selected_region)
+            except Region.DoesNotExist:
+                selected_region = None
+
+        if officer_id:
+            try:
+                selected_officer = Account_Officer.objects.get(id=officer_id, branch=user_branch)
+                filtered_customers = filtered_customers.filter(credit_officer=selected_officer)
+            except Account_Officer.DoesNotExist:
+                selected_officer = None
+
         customer_dict = {}
-        for customer in customers:
+        for customer in filtered_customers:
             if exclude_ac_no_one and customer.ac_no == '1':
                 continue
             customer_dict[(customer.gl_no, customer.ac_no)] = customer
 
-        # Filter Memtrans records based on the reporting date and branch
-        transactions = Memtrans.objects.filter(app_date__lte=reporting_date)
-        if branch_id:
+        transactions = Memtrans.objects.filter(
+            app_date__lte=reporting_date,
+            customer__branch=user_branch
+        )
+        if selected_branch:
             transactions = transactions.filter(branch=selected_branch)
 
-        gl_names = Account.objects.values_list('gl_no', 'gl_name')
-        gl_name_dict = dict(gl_names)
+        gl_map = {a.gl_no: a.gl_name for a in gl_accounts}
 
-        grand_total = 0
         for (gl_no, ac_no), customer in customer_dict.items():
-            # Filter transactions for this specific customer
             customer_transactions = transactions.filter(gl_no=gl_no, ac_no=ac_no)
             account_balance = customer_transactions.aggregate(total=Sum('amount'))['total'] or 0
 
             if include_non_zero and account_balance == 0:
                 continue
 
+            gl_name = gl_map.get(gl_no, 'Unknown Account')
+
             if gl_no not in customer_data:
                 customer_data[gl_no] = {
-                    'gl_name': gl_name_dict.get(gl_no, 'Unknown'),
+                    'gl_name': gl_name,
                     'customers': [],
                     'subtotal': 0,
                     'count': 0
                 }
 
             customer_data[gl_no]['customers'].append({
-                'gl_no': gl_no,
                 'first_name': customer.first_name,
                 'middle_name': customer.middle_name,
                 'last_name': customer.last_name,
                 'address': customer.address,
                 'account_balance': account_balance,
+                'gl_name': gl_name,
             })
 
             customer_data[gl_no]['subtotal'] += account_balance
             customer_data[gl_no]['count'] += 1
             grand_total += account_balance
+
+    company = user_branch.company_name if user_branch else "No Company Assigned"
+    username = request.user.username if request.user.is_authenticated else None
 
     context = {
         'branches': branches,
@@ -1956,22 +2203,30 @@ def all_customers_account_balances(request):
         'exclude_ac_no_one': exclude_ac_no_one,
         'grand_total': grand_total,
         'current_datetime': current_datetime,
-        'company': selected_branch.company if selected_branch else None,
+        'company': company,
+        'username': username,
+        'user': request.user,
     }
 
     return render(request, 'reports/savings_report/savings_account_balance_report.html', context)
 
-
-
-
 def savings_transaction_report(request):
-    # Initialize filter options (available even if exception occurs)
+    user = request.user
+
+    # Get the user's branch/company_name
+    user_branch = user.branches.first()
+    if not user_branch:
+        return render(request, 'error.html', {'message': 'User has no branch assigned.'})
+    user_company_name = user_branch.company_name
+
     try:
-        branches = Branch.objects.all().order_by('branch_name')
-        regions = Region.objects.all()
-        account_officers = Account_Officer.objects.all()
+        # Initialize filter options - filtered by company_name
+        branches = Branch.objects.filter(company_name=user_company_name).order_by('branch_name')
+        regions = Region.objects.filter(branch__company_name=user_company_name)
+        account_officers = Account_Officer.objects.filter(region__branch__company_name=user_company_name)
         gl_accounts = Account.objects.filter(
-            gl_no__in=Customer.objects.values('gl_no').distinct()
+            gl_no__in=Customer.objects.filter(branch__company_name=user_company_name).values('gl_no').distinct(),
+            branch__company_name=user_company_name
         )
         current_datetime = timezone.now()
         
@@ -2007,13 +2262,13 @@ def savings_transaction_report(request):
             form_data['include_non_zero'] = request.POST.get('include_non_zero') == 'on'
             form_data['exclude_ac_no_one'] = request.POST.get('exclude_ac_no_one') == 'on'
 
-            # Apply filters
-            customers = Customer.objects.all()
+            # Apply filters - start with company_name base filter
+            customers = Customer.objects.filter(branch__company_name=user_company_name)
             
             # Branch filter
             if branch_id := request.POST.get('branch'):
                 try:
-                    branch = Branch.objects.get(id=branch_id)
+                    branch = Branch.objects.get(id=branch_id, company_name=user_company_name)
                     customers = customers.filter(branch=branch.branch_code)
                     form_data['selected_branch'] = branch
                 except Branch.DoesNotExist:
@@ -2027,8 +2282,8 @@ def savings_transaction_report(request):
             # Region filter
             if region_id := request.POST.get('region'):
                 try:
-                    region = Region.objects.get(id=region_id)
-                    branch_codes = Branch.objects.filter(region=region).values_list('branch_code', flat=True)
+                    region = Region.objects.get(id=region_id, branch__company_name=user_company_name)
+                    branch_codes = Branch.objects.filter(region=region, company_name=user_company_name).values_list('branch_code', flat=True)
                     customers = customers.filter(branch__in=branch_codes)
                     form_data['selected_region'] = region
                 except Region.DoesNotExist:
@@ -2037,15 +2292,15 @@ def savings_transaction_report(request):
             # Account Officer filter
             if officer_id := request.POST.get('credit_officer'):
                 try:
-                    officer = Account_Officer.objects.get(id=officer_id)
-                    branch_codes = Branch.objects.filter(account_officer=officer).values_list('branch_code', flat=True)
+                    officer = Account_Officer.objects.get(id=officer_id, region__branch__company_name=user_company_name)
+                    branch_codes = Branch.objects.filter(account_officer=officer, company_name=user_company_name).values_list('branch_code', flat=True)
                     customers = customers.filter(branch__in=branch_codes)
                     form_data['selected_officer'] = officer
                 except Account_Officer.DoesNotExist:
                     messages.warning(request, "Selected account officer not found")
             
             # Process transactions
-            gl_name_dict = dict(Account.objects.values_list('gl_no', 'gl_name'))
+            gl_name_dict = dict(Account.objects.filter(branch__company_name=user_company_name).values_list('gl_no', 'gl_name'))
             
             # Create customer dictionary for quick lookup
             customer_dict = {
@@ -2053,10 +2308,11 @@ def savings_transaction_report(request):
                 if not (form_data['exclude_ac_no_one'] and c.ac_no == '1')
             }
             
-            # Get transactions in date range
+            # Get transactions in date range for the company
             transactions = Memtrans.objects.filter(
                 app_date__gte=form_data['start_date'],
-                app_date__lte=form_data['end_date']
+                app_date__lte=form_data['end_date'],
+                branch__company_name=user_company_name
             )
             
             if form_data['selected_branch']:
@@ -2117,10 +2373,29 @@ def savings_transaction_report(request):
             'grand_total_debit': grand_total_debit,
             'grand_total_credit': grand_total_credit,
             'current_datetime': current_datetime,
+            'user_company_name': user_company_name,
             **form_data
         }
 
         return render(request, 'reports/savings_report/savings_transactions_report.html', context)
+
+    except Exception as e:
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error in savings_transaction_report: {str(e)}", exc_info=True)
+        
+        # Return to form with error message and maintain filter options
+        messages.error(request, f"An error occurred while generating the transaction report: {str(e)}")
+        return render(request, 'reports/savings_report/savings_transactions_report.html', {
+            'branches': Branch.objects.filter(company_name=user_company_name).order_by('branch_name'),
+            'regions': Region.objects.filter(branch__company_name=user_company_name),
+            'account_officers': Account_Officer.objects.filter(region__branch__company_name=user_company_name),
+            'gl_accounts': Account.objects.filter(
+                gl_no__in=Customer.objects.filter(branch__company_name=user_company_name).values('gl_no').distinct(),
+                branch__company_name=user_company_name
+            ),
+            'current_datetime': timezone.now(),
+            'user_company_name': user_company_name,
+        })
 
     except Exception as e:
         logger = logging.getLogger(__name__)
@@ -2152,6 +2427,12 @@ from django.db.models import Sum, Max
 from django.shortcuts import render
 from django.utils import timezone
 from datetime import datetime, timedelta
+from django.db.models import Sum, Max
+from django.shortcuts import render
+from django.utils import timezone
+from datetime import datetime, timedelta
+
+
 
 def savings_account_listing(request):
     # Initialize variables
@@ -2161,7 +2442,11 @@ def savings_account_listing(request):
     customer_data = {}
     grand_total = 0
 
-    # Default to current date if dates are not provided
+    # Get user's company
+    user_branch = request.user.branches.first()
+    user_company_name = user_branch.company_name if user_branch else None
+
+    # Default dates
     default_end_date = timezone.now().date()
     default_start_date = default_end_date
 
@@ -2176,57 +2461,47 @@ def savings_account_listing(request):
         include_non_zero = request.POST.get('include_non_zero') == 'on'
         exclude_ac_no_one = request.POST.get('exclude_ac_no_one') == 'on'
 
-        # Convert start_date and end_date to datetime objects
-        if start_date_str:
-            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
-        else:
-            start_date = default_start_date
+        # Convert dates
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date() if start_date_str else default_start_date
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date() if end_date_str else default_end_date
 
-        if end_date_str:
-            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
-        else:
-            end_date = default_end_date
-
-        # Filter customers based on form input
-        customers = Customer.objects.all()
+        # Filter customers
+        customers = Customer.objects.filter(branch__company_name=user_company_name)
+        
         if branch_id:
-            selected_branch = Branch.objects.get(id=branch_id)
+            selected_branch = Branch.objects.filter(company_name=user_company_name, id=branch_id).first()
             customers = customers.filter(branch=selected_branch)
-        else:
-            selected_branch = None
 
         if selected_gl_no:
             customers = customers.filter(gl_no=selected_gl_no)
 
         if region_id:
-            selected_region = Region.objects.get(id=region_id)
+            selected_region = Region.objects.filter(id=region_id).first()
             customers = customers.filter(region=selected_region)
 
         if officer_id:
-            selected_officer = Account_Officer.objects.get(id=officer_id)
+            selected_officer = Account_Officer.objects.filter(id=officer_id).first()
             customers = customers.filter(credit_officer=selected_officer)
 
-        # Create a dictionary to map GL numbers and account numbers to customer details
+        # Create customer dictionary
         customer_dict = {}
         for customer in customers:
             if exclude_ac_no_one and customer.ac_no == '1':
                 continue
             customer_dict[(customer.gl_no, customer.ac_no)] = customer
 
-        # Filter Memtrans records based on the date range and branch
-        transactions = Memtrans.objects.filter(app_date__gte=start_date, app_date__lte=end_date)
-        if branch_id:
+        # Filter transactions
+        transactions = Memtrans.objects.filter(
+            branch__company_name=user_company_name,
+            app_date__gte=start_date,
+            app_date__lte=end_date
+        )
+        if branch_id and selected_branch:
             transactions = transactions.filter(branch=selected_branch)
 
-        # Aggregate data by GL No and AC No
-        gl_names = Account.objects.values_list('gl_no', 'gl_name')
-        gl_name_dict = dict(gl_names)
-
+        # Process customer data
         for (gl_no, ac_no), customer in customer_dict.items():
-            # Filter transactions for this specific customer
             customer_transactions = transactions.filter(gl_no=gl_no, ac_no=ac_no)
-
-            # Calculate total balance for the customer
             total_balance = customer_transactions.aggregate(total=Sum('amount'))['total'] or 0
 
             if include_non_zero and total_balance == 0:
@@ -2234,7 +2509,7 @@ def savings_account_listing(request):
 
             if gl_no not in customer_data:
                 customer_data[gl_no] = {
-                    'gl_name': gl_name_dict.get(gl_no, 'Unknown'),
+                    'gl_name': Account.objects.filter(gl_no=gl_no).first().gl_name if Account.objects.filter(gl_no=gl_no).exists() else 'Unknown',
                     'customers': [],
                     'subtotal': 0,
                     'count': 0
@@ -2243,14 +2518,11 @@ def savings_account_listing(request):
             last_trx_date = customer_transactions.aggregate(latest_date=Max('app_date'))['latest_date']
             trx_dates = customer_transactions.values_list('sys_date', flat=True).distinct()
 
-            # Calculate days without activity
-            days_without_activity = 0
-            current_date = start_date
-
-            while current_date <= end_date:
-                if current_date not in [trx_date.date() for trx_date in trx_dates]:
-                    days_without_activity += 1
-                current_date += timedelta(days=1)
+            days_without_activity = sum(
+                1 for current_date in (
+                    start_date + timedelta(days=i) for i in range((end_date - start_date).days + 1)
+                if current_date not in {trx_date.date() for trx_date in trx_dates}
+            ))
 
             customer_info = {
                 'gl_no': gl_no,
@@ -2262,10 +2534,21 @@ def savings_account_listing(request):
                 'last_trx_date': last_trx_date,
                 'days_without_activity': days_without_activity,
             }
+            
             customer_data[gl_no]['customers'].append(customer_info)
             customer_data[gl_no]['subtotal'] += total_balance
             customer_data[gl_no]['count'] += 1
             grand_total += total_balance
+
+    # Prepare dropdown data
+    gl_accounts = Account.objects.filter(
+        branch__company_name=user_company_name,
+        gl_no__isnull=False
+    ).exclude(gl_no='').order_by('gl_no').distinct()
+
+    branches = Branch.objects.filter(company_name=user_company_name)
+    regions = Region.objects.filter(branch__company_name=user_company_name)
+    account_officers = Account_Officer.objects.filter(branch__company_name=user_company_name)
 
     context = {
         'customer_data': customer_data,
@@ -2277,144 +2560,85 @@ def savings_account_listing(request):
         'selected_officer': selected_officer,
         'include_non_zero': include_non_zero,
         'exclude_ac_no_one': exclude_ac_no_one,
-        'branches': Branch.objects.all(),
-        'gl_accounts': Account.objects.filter(gl_no__in=Customer.objects.values('gl_no').distinct()),
-        'regions': Region.objects.all(),
-        'account_officers': Account_Officer.objects.all(),
+        'branches': branches,
+        'gl_accounts': gl_accounts,
+        'regions': regions,
+        'account_officers': account_officers,
         'grand_total': grand_total,
         'current_datetime': timezone.now(),
-        'company': selected_branch.company if selected_branch else None,
+        'company': selected_branch.company if selected_branch else user_branch.company if user_branch else None,
     }
 
     return render(request, 'reports/savings_report/savings_account_listing.html', context)
 
+
+
+
+@login_required
 def savings_account_status(request):
-    # Initialize variables
-    start_date = end_date = None
-    branches = Branch.objects.all()
-    selected_branch = selected_gl_no = selected_region = selected_officer = None
-    include_non_zero = exclude_ac_no_one = False
-    account_status_data = {}
-    current_datetime = timezone.now()
+    user = request.user
 
-    if request.method == "POST":
-        # Get form data
-        start_date_str = request.POST.get('start_date')
-        end_date_str = request.POST.get('end_date')
-        branch_id = request.POST.get('branch')
-        selected_gl_no = request.POST.get('gl_no')
-        region_id = request.POST.get('region')
-        officer_id = request.POST.get('credit_officer')
-        include_non_zero = request.POST.get('include_non_zero') == 'on'
-        exclude_ac_no_one = request.POST.get('exclude_ac_no_one') == 'on'
+    # Get the user's branch/company_name
+    user_branch = user.branches.first()
+    if not user_branch:
+        return render(request, 'error.html', {'message': 'User has no branch assigned.'})
+    user_company_name = user_branch.company_name
 
-        # Convert start_date and end_date to datetime objects
-        if start_date_str:
-            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
-        if end_date_str:
-            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
-        else:
-            end_date = current_datetime.date()
+    # Get all branches for the company
+    branches = Branch.objects.filter(company_name=user_company_name)
+    
+    # Filter all data by branch__company_name = user's company_name
+    gl_accounts = Account.objects.filter(branch__company_name=user_company_name)
+    customers = Customer.objects.filter(branch__company_name=user_company_name)
+    memtrans = Memtrans.objects.filter(branch__company_name=user_company_name)
+    regions = Region.objects.filter(branch__company_name=user_company_name)
+    account_officers = Account_Officer.objects.filter(region__branch__company_name=user_company_name)
 
-        # Filter transactions based on the selected criteria
-        transactions = Memtrans.objects.all()
+    # Optional filters from GET params
+    branch_filter = request.GET.get('branch')
+    region_filter = request.GET.get('region')
+    officer_filter = request.GET.get('account_officer')
 
-        # Filter by branch
-        if branch_id:
-            selected_branch = Branch.objects.get(id=branch_id)
-            transactions = transactions.filter(branch=selected_branch)
+    if branch_filter:
+        branches = branches.filter(branch_code=branch_filter)  # Add branch filtering
+        gl_accounts = gl_accounts.filter(branch__branch_code=branch_filter)
+        customers = customers.filter(branch__branch_code=branch_filter)
+        memtrans = memtrans.filter(branch__branch_code=branch_filter)
+        regions = regions.filter(branch__branch_code=branch_filter)
+        account_officers = account_officers.filter(region__branch__branch_code=branch_filter)
 
-        # Apply other filters
-        if selected_gl_no:
-            transactions = transactions.filter(gl_no=selected_gl_no)
-        if region_id:
-            selected_region = Region.objects.get(id=region_id)
-            transactions = transactions.filter(customer__region=selected_region)
-        if officer_id:
-            selected_officer = Account_Officer.objects.get(id=officer_id)
-            transactions = transactions.filter(customer__credit_officer=selected_officer)
-        if exclude_ac_no_one:
-            transactions = transactions.exclude(ac_no='1')
-        if start_date:
-            transactions = transactions.filter(app_date__gte=start_date)
-        if end_date:
-            transactions = transactions.filter(app_date__lte=end_date)
+    if region_filter:
+        account_officers = account_officers.filter(region_id=region_filter)
+        customers = customers.filter(region_id=region_filter)
 
-        # Aggregate data by GL No and AC No
-        gl_accounts = transactions.values('gl_no').distinct()
-        
-        for gl in gl_accounts:
-            gl_no = gl['gl_no']
-            try:
-                gl_name = Account.objects.get(gl_no=gl_no).gl_name
-            except Account.DoesNotExist:
-                gl_name = "Unknown GL"
-                
-            customer_transactions = transactions.filter(gl_no=gl_no)
-            accounts = []
-            
-            for ac_no in customer_transactions.values('ac_no').distinct():
-                ac_no = ac_no['ac_no']
-                try:
-                    customer = Customer.objects.get(gl_no=gl_no, ac_no=ac_no)
-                except Customer.DoesNotExist:
-                    continue
-                    
-                account_balance = customer_transactions.filter(ac_no=ac_no).aggregate(
-                    total_balance=Sum('amount')
-                )['total_balance'] or 0
+    if officer_filter:
+        customers = customers.filter(account_officer_id=officer_filter)
 
-                if include_non_zero and account_balance == 0:
-                    continue
+    # Prepare customer data
+    customer_data = []
+    for cust in customers:
+        balance = memtrans.filter(ac_no=cust.ac_no).aggregate(total_balance=Sum('amount'))['total_balance'] or 0
+        last_trx = memtrans.filter(ac_no=cust.ac_no).aggregate(last_date=Max('sys_date'))['last_date']
+        days_without_activity = (now().date() - last_trx).days if last_trx else None
 
-                last_trx = customer_transactions.filter(ac_no=ac_no).order_by('-sys_date').first()
-                last_trx_date = last_trx.sys_date if last_trx else customer.reg_date
-                
-                days_without_activity = (current_datetime.date() - last_trx_date.date()).days
-                
-                accounts.append({
-                    'gl_no': gl_no,
-                    'ac_no': ac_no,
-                    'first_name': customer.first_name,
-                    'middle_name': customer.middle_name,
-                    'last_name': customer.last_name,
-                    'address': customer.address,
-                    'account_balance': account_balance,
-                    'last_trx_date': last_trx_date,
-                    'days_without_activity': days_without_activity,
-                    'reg_date': customer.reg_date,
-                    'status': customer.get_status_display(),
-                })
-
-            if accounts:
-                account_status_data[gl_no] = {
-                    'gl_name': gl_name,
-                    'accounts': accounts,
-                    'count': len(accounts),
-                    'subtotal': sum(acc['account_balance'] for acc in accounts),
-                }
+        customer_data.append({
+            'customer': cust,
+            'balance': balance,
+            'last_transaction_date': last_trx,
+            'days_without_activity': days_without_activity,
+            'reg_date': cust.reg_date,
+        })
 
     context = {
-        'account_status_data': account_status_data,
-        'start_date': start_date,
-        'end_date': end_date,
-        'branches': branches,
-        'selected_branch': selected_branch,
-        'selected_gl_no': selected_gl_no,
-        'selected_region': selected_region,
-        'selected_officer': selected_officer,
-        'include_non_zero': include_non_zero,
-        'exclude_ac_no_one': exclude_ac_no_one,
-        'gl_accounts': Account.objects.all(),
-        'regions': Region.objects.all(),
-        'account_officers': Account_Officer.objects.all(),
-        'current_datetime': current_datetime,
-        'company': selected_branch.company if selected_branch else None,
-        'grand_total': sum(data['subtotal'] for data in account_status_data.values()),
+        'branches': branches,  # Add branches to context
+        'gl_accounts': gl_accounts,
+        'regions': regions,
+        'account_officers': account_officers,
+        'customer_data': customer_data,
+        'user_company_name': user_company_name,
     }
 
     return render(request, 'reports/savings_report/savings_account_status.html', context)
-
 
 
 
@@ -2425,13 +2649,23 @@ from datetime import datetime
 from django.db.models import Min, Max, Sum
 from django.contrib import messages
 
-
 def savings_account_with_zero_balance(request):
-    # Initialize filter options (available even if exception occurs)
-    branches = Branch.objects.all()
-    regions = Region.objects.all()
-    account_officers = Account_Officer.objects.all()
-    gl_accounts = Account.objects.filter(gl_no__in=Customer.objects.values('gl_no').distinct())
+    user = request.user
+
+    # Get the user's branch/company_name
+    user_branch = user.branches.first()
+    if not user_branch:
+        return render(request, 'error.html', {'message': 'User has no branch assigned.'})
+    user_company_name = user_branch.company_name
+
+    # Initialize filter options - filtered by company_name
+    branches = Branch.objects.filter(company_name=user_company_name)
+    regions = Region.objects.filter(branch__company_name=user_company_name)
+    account_officers = Account_Officer.objects.filter(region__branch__company_name=user_company_name)
+    gl_accounts = Account.objects.filter(
+        gl_no__in=Customer.objects.filter(branch__company_name=user_company_name).values('gl_no').distinct(),
+        branch__company_name=user_company_name
+    )
     current_datetime = timezone.now()
     
     try:
@@ -2457,13 +2691,13 @@ def savings_account_with_zero_balance(request):
             
             form_data['exclude_ac_no_one'] = request.POST.get('exclude_ac_no_one') == 'on'
 
-            # Apply filters
-            customers = Customer.objects.all()
+            # Apply filters - start with company_name base filter
+            customers = Customer.objects.filter(branch__company_name=user_company_name)
             
             # Branch filter
             if branch_id := request.POST.get('branch'):
                 try:
-                    branch = Branch.objects.get(id=branch_id)
+                    branch = Branch.objects.get(id=branch_id, company_name=user_company_name)
                     customers = customers.filter(branch=branch.branch_code)
                     form_data['selected_branch'] = branch
                 except Branch.DoesNotExist:
@@ -2477,8 +2711,8 @@ def savings_account_with_zero_balance(request):
             # Region filter
             if region_id := request.POST.get('region'):
                 try:
-                    region = Region.objects.get(id=region_id)
-                    branch_codes = Branch.objects.filter(region=region).values_list('branch_code', flat=True)
+                    region = Region.objects.get(id=region_id, branch__company_name=user_company_name)
+                    branch_codes = Branch.objects.filter(region=region, company_name=user_company_name).values_list('branch_code', flat=True)
                     customers = customers.filter(branch__in=branch_codes)
                     form_data['selected_region'] = region
                 except Region.DoesNotExist:
@@ -2487,15 +2721,15 @@ def savings_account_with_zero_balance(request):
             # Account Officer filter
             if officer_id := request.POST.get('credit_officer'):
                 try:
-                    officer = Account_Officer.objects.get(id=officer_id)
-                    branch_codes = Branch.objects.filter(account_officer=officer).values_list('branch_code', flat=True)
+                    officer = Account_Officer.objects.get(id=officer_id, region__branch__company_name=user_company_name)
+                    branch_codes = Branch.objects.filter(account_officer=officer, company_name=user_company_name).values_list('branch_code', flat=True)
                     customers = customers.filter(branch__in=branch_codes)
                     form_data['selected_officer'] = officer
                 except Account_Officer.DoesNotExist:
                     messages.warning(request, "Selected account officer not found")
             
             # Process customers with zero balance
-            gl_name_dict = dict(Account.objects.values_list('gl_no', 'gl_name'))
+            gl_name_dict = dict(Account.objects.filter(branch__company_name=user_company_name).values_list('gl_no', 'gl_name'))
             
             for customer in customers:
                 if form_data['exclude_ac_no_one'] and customer.ac_no == '1':
@@ -2504,7 +2738,8 @@ def savings_account_with_zero_balance(request):
                 transactions = Memtrans.objects.filter(
                     gl_no=customer.gl_no,
                     ac_no=customer.ac_no,
-                    app_date__lte=form_data['reporting_date']
+                    app_date__lte=form_data['reporting_date'],
+                    branch__company_name=user_company_name
                 )
                 
                 # Get balance and transaction dates
@@ -2548,6 +2783,7 @@ def savings_account_with_zero_balance(request):
             'customer_data': customer_data,
             'grand_total': grand_total,
             'current_datetime': current_datetime,
+            'user_company_name': user_company_name,  # Added company name to context
             **form_data
         }
 
@@ -2722,15 +2958,23 @@ def savings_account_overdrawn(request):
         })
 
 
-
 def savings_interest_paid(request):
-    # Initialize filter options (available even if exception occurs)
+    user = request.user
+
+    # Get the user's branch/company_name
+    user_branch = user.branches.first()
+    if not user_branch:
+        return render(request, 'error.html', {'message': 'User has no branch assigned.'})
+    user_company_name = user_branch.company_name
+
     try:
-        branches = Branch.objects.all().order_by('branch_name')
-        regions = Region.objects.all()
-        account_officers = Account_Officer.objects.all()
+        # Initialize filter options - filtered by company_name
+        branches = Branch.objects.filter(company_name=user_company_name).order_by('branch_name')
+        regions = Region.objects.filter(branch__company_name=user_company_name)
+        account_officers = Account_Officer.objects.filter(region__branch__company_name=user_company_name)
         gl_accounts = Account.objects.filter(
-            gl_no__in=Customer.objects.values('gl_no').distinct()
+            gl_no__in=Customer.objects.filter(branch__company_name=user_company_name).values('gl_no').distinct(),
+            branch__company_name=user_company_name
         )
         current_datetime = timezone.now()
         
@@ -2756,13 +3000,13 @@ def savings_interest_paid(request):
             
             form_data['exclude_ac_no_one'] = request.POST.get('exclude_ac_no_one') == 'on'
 
-            # Apply filters
-            customers = Customer.objects.all()
+            # Apply filters - start with company_name base filter
+            customers = Customer.objects.filter(branch__company_name=user_company_name)
             
             # Branch filter
             if branch_id := request.POST.get('branch'):
                 try:
-                    branch = Branch.objects.get(id=branch_id)
+                    branch = Branch.objects.get(id=branch_id, company_name=user_company_name)
                     customers = customers.filter(branch=branch.branch_code)
                     form_data['selected_branch'] = branch
                 except Branch.DoesNotExist:
@@ -2776,8 +3020,8 @@ def savings_interest_paid(request):
             # Region filter
             if region_id := request.POST.get('region'):
                 try:
-                    region = Region.objects.get(id=region_id)
-                    branch_codes = Branch.objects.filter(region=region).values_list('branch_code', flat=True)
+                    region = Region.objects.get(id=region_id, branch__company_name=user_company_name)
+                    branch_codes = Branch.objects.filter(region=region, company_name=user_company_name).values_list('branch_code', flat=True)
                     customers = customers.filter(branch__in=branch_codes)
                     form_data['selected_region'] = region
                 except Region.DoesNotExist:
@@ -2786,15 +3030,15 @@ def savings_interest_paid(request):
             # Account Officer filter
             if officer_id := request.POST.get('credit_officer'):
                 try:
-                    officer = Account_Officer.objects.get(id=officer_id)
-                    branch_codes = Branch.objects.filter(account_officer=officer).values_list('branch_code', flat=True)
+                    officer = Account_Officer.objects.get(id=officer_id, region__branch__company_name=user_company_name)
+                    branch_codes = Branch.objects.filter(account_officer=officer, company_name=user_company_name).values_list('branch_code', flat=True)
                     customers = customers.filter(branch__in=branch_codes)
                     form_data['selected_officer'] = officer
                 except Account_Officer.DoesNotExist:
                     messages.warning(request, "Selected account officer not found")
             
             # Process interest payments (transactions with code 'MSI')
-            gl_name_dict = dict(Account.objects.values_list('gl_no', 'gl_name'))
+            gl_name_dict = dict(Account.objects.filter(branch__company_name=user_company_name).values_list('gl_no', 'gl_name'))
             
             for customer in customers:
                 if form_data['exclude_ac_no_one'] and customer.ac_no == '1':
@@ -2805,7 +3049,8 @@ def savings_interest_paid(request):
                     gl_no=customer.gl_no,
                     ac_no=customer.ac_no,
                     code='MSI',  # Interest payment transactions
-                    app_date__lte=form_data['reporting_date']
+                    app_date__lte=form_data['reporting_date'],
+                    branch__company_name=user_company_name
                 )
                 
                 # Calculate total interest paid
@@ -2853,6 +3098,7 @@ def savings_interest_paid(request):
             'customer_data': customer_data,
             'grand_total': grand_total,
             'current_datetime': current_datetime,
+            'user_company_name': user_company_name,
             **form_data
         }
 
@@ -2865,24 +3111,35 @@ def savings_interest_paid(request):
         # Return to form with error message and maintain filter options
         messages.error(request, f"An error occurred while generating the interest paid report: {str(e)}")
         return render(request, 'reports/savings_report/savings_interest_paid.html', {
-            'branches': Branch.objects.all().order_by('branch_name'),
-            'regions': Region.objects.all(),
-            'account_officers': Account_Officer.objects.all(),
-            'gl_accounts': Account.objects.filter(gl_no__in=Customer.objects.values('gl_no').distinct()),
+            'branches': Branch.objects.filter(company_name=user_company_name).order_by('branch_name'),
+            'regions': Region.objects.filter(branch__company_name=user_company_name),
+            'account_officers': Account_Officer.objects.filter(region__branch__company_name=user_company_name),
+            'gl_accounts': Account.objects.filter(
+                gl_no__in=Customer.objects.filter(branch__company_name=user_company_name).values('gl_no').distinct(),
+                branch__company_name=user_company_name
+            ),
             'current_datetime': timezone.now(),
+            'user_company_name': user_company_name,
         })
 
 
-
-
 def savings_account_credit_balance(request):
-    # Initialize filter options (available even if exception occurs)
+    user = request.user
+
+    # Get the user's branch/company_name
+    user_branch = user.branches.first()
+    if not user_branch:
+        return render(request, 'error.html', {'message': 'User has no branch assigned.'})
+    user_company_name = user_branch.company_name
+
     try:
-        branches = Branch.objects.all().order_by('branch_name')
-        regions = Region.objects.all()
-        account_officers = Account_Officer.objects.all()
+        # Initialize filter options - filtered by company_name
+        branches = Branch.objects.filter(company_name=user_company_name).order_by('branch_name')
+        regions = Region.objects.filter(branch__company_name=user_company_name)
+        account_officers = Account_Officer.objects.filter(region__branch__company_name=user_company_name)
         gl_accounts = Account.objects.filter(
-            gl_no__in=Customer.objects.values('gl_no').distinct()
+            gl_no__in=Customer.objects.filter(branch__company_name=user_company_name).values('gl_no').distinct(),
+            branch__company_name=user_company_name
         )
         current_datetime = timezone.now()
         
@@ -2908,13 +3165,13 @@ def savings_account_credit_balance(request):
             
             form_data['exclude_ac_no_one'] = request.POST.get('exclude_ac_no_one') == 'on'
 
-            # Apply filters
-            customers = Customer.objects.all()
+            # Apply filters - start with company_name base filter
+            customers = Customer.objects.filter(branch__company_name=user_company_name)
             
             # Branch filter
             if branch_id := request.POST.get('branch'):
                 try:
-                    branch = Branch.objects.get(id=branch_id)
+                    branch = Branch.objects.get(id=branch_id, company_name=user_company_name)
                     customers = customers.filter(branch=branch.branch_code)
                     form_data['selected_branch'] = branch
                 except Branch.DoesNotExist:
@@ -2928,8 +3185,8 @@ def savings_account_credit_balance(request):
             # Region filter
             if region_id := request.POST.get('region'):
                 try:
-                    region = Region.objects.get(id=region_id)
-                    branch_codes = Branch.objects.filter(region=region).values_list('branch_code', flat=True)
+                    region = Region.objects.get(id=region_id, branch__company_name=user_company_name)
+                    branch_codes = Branch.objects.filter(region=region, company_name=user_company_name).values_list('branch_code', flat=True)
                     customers = customers.filter(branch__in=branch_codes)
                     form_data['selected_region'] = region
                 except Region.DoesNotExist:
@@ -2938,15 +3195,15 @@ def savings_account_credit_balance(request):
             # Account Officer filter
             if officer_id := request.POST.get('credit_officer'):
                 try:
-                    officer = Account_Officer.objects.get(id=officer_id)
-                    branch_codes = Branch.objects.filter(account_officer=officer).values_list('branch_code', flat=True)
+                    officer = Account_Officer.objects.get(id=officer_id, region__branch__company_name=user_company_name)
+                    branch_codes = Branch.objects.filter(account_officer=officer, company_name=user_company_name).values_list('branch_code', flat=True)
                     customers = customers.filter(branch__in=branch_codes)
                     form_data['selected_officer'] = officer
                 except Account_Officer.DoesNotExist:
                     messages.warning(request, "Selected account officer not found")
             
             # Process accounts with credit balance (> 0)
-            gl_name_dict = dict(Account.objects.values_list('gl_no', 'gl_name'))
+            gl_name_dict = dict(Account.objects.filter(branch__company_name=user_company_name).values_list('gl_no', 'gl_name'))
             
             for customer in customers:
                 if form_data['exclude_ac_no_one'] and customer.ac_no == '1':
@@ -2955,7 +3212,8 @@ def savings_account_credit_balance(request):
                 transactions = Memtrans.objects.filter(
                     gl_no=customer.gl_no,
                     ac_no=customer.ac_no,
-                    app_date__lte=form_data['reporting_date']
+                    app_date__lte=form_data['reporting_date'],
+                    branch__company_name=user_company_name
                 )
                 
                 # Calculate account balance
@@ -3001,6 +3259,7 @@ def savings_account_credit_balance(request):
             'customer_data': customer_data,
             'grand_total': grand_total,
             'current_datetime': current_datetime,
+            'user_company_name': user_company_name,
             **form_data
         }
 
@@ -3011,31 +3270,41 @@ def savings_account_credit_balance(request):
         logger = logging.getLogger(__name__)
         logger.error(f"Error in savings_account_credit_balance: {str(e)}", exc_info=True)
         
-        # Return to form with error message
+        # Return to form with error message and maintain company filtering
         messages.error(request, f"An error occurred while generating the credit balance report: {str(e)}")
         return render(request, 'reports/savings_report/savings_account_with_credit_balance_report.html', {
-            'branches': Branch.objects.all().order_by('branch_name'),
-            'regions': Region.objects.all(),
-            'account_officers': Account_Officer.objects.all(),
-            'gl_accounts': Account.objects.filter(gl_no__in=Customer.objects.values('gl_no').distinct()),
+            'branches': Branch.objects.filter(company_name=user_company_name).order_by('branch_name'),
+            'regions': Region.objects.filter(branch__company_name=user_company_name),
+            'account_officers': Account_Officer.objects.filter(region__branch__company_name=user_company_name),
+            'gl_accounts': Account.objects.filter(
+                gl_no__in=Customer.objects.filter(branch__company_name=user_company_name).values('gl_no').distinct(),
+                branch__company_name=user_company_name
+            ),
             'current_datetime': timezone.now(),
+            'user_company_name': user_company_name,
         })
 
-
-
-
-
 def savings_overdrawn_account_status(request):
-    # Initialize variables
-    customer_data = {}
-    branches = Company.objects.all()
-    regions = Region.objects.all()
-    account_officers = Account_Officer.objects.all()
-    gl_accounts = Account.objects.filter(gl_no__in=Customer.objects.values('gl_no').distinct())
+    user = request.user
+
+    # Get the user's branch/company_name
+    user_branch = user.branches.first()
+    if not user_branch:
+        return render(request, 'error.html', {'message': 'User has no branch assigned.'})
+    user_company_name = user_branch.company_name
+
+    # Initialize variables - filtered by company_name
+    branches = Branch.objects.filter(company_name=user_company_name)  # Changed from Company to Branch
+    regions = Region.objects.filter(branch__company_name=user_company_name)
+    account_officers = Account_Officer.objects.filter(region__branch__company_name=user_company_name)
+    gl_accounts = Account.objects.filter(
+        gl_no__in=Customer.objects.filter(branch__company_name=user_company_name).values('gl_no').distinct(),
+        branch__company_name=user_company_name
+    )
     
     # Default reporting date is the current date
     default_reporting_date = timezone.now().date()
-    current_datetime = timezone.now()  # Get the current date and time
+    current_datetime = timezone.now()
     
     # Initialize form selections
     selected_branch = None
@@ -3045,6 +3314,7 @@ def savings_overdrawn_account_status(request):
     reporting_date = default_reporting_date
     exclude_ac_no_one = False
     grand_total = 0
+    customer_data = {}
 
     if request.method == 'POST':
         # Get filters from the form
@@ -3060,25 +3330,50 @@ def savings_overdrawn_account_status(request):
         else:
             reporting_date = default_reporting_date
 
-        customers = Customer.objects.all()
+        # Start with company_name base filter
+        customers = Customer.objects.filter(branch__company_name=user_company_name)
+        
         if branch_id:
-            customers = customers.filter(branch=branch_id)
-            selected_branch = Company.objects.get(id=branch_id)
+            try:
+                selected_branch = Branch.objects.get(id=branch_id, company_name=user_company_name)  # Changed to Branch
+                customers = customers.filter(branch=selected_branch.branch_code)
+            except Branch.DoesNotExist:
+                messages.warning(request, "Selected branch not found")
         
         if gl_no:
             customers = customers.filter(gl_no=gl_no)
             selected_gl_no = gl_no
         
         if region_id:
-            customers = customers.filter(region_id=region_id)
-            selected_region = Region.objects.get(id=region_id)
+            try:
+                selected_region = Region.objects.get(id=region_id, branch__company_name=user_company_name)
+                branch_codes = Branch.objects.filter(
+                    region=selected_region, 
+                    company_name=user_company_name
+                ).values_list('branch_code', flat=True)
+                customers = customers.filter(branch__in=branch_codes)
+            except Region.DoesNotExist:
+                messages.warning(request, "Selected region not found")
 
         if officer_id:
-            customers = customers.filter(credit_officer_id=officer_id)
-            selected_officer = Account_Officer.objects.get(id=officer_id)
+            try:
+                selected_officer = Account_Officer.objects.get(
+                    id=officer_id, 
+                    region__branch__company_name=user_company_name
+                )
+                branch_codes = Branch.objects.filter(
+                    account_officer=selected_officer,
+                    company_name=user_company_name
+                ).values_list('branch_code', flat=True)
+                customers = customers.filter(branch__in=branch_codes)
+            except Account_Officer.DoesNotExist:
+                messages.warning(request, "Selected account officer not found")
         
-        gl_names = Account.objects.values_list('gl_no', 'gl_name')
-        gl_name_dict = dict(gl_names)
+        # Get GL names for the company
+        gl_name_dict = dict(
+            Account.objects.filter(branch__company_name=user_company_name)
+            .values_list('gl_no', 'gl_name')
+        )
         
         grand_total = 0
         for customer in customers:
@@ -3087,14 +3382,15 @@ def savings_overdrawn_account_status(request):
 
             transactions = Memtrans.objects.filter(
                 gl_no=customer.gl_no,
-                ac_no=customer.ac_no
+                ac_no=customer.ac_no,
+                branch__company_name=user_company_name
             )
 
             # Get the earliest transaction date for the account
             earliest_transaction_date = transactions.aggregate(min_date=Min('app_date'))['min_date']
 
             if not earliest_transaction_date:
-                earliest_transaction_date = timezone.now().date()  # Use today's date if no transactions exist
+                earliest_transaction_date = timezone.now().date()
 
             # Filter transactions up to the reporting date
             transactions = transactions.filter(app_date__lte=reporting_date)
@@ -3139,11 +3435,11 @@ def savings_overdrawn_account_status(request):
         'reporting_date': reporting_date,
         'exclude_ac_no_one': exclude_ac_no_one,
         'grand_total': grand_total,
-        'current_datetime': current_datetime,  # Add current datetime to the context
+        'current_datetime': current_datetime,
+        'user_company_name': user_company_name,
     }
 
     return render(request, 'reports/savings_report/savings_overdrawn_account_status.html', context)
-
 
 
 
@@ -3444,15 +3740,17 @@ from django.db.models import Sum
 
 
 
-
-
 def loan_ledger_card_view(request):
-    branches = Branch.objects.all()
-    accounts = Account.objects.all()
+    # Get the current user's company (Branch) first
+    user_branch = request.user.branch  # Assuming the User model has a ForeignKey to Branch
+    
+    # Filter all querysets by the user's branch/company
+    branches = Branch.objects.filter(id=user_branch.id)  # Only show user's branch
+    accounts = Account.objects.filter(branch=user_branch)  # Only accounts from user's branch
     error_message = None
 
     if request.method == 'POST':
-        form = LoanLedgerCardForm(request.POST)
+        form = LoanLedgerCardForm(request.POST, user_branch=user_branch)  # Pass user_branch to form
         if form.is_valid():
             branch = form.cleaned_data['branch']
             account = form.cleaned_data['account']
@@ -3460,8 +3758,8 @@ def loan_ledger_card_view(request):
             cycle = form.cleaned_data.get('cycle')
 
             try:
-                # Retrieve the loan information
-                loan = Loans.objects.get(gl_no=account.gl_no, ac_no=ac_no, cycle=cycle)
+                # Retrieve the loan information - add branch filter
+                loan = Loans.objects.get(branch=branch, gl_no=account.gl_no, ac_no=ac_no, cycle=cycle)
                 disbursement_amount = loan.loan_amount
                 total_interest = LoanHist.objects.filter(
                     branch=branch, gl_no=account.gl_no, ac_no=ac_no, cycle=cycle, trx_type='LD'
@@ -3471,36 +3769,30 @@ def loan_ledger_card_view(request):
                 loan_officer = loan.loan_officer
                 annual_interest_rate = loan.interest_rate
 
-                # Retrieve the customer information
-                customer = Customer.objects.get(gl_no=account.gl_no, ac_no=ac_no)
+                # Retrieve the customer information - add branch filter
+                customer = Customer.objects.get(branch=branch, gl_no=account.gl_no, ac_no=ac_no)
 
-                # Initialize the principal and interest balances
+                # Rest of your existing code remains the same...
                 principal_balance = disbursement_amount
                 interest_balance = total_interest
 
-                # Query the LoanHist model to get the ledger card details
                 ledger_card = LoanHist.objects.filter(
                     branch=branch, gl_no=account.gl_no, ac_no=ac_no, cycle=cycle
                 ).order_by('trx_date')
 
-                # Initialize totals
                 total_payment = 0
                 penalty_balance = 0
 
-                # Iterate over ledger card entries to calculate the balances
                 for entry in ledger_card:
                     total_payment += entry.principal + entry.interest + entry.penalty
 
                     if entry.trx_type == 'LP':
-                        principal_balance += entry.principal  # Reduce principal balance by the principal payment
-                        interest_balance += entry.interest  # Reduce interest balance by the interest payment
+                        principal_balance += entry.principal
+                        interest_balance += entry.interest
                     
                     penalty_balance += entry.penalty
-
-                    # Calculate the total balance
                     total_balance = principal_balance + interest_balance + penalty_balance
 
-                    # Update each entry with the calculated balances
                     entry.total_payment = total_payment
                     entry.principal_balance = principal_balance
                     entry.interest_balance = interest_balance
@@ -3522,53 +3814,55 @@ def loan_ledger_card_view(request):
                     'num_installments': num_installments,
                     'loan_officer': loan_officer,
                     'annual_interest_rate': annual_interest_rate,
-                    'branches': branches,   # Pass all branches
-                    'accounts': accounts,   # Pass all accounts
-                    'branch': branch,       # Pass the specific branch
-                    'form_submitted': True  # Flag to indicate form submission
+                    'branches': branches,
+                    'accounts': accounts,
+                    'branch': branch,
+                    'form_submitted': True
                 })
 
             except Loans.DoesNotExist:
-                return render(request, 'reports/loans/loan_ledger_card.html', {
-                    'form': form,
-                    'branches': branches,
-                    'accounts': accounts,
-                    'form_submitted': True,
-                    'error_message': 'No loan record found for the provided criteria.'
-                })
+                error_message = 'No loan record found for the provided criteria.'
             except Customer.DoesNotExist:
-                return render(request, 'reports/loans/loan_ledger_card.html', {
-                    'form': form,
-                    'branches': branches,
-                    'accounts': accounts,
-                    'form_submitted': True,
-                    'error_message': 'No customer record found for the provided criteria.'
-                })
+                error_message = 'No customer record found for the provided criteria.'
+            
+            return render(request, 'reports/loans/loan_ledger_card.html', {
+                'form': form,
+                'branches': branches,
+                'accounts': accounts,
+                'form_submitted': True,
+                'error_message': error_message
+            })
     else:
-        form = LoanLedgerCardForm()
+        form = LoanLedgerCardForm(user_branch=user_branch)  # Pass user_branch to form
 
     return render(request, 'reports/loans/loan_ledger_card.html', {
         'form': form,
-        'branches': branches,   # Pass all branches
-        'accounts': accounts,   # Pass all accounts
-        'form_submitted': False, # Flag to indicate form not yet submitted
-        'error_message': error_message  # Pass error message to template
+        'branches': branches,
+        'accounts': accounts,
+        'form_submitted': False,
+        'error_message': error_message
     })
 
-from django.shortcuts import render
-from .forms import LoanLedgerCardForm
-from accounts_admin.models import Account
-from loans.models import Loans, LoanHist
-from customers.models import Customer
-from datetime import timedelta  # Import timedelta to adjust the date
 
 
 def loan_repayment_schedule(request):
-    branches = Branch.objects.all()
-    accounts = Account.objects.all()
+    # Get the user's company from their branch
+    user_branch = request.user.branch  # Assuming User has a ForeignKey to Branch
+    if not user_branch:
+        return render(request, 'reports/loans/loan_repayment_schedule.html', {
+            'form': LoanLedgerCardForm(),
+            'branches': [],
+            'accounts': [],
+            'form_submitted': False,
+            'error_message': 'You are not associated with any branch.',
+        })
+
+    # Filter branches and accounts by user's branch
+    branches = Branch.objects.filter(id=user_branch.id)
+    accounts = Account.objects.filter(branch=user_branch)
 
     if request.method == 'POST':
-        form = LoanLedgerCardForm(request.POST)
+        form = LoanLedgerCardForm(request.POST, user_branch=user_branch)
         if form.is_valid():
             branch = form.cleaned_data['branch']
             account = form.cleaned_data['account']
@@ -3577,124 +3871,107 @@ def loan_repayment_schedule(request):
 
             try:
                 # Retrieve the loan information
-                loan = Loans.objects.get(gl_no=account.gl_no, ac_no=ac_no, cycle=cycle)
-            except Loans.DoesNotExist:
-                # If no loan is found, return an error message to the template
+                loan = Loans.objects.get(
+                    branch=branch,
+                    gl_no=account.gl_no, 
+                    ac_no=ac_no, 
+                    cycle=cycle
+                )
+                
+                # Get customer
+                customer = Customer.objects.get(
+                    branch=branch,
+                    gl_no=account.gl_no, 
+                    ac_no=ac_no
+                )
+
+                # Calculate balances and ledger entries
+                disbursement_amount = loan.loan_amount
+                disbursement_date = loan.disbursement_date
+                
+                # Get all loan transactions (not just LD)
+                ledger_entries = LoanHist.objects.filter(
+                    branch=branch,
+                    gl_no=account.gl_no, 
+                    ac_no=ac_no, 
+                    cycle=cycle
+                ).order_by('trx_date')
+                
+                # Initialize balances
+                principal_balance = disbursement_amount
+                interest_balance = sum(
+                    entry.interest for entry in ledger_entries.filter(trx_type='LD')
+                )
+                penalty_balance = 0
+                total_payment = 0
+                
+                # Process each entry
+                ledger_card = []
+                for entry in ledger_entries:
+                    if entry.trx_type == 'LP':  # Loan Payment
+                        principal_balance -= entry.principal
+                        interest_balance -= entry.interest
+                        total_payment += entry.principal + entry.interest
+                    
+                    penalty_balance += entry.penalty
+                    total_balance = principal_balance + interest_balance + penalty_balance
+                    
+                    # Add calculated fields to entry
+                    entry.principal_balance = principal_balance
+                    entry.interest_balance = interest_balance
+                    entry.penalty_balance = penalty_balance
+                    entry.total_balance = total_balance
+                    entry.total_payment = total_payment
+                    
+                    ledger_card.append(entry)
+
+                return render(request, 'reports/loans/loan_repayment_schedule.html', {
+                    'form': form,
+                    'ledger_card': ledger_card,
+                    'customer': customer,
+                    'loan': loan,
+                    'disbursement_amount': disbursement_amount,
+                    'disbursement_date': disbursement_date,
+                    'num_installments': loan.num_install,
+                    'loan_officer': loan.loan_officer,
+                    'annual_interest_rate': loan.interest_rate,
+                    'branches': branches,
+                    'accounts': accounts,
+                    'form_submitted': True,
+                    'error_message': None
+                })
+
+            except (Loans.DoesNotExist, Customer.DoesNotExist) as e:
+                error_message = 'No loan or customer record found.' if isinstance(e, Loans.DoesNotExist) else 'Customer record not found.'
                 return render(request, 'reports/loans/loan_repayment_schedule.html', {
                     'form': form,
                     'branches': branches,
                     'accounts': accounts,
                     'form_submitted': True,
-                    'error_message': 'No loan record found for the provided details.',  # Pass error message
+                    'error_message': error_message,
                 })
-
-            # Proceed with loan details if found
-            disbursement_amount = loan.loan_amount
-            disbursement_date = loan.disbursement_date
-            num_installments = loan.num_install
-            loan_officer = loan.loan_officer
-            annual_interest_rate = loan.interest_rate
-
-            # Retrieve the customer information
-            customer = Customer.objects.get(gl_no=account.gl_no, ac_no=ac_no)
-
-            # Initialize the principal balance with the disbursement amount
-            principal_balance = disbursement_amount
-
-            # Calculate total interest from entries with trx_type='LD'
-            total_interest = sum(entry.interest for entry in LoanHist.objects.filter(
-                branch=branch, gl_no=account.gl_no, ac_no=ac_no, cycle=cycle, trx_type='LD'
-            ))
-
-            # Initialize interest balance
-            interest_balance = total_interest
-
-            # Create an initial entry for the loan disbursement
-            initial_entry = LoanHist(
-                trx_date=disbursement_date - timedelta(days=1),
-                trx_naration='Loan Disbursement',
-                principal='0.00',
-                interest=0,
-                penalty=0,
-                trx_type='LD',
-                gl_no=account.gl_no,
-                ac_no=ac_no,
-                cycle=cycle,
-                branch=branch,
-            )
-
-            # Query the LoanHist model to get the ledger card details
-            ledger_card = list(LoanHist.objects.filter(
-                branch=branch, gl_no=account.gl_no, ac_no=ac_no, cycle=cycle, trx_type='LD'
-            ).order_by('trx_date'))
-
-            # Insert the initial disbursement entry at the beginning of the ledger card
-            ledger_card.insert(0, initial_entry)
-
-            # Initialize totals
-            total_payment = 0
-            penalty_balance = 0
-            total_balance = 0
-
-            # Iterate over ledger card entries to calculate the balances
-            for entry in ledger_card:
-                if entry == initial_entry:
-                    entry.principal_balance = disbursement_amount
-                    entry.interest_balance = interest_balance
-                    entry.penalty_balance = 0
-                    entry.total_balance = disbursement_amount + interest_balance
-                    entry.total_payment = 0
-                else:
-                    if entry.trx_type == 'LD':
-                        principal_balance -= entry.principal
-                        interest_balance -= entry.interest
-                        if interest_balance < 0:
-                            interest_balance = 0
-                        if principal_balance < 0:
-                            principal_balance = 0
-
-                    penalty_balance += entry.penalty
-                    total_payment += entry.principal + entry.interest + entry.penalty
-                    total_balance = principal_balance + interest_balance + penalty_balance
-                    entry.total_payment = total_payment
-                    entry.principal_balance = principal_balance
-                    entry.interest_balance = interest_balance
-                    entry.penalty_balance = penalty_balance
-                    entry.total_balance = total_balance
-
-            # Pass the specific branch object to the template
+        
+        else:
+            # Form is invalid - show errors
             return render(request, 'reports/loans/loan_repayment_schedule.html', {
                 'form': form,
-                'ledger_card': ledger_card,
-                'total_payment': total_payment,
-                'principal_balance': principal_balance,
-                'interest_balance': interest_balance,
-                'penalty_balance': penalty_balance,
-                'total_balance': total_balance,
-                'customer': customer,
-                'loan': loan,
-                'disbursement_amount': disbursement_amount,
-                'disbursement_date': disbursement_date,
-                'num_installments': num_installments,
-                'loan_officer': loan_officer,
-                'annual_interest_rate': annual_interest_rate,
                 'branches': branches,
                 'accounts': accounts,
-                'branch': branch,
-                'form_submitted': True  # Flag to indicate form submission
+                'form_submitted': False,
+                'error_message': 'Please correct the errors below.',
             })
-    else:
-        form = LoanLedgerCardForm()
 
+    else:
+        # GET request - initialize form with filtered data
+        form = LoanLedgerCardForm(user_branch=user_branch)
+    
     return render(request, 'reports/loans/loan_repayment_schedule.html', {
         'form': form,
         'branches': branches,
         'accounts': accounts,
-        'form_submitted': False  # Flag to indicate form not yet submitted
+        'form_submitted': False,
+        'error_message': None
     })
-
-
-
 
 
 from .forms import LoanDisbursementReportForm
@@ -3716,74 +3993,138 @@ from loans.models import Loans
 from company.models import Branch
 
 @login_required
+
+
+
 def loan_disbursement_report(request):
-    # Initialize variables
-    form = LoanDisbursementReportForm(request.POST or None)
-    loans = Loans.objects.none()
+    # Get current user's branch
+    user_branch = request.user.branch
+    
+    # Initialize form with user's branch
+    form = LoanDisbursementReportForm(
+        request.POST or None,
+        user_branch=user_branch,
+        initial={'reporting_date': date.today()}  # Set default date to today
+    )
+    
+    # Initialize context
     context = {
         'form': form,
-        'loans': loans,
+        'expected_repayments': [],
+        'branches': Branch.objects.filter(id=user_branch.id),
+        'gl_accounts': Account.objects.filter(branch=user_branch),
+        'current_date': timezone.now().strftime('%d/%m/%Y'),
+        'reporting_date': None,
         'selected_branch': None,
-        'total_loan_amount': 0,
-        'total_interest': 0,
+        'selected_gl_no': None,
         'grand_total_loan_amount': 0,
         'grand_total_interest': 0,
-        'current_date': timezone.now().strftime('%d/%m/%Y'),
-        'start_date': None,
-        'end_date': None,
+        'grand_total_principal_paid': 0,
+        'grand_total_interest_paid': 0,
+        'grand_total_repayment': 0,
     }
 
-    if request.method == 'POST' and form.is_valid():
-        # Get cleaned form data
-        start_date = form.cleaned_data['start_date']
-        end_date = form.cleaned_data['end_date']
-        branch = form.cleaned_data.get('branch')  # Branch instance or None
-        gl_no = form.cleaned_data.get('gl_no')   # GL instance or None
+    if request.method == 'POST':
+        if form.is_valid():
+            reporting_date = form.cleaned_data['reporting_date']
+            branch = form.cleaned_data.get('branch') or user_branch
+            gl_no = form.cleaned_data.get('gl_no')
 
-        # Base query with date range and select_related for performance
-        loans = Loans.objects.filter(
-            disbursement_date__range=[start_date, end_date]
-        ).select_related('branch', 'customer', 'loan_officer')
+            # Base query - always filter by user's branch
+            loans = Loans.objects.filter(
+                branch=user_branch,
+                disbursement_date__lte=reporting_date
+            ).select_related('customer')
 
-        # Apply additional filters if provided
-        if branch:
-            loans = loans.filter(branch=branch)
-        if gl_no:
-            loans = loans.filter(gl_no=gl_no)
+            # Apply additional filters
+            if gl_no:
+                loans = loans.filter(gl_no=gl_no.gl_no)
 
-        # Calculate totals in a single query
-        aggregates = loans.aggregate(
-            total_loan=Sum('loan_amount'),
-            total_interest=Sum('total_interest')
-        )
+            expected_repayments = []
+            grand_totals = {
+                'loan_amount': 0,
+                'total_interest': 0,
+                'total_principal_paid': 0,
+                'total_interest_paid': 0,
+                'expected_principal_repayment': 0,
+                'expected_interest_repayment': 0,
+            }
 
-        # Update context with results
-        context.update({
-            'loans': loans,
-            'selected_branch': branch,
-            'start_date': start_date,
-            'end_date': end_date,
-            'total_loan_amount': aggregates['total_loan'] or 0,
-            'total_interest': aggregates['total_interest'] or 0,
-            'grand_total_loan_amount': aggregates['total_loan'] or 0,
-            'grand_total_interest': aggregates['total_interest'] or 0,
-        })
+            for loan in loans:
+                # Calculate expected repayments (simplified example)
+                # You should implement proper calculation based on your business logic
+                expected_principal = loan.loan_amount / loan.num_install if loan.num_install else 0
+                expected_interest = (loan.loan_amount * loan.interest_rate / 100) / 12  # Monthly interest example
+                
+                # Calculate actual payments
+                payments = LoanHist.objects.filter(
+                    gl_no=loan.gl_no,
+                    ac_no=loan.ac_no,
+                    cycle=loan.cycle,
+                    trx_type='LP',  # Loan Payment
+                    trx_date__lte=reporting_date
+                ).aggregate(
+                    total_principal=Sum('principal'),
+                    total_interest=Sum('interest')
+                )
+                
+                principal_paid = payments['total_principal'] or 0
+                interest_paid = payments['total_interest'] or 0
+                
+                # Calculate due amounts
+                principal_due = max(0, expected_principal - principal_paid)
+                interest_due = max(0, expected_interest - interest_paid)
+                
+                repayment_data = {
+                    'gl_no': loan.gl_no,
+                    'ac_no': loan.ac_no,
+                    'customer_name': loan.customer.get_full_name() if loan.customer else "No Customer",
+                    'loan_amount': loan.loan_amount,
+                    'total_interest': expected_interest,
+                    'total_principal_paid': principal_paid,
+                    'total_interest_paid': interest_paid,
+                    'expected_principal_repayment': principal_due,
+                    'expected_interest_repayment': interest_due,
+                }
+                
+                expected_repayments.append(repayment_data)
+                
+                # Update grand totals
+                grand_totals['loan_amount'] += loan.loan_amount
+                grand_totals['total_interest'] += expected_interest
+                grand_totals['total_principal_paid'] += principal_paid
+                grand_totals['total_interest_paid'] += interest_paid
+                grand_totals['expected_principal_repayment'] += principal_due
+                grand_totals['expected_interest_repayment'] += interest_due
+
+            context.update({
+                'expected_repayments': expected_repayments,
+                'reporting_date': reporting_date,
+                'selected_branch': branch.branch_code if branch != user_branch else None,
+                'selected_gl_no': gl_no.gl_no if gl_no else None,
+                'grand_totals': grand_totals,
+                'grand_total_loan_amount': grand_totals['loan_amount'],
+                'grand_total_interest': grand_totals['total_interest'],
+                'grand_total_principal_paid': grand_totals['total_principal_paid'],
+                'grand_total_interest_paid': grand_totals['total_interest_paid'],
+                'grand_total_repayment': grand_totals['expected_principal_repayment'],
+            })
+        else:
+            # Form is invalid - add error to context
+            context['error_message'] = "Please correct the errors below."
 
     return render(request, 'reports/loans/loan_disbursement_report.html', context)
 
-from django.shortcuts import render
-from django.utils import timezone
-from django.db.models import Sum, F
-from .forms import LoanRepaymentReportForm
-from loans.models import LoanHist
-from company.models import Company
-from accounts.models import Account  # Assuming Account model is in accounts app
-from django.contrib.auth.decorators import login_required
+
 
 @login_required
 def loan_repayment_report(request, loan_id=None):
+    # Get current user's branch and company name
+    user_branch = request.user.branch
+    user_company_name = user_branch.company_name if user_branch else None
+    
     # Initialize variables
-    form = LoanRepaymentReportForm(request.POST or None)
+    form = LoanRepaymentReportForm(request.POST or None, user_branch=user_branch)
     repayments = LoanHist.objects.none()
     disbursements = LoanHist.objects.none()
     loan = None
@@ -3794,8 +4135,8 @@ def loan_repayment_report(request, loan_id=None):
         'disbursements': disbursements,
         'loan': loan,
         'selected_branch': None,
-        'company_name': None,
-        'branch_name': None,
+        'company_name': user_company_name,
+        'branch_name': user_branch.branch_name if user_branch else None,
         'grand_total_principal': 0,
         'grand_total_interest': 0,
         'grand_total_penalty': 0,
@@ -3808,16 +4149,18 @@ def loan_repayment_report(request, loan_id=None):
         'outstanding_amount': 0,
     }
 
-    # Get loan if ID is provided
+    # Get loan if ID is provided (only if loan belongs to user's company)
     if loan_id:
         try:
             loan = Loans.objects.select_related(
-                'customer', 'branch', 'branch__company',
-                'loan_officer', 'business_sector'
-            ).get(pk=loan_id)
+                'customer', 'branch', 'loan_officer', 'business_sector'
+            ).get(
+                pk=loan_id,
+                branch__company_name=user_company_name
+            )
             context['loan'] = loan
         except Loans.DoesNotExist:
-            messages.error(request, "Loan not found")
+            messages.error(request, "Loan not found or not accessible")
 
     if request.method == 'POST' and form.is_valid():
         start_date = form.cleaned_data['start_date']
@@ -3826,11 +4169,16 @@ def loan_repayment_report(request, loan_id=None):
         gl_no = form.cleaned_data.get('gl_no')
         cycle = form.cleaned_data.get('cycle')
 
-        # Base query for repayments
+        # Base query for repayments - filtered by user's company with prefetch
         repayments = LoanHist.objects.filter(
             trx_date__range=[start_date, end_date],
-            trx_type='LP'  # Loan Payment
-        ).select_related('branch', 'branch__company')
+            trx_type='LP',  # Loan Payment
+            branch__company_name=user_company_name
+        ).select_related(
+            'branch',
+            'loan',  # Make sure this is the correct related_name
+            'loan__customer'  # Add this to prefetch customer data
+        )
 
         # If viewing specific loan, filter by loan details
         if loan:
@@ -3844,7 +4192,8 @@ def loan_repayment_report(request, loan_id=None):
                 trx_type='LD',  # Loan Disbursement
                 gl_no=loan.gl_no,
                 ac_no=loan.ac_no,
-                cycle=loan.cycle
+                cycle=loan.cycle,
+                branch__company_name=user_company_name
             )
         elif branch:
             repayments = repayments.filter(branch=branch)
@@ -3852,22 +4201,6 @@ def loan_repayment_report(request, loan_id=None):
             repayments = repayments.filter(gl_no=gl_no.gl_no)
         if cycle:
             repayments = repayments.filter(cycle=cycle)
-
-        # Get company/branch names
-        company_name = "All Companies"
-        branch_name = "All Branches"
-        
-        if loan and loan.branch:
-            company_name = loan.branch.company.company_name or "No Company"
-            branch_name = loan.branch.branch_name
-        elif branch:
-            company_name = branch.company.company_name or "No Company"
-            branch_name = branch.branch_name
-        elif repayments.exists():
-            first_repayment = repayments.first()
-            if first_repayment.branch:
-                company_name = first_repayment.branch.company.company_name or "No Company"
-                branch_name = first_repayment.branch.branch_name
 
         # Calculate aggregates
         repayment_aggregates = repayments.aggregate(
@@ -3879,7 +4212,6 @@ def loan_repayment_report(request, loan_id=None):
 
         # Calculate disbursement total if viewing loan
         disbursed_total = 0
-        disbursement_agg = {'total_disbursed': 0}
         if loan:
             disbursement_agg = disbursements.aggregate(
                 total_disbursed=Sum('principal')
@@ -3890,14 +4222,13 @@ def loan_repayment_report(request, loan_id=None):
         subtotals = repayments.values(
             'gl_no',
             'cycle',
-            'branch__company__company_name',
             'branch__branch_name'
         ).annotate(
             subtotal_principal=Sum('principal'),
             subtotal_interest=Sum('interest'),
             subtotal_penalty=Sum('penalty'),
             subtotal_paid=Sum(F('principal') + F('interest'))
-        ).order_by('branch__company__company_name', 'branch__branch_name', 'gl_no', 'cycle')
+        ).order_by('branch__branch_name', 'gl_no', 'cycle')
 
         # Calculate outstanding amount if loan exists
         outstanding_amount = 0
@@ -3916,8 +4247,6 @@ def loan_repayment_report(request, loan_id=None):
             'grand_total_penalty': repayment_aggregates.get('total_penalty', 0) or 0,
             'total_paid_sum': repayment_aggregates.get('total_paid', 0) or 0,
             'grand_total_disbursed': disbursed_total,
-            'company_name': company_name,
-            'branch_name': branch_name,
             'selected_branch': branch,
             'start_date': start_date,
             'end_date': end_date,

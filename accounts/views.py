@@ -343,42 +343,64 @@ from django.conf import settings
 from random import randint
 from .utils import _send_otp_sms
  # or User if using default
-
 def login(request):
     if request.user.is_authenticated:
+        print("[DEBUG] User already authenticated, redirecting to myAccount")
         return redirect('myAccount')
 
     if request.method == 'POST':
         email = request.POST.get('email')
         password = request.POST.get('password')
+        print(f"[DEBUG] Login attempt for email: {email}")
 
         try:
             user = authenticate(request, username=email, password=password)
             if user is None:
+                print("[DEBUG] Authentication failed: Invalid credentials")
                 raise ValueError("Invalid credentials")
 
+            print(f"[DEBUG] User {user.id} authenticated successfully")
+
             if not user.verified:
+                print("[DEBUG] Account verification check failed")
                 raise ValueError("Account not verified")
 
             if user.branch and user.branch.expire_date < timezone.now().date():
+                print(f"[DEBUG] Branch license expired on {user.branch.expire_date}")
                 raise ValueError("Branch license expired")
 
-            # ✅ Generate OTP
+            # Generate OTP
             otp = randint(100000, 999999)
             otp_message = f"Your verification code: {otp}"
+            print(f"[DEBUG] Generated OTP: {otp} (Not for production logging)")
 
-            # ✅ Store in session
+            # Store in session
             request.session['otp_data'] = {
                 'user_id': user.id,
                 'otp': otp,
                 'timestamp': timezone.now().isoformat()
             }
+            print("[DEBUG] OTP stored in session")
 
-            # ✅ Send SMS
-            if hasattr(user, 'phone') and user.phone:
-                _send_otp_sms(user.phone, otp_message, branch=user.branch)
+            # SMS Delivery - Updated to use phone_number
+            user_phone = getattr(user, 'phone_number', None)
+            if user_phone:
+                print(f"[DEBUG] Attempting SMS delivery to {user_phone}")
+                try:
+                    sms_result = _send_otp_sms(user_phone, otp_message, branch=user.branch)
+                    print(f"[DEBUG] SMS API response: {sms_result}")
+                    if sms_result and getattr(sms_result, 'status', None) == 'success':
+                        print("[DEBUG] SMS delivery successful")
+                    else:
+                        print("[DEBUG] SMS delivery may have failed (check provider logs)")
+                except Exception as sms_error:
+                    print(f"[ERROR] SMS delivery failed: {str(sms_error)}", exc_info=True)
+            else:
+                print(f"[DEBUG] No phone number available (Field value: {user_phone})")
+                print(f"[DEBUG] User object fields: {[f.name for f in user._meta.get_fields()]}")
 
-            # ✅ Send Email
+            # Email Delivery
+            print(f"[DEBUG] Preparing email delivery to {user.email}")
             subject = "Your One-Time Password (OTP)"
             html_content = render_to_string('accounts/email/otp_email.html', {
                 'user': user,
@@ -392,11 +414,18 @@ def login(request):
                 to=[user.email],
             )
             email_message.content_subtype = "html"
-            email_message.send()
 
+            try:
+                email_message.send()
+                print(f"[DEBUG] Email successfully queued for delivery to {user.email}")
+            except Exception as email_error:
+                print(f"[ERROR] Email delivery failed: {str(email_error)}", exc_info=True)
+
+            print("[DEBUG] Redirecting to OTP verification")
             return redirect('verify_otp')
 
         except Exception as e:
+            print(f"[ERROR] Login process failed: {str(e)}", exc_info=True)
             messages.error(request, str(e))
             return redirect('login')
 

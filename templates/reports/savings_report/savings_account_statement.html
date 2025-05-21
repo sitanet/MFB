@@ -160,15 +160,17 @@
                     <div class="row g-3">
                         <div class="col-md-3">
                             <label class="form-label">Branch</label>
-                            <select class="form-control" name="branch">
-                                <option value="">All Branches</option>
-                                {% for branch in branches %}
-                                <option value="{{ branch.id }}" 
-                                    {% if branch.id == branch.id %}selected{% endif %}>
-                                    {{ branch.name }}
-                                </option>
-                                {% endfor %}
-                            </select>
+                         <select class="form-control" name="branch" id="branch-select">
+                            <option value="">All Branches</option>
+                            {% for branch in branches %}
+                            <option value="{{ branch.id }}" 
+                                {% if branch.id == selected_branch.id|default:0 %}selected{% endif %}>
+                                {{ branch.branch_name }} ({{ branch.branch_code }})
+                            </option>
+                            {% empty %}
+                            <option value="" disabled>No branches available</option>
+                            {% endfor %}
+                        </select>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">GL Number</label>

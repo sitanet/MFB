@@ -148,7 +148,7 @@
                         <option value="">All Officers</option>
                         {% for officer in account_officers %}
                         <option value="{{ officer.id }}" {% if selected_officer and officer.id == selected_officer.id %}selected{% endif %}>
-                            {{ officer.user.get_full_name }}
+                            {{ officer.user }}
                         </option>
                         {% endfor %}
                     </select>
