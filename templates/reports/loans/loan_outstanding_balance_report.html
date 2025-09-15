@@ -1,12 +1,12 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="container-fluid">
+<div class="container-fluid py-4">
     <!-- Report Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 bg-gradient-primary text-white rounded px-4 py-3 shadow-sm">
         <div>
-            <h2 class="mb-0">{{ report_title }}</h2>
-            <div class="text-muted small">
+            <h2 class="mb-0 font-weight-bold">{{ report_title }}</h2>
+            <div class="small opacity-85">
                 Generated on: {{ current_date|date:"M d, Y H:i" }}
                 {% if reporting_date %} | Reporting Date: {{ reporting_date|date:"M d, Y" }}{% endif %}
                 {% if selected_branch %}
@@ -20,20 +20,20 @@
             </div>
         </div>
         <div>
-            <button id="print-report" class="btn btn-sm btn-outline-secondary">
+            <button id="print-report" class="btn btn-sm btn-light mr-2 shadow-sm">
                 <i class="fas fa-print"></i> Print
             </button>
-            <button id="export-excel" class="btn btn-sm btn-outline-secondary ml-2">
+            <button id="export-excel" class="btn btn-sm btn-light shadow-sm">
                 <i class="fas fa-file-excel"></i> Excel
             </button>
         </div>
     </div>
 
     <!-- Filter Card -->
-    <div class="card mb-4 border-0 shadow-sm">
-        <div class="card-header bg-light d-flex justify-content-between align-items-center">
-            <h6 class="mb-0">Report Filters</h6>
-            <button class="btn btn-sm btn-link" type="button" data-toggle="collapse" data-target="#filterCollapse">
+    <div class="card mb-4 shadow-sm border-0 rounded-lg">
+        <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+            <h6 class="mb-0 font-weight-bold">Report Filters</h6>
+            <button class="btn btn-sm btn-light" type="button" data-toggle="collapse" data-target="#filterCollapse" aria-expanded="true" aria-controls="filterCollapse">
                 <i class="fas fa-sliders-h"></i>
             </button>
         </div>
@@ -43,13 +43,13 @@
                     {% csrf_token %}
                     <div class="form-row">
                         <div class="form-group col-md-3">
-                            <label for="id_reporting_date" class="small font-weight-bold">Reporting Date</label>
+                            <label for="id_reporting_date" class="small font-weight-bold text-info">Reporting Date</label>
                             <input type="date" name="reporting_date" id="id_reporting_date" 
-                                   class="form-control form-control-sm" value="{{ reporting_date }}">
+                                   class="form-control form-control-sm border-info" value="{{ reporting_date }}">
                         </div>
                         <div class="form-group col-md-3">
-                            <label for="id_branch" class="small font-weight-bold">Branch</label>
-                            <select name="branch" id="id_branch" class="form-control form-control-sm">
+                            <label for="id_branch" class="small font-weight-bold text-info">Branch</label>
+                            <select name="branch" id="id_branch" class="form-control form-control-sm border-info">
                                 <option value="">All Branches</option>
                                 {% for branch in branches %}
                                     <option value="{{ branch.id }}" 
@@ -60,8 +60,8 @@
                             </select>
                         </div>
                         <div class="form-group col-md-3">
-                            <label for="id_gl_no" class="small font-weight-bold">GL Account</label>
-                            <select name="gl_no" id="id_gl_no" class="form-control form-control-sm">
+                            <label for="id_gl_no" class="small font-weight-bold text-info">GL Account</label>
+                            <select name="gl_no" id="id_gl_no" class="form-control form-control-sm border-info">
                                 <option value="">All GL Accounts</option>
                                 {% for gl_account in gl_accounts %}
                                     <option value="{{ gl_account.gl_no }}" 
@@ -72,7 +72,7 @@
                             </select>
                         </div>
                         <div class="form-group col-md-3 d-flex align-items-end">
-                            <button type="submit" class="btn btn-primary btn-sm w-100">
+                            <button type="submit" class="btn btn-info btn-sm btn-block font-weight-bold shadow-sm">
                                 <i class="fas fa-filter"></i> Apply Filters
                             </button>
                         </div>
@@ -86,34 +86,34 @@
     {% if outstanding_loans %}
     <div class="row mb-4">
         <div class="col-md-3">
-            <div class="card border-left-primary shadow-sm h-100">
-                <div class="card-body">
-                    <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Total Loans</div>
-                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{ outstanding_loans|length }}</div>
+            <div class="card bg-gradient-primary text-white shadow-sm rounded-lg h-100">
+                <div class="card-body text-center">
+                    <div class="text-uppercase font-weight-bold small">Total Loans</div>
+                    <div class="h3 font-weight-bold">{{ outstanding_loans|length }}</div>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card border-left-success shadow-sm h-100">
-                <div class="card-body">
-                    <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Total Disbursed</div>
-                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{ grand_total_loan_disbursement|floatformat:2 }}</div>
+            <div class="card bg-gradient-success text-white shadow-sm rounded-lg h-100">
+                <div class="card-body text-center">
+                    <div class="text-uppercase font-weight-bold small">Total Disbursed</div>
+                    <div class="h3 font-weight-bold">{{ grand_total_loan_disbursement|floatformat:2 }}</div>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card border-left-warning shadow-sm h-100">
-                <div class="card-body">
-                    <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Outstanding Principal</div>
-                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{ grand_total_outstanding_principal|floatformat:2 }}</div>
+            <div class="card bg-gradient-warning text-dark shadow-sm rounded-lg h-100">
+                <div class="card-body text-center">
+                    <div class="text-uppercase font-weight-bold small">Outstanding Principal</div>
+                    <div class="h3 font-weight-bold">{{ grand_total_outstanding_principal|floatformat:2 }}</div>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card border-left-danger shadow-sm h-100">
-                <div class="card-body">
-                    <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">Outstanding Amount</div>
-                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{ grand_total_outstanding_amount|floatformat:2 }}</div>
+            <div class="card bg-gradient-danger text-white shadow-sm rounded-lg h-100">
+                <div class="card-body text-center">
+                    <div class="text-uppercase font-weight-bold small">Outstanding Amount</div>
+                    <div class="h3 font-weight-bold">{{ grand_total_outstanding_amount|floatformat:2 }}</div>
                 </div>
             </div>
         </div>
@@ -122,11 +122,11 @@
 
     <!-- Main Report Table -->
     {% if outstanding_loans %}
-    <div class="card shadow-sm">
+    <div class="card shadow-sm rounded-lg">
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-bordered table-hover table-sm mb-0" id="reportTable" width="100%" cellspacing="0">
-                    <thead class="thead-light">
+                <table class="table table-striped table-hover table-bordered table-sm mb-0" id="reportTable" width="100%" cellspacing="0" style="min-width: 1100px;">
+                    <thead class="thead-dark">
                         <tr>
                             <th>GL No</th>
                             <th>Account No</th>
@@ -145,32 +145,35 @@
                     <tbody>
                         {% for loan in outstanding_loans %}
                         <tr>
-                            <td>{{ loan.gl_no }}</td>
+                            <td class="font-weight-bold text-primary">{{ loan.gl_no }}</td>
                             <td>{{ loan.ac_no }}</td>
-                            <td>{{ loan.customer_name|truncatechars:20 }}</td>
-                            <td class="text-right">{{ loan.loan_amount|floatformat:2 }}</td>
-                            <td class="text-right">{{ loan.total_interest|floatformat:2 }}</td>
+                            <td title="{{ loan.customer_name }}">{{ loan.customer_name|truncatechars:20 }}</td>
+                            <td class="text-right text-success font-weight-bold">${{ loan.loan_amount|floatformat:2 }}</td>
+                           
+                              <td class="text-right text-warning">{{ loan.outstanding_interest|floatformat:2 }}</td>
                             <td>{{ loan.disbursement_date|date:"Y-m-d" }}</td>
                             <td>{{ loan.expiry_date|date:"Y-m-d"|default:"-" }}</td>
-                            <td class="text-right">{{ loan.total_principal_paid|floatformat:2 }}</td>
-                            <td class="text-right">{{ loan.total_interest_paid|floatformat:2 }}</td>
-                            <td class="text-right font-weight-bold">{{ loan.outstanding_principal|floatformat:2 }}</td>
-                            <td class="text-right">{{ loan.outstanding_interest|floatformat:2 }}</td>
-                            <td class="text-right font-weight-bold text-danger">{{ loan.outstanding_amount|floatformat:2 }}</td>
+                            <td class="text-right text-success">{{ loan.total_principal_paid|floatformat:2 }}</td>
+                            <td class="text-right text-info">{{ loan.total_interest_paid|floatformat:2 }}</td>
+                            <td class="text-right font-weight-bold text-warning">{{ loan.outstanding_principal|floatformat:2 }}</td>
+                           <td class="text-right text-info">{{ loan.total_interest|floatformat:2 }}</td>
+                            <td class="text-right font-weight-bold text-danger">${{ loan.outstanding_amount|floatformat:2 }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
-                    <tfoot class="bg-light">
-                        <tr>
-                            <th colspan="3">Totals</th>
-                            <th class="text-right">{{ grand_total_loan_disbursement|floatformat:2 }}</th>
-                            <th class="text-right">{{ grand_total_outstanding_interest|floatformat:2 }}</th>
-                            <th colspan="3"></th>
-                            <th class="text-right">{{ grand_total_outstanding_principal|floatformat:2 }}</th>
-                            <th class="text-right">{{ grand_total_outstanding_interest|floatformat:2 }}</th>
-                            <th class="text-right">{{ grand_total_outstanding_amount|floatformat:2 }}</th>
-                        </tr>
-                    </tfoot>
+<tfoot class="bg-secondary text-white font-weight-bold">
+    <tr>
+        <th colspan="3">Totals</th>
+        <th class="text-right">${{ grand_total_loan_disbursement|floatformat:2 }}</th>
+                <th class="text-right">{{ grand_total_outstanding_interest|floatformat:2 }}</th> <!-- stays -->
+
+        <th colspan="4"></th>
+        <th class="text-right">{{ grand_total_outstanding_principal|floatformat:2 }}</th>
+        <th class="text-right">{{ grand_total_total_interest|floatformat:2 }}</th>  <!-- changed -->
+        <th class="text-right">${{ grand_total_outstanding_amount|floatformat:2 }}</th>
+    </tr>
+</tfoot>
+
                 </table>
             </div>
         </div>
@@ -188,10 +191,8 @@
 $(document).ready(function() {
     // Print report functionality
     $('#print-report').click(function() {
-        // Clone the report table
         var printContents = $('#reportTable').clone();
-        
-        // Create a new window
+
         var originalContents = $('body').html();
         $('body').empty().append(printContents);
         window.print();
@@ -200,17 +201,12 @@ $(document).ready(function() {
 
     // Export to Excel functionality
     $('#export-excel').click(function() {
-        // Get the table
         var table = document.getElementById('reportTable');
-        
-        // Create workbook
         var wb = XLSX.utils.table_to_book(table, {sheet:"Loan Report"});
-        
-        // Generate file and download
         XLSX.writeFile(wb, 'Loan_Outstanding_Balance_{{ current_date|date:"Ymd" }}.xlsx');
     });
 
-    // Initialize DataTable
+    // Initialize DataTable with styling
     $('#reportTable').DataTable({
         dom: '<"top"Bf>rt<"bottom"lip><"clear">',
         buttons: [
@@ -219,9 +215,7 @@ $(document).ready(function() {
                 text: '<i class="fas fa-print"></i> Print',
                 title: '{{ report_title }}',
                 messageTop: 'Generated on: {{ current_date|date:"M d, Y H:i" }}',
-                exportOptions: {
-                    columns: ':visible'
-                }
+                exportOptions: { columns: ':visible' }
             },
             {
                 extend: 'excel',
@@ -233,36 +227,69 @@ $(document).ready(function() {
         ],
         pageLength: 25,
         order: [[5, 'desc']],  // Default sort by disbursement date
-        responsive: true
+        responsive: true,
+        language: {
+            search: "Filter records:",
+            lengthMenu: "Show _MENU_ entries"
+        }
     });
-
-    // Auto-focus the first filter field
-    $('#id_reporting_date').focus();
 });
 </script>
 
 <style>
-@media print {
-    body * {
-        visibility: hidden;
+/* Gradient background for header */
+.bg-gradient-primary {
+    background: linear-gradient(45deg, #007bff, #00c6ff);
+}
+/* Card gradients for summary */
+.bg-gradient-success {
+    background: linear-gradient(45deg, #28a745, #85e085);
+}
+.bg-gradient-warning {
+    background: linear-gradient(45deg, #ffc107, #fff5b1);
+    color: #333;
+}
+.bg-gradient-danger {
+    background: linear-gradient(45deg, #dc3545, #f28b94);
+}
+
+/* Table row hover */
+table#reportTable tbody tr:hover {
+    background-color: #dff0fb !important;
+}
+
+/* Accent text colors */
+.text-primary { color: #0056b3 !important; }
+.text-success { color: #28a745 !important; }
+.text-info { color: #17a2b8 !important; }
+.text-warning { color: #ffc107 !important; }
+.text-danger { color: #dc3545 !important; }
+
+/* Rounded corners for table header */
+table#reportTable thead th {
+    border-top-left-radius: 0.5rem;
+    border-top-right-radius: 0.5rem;
+}
+
+/* Button styling */
+#export-excel, #print-report {
+    transition: background-color 0.3s ease;
+}
+#export-excel:hover, #print-report:hover {
+    background-color: #e0f7fa;
+    color: #007bff;
+    cursor: pointer;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .form-row > .form-group {
+        margin-bottom: 1rem;
     }
-    #reportTable, #reportTable * {
-        visibility: visible;
-    }
-    #reportTable {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-        font-size: 11pt;
-    }
-    .dataTables_info, .dataTables_length, .dataTables_filter {
-        display: none;
-    }
-    table {
-        width: 100% !important;
-        margin: 0 !important;
+    .table-responsive {
+        font-size: 0.9rem;
     }
 }
 </style>
-{% endblock %}
+
+{% endblock content %}

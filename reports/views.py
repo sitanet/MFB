@@ -4116,24 +4116,26 @@ def loan_disbursement_report(request):
     return render(request, 'reports/loans/loan_disbursement_report.html', context)
 
 
-
 @login_required
+
+
 def loan_repayment_report(request, loan_id=None):
     # Get current user's branch and company name
     user_branch = request.user.branch
     user_company_name = user_branch.company_name if user_branch else None
-    
-    # Initialize variables
+
+    # Initialize form with user's branch
     form = LoanRepaymentReportForm(request.POST or None, user_branch=user_branch)
-    repayments = LoanHist.objects.none()
-    disbursements = LoanHist.objects.none()
+
+    # Ensure loan is always defined
     loan = None
-    
+
+    # Initialize context
     context = {
         'form': form,
-        'repayments': repayments,
-        'disbursements': disbursements,
-        'loan': loan,
+        'repayment_list': [],
+        'disbursements': [],
+        'loan': None,
         'selected_branch': None,
         'company_name': user_company_name,
         'branch_name': user_branch.branch_name if user_branch else None,
@@ -4149,7 +4151,7 @@ def loan_repayment_report(request, loan_id=None):
         'outstanding_amount': 0,
     }
 
-    # Get loan if ID is provided (only if loan belongs to user's company)
+    # Get loan if ID is provided
     if loan_id:
         try:
             loan = Loans.objects.select_related(
@@ -4169,27 +4171,20 @@ def loan_repayment_report(request, loan_id=None):
         gl_no = form.cleaned_data.get('gl_no')
         cycle = form.cleaned_data.get('cycle')
 
-        # Base query for repayments - filtered by user's company with prefetch
         repayments = LoanHist.objects.filter(
             trx_date__range=[start_date, end_date],
-            trx_type='LP',  # Loan Payment
+            trx_type='LP',
             branch__company_name=user_company_name
-        ).select_related(
-            'branch',
-            'loan',  # Make sure this is the correct related_name
-            'loan__customer'  # Add this to prefetch customer data
-        )
+        ).select_related('branch')
 
-        # If viewing specific loan, filter by loan details
         if loan:
             repayments = repayments.filter(
                 gl_no=loan.gl_no,
                 ac_no=loan.ac_no,
                 cycle=loan.cycle
             )
-            # Get disbursements for this loan
             disbursements = LoanHist.objects.filter(
-                trx_type='LD',  # Loan Disbursement
+                trx_type='LD',
                 gl_no=loan.gl_no,
                 ac_no=loan.ac_no,
                 cycle=loan.cycle,
@@ -4202,7 +4197,36 @@ def loan_repayment_report(request, loan_id=None):
         if cycle:
             repayments = repayments.filter(cycle=cycle)
 
-        # Calculate aggregates
+        loan_numbers = repayments.values_list('gl_no', 'ac_no', 'cycle').distinct()
+        loans = Loans.objects.filter(
+            gl_no__in=[x[0] for x in loan_numbers],
+            ac_no__in=[x[1] for x in loan_numbers],
+            cycle__in=[x[2] for x in loan_numbers]
+        ).select_related('customer')
+
+        loan_customer_map = {
+            (loan.gl_no, loan.ac_no, loan.cycle): loan.customer.get_full_name() if loan.customer else "No Customer"
+            for loan in loans
+        }
+
+        repayment_list = []
+        for repayment in repayments:
+            key = (repayment.gl_no, repayment.ac_no, repayment.cycle)
+            repayment_list.append({
+                'counter': len(repayment_list) + 1,
+                'customer_name': loan_customer_map.get(key, "No Customer"),
+                'branch_name': repayment.branch.branch_name,
+                'gl_no': repayment.gl_no,
+                'ac_no': repayment.ac_no,
+                'cycle': repayment.cycle,
+                'trx_date': repayment.trx_date,
+                'trx_no': repayment.trx_no,
+                'principal': float(repayment.principal or 0),
+                'interest': float(repayment.interest or 0),
+                'penalty': float(repayment.penalty or 0),
+                'total_paid': float((repayment.principal or 0) + (repayment.interest or 0)),
+            })
+
         repayment_aggregates = repayments.aggregate(
             total_principal=Sum('principal'),
             total_interest=Sum('interest'),
@@ -4210,43 +4234,41 @@ def loan_repayment_report(request, loan_id=None):
             total_paid=Sum(F('principal') + F('interest'))
         )
 
-        # Calculate disbursement total if viewing loan
-        disbursed_total = 0
-        if loan:
-            disbursement_agg = disbursements.aggregate(
-                total_disbursed=Sum('principal')
-            )
-            disbursed_total = disbursement_agg['total_disbursed'] or 0
+        disbursed_total = disbursements.aggregate(
+            total_disbursed=Sum('principal')
+        ).get('total_disbursed', 0) or 0 if loan else 0
 
-        # Calculate subtotals with cycle included
-        subtotals = repayments.values(
-            'gl_no',
-            'cycle',
-            'branch__branch_name'
+        subtotals = []
+        for subtotal in repayments.values(
+            'gl_no', 'cycle', 'branch__branch_name'
         ).annotate(
             subtotal_principal=Sum('principal'),
             subtotal_interest=Sum('interest'),
             subtotal_penalty=Sum('penalty'),
             subtotal_paid=Sum(F('principal') + F('interest'))
-        ).order_by('branch__branch_name', 'gl_no', 'cycle')
+        ).order_by('branch__branch_name', 'gl_no', 'cycle'):
+            subtotals.append({
+                'branch_name': subtotal['branch__branch_name'],
+                'gl_no': subtotal['gl_no'],
+                'cycle': subtotal['cycle'],
+                'subtotal_principal': float(subtotal['subtotal_principal'] or 0),
+                'subtotal_interest': float(subtotal['subtotal_interest'] or 0),
+                'subtotal_penalty': float(subtotal['subtotal_penalty'] or 0),
+                'subtotal_paid': float(subtotal['subtotal_paid'] or 0),
+            })
 
-        # Calculate outstanding amount if loan exists
-        outstanding_amount = 0
-        if loan:
-            grand_total_principal = repayment_aggregates.get('total_principal') or 0
-            outstanding_amount = loan.loan_amount - grand_total_principal
+        outstanding_amount = max(0, float(loan.loan_amount) - float(repayment_aggregates.get('total_principal') or 0)) if loan else 0
 
-        # Update context
         context.update({
-            'repayments': repayments,
-            'disbursements': disbursements if loan else [],
+            'repayment_list': repayment_list,
+            'disbursements': list(disbursements) if loan else [],
             'loan': loan,
             'outstanding_amount': outstanding_amount,
-            'grand_total_principal': repayment_aggregates.get('total_principal', 0) or 0,
-            'grand_total_interest': repayment_aggregates.get('total_interest', 0) or 0,
-            'grand_total_penalty': repayment_aggregates.get('total_penalty', 0) or 0,
-            'total_paid_sum': repayment_aggregates.get('total_paid', 0) or 0,
-            'grand_total_disbursed': disbursed_total,
+            'grand_total_principal': float(repayment_aggregates.get('total_principal', 0) or 0),
+            'grand_total_interest': float(repayment_aggregates.get('total_interest', 0) or 0),
+            'grand_total_penalty': float(repayment_aggregates.get('total_penalty', 0) or 0),
+            'total_paid_sum': float(repayment_aggregates.get('total_paid', 0) or 0),
+            'grand_total_disbursed': float(disbursed_total),
             'selected_branch': branch,
             'start_date': start_date,
             'end_date': end_date,
@@ -4254,6 +4276,7 @@ def loan_repayment_report(request, loan_id=None):
         })
 
     return render(request, 'reports/loans/loan_repayment_report.html', context)
+
 
 # views.py
 from django.shortcuts import render
@@ -4265,11 +4288,21 @@ from company.models import Branch  # Import Branch if not already
 from accounts.models import Account
 from django.contrib.auth.decorators import login_required
 
-@login_required
 
+
+
+from datetime import datetime, timedelta
+from django.utils.timezone import now
+
+@login_required
+ # adjust imports as needed
 
 def repayment_since_disbursement_report(request):
-    # Initialize default context values
+    user_branches = Branch.objects.filter(user=request.user)
+
+    # Assuming Account has a ForeignKey to Branch as 'branch', if not, adjust accordingly
+    user_gl_accounts = Account.objects.filter(branch__in=user_branches).distinct()
+
     context = {
         'report_title': 'Repayment Since Disbursement',
         'repayments': [],
@@ -4283,12 +4316,12 @@ def repayment_since_disbursement_report(request):
         'current_date': timezone.now().strftime('%Y-%m-%d'),
         'start_date': '',
         'end_date': '',
-        'branches': Branch.objects.all(),
-        'gl_accounts': Account.objects.all(),
+        'branches': user_branches,
+        'gl_accounts': user_gl_accounts,
         'selected_branch': '',
         'selected_gl_no': '',
-        'company_name': 'All Companies',
-        'branch_name': 'All Branches'
+        'company_name': 'Your Company',  # default, will update if branch selected
+        'branch_name': 'All Branches',
     }
 
     if request.method == 'POST':
@@ -4297,36 +4330,38 @@ def repayment_since_disbursement_report(request):
         selected_branch = request.POST.get('branch', '')
         selected_gl_no = request.POST.get('gl_no', '')
 
+        context['start_date'] = start_date
+        context['end_date'] = end_date
+        context['selected_branch'] = selected_branch
+        context['selected_gl_no'] = selected_gl_no
+
         if start_date and end_date:
             try:
-                # Convert to date objects for comparison
                 start_date_obj = datetime.strptime(start_date, '%Y-%m-%d').date()
                 end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
 
-                # Fetch loans disbursed before or on the end date
+                # Filter loans by user's branches only
                 loans = Loans.objects.filter(
-                    disbursement_date__lte=end_date_obj
-                ).select_related('customer', 'branch', 'branch__company')
+                    disbursement_date__lte=end_date_obj,
+                    branch__in=user_branches,
+                )
 
-                # Apply filters if provided
                 if selected_branch:
                     loans = loans.filter(branch_id=selected_branch)
-                    branch = Branch.objects.filter(id=selected_branch).first()
+                    branch = user_branches.filter(id=selected_branch).first()
                     if branch:
-                        context['company_name'] = branch.company.company_name
+                        context['company_name'] = branch.company_name
                         context['branch_name'] = branch.branch_name
 
                 if selected_gl_no:
                     loans = loans.filter(gl_no=selected_gl_no)
 
-                # Filter loan repayments
                 repayments = LoanHist.objects.filter(
                     trx_date__range=[start_date_obj, end_date_obj],
                     trx_type='LP',
                     gl_no__in=loans.values_list('gl_no', flat=True)
                 )
 
-                # Aggregate repayments by customer
                 repayment_summaries = repayments.values('gl_no', 'ac_no', 'cycle').annotate(
                     total_principal=Sum('principal'),
                     total_interest=Sum('interest'),
@@ -4334,23 +4369,21 @@ def repayment_since_disbursement_report(request):
                     total_paid=Sum(F('principal') + F('interest') + F('penalty'))
                 )
 
-                # Calculate grand totals
                 grand_total_principal = repayment_summaries.aggregate(Sum('total_principal'))['total_principal__sum'] or 0
                 grand_total_interest = repayment_summaries.aggregate(Sum('total_interest'))['total_interest__sum'] or 0
                 grand_total_penalty = repayment_summaries.aggregate(Sum('total_penalty'))['total_penalty__sum'] or 0
 
-                # Process each repayment
                 repayments_with_percentage = []
                 total_loan_amount = 0
                 total_loan_interest = 0
-                
+
                 for summary in repayment_summaries:
                     loan = loans.filter(
                         gl_no=summary['gl_no'],
                         ac_no=summary['ac_no'],
                         cycle=summary['cycle']
                     ).first()
-                    
+
                     if loan:
                         loan_amount = loan.loan_amount
                         loan_interest = loan.total_interest
@@ -4382,11 +4415,9 @@ def repayment_since_disbursement_report(request):
                         'percentage_paid': round(percentage_paid, 2)
                     })
 
-                # Final calculations
                 total_paid_sum = sum(item['total_paid'] for item in repayments_with_percentage)
                 total_percentage_paid = (grand_total_principal / total_loan_amount) * 100 if total_loan_amount > 0 else 0
 
-                # Update context with results
                 context.update({
                     'repayments': repayments_with_percentage,
                     'grand_total_principal': grand_total_principal,
@@ -4396,10 +4427,6 @@ def repayment_since_disbursement_report(request):
                     'total_loan_amount': total_loan_amount,
                     'total_loan_interest': total_loan_interest,
                     'total_percentage_paid': total_percentage_paid,
-                    'start_date': start_date,
-                    'end_date': end_date,
-                    'selected_branch': selected_branch,
-                    'selected_gl_no': selected_gl_no
                 })
 
             except ValueError:
@@ -4408,20 +4435,34 @@ def repayment_since_disbursement_report(request):
     return render(request, 'reports/loans/repayment_since_disbursement_report.html', context)
 
 
+from django.db.models import Sum
+from django.utils import timezone
+from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
+from decimal import Decimal
+@login_required
+
 def loan_outstanding_balance(request):
-    # Initialize variables
+    user = request.user
+
+    user_company_names = Branch.objects.filter(user=user).values_list('company_name', flat=True).distinct()
+    branches = Branch.objects.filter(company_name__in=user_company_names)
+    gl_accounts = Account.objects.filter(branch__company_name__in=user_company_names)
+
     outstanding_loans = []
-    grand_total_outstanding_principal = 0
-    grand_total_outstanding_interest = 0
-    grand_total_outstanding_amount = 0
-    grand_total_loan_disbursement = 0
     reporting_date = ''
     selected_branch = ''
     selected_gl_no = ''
+    selected_branch_obj = None
+    selected_gl_obj = None
 
-    # Fetch all branches and GL accounts for dropdowns
-    branches = Branch.objects.all()  # Changed from Company to Branch
-    gl_accounts = Account.objects.all()
+    # Initialize grand totals dictionary
+    grand_totals = {
+        'loan_disbursement': 0,
+        'outstanding_principal': 0,
+        'outstanding_interest': 0,
+        'outstanding_amount': 0,
+    }
 
     if request.method == 'POST':
         reporting_date = request.POST.get('reporting_date', '')
@@ -4429,18 +4470,24 @@ def loan_outstanding_balance(request):
         selected_gl_no = request.POST.get('gl_no', '')
 
         if reporting_date:
-            # Fetch outstanding loans, filtered by branch and gl_no if selected
-            loans = Loans.objects.filter(disbursement_date__lte=reporting_date)
-            
-            if selected_branch:
-                loans = loans.filter(branch_id=selected_branch)  # Using branch_id for filtering
-                
-            if selected_gl_no:
-                loans = loans.filter(gl_no=selected_gl_no)
+            loans = Loans.objects.filter(
+                disbursement_date__lte=reporting_date,
+                branch__company_name__in=user_company_names
+            )
 
-            # Prepare list for output
+            if selected_branch:
+                branch_qs = branches.filter(id=selected_branch)
+                if branch_qs.exists():
+                    selected_branch_obj = branch_qs.first()
+                    loans = loans.filter(branch_id=selected_branch)
+
+            if selected_gl_no:
+                gl_qs = gl_accounts.filter(gl_no=selected_gl_no)
+                if gl_qs.exists():
+                    selected_gl_obj = gl_qs.first()
+                    loans = loans.filter(gl_no=selected_gl_no)
+
             for loan in loans:
-                # Get the latest transaction of type 'LD' for the loan
                 latest_transaction = LoanHist.objects.filter(
                     gl_no=loan.gl_no,
                     ac_no=loan.ac_no,
@@ -4448,36 +4495,32 @@ def loan_outstanding_balance(request):
                     trx_type='LD'
                 ).order_by('-trx_date').first()
 
-                # Get expiry_date from the latest transaction
                 expiry_date = latest_transaction.trx_date if latest_transaction else None
 
-                # Calculate total principal paid
                 total_principal_paid = LoanHist.objects.filter(
                     gl_no=loan.gl_no,
                     ac_no=loan.ac_no,
                     cycle=loan.cycle,
                     trx_type='LP'
-                ).aggregate(
-                    total_principal_paid=Sum('principal')
-                )['total_principal_paid'] or 0
+                ).aggregate(total=Sum('principal'))['total'] or 0
 
-                # Calculate total interest paid
                 total_interest_paid = LoanHist.objects.filter(
                     gl_no=loan.gl_no,
                     ac_no=loan.ac_no,
                     cycle=loan.cycle,
                     trx_type='LP'
-                ).aggregate(
-                    total_interest_paid=Sum('interest')
-                )['total_interest_paid'] or 0
+                ).aggregate(total=Sum('interest'))['total'] or 0
 
-                # Fetch customer name
-                if loan.customer:
-                    customer_name = f"{loan.customer.first_name} {loan.customer.middle_name or ''} {loan.customer.last_name}"
-                else:
-                    customer_name = 'N/A'
+                customer_name = (
+                    f"{loan.customer.first_name} {loan.customer.middle_name or ''} {loan.customer.last_name}".strip()
+                    if loan.customer else 'N/A'
+                )
 
-                # Add loan data to the list
+                outstanding_principal = loan.loan_amount + total_principal_paid
+                outstanding_interest = loan.total_interest - total_interest_paid
+                outstanding_amount = outstanding_principal + outstanding_interest
+
+                # Append loan record
                 outstanding_loans.append({
                     'gl_no': loan.gl_no,
                     'ac_no': loan.ac_no,
@@ -4487,31 +4530,34 @@ def loan_outstanding_balance(request):
                     'disbursement_date': loan.disbursement_date,
                     'total_principal_paid': total_principal_paid,
                     'total_interest_paid': total_interest_paid,
-                    'outstanding_principal': loan.loan_amount + total_principal_paid,  # Fixed calculation
-                    'outstanding_interest': loan.total_interest + total_interest_paid,  # Fixed calculation
-                    'outstanding_amount': (loan.loan_amount + total_principal_paid) + (loan.total_interest + total_interest_paid),  # Fixed calculation
+                    'outstanding_principal': outstanding_principal,
+                    'outstanding_interest': outstanding_interest,
+                    'outstanding_amount': outstanding_amount,
                     'expiry_date': expiry_date
                 })
 
-                # Update totals
-                grand_total_loan_disbursement += loan.loan_amount
-                grand_total_outstanding_principal += (loan.loan_amount + total_principal_paid)
-                grand_total_outstanding_interest += (loan.total_interest + total_interest_paid)
-                grand_total_outstanding_amount += (loan.loan_amount + total_principal_paid) + (loan.total_interest + total_interest_paid)
+                # Update grand totals
+                grand_totals['loan_disbursement'] += loan.loan_amount
+                grand_totals['outstanding_principal'] += outstanding_principal
+                grand_totals['outstanding_interest'] += outstanding_interest
+                grand_totals['outstanding_amount'] += outstanding_amount
 
     context = {
         'report_title': 'Loan Outstanding Balance Report',
         'outstanding_loans': outstanding_loans,
-        'grand_total_loan_disbursement': grand_total_loan_disbursement,
-        'grand_total_outstanding_principal': grand_total_outstanding_principal,
-        'grand_total_outstanding_interest': grand_total_outstanding_interest,
-        'grand_total_outstanding_amount': grand_total_outstanding_amount,
+        'grand_totals': grand_totals,
+        'grand_total_loan_disbursement': grand_totals['loan_disbursement'],
+        'grand_total_outstanding_principal': grand_totals['outstanding_principal'],
+        'grand_total_outstanding_interest': grand_totals['outstanding_interest'],
+        'grand_total_outstanding_amount': grand_totals['outstanding_amount'],
         'current_date': timezone.now(),
         'reporting_date': reporting_date,
-        'branches': branches,  # Changed variable name to match the model
+        'branches': branches,
         'gl_accounts': gl_accounts,
         'selected_branch': selected_branch,
-        'selected_gl_no': selected_gl_no
+        'selected_gl_no': selected_gl_no,
+        'selected_branch_obj': selected_branch_obj,
+        'selected_gl_obj': selected_gl_obj,
     }
 
     return render(request, 'reports/loans/loan_outstanding_balance_report.html', context)
@@ -4526,6 +4572,17 @@ from django.core.exceptions import ValidationError
 from django.db.models import Sum
  # Update with the actual import path
 from django.http import HttpResponseBadRequest
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.db.models import Sum
+from django.utils import timezone
+
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.db.models import Sum
+from django.utils import timezone
+
+
 
 def expected_repayment(request):
     # Initialize variables
@@ -4538,9 +4595,14 @@ def expected_repayment(request):
     selected_branch = ''
     selected_gl_no = ''
 
-    # Fetch all branches and GL accounts for dropdowns
-    branches = Branch.objects.all()  # Changed from Company to Branch
-    gl_accounts = Account.objects.all()
+    if request.user.is_authenticated:
+        # Get branches linked to the logged-in user
+        branches = Branch.objects.filter(user=request.user)
+        # Get accounts linked to those branches
+        gl_accounts = Account.objects.filter(branch__in=branches)
+    else:
+        branches = Branch.objects.none()
+        gl_accounts = Account.objects.none()
 
     if request.method == 'POST':
         # Get form data
@@ -4558,14 +4620,22 @@ def expected_repayment(request):
         else:
             reporting_date = timezone.now().date()
 
-        # Initialize queryset
+        # Filter loans disbursed on or before reporting_date
         loans = Loans.objects.filter(disbursement_date__lte=reporting_date)
 
-        # Apply additional filters if provided
+        # Filter loans by selected branch if provided and the branch belongs to the user
         if selected_branch:
-            loans = loans.filter(branch_id=selected_branch)  # Using branch_id for filtering
+            if branches.filter(id=selected_branch).exists():
+                loans = loans.filter(branch_id=selected_branch)
+            else:
+                loans = loans.none()  # User selected branch they don't own
+
+        # Filter loans by selected GL number if provided and the GL account belongs to the user's branches
         if selected_gl_no:
-            loans = loans.filter(gl_no=selected_gl_no)
+            if gl_accounts.filter(gl_no=selected_gl_no).exists():
+                loans = loans.filter(gl_no=selected_gl_no)
+            else:
+                loans = loans.none()  # User selected GL not in their branches
 
         # Prepare list for output
         for loan in loans:
@@ -4601,12 +4671,12 @@ def expected_repayment(request):
                 trx_date__lte=reporting_date
             ).aggregate(total_interest=Sum('interest'))['total_interest'] or 0
 
-            expected_principal_repayment = total_disbursements - total_principal_paid  # Fixed calculation
-            expected_interest_repayment = total_interest - total_interest_paid  # Fixed calculation
+            expected_principal_repayment = total_disbursements - total_principal_paid
+            expected_interest_repayment = total_interest - total_interest_paid
 
             # Fetch customer name
             if loan.customer:
-                customer_name = f"{loan.customer.first_name} {loan.customer.middle_name or ''} {loan.customer.last_name}"
+                customer_name = f"{loan.customer.first_name} {loan.customer.middle_name or ''} {loan.customer.last_name}".strip()
             else:
                 customer_name = 'N/A'
 
@@ -4647,6 +4717,9 @@ def expected_repayment(request):
     }
 
     return render(request, 'reports/loans/expected_repayment_report.html', context)
+
+
+
 
 def active_loans_by_officer(request):
     # Initialize variables

@@ -343,6 +343,20 @@ from django.conf import settings
 from random import randint
 from .utils import _send_otp_sms
  # or User if using default
+from django.shortcuts import render, redirect
+from django.contrib.auth import authenticate, login as auth_login
+from django.contrib import messages
+from django.utils import timezone
+from django.core.mail import EmailMessage
+from django.template.loader import render_to_string
+from django.conf import settings
+from random import randint
+from .utils import _send_otp_sms
+import logging
+
+logger = logging.getLogger(__name__)  # use Django’s logging system
+
+
 def login(request):
     if request.user.is_authenticated:
         print("[DEBUG] User already authenticated, redirecting to myAccount")
@@ -382,7 +396,7 @@ def login(request):
             }
             print("[DEBUG] OTP stored in session")
 
-            # SMS Delivery - Updated to use phone_number
+            # SMS Delivery
             user_phone = getattr(user, 'phone_number', None)
             if user_phone:
                 print(f"[DEBUG] Attempting SMS delivery to {user_phone}")
@@ -394,7 +408,7 @@ def login(request):
                     else:
                         print("[DEBUG] SMS delivery may have failed (check provider logs)")
                 except Exception as sms_error:
-                    print(f"[ERROR] SMS delivery failed: {str(sms_error)}", exc_info=True)
+                    logger.error(f"[ERROR] SMS delivery failed: {str(sms_error)}", exc_info=True)
             else:
                 print(f"[DEBUG] No phone number available (Field value: {user_phone})")
                 print(f"[DEBUG] User object fields: {[f.name for f in user._meta.get_fields()]}")
@@ -419,17 +433,18 @@ def login(request):
                 email_message.send()
                 print(f"[DEBUG] Email successfully queued for delivery to {user.email}")
             except Exception as email_error:
-                print(f"[ERROR] Email delivery failed: {str(email_error)}", exc_info=True)
+                logger.error(f"[ERROR] Email delivery failed: {str(email_error)}", exc_info=True)
 
             print("[DEBUG] Redirecting to OTP verification")
             return redirect('verify_otp')
 
         except Exception as e:
-            print(f"[ERROR] Login process failed: {str(e)}", exc_info=True)
+            logger.error(f"[ERROR] Login process failed: {str(e)}", exc_info=True)
             messages.error(request, str(e))
             return redirect('login')
 
     return render(request, 'accounts/login.html')
+
 
 
 from django.shortcuts import render, redirect

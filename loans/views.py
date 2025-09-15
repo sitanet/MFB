@@ -74,6 +74,7 @@ from django.utils import timezone
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
 
+
 def loan_application(request, id):
     # Get customer by ID
     customer = get_object_or_404(Customer, id=id)
@@ -86,41 +87,40 @@ def loan_application(request, id):
     # Set initial values for the form
     initial_values = {'gl_no_cust': customer.gl_no, 'ac_no_cust': customer.ac_no}
 
-    # Get the logged-in user's branch information
+    # Get the logged-in user's branch
     user = request.user
-    branch = get_object_or_404(Branch, id=user.branch_id)
-    company = get_object_or_404(Company, id=branch.id)
-    company_date = company.session_date.strftime('%Y-%m-%d') if company.session_date else ''
+    branch = get_object_or_404(Branch, id=user.branch_id)  # Use Branch model directly
+    branch_date = branch.session_date.strftime('%Y-%m-%d') if branch.session_date else ''
 
-    # Check if the company's session status is closed
-    if company.session_status == 'Closed':
+    # Check if the session is closed
+    if branch.session_status == 'Closed':
         return HttpResponse("You cannot post any transaction. Session is closed.")
-    
+
     if request.method == 'POST':
         form = LoansForm(request.POST, request.FILES)
         if form.is_valid():
-            # Date validation
+            # Validate dates
             appli_date = form.cleaned_data.get('appli_date')
-            ses_date = company.session_date
-            
+            ses_date = branch.session_date
+
             if ses_date and appli_date and appli_date > ses_date:
                 messages.error(request, "Application date cannot be after the current session date.")
                 return render(request, 'loans/loans_application.html', {
                     'form': form,
                     'customer': customer,
                     'loan_account': loan_account,
-                    'company': company,
-                    'company_date': company_date,
+                    'branch': branch,
+                    'branch_date': branch_date,
                 })
-            
+
             gl_no = form.cleaned_data['gl_no']
             ac_no = form.cleaned_data['ac_no']
 
             with transaction.atomic():
-                # Check for existing loan
+                # Get last loan cycle
                 existing_loan = Loans.objects.filter(gl_no=gl_no, ac_no=ac_no).last()
 
-                # Create new loan instance
+                # Create new loan
                 new_loan = Loans(
                     branch=cust_branch,
                     appli_date=appli_date,
@@ -136,11 +136,9 @@ def loan_application(request, id):
                     num_install=form.cleaned_data.get('num_install', 0),
                     cycle=existing_loan.cycle + 1 if existing_loan else 1,
                 )
-
-                # Save the new loan
                 new_loan.save()
 
-                # Update customer loan status
+                # Update customer's loan status
                 customer.loan = 'T'
                 customer.save()
 
@@ -156,9 +154,10 @@ def loan_application(request, id):
         'form': form,
         'customer': customer,
         'loan_account': loan_account,
-        'company': company,
-        'company_date': company_date,
+        'branch': branch,
+        'branch_date': branch_date,
     })
+
 
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
