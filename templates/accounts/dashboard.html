@@ -1,309 +1,790 @@
 {% extends "base.html" %}
 {% block content %}
-<!-- Load Google Fonts -->
-<link href="https://fonts.googleapis.com/css2?family=Roboto :wght@400;500;700&display=swap" rel="stylesheet">
-
-<style>
-  body {
-    font-family: 'Roboto', sans-serif;
-    background-color: #f8f9fa;
-  }
-
-  .card {
-    border-radius: 1rem;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-  }
-
-  .card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-  }
-
-  .hover-scale {
-    transition: transform 0.2s ease-in-out;
-  }
-
-  .hover-scale:hover {
-    transform: scale(1.02);
-  }
-
-  .badge-success {
-    background-color: #1cc88a;
-  }
-
-  .badge-primary {
-    background-color: #1a6e1a;
-  }
-
-  .badge-warning {
-    background-color: #f6c23e;
-  }
-
-  .text-primary {
-    color: #1a6e1a !important;
-  }
-
-  .btn-primary {
-    background-color: #1a6e1a;
-    border-color: #1a6e1a;
-  }
-
-  .btn-primary:hover {
-    background-color: #0d4d0d;
-    border-color: #0d4d0d;
-  }
-
-  .chart-area canvas {
-    max-height: 300px;
-  }
-
-  ::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  ::-webkit-scrollbar-thumb {
-    background: #1a6e1a;
-    border-radius: 10px;
-  }
-</style>
-
-<div class="container-fluid py-4">
-  <!-- Header Section -->
-  <div class="row mb-4">
-    <div class="col-md-12">
-      <div class="page-header p-4 rounded-3 text-white"
-           style="background: linear-gradient(to right, rgb(241, 107, 58), #0d4d0d);">
-        <h2 class="font-weight-bold"><i class="fas fa-university mr-2"></i>FinanceFlex Banking Dashboard</h2>
-        <p class="mb-0">Comprehensive overview of your financial institution's performance</p>
-      </div>
-    </div>
-  </div>
-
-  <!-- Summary Cards -->
-  {% include "summary_cards.html" %}
-
-  <!-- Charts -->
-  <div class="row">
-    <div class="col-xl-8 col-lg-7 mb-4">
-      <div class="card shadow-sm">
-        <div class="card-header d-flex justify-content-between align-items-center bg-white border-0">
-          <h6 class="m-0 font-weight-bold text-primary">
-            <i class="fas fa-chart-bar mr-1"></i> Deposits vs Loans Overview
-          </h6>
-          <div class="dropdown no-arrow">
-            <button class="btn btn-link btn-sm dropdown-toggle" type="button" id="dropdownMenuButton"
-                    data-bs-toggle="dropdown" aria-expanded="false">
-              <i class="fas fa-ellipsis-v fa-sm text-gray-400"></i>
-            </button>
-            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuButton">
-              <li><a class="dropdown-item" href="#">Last 30 Days</a></li>
-              <li><a class="dropdown-item" href="#">Last Quarter</a></li>
-              <li><a class="dropdown-item" href="#">Last Year</a></li>
-            </ul>
-          </div>
-        </div>
-        <div class="card-body pt-0">
-          <canvas id="depositsLoansChart"></canvas>
-          <div class="mt-3 small text-muted d-flex justify-content-between">
-            <span><i class="fas fa-circle text-primary mr-1"></i> Deposits</span>
-            <span><i class="fas fa-circle text-success mr-1"></i> Loans</span>
-            <span><i class="fas fa-sync-alt mr-1"></i> Updated 1 hour ago</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-xl-4 col-lg-5 mb-4">
-      <div class="card shadow-sm">
-        <div class="card-header d-flex justify-content-between align-items-center bg-white border-0">
-          <h6 class="m-0 font-weight-bold text-primary">
-            <i class="fas fa-users mr-1"></i> Customer Segmentation
-          </h6>
-          <i class="fas fa-user-tag text-primary"></i>
-        </div>
-        <div class="card-body">
-          <canvas id="customerSegmentationChart" height="120"></canvas>
-          <div class="mt-4 text-center small">
-            <span class="mr-3"><i class="fas fa-circle text-primary"></i> Retail (62%)</span>
-            <span class="mr-3"><i class="fas fa-circle text-success"></i> Business (28%)</span>
-            <span><i class="fas fa-circle text-info"></i> Premium (10%)</span>
-          </div>
-          <div class="mt-3 text-center">
-            <button class="btn btn-outline-primary btn-sm">
-              <i class="fas fa-download mr-1"></i> Export Data
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Additional Metrics -->
-  {% include "loan_transactions.html" %}
-
-  <!-- Branch Performance Table -->
-  <div class="row">
-    <div class="col-12">
-      <div class="card shadow-sm">
-        <div class="card-header d-flex justify-content-between align-items-center bg-white border-0">
-          <h6 class="m-0 font-weight-bold text-primary">
-            <i class="fas fa-map-marker-alt mr-1"></i> Branch Performance
-          </h6>
-        </div>
-        <div class="card-body">
-          <div class="table-responsive">
-            <table class="table table-hover align-middle">
-              <thead class="table-light">
-                <tr>
-                  <th>Branch</th>
-                  <th>Location</th>
-                  <th>Customers</th>
-                  <th>Deposits</th>
-                  <th>Loans</th>
-                  <th>Profit</th>
-                  <th>NPL Ratio</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td><strong>Lagos Main</strong></td>
-                  <td>Victoria Island</td>
-                  <td>5,420</td>
-                  <td>₦1.25T</td>
-                  <td>₦980B</td>
-                  <td class="text-success">₦42.5B</td>
-                  <td>4.2%</td>
-                  <td><span class="badge badge-success">Excellent</span></td>
-                </tr>
-                <tr>
-                  <td><strong>Abuja Central</strong></td>
-                  <td>Central Business District</td>
-                  <td>4,850</td>
-                  <td>₦890B</td>
-                  <td>₦720B</td>
-                  <td class="text-success">₦31.2B</td>
-                  <td>5.1%</td>
-                  <td><span class="badge badge-success">Excellent</span></td>
-                </tr>
-                <tr>
-                  <td><strong>Port Harcourt</strong></td>
-                  <td>GRA Phase 2</td>
-                  <td>3,920</td>
-                  <td>₦750B</td>
-                  <td>₦610B</td>
-                  <td class="text-success">₦28.7B</td>
-                  <td>5.8%</td>
-                  <td><span class="badge badge-primary">Good</span></td>
-                </tr>
-                <tr>
-                  <td><strong>Kano</strong></td>
-                  <td>Zaria Road</td>
-                  <td>3,450</td>
-                  <td>₦680B</td>
-                  <td>₦550B</td>
-                  <td class="text-success">₦25.1B</td>
-                  <td>6.5%</td>
-                  <td><span class="badge badge-primary">Good</span></td>
-                </tr>
-                <tr>
-                  <td><strong>Ibadan</strong></td>
-                  <td>Bodija</td>
-                  <td>2,870</td>
-                  <td>₦520B</td>
-                  <td>₦420B</td>
-                  <td class="text-warning">₦18.3B</td>
-                  <td>7.2%</td>
-                  <td><span class="badge badge-warning">Fair</span></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <div class="mt-3 text-end">
-            <button class="btn btn-primary">
-              <i class="fas fa-download me-1"></i> Export Report
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<script src="/vendor/chart.js/Chart.min.js"></script>
-<script>
-  // Chart configuration (same as before)
-  var ctx = document.getElementById("depositsLoansChart");
-  new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
-      datasets: [{
-        label: "Deposits",
-        lineTension: 0.3,
-        backgroundColor: "rgba(78, 115, 223, 0.05)",
-        borderColor: "rgba(78, 115, 223, 1)",
-        pointRadius: 3,
-        pointBackgroundColor: "rgba(78, 115, 223, 1)",
-        pointBorderColor: "rgba(78, 115, 223, 1)",
-        pointHoverRadius: 3,
-        pointHoverBackgroundColor: "rgba(78, 115, 223, 1)",
-        pointHitRadius: 10,
-        pointBorderWidth: 2,
-        data: [3.8, 3.9, 4.0, 4.1, 4.2, 4.3, 4.4, 4.5, 4.55, 4.6, 4.7, 4.78],
-      }, {
-        label: "Loans",
-        lineTension: 0.3,
-        backgroundColor: "rgba(28, 200, 138, 0.05)",
-        borderColor: "rgba(28, 200, 138, 1)",
-        pointRadius: 3,
-        pointBackgroundColor: "rgba(28, 200, 138, 1)",
-        pointBorderColor: "rgba(28, 200, 138, 1)",
-        pointHoverRadius: 3,
-        pointHoverBackgroundColor: "rgba(28, 200, 138, 1)",
-        pointHitRadius: 10,
-        pointBorderWidth: 2,
-        data: [2.9, 3.0, 3.1, 3.2, 3.3, 3.4, 3.45, 3.5, 3.55, 3.6, 3.65, 3.7],
-      }],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        yAxes: [{
-          ticks: {
-            callback: function(value) {
-              return '₦' + value + 'T';
-            }
-          }
-        }]
-      },
-      tooltips: {
-        callbacks: {
-          label: function(tooltipItem, data) {
-            return data.datasets[tooltipItem.datasetIndex].label + ': ₦' + tooltipItem.yLabel + 'T';
-          }
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FinanceFlex Banking Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            /* Orange & Green Theme */
+            --primary-orange: #f97316; /* Vibrant orange */
+            --primary-orange-dark: #ea580c; /* Darker orange */
+            --primary-green: #16a34a; /* Rich green */
+            --primary-green-dark: #15803d; /* Darker green */
+            --success: #22c55e; /* Bright green */
+            --warning: #f59e0b; /* Amber */
+            --light: #f8fafc;
+            --dark: #0f172a;
+            --gray-100: #f1f5f9;
+            /* --gray-200: #aaa6a2;     hover navigation bar */
+            --gray-300: #cbd5e1;
+            --gray-400: #94a3b8;
+            --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --card-hover-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
         }
-      }
-    }
-  });
 
-  var ctx2 = document.getElementById("customerSegmentationChart");
-  new Chart(ctx2, {
-    type: 'doughnut',
-    data: {
-      labels: ["Retail", "Business", "Premium"],
-      datasets: [{
-        data: [62, 28, 10],
-        backgroundColor: ['#4e73df', '#1cc88a', '#36b9cc'],
-        hoverBackgroundColor: ['#2e59d9', '#17a673', '#2c9faf'],
-        hoverBorderColor: "rgba(234, 236, 244, 1)"
-      }]
-    },
-    options: {
-      cutoutPercentage: 75
-    }
-  });
-</script>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f0fdf4 0%, #fff7ed 100%);
+            color: var(--dark);
+            line-height: 1.6;
+        }
+
+        .container-fluid {
+            padding: 0 1.5rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Header Styles */
+        .page-header {
+            background: linear-gradient(135deg, var(--primary-orange) 0%, var(--primary-green) 100%);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--card-shadow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .page-header::before {
+            content: "";
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(247, 243, 243, 0.1) 0%, rgba(243, 239, 239, 0) 70%);
+            transform: rotate(30deg);
+        }
+
+        .page-header h2 {
+            font-weight: 700;
+            font-size: 2.25rem;
+            margin-bottom: 0.5rem;
+            position: relative;
+            z-index: 2;
+        }
+
+        .page-header p {
+            opacity: 0.9;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* Card Styles */
+        .card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: var(--card-shadow);
+            transition: all 0.3s ease;
+            margin-bottom: 1.5rem;
+            border: none;
+            overflow: hidden;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--card-hover-shadow);
+        }
+
+        .card-header {
+            background: white;
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--gray-200);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-title {
+            font-weight: 600;
+            font-size: 1.125rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .card-title.orange {
+            color: var(--primary-orange);
+        }
+
+        .card-title.green {
+            color: var(--primary-green);
+        }
+
+        .card-body {
+            padding: 1.5rem;
+        }
+
+        /* Summary Cards */
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(50px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .summary-card {
+            display: flex;
+            flex-direction: column;
+            padding: 1.5rem;
+            border-radius: 16px;
+            background: white;
+            box-shadow: var(--card-shadow);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .summary-card::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 5px;
+            height: 100%;
+        }
+
+        .summary-card:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--card-hover-shadow);
+        }
+
+        .summary-card.orange::before {
+            background: var(--primary-orange);
+        }
+
+        .summary-card.green::before {
+            background: var(--primary-green);
+        }
+
+        .summary-card-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1.25rem;
+            font-size: 1.5rem;
+        }
+
+        .summary-card-orange {
+            background: rgba(249, 115, 22, 0.1);
+            color: var(--primary-orange);
+        }
+
+        .summary-card-green {
+            background: rgba(22, 163, 74, 0.1);
+            color: var(--primary-green);
+        }
+
+        .summary-card-success {
+            background: rgba(34, 197, 94, 0.1);
+            color: var(--success);
+        }
+
+        .summary-card-warning {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--warning);
+        }
+
+        .summary-card-value {
+            font-size: 1.875rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+
+        .summary-card-label {
+            color: var(--gray-400);
+            font-size: 0.875rem;
+        }
+
+        .summary-card-trend {
+            display: flex;
+            align-items: center;
+            margin-top: 0.75rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .trend-up {
+            color: var(--success);
+        }
+
+        .trend-down {
+            color: var(--warning);
+        }
+
+        /* Chart Styles */
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+
+        .chart-legend {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 1rem;
+            font-size: 0.875rem;
+            color: var(--gray-400);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        /* Table Styles */
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background-color: var(--gray-100);
+        }
+
+        th {
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            color: var(--gray-400);
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover {
+            background-color: rgba(241, 245, 249, 0.5);
+        }
+
+        .badge {
+            padding: 0.375rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-success {
+            background-color: rgba(34, 197, 94, 0.15);
+            color: var(--success);
+        }
+
+        .badge-primary {
+            background-color: rgba(22, 163, 74, 0.15);
+            color: var(--primary-green);
+        }
+
+        .badge-warning {
+            background-color: rgba(245, 158, 11, 0.15);
+            color: var(--warning);
+        }
+
+        .badge-orange {
+            background-color: rgba(249, 115, 22, 0.15);
+            color: var(--primary-orange);
+        }
+
+        .text-success {
+            color: var(--success) !important;
+        }
+
+        .text-warning {
+            color: var(--warning) !important;
+        }
+
+        .text-orange {
+            color: var(--primary-orange) !important;
+        }
+
+        /* Button Styles */
+        .btn {
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            border: none;
+            font-size: 0.875rem;
+        }
+
+        .btn-orange {
+            background-color: var(--primary-orange);
+            color: white;
+        }
+
+        .btn-orange:hover {
+            background-color: var(--primary-orange-dark);
+        }
+
+        .btn-outline-orange {
+            background: transparent;
+            border: 1px solid var(--primary-orange);
+            color: var(--primary-orange);
+        }
+
+        .btn-outline-orange:hover {
+            background-color: rgba(249, 115, 22, 0.05);
+        }
+
+        .btn-green {
+            background-color: var(--primary-green);
+            color: white;
+        }
+
+        .btn-green:hover {
+            background-color: var(--primary-green-dark);
+        }
+
+        /* Dropdown */
+        .dropdown-toggle {
+            background: transparent;
+            border: none;
+            color: var(--gray-400);
+            padding: 0.25rem;
+            border-radius: 4px;
+        }
+
+        .dropdown-toggle:hover {
+            background: var(--gray-200);
+            color: var(--dark);
+        }
+
+        .dropdown-menu {
+            border-radius: 8px;
+            box-shadow: var(--card-shadow);
+            border: 1px solid var(--gray-200);
+            padding: 0.5rem 0;
+        }
+
+        .dropdown-item {
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+        }
+
+        .dropdown-item:hover {
+            background-color: var(--gray-100);
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--gray-100);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary-orange);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--primary-orange-dark);
+        }
+
+        /* Responsive */
+        @media (max-width: 992px) {
+            .page-header h2 {
+                font-size: 1.875rem;
+            }
+            
+            .summary-cards {
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container-fluid {
+                padding: 0 1rem;
+            }
+            
+            .page-header {
+                padding: 1.5rem;
+            }
+            
+            .page-header h2 {
+                font-size: 1.5rem;
+            }
+            
+            .summary-cards {
+                grid-template-columns: 1fr;
+            }
+            
+            .chart-container {
+                height: 250px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid py-4">
+        <!-- Header Section -->
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <div class="page-header">
+                    <h2><i class="fas fa-university"></i> FinanceFlex Banking Dashboard</h2>
+                    <p style="color: white;">Comprehensive overview of your financial institution's performance</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="summary-cards">
+            <div class="summary-card orange">
+                <div class="summary-card-icon summary-card-orange">
+                    <i class="fas fa-wallet"></i>
+                </div>
+                <div class="summary-card-value">₦4.78T</div>
+                <div class="summary-card-label">Total Deposits</div>
+                <div class="summary-card-trend trend-up">
+                    <i class="fas fa-arrow-up"></i> 12.4% from last month
+                </div>
+            </div>
+            
+            <div class="summary-card green">
+                <div class="summary-card-icon summary-card-green">
+                    <i class="fas fa-hand-holding-usd"></i>
+                </div>
+                <div class="summary-card-value">₦3.70T</div>
+                <div class="summary-card-label">Total Loans</div>
+                <div class="summary-card-trend trend-up">
+                    <i class="fas fa-arrow-up"></i> 8.2% from last month
+                </div>
+            </div>
+            
+            <div class="summary-card orange">
+                <div class="summary-card-icon summary-card-orange">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="summary-card-value">24,510</div>
+                <div class="summary-card-label">Active Customers</div>
+                <div class="summary-card-trend trend-up">
+                    <i class="fas fa-arrow-up"></i> 3.7% from last month
+                </div>
+            </div>
+            
+            <div class="summary-card green">
+                <div class="summary-card-icon summary-card-green">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="summary-card-value">5.8%</div>
+                <div class="summary-card-label">NPL Ratio</div>
+                <div class="summary-card-trend trend-down">
+                    <i class="fas fa-arrow-down"></i> 0.3% from last month
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="row">
+            <div class="col-xl-8 col-lg-7 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="card-title orange">
+                            <i class="fas fa-chart-bar"></i> Deposits vs Loans Overview
+                        </h6>
+                        <div class="dropdown">
+                            <button class="dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuButton">
+                                <li><a class="dropdown-item" href="#">Last 30 Days</a></li>
+                                <li><a class="dropdown-item" href="#">Last Quarter</a></li>
+                                <li><a class="dropdown-item" href="#">Last Year</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="depositsLoansChart"></canvas>
+                        </div>
+                        <div class="chart-legend">
+                            <div class="legend-item">
+                                <div class="legend-color" style="background-color: var(--primary-orange);"></div>
+                                <span>Deposits</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color" style="background-color: var(--primary-green);"></div>
+                                <span>Loans</span>
+                            </div>
+                            <div class="legend-item">
+                                <i class="fas fa-sync-alt"></i>
+                                <span>Updated 1 hour ago</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-4 col-lg-5 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="card-title green">
+                            <i class="fas fa-users"></i> Customer Segmentation
+                        </h6>
+                        <i class="fas fa-user-tag text-orange"></i>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="customerSegmentationChart"></canvas>
+                        </div>
+                        <div class="mt-4 text-center">
+                            <div class="d-flex justify-content-center gap-3 mb-3">
+                                <div class="d-flex align-items-center gap-1">
+                                    <div class="legend-color" style="background-color: var(--primary-orange);"></div>
+                                    <span>Retail (62%)</span>
+                                </div>
+                                <div class="d-flex align-items-center gap-1">
+                                    <div class="legend-color" style="background-color: var(--primary-green);"></div>
+                                    <span>Business (28%)</span>
+                                </div>
+                                <div class="d-flex align-items-center gap-1">
+                                    <div class="legend-color" style="background-color: var(--success);"></div>
+                                    <span>Premium (10%)</span>
+                                </div>
+                            </div>
+                            <button class="btn btn-outline-orange">
+                                <i class="fas fa-download"></i> Export Data
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Branch Performance Table -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="card-title orange">
+                            <i class="fas fa-map-marker-alt"></i> Branch Performance
+                        </h6>
+                        <button class="btn btn-orange">
+                            <i class="fas fa-download"></i> Export Report
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Branch</th>
+                                        <th>Location</th>
+                                        <th>Customers</th>
+                                        <th>Deposits</th>
+                                        <th>Loans</th>
+                                        <th>Profit</th>
+                                        <th>NPL Ratio</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><strong>Lagos Main</strong></td>
+                                        <td>Victoria Island</td>
+                                        <td>5,420</td>
+                                        <td class="text-orange">₦1.25T</td>
+                                        <td class="text-green">₦980B</td>
+                                        <td class="text-success">₦42.5B</td>
+                                        <td>4.2%</td>
+                                        <td><span class="badge badge-success">Excellent</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Abuja Central</strong></td>
+                                        <td>Central Business District</td>
+                                        <td>4,850</td>
+                                        <td class="text-orange">₦890B</td>
+                                        <td class="text-green">₦720B</td>
+                                        <td class="text-success">₦31.2B</td>
+                                        <td>5.1%</td>
+                                        <td><span class="badge badge-success">Excellent</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Port Harcourt</strong></td>
+                                        <td>GRA Phase 2</td>
+                                        <td>3,920</td>
+                                        <td class="text-orange">₦750B</td>
+                                        <td class="text-green">₦610B</td>
+                                        <td class="text-success">₦28.7B</td>
+                                        <td>5.8%</td>
+                                        <td><span class="badge badge-primary">Good</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Kano</strong></td>
+                                        <td>Zaria Road</td>
+                                        <td>3,450</td>
+                                        <td class="text-orange">₦680B</td>
+                                        <td class="text-green">₦550B</td>
+                                        <td class="text-success">₦25.1B</td>
+                                        <td>6.5%</td>
+                                        <td><span class="badge badge-primary">Good</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Ibadan</strong></td>
+                                        <td>Bodija</td>
+                                        <td>2,870</td>
+                                        <td class="text-orange">₦520B</td>
+                                        <td class="text-green">₦420B</td>
+                                        <td class="text-warning">₦18.3B</td>
+                                        <td>7.2%</td>
+                                        <td><span class="badge badge-warning">Fair</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Deposits vs Loans Chart
+        const depositsLoansCtx = document.getElementById('depositsLoansChart').getContext('2d');
+        const depositsLoansChart = new Chart(depositsLoansCtx, {
+            type: 'line',
+            data: {
+                labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+                datasets: [{
+                    label: "Deposits",
+                    tension: 0.3,
+                    backgroundColor: "rgba(249, 115, 22, 0.08)",
+                    borderColor: "rgba(249, 115, 22, 1)",
+                    pointRadius: 4,
+                    pointBackgroundColor: "rgba(249, 115, 22, 1)",
+                    pointBorderColor: "rgba(249, 115, 22, 1)",
+                    pointHoverRadius: 5,
+                    pointHoverBackgroundColor: "rgba(249, 115, 22, 1)",
+                    pointHitRadius: 10,
+                    pointBorderWidth: 2,
+                    data: [3.8, 3.9, 4.0, 4.1, 4.2, 4.3, 4.4, 4.5, 4.55, 4.6, 4.7, 4.78],
+                }, {
+                    label: "Loans",
+                    tension: 0.3,
+                    backgroundColor: "rgba(22, 163, 74, 0.08)",
+                    borderColor: "rgba(22, 163, 74, 1)",
+                    pointRadius: 4,
+                    pointBackgroundColor: "rgba(22, 163, 74, 1)",
+                    pointBorderColor: "rgba(22, 163, 74, 1)",
+                    pointHoverRadius: 5,
+                    pointHoverBackgroundColor: "rgba(22, 163, 74, 1)",
+                    pointHitRadius: 10,
+                    pointBorderWidth: 2,
+                    data: [2.9, 3.0, 3.1, 3.2, 3.3, 3.4, 3.45, 3.5, 3.55, 3.6, 3.65, 3.7],
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': ₦' + context.parsed.y + 'T';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        ticks: {
+                            callback: function(value) {
+                                return '₦' + value + 'T';
+                            },
+                            color: '#64748b'
+                        },
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            color: '#64748b'
+                        }
+                    }
+                },
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                }
+            }
+        });
+
+        // Customer Segmentation Chart
+        const customerSegmentationCtx = document.getElementById('customerSegmentationChart').getContext('2d');
+        const customerSegmentationChart = new Chart(customerSegmentationCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ["Retail", "Business", "Premium"],
+                datasets: [{
+                    data: [62, 28, 10],
+                    backgroundColor: ['#f97316', '#16a34a', '#22c55e'],
+                    borderWidth: 0,
+                    hoverOffset: 10
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                cutout: '75%'
+            }
+        });
+    </script>
+</body>
+</html>
 {% endblock %}

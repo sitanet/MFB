@@ -1,78 +1,150 @@
 {% extends "base.html" %}
 {% block content %}
 {% load humanize %}
-<div class="container-fluid">
+
+<style>
+    /* Container */
+    .report-container {
+        background: #f4f6f9;
+        min-height: 100vh;
+        padding: 30px 20px;
+    }
+
+    /* Page Title */
+    .page_title h2 {
+        font-weight: 700;
+        font-size: 2rem;
+        color: #2c3e50;
+        text-align: center;
+        margin-bottom: 25px;
+    }
+
+    /* Card */
+    .report-card {
+        background: #fff;
+        border-radius: 18px;
+        padding: 30px;
+        box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+        transition: transform 0.2s ease;
+    }
+    .report-card:hover { transform: translateY(-3px); }
+
+    /* Company Info */
+    .company-info h4 { font-weight: 700; color: #2c3e50; }
+    .company-info h6 { color: #7f8c8d; margin: 2px 0; }
+
+    /* Buttons */
+    .action-buttons {
+        text-align: right;
+        margin-bottom: 15px;
+    }
+    .action-buttons .btn {
+        margin-left: 5px;
+        border-radius: 10px;
+        font-weight: 600;
+        padding: 8px 16px;
+    }
+    .action-buttons .dropdown-menu a {
+        font-weight: 500;
+    }
+
+    /* Loan Info */
+    .loan-details h6 {
+        font-size: 0.95rem;
+        margin: 5px 0;
+        color: #34495e;
+    }
+
+    /* Table */
+    .table {
+        margin-top: 25px;
+        border-radius: 10px;
+        overflow: hidden;
+    }
+    .table thead {
+        background: linear-gradient(90deg, #2c3e50, #34495e);
+        color: #fff;
+        text-transform: uppercase;
+        font-size: 0.9rem;
+    }
+    .table th, .table td {
+        padding: 12px 14px;
+        vertical-align: middle;
+    }
+    .table tbody tr:nth-child(even) { background: #f9fbfd; }
+    .table tbody tr:hover { background: #eef3f7; transition: background 0.2s; }
+    .table tfoot {
+        background: #e9ecef;
+        font-weight: 700;
+    }
+
+    /* Print Styles */
+    @media print {
+        body * { visibility: hidden; }
+        .report-card, .report-card * { visibility: visible; }
+        .report-card { position: absolute; top: 0; left: 0; width: 100%; padding: 20px; }
+        .action-buttons { display: none; }
+    }
+</style>
+
+<div class="report-container">
     <div class="row">
         <div class="col-md-12">
             <div class="page_title">
-                <h2>Loan Repayment Schedule</h2>
+                <h2>📑 Loan Repayment Schedule</h2>
             </div>
         </div>
 
-        <!-- SearchTable -->
-        <div class="container deposit p-5 shadow-lg rounded rounded-5">
-            
-            <div class="row mt-3 table-row1">
-              
-                <div class="third mx-auto text-center">
-                    <h5> {{ company.company_name }}</h5>
-                    <h6>{{ company.office_address }}</h6>
-                    <h6>{{ company.branch_name }}</h6>
-                    <h6>{{ company.contact_phone_no }}</h6>
-               
+        <!-- Report Card -->
+        <div class="col-md-12">
+            <div class="report-card">
+
+                <!-- Company Info -->
+ <div class="company-info text-center mb-4">
+    <h4>{{ company.company_name }} — {{ branch.branch_name }}</h4>
+    <h6>{{ branch.office_address }}</h6>
+    <h6>📞 {{ company.contact_phone_no }}</h6>
+</div>
+
+
+
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <div class="btn-group">
+                        <button class="btn btn-success dropdown-toggle" type="button" id="downloadMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            ⬇️ Download
+                        </button>
+                        <div class="dropdown-menu" aria-labelledby="downloadMenu">
+                            <a class="dropdown-item" href="{% url 'generate_pdf' id=loan_instance.id %}" target="_blank">PDF</a>
+                            <a class="dropdown-item" href="{% url 'generate_doc' id=loan_instance.id %}" target="_blank">Doc</a>
+                            <a class="dropdown-item" href="{% url 'generate_excel' id=loan_instance.id %}" target="_blank">Excel</a>
+                            <a class="dropdown-item" href="{% url 'generate_csv' id=loan_instance.id %}" target="_blank">CSV</a>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" onclick="window.print()">🖨 Print</button>
+                    <button class="btn btn-secondary" onclick="window.history.back()">⬅️ Back</button>
                 </div>
-                
-                <div class="dropdown" style="text-align: right; ">
-                    <button class="btn btn-success dropdown-toggle" type="button" id="downloadMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                        Download All Format
-                    </button>
-                    <div class="dropdown-menu" aria-labelledby="downloadMenu">
-                        <a class="dropdown-item" href="{% url 'generate_pdf' id=loan_instance.id %}" target="_blank">PDF</a>
-                        <a class="dropdown-item" href="{% url 'generate_doc' id=loan_instance.id %}" target="_blank">Doc</a>
-                        <a class="dropdown-item" href="{% url 'generate_excel' id=loan_instance.id %}" target="_blank">Excel</a>
-                        <a class="dropdown-item" href="{% url 'generate_csv' id=loan_instance.id %}" target="_blank">CSV</a>
-                    </div>
-                    <button class="btn btn-success" id="printButton" onclick="window.print()">Print Report</button>
-                    
-                    <script>
-                        // JavaScript function to go back in history
-                        function goBack() {
-                            window.history.back();
-                        }
-                    </script>
-                    <button class="btn btn-success" onclick="goBack()">Back</button>
 
-                
+                <!-- Loan Details -->
+                <div class="loan-details mb-3">
+                    <h6>👤 Borrower: {{ customers.first_name }} {{ customers.middle_name }} {{ customers.last_name }}</h6>
+                    <h6>📌 Loan No: {{ loan_instance.gl_no }} {{ loan_instance.ac_no }}</h6>
+                    <h6>💰 Loan Amount: ₦{{ loan_instance.loan_amount|floatformat:2|intcomma }}</h6>
+                    <h6>📊 Interest Rate: {{ loan_instance.interest_rate }}%</h6>
+                    <h6>🏠 Address: {{ customers.address }}</h6>
+                    <h6>✅ Approved Date: {{ loan_instance.approval_date }}</h6>
+                    <h6>📅 No. of Installments: {{ loan_instance.num_install }}</h6>
+                    <h6>⏳ Loan Period: {{ loan_instance.payment_freq }}</h6>
                 </div>
-                <div class="col-md-12 mx-0">
-                  
-                    
-                    <div class="two" style="float: left; margin-right: 10%;">
-                        <h6>Loan Product: {{ customers.first_name }} {{ customers.middle_name }} {{ customers.last_name }}</h6>
-                        <h6>Loan No: {{ loan_instance.gl_no }} {{ loan_instance.ac_no }}</h6>
-                        <h6>Account No: N{{ loan_instance.loan_amount|floatformat:2|intcomma  }} </h6>
-                        <h6>Interest Rate: {{ loan_instance.interest_rate }} </h6>
-                        <h6>Physical/Postal Address: {{ customers.address }} </h6>
-                        <h6>Approved Date: {{ loan_instance.approval_date }} </h6>
-                        <h6> No of Installment: {{ loan_instance.num_install}}</h6>
-                        <h6>Loan Period: {{ loan_instance.payment_freq }} </h6>
-                    </div>
-                    <div class="one">
-                        
-                        <!-- <h6>No. of Installments: {{ loan_instance.gl_no }} {{ loan_instance.ac_no }}</h6>
-                        <h6>Annual Int. Rate: N{{ loan_instance.loan_amount|floatformat:2|intcomma  }} </h6>
-                        <h6> Loan Officer: {{ loan_instance.num_install}}</h6>
-                        <h6> Loan Fund: {{ loan_instance.num_install}}</h6> -->
-                    </div>
 
-
-                    <!-- table -->
-                    <table class="table table-responsive table-hover">
-                        <thead class="thead-dark">
+                <!-- Schedule Table -->
+                <div class="table-responsive">
+                    <table class="table table-hover table-bordered">
+                        <thead>
                             <tr>
                                 <th>Period</th>
                                 <th>Payment Date</th>
-                                <th>Principal Payment.</th>
+                                <th>Principal Payment</th>
                                 <th>Interest Payment</th>
                                 <th>Total Payment</th>
                                 <th>Principal Remaining</th>
@@ -81,20 +153,20 @@
                         <tbody>
                             <tr>
                                 <td>0</td>
-                                <td>{{loan_instance.appli_date|date:"d-m-Y" }}</td>
+                                <td>{{ loan_instance.appli_date|date:"d-m-Y" }}</td>
                                 <td>0.00</td>
                                 <td>0.00</td>
                                 <td>0.00</td>
-                                <td>{{ loan_instance.loan_amount }}</td>
+                                <td>{{ loan_instance.loan_amount|floatformat:2|intcomma }}</td>
                             </tr>
                             {% for payment in loan_schedule %}
                                 <tr>
                                     <td>{{ payment.period }}</td>
-                                    <td>{{payment.payment_date|date:"d-m-Y" }}</td>
-                                    <td>{{ payment.principal_payment|floatformat:2|intcomma  }}</td>
+                                    <td>{{ payment.payment_date|date:"d-m-Y" }}</td>
+                                    <td>{{ payment.principal_payment|floatformat:2|intcomma }}</td>
                                     <td>{{ payment.interest_payment|floatformat:2|intcomma }}</td>
                                     <td>{{ payment.total_payment|floatformat:2|intcomma }}</td>
-                                    <td>{{ payment.principal_remaining|floatformat:2|intcomma  }}</td>
+                                    <td>{{ payment.principal_remaining|floatformat:2|intcomma }}</td>
                                 </tr>
                             {% endfor %}
                         </tbody>
@@ -104,10 +176,12 @@
                                 <td><strong>{{ total_principal_sum|floatformat:2|intcomma }}</strong></td>
                                 <td><strong>{{ total_interest_sum|floatformat:2|intcomma }}</strong></td>
                                 <td><strong>{{ total_payments_sum|floatformat:2|intcomma }}</strong></td>
+                                <td></td>
                             </tr>
                         </tfoot>
                     </table>
                 </div>
+
             </div>
         </div>
     </div>

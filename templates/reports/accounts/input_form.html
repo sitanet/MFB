@@ -27,36 +27,66 @@
                                   </div>
                                </div>
              
-             <form id="generateForm" method="post" action="{% url 'generate_statement' %}" class="chart_of_account p-5 shadow-lg rounded rounded-5">
-                                        {% csrf_token %}
-                                 <div class="form-row">
-                                        <div class="form-group col-md-3">
-                                            <label for="general_ledger_accout_name">Start Date </label>
-                                            <input type="date" class="form-control bg-light"
-                                                  
-                                                  name="start_date"  id="ses_date" value="{{company_date}}">
-                                      </div>
-                                      <div class="form-group col-md-3">
-                                        <label for="general_ledger_accout_name">End Date </label>
-                                        <input type="date" class="form-control bg-light"
-                                              name="end_date" id="ses_date" value="{{company_date}}">
-                                    </div>
-                                    <div class="form-group col-md-3">
-                                        <label for="general_ledger_accout_name">GL NO </label>
-                                        <input type="text" class="form-control bg-light"
-                                              id="general_ledger_accout_name"
-                                              name="gl_no">
-                                    </div>
-                                    <div class="form-group col-md-3">
-                                        <label for="general_ledger_accout_name">AC NO</label>
-                                        <input type="text" class="form-control bg-light"
-                                              id="general_ledger_accout_name"
-                                              name="ac_no">
-                                    </div>
-                                    </div>
-                                        <input type="hidden" id="pageInput" name="page" value="">
-                                        <button type="submit"  class="btn w- btn-success mt-4 shadow-sm">Generate Statement</button>
-                                    </form>
+     <form id="generateForm" method="post" action="{% url 'generate_statement' %}" 
+      class="p-4 shadow-lg rounded-4 bg-white">
+    {% csrf_token %}
+    
+    <!-- Form Header -->
+    <div class="mb-4 border-bottom pb-2">
+        <h5 class="text-primary mb-0">
+            <i class="fas fa-file-invoice-dollar me-2"></i> Generate Statement
+        </h5>
+        <small class="text-muted">Please select a date range and account details</small>
+    </div>
+
+    <div class="row g-4">
+        <!-- Start Date -->
+        <div class="col-md-3">
+            <label class="form-label fw-semibold">
+                <i class="fas fa-calendar-day me-1 text-primary"></i> Start Date
+            </label>
+            <input type="date" class="form-control bg-light shadow-sm"
+                   name="start_date" id="start_date" value="{{ company_date }}">
+        </div>
+
+        <!-- End Date -->
+        <div class="col-md-3">
+            <label class="form-label fw-semibold">
+                <i class="fas fa-calendar-check me-1 text-success"></i> End Date
+            </label>
+            <input type="date" class="form-control bg-light shadow-sm"
+                   name="end_date" id="end_date" value="{{ company_date }}">
+        </div>
+
+        <!-- GL No -->
+        <div class="col-md-3">
+            <label class="form-label fw-semibold">
+                <i class="fas fa-book me-1 text-warning"></i> GL Number
+            </label>
+            <input type="text" class="form-control bg-light shadow-sm"
+                   name="gl_no" placeholder="Enter GL No.">
+        </div>
+
+        <!-- AC No -->
+        <div class="col-md-3">
+            <label class="form-label fw-semibold">
+                <i class="fas fa-id-card me-1 text-danger"></i> Account Number
+            </label>
+            <input type="text" class="form-control bg-light shadow-sm"
+                   name="ac_no" placeholder="Enter Account No.">
+        </div>
+    </div>
+
+    <input type="hidden" id="pageInput" name="page" value="">
+
+    <!-- Submit Button -->
+    <div class="text-end mt-4">
+        <button type="submit" class="btn btn-success px-4 py-2 shadow-sm rounded-pill">
+            <i class="fas fa-file-alt me-2"></i> Generate Statement
+        </button>
+    </div>
+</form>
+
 
                                 
                             </div>
@@ -67,21 +97,31 @@
 
 
                     
-     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-        var sessionDateInput = document.getElementById('ses_date');
-        var companyDate = '{{ company_date }}'; // Assuming company_date is in the 'YYYY-MM-DD' format
-                            
-        sessionDateInput.addEventListener('change', function() {
-            var selectedDate = new Date(sessionDateInput.value);
-            var companyDateObj = new Date(companyDate);
-                            
-            if (selectedDate > companyDateObj) {
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var startDateInput = document.getElementById('start_date');
+    var endDateInput = document.getElementById('end_date');
+    var companyDate = '{{ company_date }}'; // YYYY-MM-DD format
+
+    function validateDate(input) {
+        var selectedDate = new Date(input.value);
+        var companyDateObj = new Date(companyDate);
+
+        if (selectedDate > companyDateObj) {
             alert('Please select a date not greater than the session date.');
-                sessionDateInput.value = '{{ company_date }}'; // Clear the input value
-                }
-            });
-           });
-         </script>
+            input.value = companyDate; 
+        }
+    }
+
+    startDateInput.addEventListener('change', function() {
+        validateDate(startDateInput);
+    });
+
+    endDateInput.addEventListener('change', function() {
+        validateDate(endDateInput);
+    });
+});
+</script>
+
 
 {% endblock %}

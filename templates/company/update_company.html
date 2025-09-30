@@ -1,117 +1,142 @@
-{% extends "base.html" %}
-{% block content %}
-<div class="container-fluid">
-    <div class="row">
-          <div class="col-md-12">
-                <div class="page_title">
-                      <h2>Update Company</h2>
-                </div>
-          </div>
-          <!-- form -->
-          <form method="POST" class="chart_of_account p-5 shadow-lg rounded rounded-5">
-              {% csrf_token %}
-              {% if messages %}
-      <ul class="messages">
-          {% for message in messages %}
-              <li style="font-size: 30px; color: brown; font-weight: bold;"  {% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
-          {% endfor %}
-      </ul>
-  {% endif %}
-  <h6 style="color: red;" >{{ form.errors }}</h6>
-                <div class="form-row">
-                      <!-- <div class="form-group col-md-4">
-                            <label for="general_ledger_accout_no">Branch Code.</label>
-                            <input type="text" class="form-control bg-light"
-                                  id="general_ledger_accout_no"
-                                  name="branch_code" value="{{ form.branch_code.value }}">
-                      </div> -->
-                      <div class="form-group col-md-4">
-                        <label for="general_ledger_accout_name">Company
-                              Name</label>
-                        <input type="text" class="form-control bg-light"
-                              id="general_ledger_accout_name"
-                              name="company_name" value="{{ form.company_name.value }}">
-                  </div>
-                      <!-- <div class="form-group col-md-4">
-                            <label for="general_ledger_accout_name">Branch
-                                  Name</label>
-                            <input type="text" class="form-control bg-light"
-                                  id="general_ledger_accout_name"
-                                  name="branch_name" value="{{ form.branch_name.value }}">
-                      </div> -->
-  
-                
-                    <div class="form-group col-md-4">
-                        <label for="general_ledger_accout_name">Contact person</label>
-                        <input type="text" class="form-control bg-light"
-                              id="general_ledger_accout_name"
-                              name="contact_person" value="{{ form.contact_person.value }}">
-                  </div>
-  
-                    
-                      <div class="form-group col-md-4">
-                        <label for="general_ledger_accout_name">office Address</label>
-                        <input type="text" class="form-control bg-light"
-                              id="general_ledger_accout_name"
-                              name="office_address" value="{{ form.office_address.value }}">
-                             
-                  </div>
-  
-                 
-                      <div class="form-group col-md-4">
-                        <label for="general_ledger_accout_name">Contact Phone NO</label>
-                        <input type="text" class="form-control bg-light"
-                              id="general_ledger_accout_name"
-                              name="contact_phone_no" value="{{ form.contact_phone_no.value }}">
-                  </div>
-                 
-                    <div class="form-group col-md-4">
-                        <label for="general_ledger_accout_name">Session Date</label>
-                        <input type="date" class="form-control bg-light"
-                              id="general_ledger_accout_name"
-                              name="session_date" value="{{ company.session_date|date:'Y-m-d' }}">
-                  </div>
-               
-                  <div class="form-group col-md-4">
-                    <label for="general_ledger_accout_name">Registration Date</label>
-                    <input type="date" class="form-control bg-light"
-                          id="general_ledger_accout_name"
-                          name="registration_date" value="{{ company.registration_date|date:'Y-m-d'}}">
-              </div>
-             
-              <div class="form-group col-md-4">
-                <label for="general_ledger_accout_name">Expiration Date</label>
-                <input type="date" class="form-control bg-light"
-                      id="general_ledger_accout_name"
-                      name="expiration_date" value="{{ company.expiration_date|date:'Y-m-d'}}">
-                  
-          </div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Company</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Your CSS (unchanged) */
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        :root { --primary: #22c55e; --primary-dark: #16a34a; --secondary: #ff7f00; --secondary-dark: #e67300; --light: #f8fafc; --dark: #1e293b; --gray: #64748b; --light-gray: #e2e8f0; --success: #10b981; --danger: #ef4444; --border-radius: 8px; --box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); --transition: all 0.3s ease; }
+        body { background: linear-gradient(135deg, #f0fdf4 0%, #fff7ed 100%); color: var(--dark); line-height: 1.6; min-height: 100vh; }
+        .navbar { background: white; box-shadow: var(--box-shadow); padding: 0 2rem; position: sticky; top: 0; z-index: 100; border-bottom: 3px solid var(--primary); }
+        .nav-container { display: flex; justify-content: space-between; align-items: center; max-width: 1200px; margin: 0 auto; height: 70px; }
+        .logo { display: flex; align-items: center; gap: 12px; font-size: 1.5rem; font-weight: 700; color: var(--primary); text-decoration: none; }
+        .logo i { font-size: 1.8rem; color: var(--secondary); }
+        .nav-links { display: flex; gap: 1.5rem; }
+        .nav-links a { text-decoration: none; color: var(--dark); font-weight: 600; padding: 8px 16px; border-radius: var(--border-radius); transition: var(--transition); position: relative; }
+        .nav-links a:hover, .nav-links a.active { color: var(--dark); font-weight: 700; }
+        .nav-links a::after { content: ''; position: absolute; bottom: 0; left: 0; width: 0; height: 3px; background: var(--secondary); transition: var(--transition); border-radius: 3px; }
+        .nav-links a:hover::after, .nav-links a.active::after { width: 100%; }
+        .nav-buttons { display: flex; gap: 1rem; }
+        .btn { padding: 6px 16px; border-radius: var(--border-radius); font-weight: 600; cursor: pointer; transition: var(--transition); border: none; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 8px; }
+        .btn-outline { background: transparent; border: 2px solid var(--primary); color: var(--primary); }
+        .btn-outline:hover { background: var(--primary); color: white; }
+        .btn-primary { background: var(--secondary); color: white; box-shadow: 0 4px 6px rgba(255,127,0,0.2); }
+        .btn-primary:hover { background: var(--secondary-dark); transform: translateY(-2px); }
+        .container { max-width: 1200px; margin: 2rem auto; padding: 0 1.5rem; }
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 2px solid var(--light-gray); }
+        .page-header h1 { font-size: 2rem; color: var(--dark); background: linear-gradient(90deg, var(--primary), var(--secondary)); -webkit-background-clip: text; background-clip: text; color: transparent; font-weight: 700; }
+        .page-header .btn { padding: 8px 16px; font-size: 0.95rem; }
+        .form-container { background: white; border-radius: var(--border-radius); padding: 1.5rem; box-shadow: var(--box-shadow); margin-bottom: 2rem; border-top: 4px solid var(--primary); position: relative; }
+        .form-group { margin-bottom: 1rem; }
+        .form-group label { display: block; margin-bottom: 0.3rem; font-weight: 600; color: var(--dark); display: flex; align-items: center; gap: 6px; font-size: 0.95rem; }
+        .form-group label::after { content: ''; display: inline-block; width: 8px; height: 8px; background: var(--secondary); border-radius: 50%; opacity: 0; }
+        .form-group.required label::after { opacity: 1; }
+        .form-control { width: 100%; padding: 8px 12px; border: 2px solid var(--light-gray); border-radius: var(--border-radius); font-size: 0.95rem; transition: var(--transition); }
+        .form-control:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(34,197,94,0.2); }
+        .form-row { display: flex; gap: 1.25rem; }
+        .form-row .form-group { flex: 1; }
+        .footer { text-align: center; padding: 1.5rem; color: var(--gray); font-size: 0.85rem; margin-top: 2rem; border-top: 1px solid var(--light-gray); }
+    </style>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="company-register.html" class="logo">
+                <i class="fas fa-leaf"></i>
+                <span>FinanceFlex</span>
+            </a>
+            <div class="nav-links">
+                <a href="company-register.html" class="nav-link">Company Registration</a>
+                <a href="branch-register.html" class="nav-link">Branch Management</a>
+                <a href="company-list.html" class="nav-link active">Company List</a>
+                <a href="branch-list.html" class="nav-link">Branch List</a>
+            </div>
+            <div class="nav-buttons">
+                <button class="btn btn-outline"><i class="fas fa-user"></i> Log In</button>
+                <button class="btn btn-primary"><i class="fas fa-user-plus"></i> Sign Up</button>
+            </div>
+        </div>
+    </nav>
 
-          <div class="form-group col-md-4">
-            <label for="general_ledger_accout_name">Expiration Date</label>
-            <input type="text" class="form-control bg-light"
-                  id="general_ledger_accout_name"
-                  name="license_key" value="{{ form.license_key.value}}">
-                 
-      </div>
-                  
-                            
-                      <!-- <button type="submit"
-                            class="btn w- btn-success mt-4 shadow-sm">Delete</button> -->
-                            <button type="submit"
-                            class="btn w- btn-success mt-4 shadow-sm">Update</button>
+    <div class="container">
+        <div class="page-header">
+            <h1>Edit Company</h1>
+            <a href="{% url 'company_list' %}" class="btn btn-outline"><i class="fas fa-building"></i> View Companies</a>
+        </div>
+        <div class="form-container">
+            <form method="POST" id="company-form">
+                {% csrf_token %}
+
+                {% if messages %}
+                    <div style="background:#e8f7ee; border-left:3px solid #2ecc71; padding:10px; margin-bottom:1.5rem; border-radius:6px; color:#27ae60; font-weight:500;">
+                        {% for message in messages %}
+                            {{ message }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                <div class="form-row">
+                    <div class="form-group required">
+                        <label for="company_name"><i class="fas fa-building mr-2"></i>Company Name</label>
+                        <input type="text" id="company_name" name="company_name" class="form-control" 
+                               value="{{ form.company_name.value|default_if_none:'' }}" required>
+                    </div>
+                    <div class="form-group required">
+                        <label for="contact_person"><i class="fas fa-user mr-2"></i>Contact Person</label>
+                        <input type="text" id="contact_person" name="contact_person" class="form-control"
+                               value="{{ form.contact_person.value|default_if_none:'' }}" required>
+                    </div>
+                    <div class="form-group required">
+                        <label for="office_address"><i class="fas fa-map-marker-alt mr-2"></i>Office Address</label>
+                        <input type="text" id="office_address" name="office_address" class="form-control"
+                               value="{{ form.office_address.value|default_if_none:'' }}" required>
+                    </div>
                 </div>
-               
-                <a href="{% url 'company_list' %}" style="color: green; font-weight: bold;">Back to Company List</a>
-          </form>
-          
-  
-          <div>
-                <!-- Chart of Accoutwill come here -->
-          </div>
-  
-  
+
+                <div class="form-row">
+                    <div class="form-group required">
+                        <label for="contact_phone_no"><i class="fas fa-phone mr-2"></i>Contact Phone NO</label>
+                        <input type="text" id="contact_phone_no" name="contact_phone_no" class="form-control"
+                               value="{{ form.contact_phone_no.value|default_if_none:'' }}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="session_date"><i class="fas fa-calendar-day mr-2"></i>Session Date</label>
+                        <input type="date" id="session_date" name="session_date" class="form-control"
+                               value="{{ company.session_date|date:'Y-m-d' }}">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group required">
+                        <label for="registration_date"><i class="fas fa-calendar-check mr-2"></i>Registration Date</label>
+                        <input type="date" id="registration_date" name="registration_date" class="form-control"
+                               value="{{ company.registration_date|date:'Y-m-d' }}" required>
+                    </div>
+                    <div class="form-group required">
+                        <label for="expiration_date"><i class="fas fa-calendar-times mr-2"></i>Expiration Date</label>
+                        <input type="date" id="expiration_date" name="expiration_date" class="form-control"
+                               value="{{ company.expiration_date|date:'Y-m-d' }}" required>
+                    </div>
+                    <div class="form-group required">
+                        <label for="license_key"><i class="fas fa-key mr-2"></i>License Key</label>
+                        <input type="text" id="license_key" name="license_key" class="form-control"
+                               value="{{ form.license_key.value|default_if_none:'' }}" required>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width: 100%; padding: 10px; font-size: 1rem;">
+                    <i class="fas fa-save"></i> Update Company
+                </button>
+            </form>
+        </div>
     </div>
-  
-  </div>
-{% endblock %}
+
+    <div class="footer">
+        <p>FinanceFlex Management System &copy; 2023 | Financial Solutions</p>
+    </div>
+</body>
+</html>

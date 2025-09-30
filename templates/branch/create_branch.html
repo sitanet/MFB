@@ -1,168 +1,377 @@
-{% load static %}
-
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <!-- Basic Meta and Styles -->
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Create Branch</title>
-    <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}" />
-    <link rel="stylesheet" href="{% static 'css/style.css' %}" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body {
-            background-image: url('{% static "images/savings.jpg" %}');
-            background-size: cover;
-            background-position: center;
-            min-height: 100vh;
+        * {
             margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        :root {
+            --primary: #22c55e;
+            --primary-dark: #16a34a;
+            --secondary: #ff7f00;
+            --secondary-dark: #e67300;
+            --light: #f8fafc;
+            --dark: #1e293b;
+            --gray: #64748b;
+            --light-gray: #e2e8f0;
+            --success: #10b981;
+            --danger: #ef4444;
+            --border-radius: 8px;
+            --box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --transition: all 0.3s ease;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f0fdf4 0%, #fff7ed 100%);
+            color: var(--dark);
+            line-height: 1.6;
+            min-height: 100vh;
             display: flex;
-            justify-content: center;
+            flex-direction: column;
+        }
+
+        .navbar {
+            background: white;
+            box-shadow: var(--box-shadow);
+            padding: 0 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-bottom: 3px solid var(--secondary);
+        }
+
+        .nav-container {
+            display: flex;
+            justify-content: space-between;
             align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+            height: 70px;
         }
 
-        .branch-form {
-            background-color: #fff;
-            padding: 30px;
-            border: 1px solid #ddd;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            width: 700px;
-            border-radius: 5px;
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            text-decoration: none;
         }
 
-        .btn-danger {
-            background-color: orange;
-            border-color: orange;
+        .logo i {
+            font-size: 1.8rem;
+            color: var(--secondary);
         }
 
-        .btn-danger:hover {
-            background-color: #ff7f32;
-            border-color: #ff7f32;
+        .nav-links {
+            display: flex;
+            gap: 1.5rem;
         }
 
-        .form-label {
+        .nav-links a {
+            text-decoration: none;
+            color: var(--dark);
             font-weight: 600;
-            margin-bottom: 5px;
-            display: block;
-            color: #333;
+            padding: 8px 16px;
+            border-radius: var(--border-radius);
+            transition: var(--transition);
+            position: relative;
         }
 
-        .form-error {
-            color: #dc3545;
-            font-size: 0.875rem;
-            margin-top: 5px;
+        .nav-links a:hover,
+        .nav-links a.active {
+            color: var(--dark);
+            font-weight: 700;
+        }
+
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 3px;
+            background: var(--secondary);
+            transition: var(--transition);
+            border-radius: 3px;
+        }
+
+        .nav-links a:hover::after,
+        .nav-links a.active::after {
+            width: 100%;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1.5rem;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid var(--light-gray);
+        }
+
+        .page-header h1 {
+            font-size: 2rem;
+            color: var(--dark);
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            font-weight: 700;
+        }
+
+        .form-container {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            box-shadow: var(--box-shadow);
+            margin-bottom: 2rem;
+            border-top: 4px solid var(--secondary);
+            position: relative;
+        }
+
+        .form-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 70px;
+            height: 70px;
+            background: radial-gradient(circle, var(--secondary) 0%, transparent 70%);
+            opacity: 0.1;
+            border-radius: 0 0 0 50%;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.3rem;
+            font-weight: 600;
+            color: var(--dark);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.95rem;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 8px 12px;
+            border: 2px solid var(--light-gray);
+            border-radius: var(--border-radius);
+            font-size: 0.95rem;
+            transition: var(--transition);
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--secondary);
+            box-shadow: 0 0 0 3px rgba(255, 127, 0, 0.2);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.25rem;
+        }
+
+        @media (max-width: 992px) {
+            .form-row {
+                grid-template-columns: repeat(2, 1fr);
+            }
         }
 
         @media (max-width: 768px) {
-            .branch-form {
-                width: 90%;
-                padding: 20px;
+            .form-row {
+                grid-template-columns: 1fr;
             }
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border-radius: var(--border-radius);
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            border: none;
+            font-size: 0.95rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background: var(--secondary);
+            color: white;
+            box-shadow: 0 4px 6px rgba(255, 127, 0, 0.2);
+        }
+
+        .btn-primary:hover {
+            background: var(--secondary-dark);
+            transform: translateY(-2px);
+        }
+
+        .form-error {
+            color: var(--danger);
+            font-size: 0.85rem;
+            margin-top: 0.3rem;
+        }
+
+        .messages {
+            background: #fff8e1;
+            padding: 0.75rem;
+            border-radius: var(--border-radius);
+            margin-bottom: 1.5rem;
+            border-left: 3px solid var(--secondary);
+        }
+
+        .footer {
+            text-align: center;
+            padding: 1.5rem;
+            color: var(--gray);
+            font-size: 0.85rem;
+            margin-top: auto;
+            border-top: 1px solid var(--light-gray);
         }
     </style>
 </head>
-
 <body>
-<div class="container-fluid">
-    <div class="row justify-content-center">
-        <div class="col-12 col-lg-8 m-auto pb-3 bg-white shadow-sm branch-form">
-            <h3 class="text-center mb-4">
-                <i class="fas fa-code-branch mr-2"></i>Create Your Branch
-            </h3>
-
-            {% if messages %}
-            <div class="alert alert-warning">
-                <ul class="mb-0 pl-3">
-                    {% for message in messages %}
-                    <li>{{ message }}</li>
-                    {% endfor %}
-                </ul>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="{% url 'company_list' %}" class="logo">
+                <i class="fas fa-leaf"></i>
+                <span>FinanceFlex</span>
+            </a>
+            <div class="nav-links">
+                <a href="{% url 'create_company' %}" class="nav-link">Company Registration</a>
+                <a href="{% url 'create_branch' %}" class="nav-link active">Branch Management</a>
+                <a href="{% url 'company_list' %}" class="nav-link">Company List</a>
+                <a href="{% url 'branch_list' %}" class="nav-link">Branch List</a>
             </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="page-header">
+            <h1>Create Branch</h1>
+        </div>
+
+        <div class="form-container">
+            {% if messages %}
+                <div class="messages">
+                    {% for message in messages %}
+                        {{ message }}
+                    {% endfor %}
+                </div>
             {% endif %}
 
             <form method="post" enctype="multipart/form-data" novalidate>
                 {% csrf_token %}
 
-                <div class="row">
+                <!-- Auto Company Name -->
+               <!-- Auto Company Name (display only, no form submission) -->
+       
+
+
+                <div class="form-row">
                     {% for field in form.visible_fields %}
-                        {% if field.name != "company_type" and field.name != "plan" %}
-                        <div class="col-md-4">
-                            <div class="form-group">
-                                <label class="form-label">
-                                    <i class="fas fa-{% if field.name == 'phone_number' %}phone{% elif field.name == 'address' %}map-marker-alt{% elif field.name == 'branch_name' %}building{% elif field.name == 'email' %}envelope{% elif field.name == 'contact_person' %}user{% elif field.name == 'branch_code' %}key{% elif field.name == 'description' %}file-alt{% elif field.name == 'opening_balance' %}dollar-sign{% else %}tag{% endif %} mr-2"></i>
-                                    {{ field.label }}
-                                </label>
+                        {% if field.name != "company_name" and field.name != "company_type" and field.name != "plan" %}
+                        <div class="form-group">
+                            <label for="{{ field.id_for_label }}">
+                                <i class="fas fa-{% if field.name == 'phone_number' %}phone
+                                   {% elif field.name == 'address' %}map-marker-alt
+                                   {% elif field.name == 'branch_name' %}building
+                                   {% elif field.name == 'email' %}envelope
+                                   {% elif field.name == 'contact_person' %}user
+                                   {% elif field.name == 'branch_code' %}key
+                                   {% elif field.name == 'description' %}file-alt
+                                   {% elif field.name == 'opening_balance' %}dollar-sign
+                                   {% else %}tag{% endif %}"></i>
+                                {{ field.label }}
+                            </label>
 
-                                {% if field.field.widget.input_type == 'select' %}
-                                    <select name="{{ field.name }}" class="form-control">
-                                        {% for choice in field.field.choices %}
-                                            <option value="{{ choice.0 }}" {% if choice.0 == field.value %}selected{% endif %}>{{ choice.1 }}</option>
-                                        {% endfor %}
-                                    </select>
-                                {% elif field.field.widget.input_type == 'textarea' %}
-                                    <textarea name="{{ field.name }}" class="form-control" rows="3">{{ field.value }}</textarea>
-                                {% else %}
-                                    <input type="{{ field.field.widget.input_type }}" name="{{ field.name }}" class="form-control" value="{{ field.value|default_if_none:'' }}">
-                                {% endif %}
+                            {% if field.field.widget.input_type == 'select' %}
+                                <select name="{{ field.name }}" class="form-control">
+                                    {% for choice in field.field.choices %}
+                                        <option value="{{ choice.0 }}" {% if choice.0 == field.value %}selected{% endif %}>{{ choice.1 }}</option>
+                                    {% endfor %}
+                                </select>
+                            {% elif field.field.widget.input_type == 'textarea' %}
+                                <textarea name="{{ field.name }}" class="form-control" rows="3">{{ field.value }}</textarea>
+                            {% else %}
+                                <input type="{{ field.field.widget.input_type }}" name="{{ field.name }}" class="form-control" value="{{ field.value|default_if_none:'' }}">
+                            {% endif %}
 
-                                {% if field.errors %}
-                                    <div class="form-error">{{ field.errors.0 }}</div>
-                                {% endif %}
-                            </div>
+                            {% if field.errors %}
+                                <div class="form-error">{{ field.errors.0 }}</div>
+                            {% endif %}
                         </div>
                         {% endif %}
                     {% endfor %}
                 </div>
 
-                <div class="row">
-                    <!-- Company Type -->
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label class="form-label">
-                                <i class="fas fa-building mr-2"></i>Company Type
-                            </label>
-                            <select name="company_type" class="form-control">
-                                <option value="">-- Select Company Type --</option>
-                                <option value="MFB" {% if form.company_type.value == "MFB" %}selected{% endif %}>Microfinance Banks (MFBs)</option>
-                                <option value="MFI" {% if form.company_type.value == "MFI" %}selected{% endif %}>Microfinance Institutions (MFIs)</option>
-                                <option value="Fintech" {% if form.company_type.value == "Fintech" %}selected{% endif %}>Fintechs</option>
-                                <option value="Neobank" {% if form.company_type.value == "Neobank" %}selected{% endif %}>Neobanks</option>
-                                <option value="Cooperative" {% if form.company_type.value == "Cooperative" %}selected{% endif %}>Cooperative Societies / Saccos</option>
-                                <option value="Thrift" {% if form.company_type.value == "Thrift" %}selected{% endif %}>Thrift/ ESUSU, Daily Contribution</option>
-                                <option value="Lender" {% if form.company_type.value == "Lender" %}selected{% endif %}>Lenders</option>
-                                <option value="NGO" {% if form.company_type.value == "NGO" %}selected{% endif %}>Financial NGOs</option>
-                                <option value="Fund_Manager" {% if form.company_type.value == "Fund_Manager" %}selected{% endif %}>Funds Managers</option>
-                            </select>
-                            {% if form.company_type.errors %}
-                                <div class="form-error">{{ form.company_type.errors.0 }}</div>
-                            {% endif %}
-                        </div>
+                <!-- Company Type & Plan -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>
+                            <i class="fas fa-building"></i> Company Type
+                        </label>
+                        <select name="company_type" class="form-control">
+                            <option value="">-- Select Company Type --</option>
+                            <option value="MFB" {% if form.company_type.value == "MFB" %}selected{% endif %}>Microfinance Banks (MFBs)</option>
+                            <option value="MFI" {% if form.company_type.value == "MFI" %}selected{% endif %}>Microfinance Institutions (MFIs)</option>
+                            <option value="Fintech" {% if form.company_type.value == "Fintech" %}selected{% endif %}>Fintechs</option>
+                            <option value="Neobank" {% if form.company_type.value == "Neobank" %}selected{% endif %}>Neobanks</option>
+                            <option value="Cooperative" {% if form.company_type.value == "Cooperative" %}selected{% endif %}>Cooperative Societies / Saccos</option>
+                            <option value="Thrift" {% if form.company_type.value == "Thrift" %}selected{% endif %}>Thrift/ ESUSU, Daily Contribution</option>
+                            <option value="Lender" {% if form.company_type.value == "Lender" %}selected{% endif %}>Lenders</option>
+                            <option value="NGO" {% if form.company_type.value == "NGO" %}selected{% endif %}>Financial NGOs</option>
+                            <option value="Fund_Manager" {% if form.company_type.value == "Fund_Manager" %}selected{% endif %}>Funds Managers</option>
+                        </select>
+                        {% if form.company_type.errors %}
+                            <div class="form-error">{{ form.company_type.errors.0 }}</div>
+                        {% endif %}
                     </div>
 
-                    <!-- Plan -->
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label class="form-label">
-                                <i class="fas fa-clipboard-list mr-2"></i>{{ form.plan.label }}
-                            </label>
-                            {{ form.plan }}
-                            {% if form.plan.errors %}
-                                <div class="form-error">{{ form.plan.errors.0 }}</div>
-                            {% endif %}
-                        </div>
+                    <div class="form-group">
+                        <label>
+                            <i class="fas fa-clipboard-list"></i> {{ form.plan.label }}
+                        </label>
+                        {{ form.plan }}
+                        {% if form.plan.errors %}
+                            <div class="form-error">{{ form.plan.errors.0 }}</div>
+                        {% endif %}
                     </div>
                 </div>
 
-                <button type="submit" class="btn btn-danger mt-4 w-100">
-                    <i class="fas fa-plus-circle mr-2"></i>Create Branch
+                <button type="submit" class="btn btn-primary" style="width: 100%; padding: 12px; font-size: 1.1rem; margin-top: 1rem;">
+                    <i class="fas fa-plus-circle"></i> Create Branch
                 </button>
             </form>
         </div>
     </div>
-</div>
 
-<script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
+    <div class="footer">
+        <p>FinanceFlex Management System &copy; 2023 | Financial Solutions</p>
+    </div>
 </body>
 </html>

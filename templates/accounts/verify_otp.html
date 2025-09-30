@@ -68,9 +68,13 @@
                         <button type="submit" class="btn w-100 btn-danger mt-4 shadow-sm">Verify OTP</button>
                     </form>
                     
-                    <p class="text-danger mt-3">
-                        Didn't receive the OTP? <a href="{% url 'resend_otp' %}" class="text-danger"><strong>Resend OTP</strong></a>
-                    </p>
+               <form method="POST" action="{% url 'resend_otp' %}" style="display:inline;">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-link p-0 m-0 align-baseline text-danger">
+        <strong>Resend OTP</strong>
+    </button>
+</form>
+
                 </div>
             </div>
         </div>

@@ -37,7 +37,7 @@ def customers(request):
     user_branch = request.user.branch  # Get the user's branch
 
     # Filter accounts using the user's branch
-    cust_data = Account.objects.filter(gl_no__startswith='20', branch=user_branch) \
+    cust_data = Account.objects.filter(gl_no__startswith='20') \
         .exclude(gl_no='20100') \
         .exclude(gl_no='20200') \
         .exclude(gl_no='20000')
@@ -45,11 +45,16 @@ def customers(request):
     gl_no = Account.objects.filter(branch=user_branch) \
         .values_list('gl_no', flat=True).filter(gl_no__startswith='20')
 
-    officer = Account_Officer.objects.filter(branch=user_branch)
-    region = Region.objects.filter(branch=user_branch)  # Make sure Region has a ForeignKey to Branch
-    category = Category.objects.filter(branch=user_branch)  # Make sure Category has a ForeignKey to Branch
-    id_card = Id_card_type.objects.filter(branch=user_branch)  # Ensure Id_card_type has a ForeignKey to Branch
+    # officer = Account_Officer.objects.filter(branch=user_branch)
+    # region = Region.objects.filter(branch=user_branch)  # Make sure Region has a ForeignKey to Branch
+    # category = Category.objects.filter(branch=user_branch)  # Make sure Category has a ForeignKey to Branch
+    # id_card = Id_card_type.objects.filter(branch=user_branch)  # Ensure Id_card_type has a ForeignKey to Branch
 
+
+    officer = Account_Officer.objects.all()
+    region = Region.objects.all()  # Make sure Region has a ForeignKey to Branch
+    category = Category.objects.all()  # Make sure Category has a ForeignKey to Branch
+    id_card = Id_card_type.objects.all()
     # Since you're not using a Company model, fetch the current branch only
     cust_branch = [user_branch]
 
@@ -542,9 +547,10 @@ def new_accounts(request):
    
 #     return render(request, 'file/internal_accounts.html', {'cust_branch':cust_branch,'gl_no':gl_no})
 
-
+from django.contrib import messages
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
+
 
 def internal_accounts(request):
     # Get the branch of the logged-in user
@@ -559,15 +565,29 @@ def internal_accounts(request):
     if request.method == 'POST':
         form = InternalAccountForm(request.POST)
         if form.is_valid():
-            # Automatically assign the logged-in user's branch to the internal account
-            form.instance.branch = request.user.branch
-            form.save()
-            return redirect('internal_list')
+            gl_no_value = form.cleaned_data.get('gl_no')
+            ac_no_value = form.cleaned_data.get('ac_no')
 
+            # ✅ Check duplicate in Customer model
+            if Customer.objects.filter(gl_no=gl_no_value, ac_no=ac_no_value, branch=user_branch).exists():
+                messages.error(
+                    request,
+                    f"⚠️ Customer with GL {gl_no_value} and AC {ac_no_value} already exists under your branch."
+                )
+            else:
+                # Assign branch automatically
+                form.instance.branch = user_branch
+                form.save()
+                messages.success(request, "✅ Internal account created successfully.")
+                return redirect('internal_list')
     else:
         form = InternalAccountForm()
 
-    return render(request, 'file/internal/internal_accounts.html', {'cust_branch': cust_branch, 'gl_no': gl_no, 'form': form})
+    return render(
+        request,
+        'file/internal/internal_accounts.html',
+        {'cust_branch': cust_branch, 'gl_no': gl_no, 'form': form}
+    )
 
 
 @login_required(login_url='login')

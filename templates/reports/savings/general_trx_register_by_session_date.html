@@ -23,7 +23,169 @@
         margin-bottom: 2rem;
     }
 
-    /* [Keep all your existing CSS styles...] */
+    .report-header {
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        color: white;
+        padding: 1.5rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        text-align: center;
+    }
+
+    .report-title {
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.5rem;
+    }
+
+    .report-subtitle {
+        font-weight: 300;
+        opacity: 0.9;
+        margin-bottom: 0.25rem;
+    }
+
+    .report-address {
+        font-size: 0.9rem;
+        opacity: 0.8;
+        margin-bottom: 0.5rem;
+    }
+
+    .report-period {
+        background: var(--light);
+        padding: 1rem;
+        border-radius: 5px;
+        margin: 1.5rem 0;
+    }
+
+    .report-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.9rem;
+    }
+
+    .report-table thead th {
+        background: var(--secondary);
+        color: white;
+        padding: 0.75rem 1rem;
+        position: sticky;
+        top: 0;
+        text-align: left;
+    }
+
+    .report-table tbody td {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid #eee;
+        vertical-align: middle;
+    }
+
+    .report-table tbody tr:hover {
+        background: rgba(52, 152, 219, 0.05);
+    }
+
+    .text-success { color: var(--success); }
+    .text-danger { color: var(--danger); }
+
+    .total-row {
+        background: var(--light);
+        font-weight: 600;
+    }
+
+    .total-row td {
+        border-top: 2px solid var(--dark);
+        border-bottom: 2px solid var(--dark);
+    }
+
+    .form-container {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .btn-print {
+        background: var(--secondary);
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+    }
+
+    .btn-generate {
+        background: var(--success);
+        color: white;
+        border: none;
+        padding: 0.5rem 1.5rem;
+    }
+
+    .btn-new-search {
+        background: var(--primary);
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        margin-left: 0.5rem;
+    }
+
+    .no-results {
+        text-align: center;
+        padding: 2rem;
+        color: var(--gray);
+    }
+
+    .hidden {
+        display: none;
+    }
+
+    .loading-spinner {
+        display: inline-block;
+        width: 1rem;
+        height: 1rem;
+        vertical-align: middle;
+        border: 0.2em solid currentColor;
+        border-right-color: transparent;
+        border-radius: 50%;
+        animation: spinner-border .75s linear infinite;
+        margin-right: 5px;
+    }
+
+    @keyframes spinner-border {
+        to { transform: rotate(360deg); }
+    }
+
+    .date-time {
+        font-size: 0.85rem;
+        color: var(--gray);
+        text-align: right;
+        margin-bottom: 1rem;
+        padding: 0.5rem;
+    }
+
+    @media print {
+        .no-print { display: none !important; }
+        .report-header { 
+            background: var(--secondary) !important; 
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        body * {
+            visibility: hidden;
+        }
+        .report-container, .report-container * {
+            visibility: visible;
+        }
+        .report-container {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            padding: 0;
+            background-color: white;
+            box-shadow: none;
+        }
+        .report-table thead th {
+            background: var(--secondary) !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+    }
 </style>
 
 <div class="container-fluid">
@@ -61,15 +223,18 @@
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">Branch</label>
-                            <select class="form-control" name="branch">
-                                <option value="">All Branches</option>
-                                {% for branch in branches %}
-                                <option value="{{ branch.id }}" 
-                                    {% if branch.id == selected_branch %}selected{% endif %}>
-                                    {{ branch.branch_name }}
-                                </option>
-                                {% endfor %}
-                            </select>
+            <select class="form-control" name="branch">
+    {% if request.user.branch.head_office %}
+        <option value="">All Branches</option>
+    {% endif %}
+    {% for branch in branches %}
+        <option value="{{ branch.id }}"
+            {% if selected_branch and branch.id == selected_branch.id %}selected{% endif %}>
+            {{ branch.branch_name }}
+        </option>
+    {% endfor %}
+</select>
+
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">User</label>

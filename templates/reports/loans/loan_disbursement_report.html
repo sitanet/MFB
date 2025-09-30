@@ -5,13 +5,13 @@
 {% block content %}
 <style>
     :root {
-        --primary: #4361ee;
-        --primary-light: #3f37c9;
-        --secondary: #3a0ca3;
-        --success: #4cc9f0;
+        --primary: #27ae60;         /* green */
+        --primary-light: #2ecc71;   /* lighter green for hover */
+        --secondary: #e67e22;       /* orange */
+        --success: #27ae60;
         --danger: #f72585;
         --warning: #f8961e;
-        --info: #4895ef;
+        --info: #e67e22;            /* optional, match orange */
         --light: #f8f9fa;
         --dark: #212529;
         --gray: #6c757d;
@@ -64,12 +64,13 @@
         font-weight: 500;
         letter-spacing: 0.5px;
         transition: all 0.3s ease;
+        color: #fff;
     }
 
     .btn-generate:hover {
         background: var(--primary-light);
         transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(67, 97, 238, 0.3);
+        box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
     }
 
     .report-table {
@@ -94,7 +95,7 @@
     }
 
     .report-table tbody tr:hover {
-        background-color: rgba(67, 97, 238, 0.05);
+        background-color: rgba(39, 174, 96, 0.05);
         transform: scale(1.005);
     }
 
@@ -113,12 +114,12 @@
         font-weight: 500;
         font-size: 0.85rem;
         display: inline-block;
-        border: 1px solid rgba(67, 97, 238, 0.2);
+        border: 1px solid rgba(39, 174, 96, 0.2);
         transition: all 0.2s ease;
     }
 
     .gl-badge:hover {
-        background-color: rgba(67, 97, 238, 0.1);
+        background-color: rgba(39, 174, 96, 0.1);
         transform: translateY(-1px);
     }
 
@@ -129,7 +130,7 @@
     }
 
     .total-row {
-        background: rgba(67, 97, 238, 0.08);
+        background: rgba(39, 174, 96, 0.08);
         font-weight: 600;
     }
 
@@ -207,7 +208,7 @@
 
     .form-control:focus {
         border-color: var(--primary);
-        box-shadow: 0 0 0 0.25rem rgba(67, 97, 238, 0.15);
+        box-shadow: 0 0 0 0.25rem rgba(39, 174, 96, 0.15);
     }
 
     .form-error {
@@ -258,6 +259,7 @@
         }
     }
 </style>
+
 
 <div class="container-fluid">
     <!-- Page Header -->
@@ -383,19 +385,19 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-xl-3 col-md-6">
-                            <div class="card text-white bg-success summary-card h-100">
-                                <div class="card-body">
-                                    <div class="d-flex justify-content-between align-items-start">
-                                        <div>
-                                            <h5 class="card-title">Principal Paid</h5>
-                                            <p class="card-text">{{ grand_total_principal_paid|floatformat:2|intcomma }}</p>
-                                        </div>
-                                        <i class="fas fa-hand-holding-usd fa-2x opacity-50"></i>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+<div class="col-xl-3 col-md-6">
+    <div class="card summary-card h-100" style="background-color: var(--primary-light); color: #fff;">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <h5 class="card-title">Principal Paid</h5>
+                    <p class="card-text">{{ grand_total_principal_paid|floatformat:2|intcomma }}</p>
+                </div>
+                <i class="fas fa-hand-holding-usd fa-2x opacity-50"></i>
+            </div>
+        </div>
+    </div>
+</div>
                         <div class="col-xl-3 col-md-6">
                             <div class="card text-white bg-info summary-card h-100">
                                 <div class="card-body">

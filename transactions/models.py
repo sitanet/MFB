@@ -35,7 +35,7 @@ class Memtrans(models.Model):
     account_type = models.CharField(max_length=1, null=True, blank=True, default='N')
     code = models.CharField(max_length=3, null=True, blank=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)  # Add user field
-
+    trx_type = models.CharField(max_length=20, null=True, blank=True, default='')
 
     def __str__(self):
         return f"Memtrans {self.trx_no}"

@@ -190,17 +190,25 @@
                     <input type="date" class="form-control" name="end_date" 
                            value="{{ end_date|date:'Y-m-d' }}" required>
                 </div>
-                <div class="col-md-3">
-                    <label class="form-label">Branch</label>
-                    <select class="form-control" name="branch">
-                        <option value="">All Branches</option>
-                        {% for branch in branches %}
-                        <option value="{{ branch.id }}" {% if selected_branch and branch.id == selected_branch.id %}selected{% endif %}>
-                            {{ branch.branch_name }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </div>
+           <div class="col-md-3">
+    <label class="form-label">Branch</label>
+    {% if user_branch_is_head_office %}
+        <!-- Head-office user: show all branches -->
+        <select class="form-control" name="branch">
+            <option value="">All Branches</option>
+            {% for branch in branches %}
+                <option value="{{ branch.id }}" {% if selected_branch and branch.id == selected_branch.id %}selected{% endif %}>
+                    {{ branch.branch_name }}
+                </option>
+            {% endfor %}
+        </select>
+    {% else %}
+        <!-- Non-head-office user: show only their branch as text -->
+        <input type="text" class="form-control" value="{{ user_branch.branch_name }}" disabled>
+        <input type="hidden" name="branch" value="{{ user_branch.id }}">
+    {% endif %}
+</div>
+
                 <div class="col-md-3">
                     <label class="form-label">Product</label>
                     <select class="form-control" name="gl_no">

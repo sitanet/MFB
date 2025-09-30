@@ -13,7 +13,24 @@
     </div>
 
     <div class="container">
-        <a href="{% url 'loans' %}" style="color: green; font-weight: bold; text-align: right; display: block;">Loans Menu</a>
+<div style="display: flex; justify-content: flex-end; margin-bottom: 15px;">
+    <a href="{% url 'loans' %}" 
+       style="display:inline-block; 
+              background: linear-gradient(135deg, #007bff, #0056b3); 
+              color: #fff; 
+              font-weight: bold; 
+              padding: 10px 20px; 
+              border-radius: 8px; 
+              text-decoration: none; 
+              box-shadow: 0 4px 8px rgba(0,0,0,0.2); 
+              transition: all 0.3s ease;"
+       onmouseover="this.style.background='linear-gradient(135deg, #0056b3, #004085)'; this.style.boxShadow='0 6px 12px rgba(0,0,0,0.3)';"
+       onmouseout="this.style.background='linear-gradient(135deg, #007bff, #0056b3)'; this.style.boxShadow='0 4px 8px rgba(0,0,0,0.2)';">
+       🔙 Loans Menu
+    </a>
+</div>
+
+
         <form method="POST" enctype="multipart/form-data" id="loanApprovalForm">
             {% csrf_token %}
             {% if messages %}
@@ -98,7 +115,21 @@
                             <i class="uil uil-navigator"></i>
                         </button>
 
-                        <a href="{% url 'loan_schedule' customer.id %}">View Repayment Plan</a>
+                    <a href="{% url 'loan_schedule' customer.id %}" 
+   style="display:inline-block; 
+          background: linear-gradient(135deg, #28a745, #218838); 
+          color: #fff; 
+          font-weight: bold; 
+          padding: 10px 20px; 
+          border-radius: 8px; 
+          text-decoration: none; 
+          box-shadow: 0 4px 8px rgba(0,0,0,0.2); 
+          transition: all 0.3s ease;"
+   onmouseover="this.style.background='linear-gradient(135deg, #218838, #1e7e34)'; this.style.boxShadow='0 6px 12px rgba(0,0,0,0.3)';"
+   onmouseout="this.style.background='linear-gradient(135deg, #28a745, #218838)'; this.style.boxShadow='0 4px 8px rgba(0,0,0,0.2)';">
+   📑 View Repayment Plan
+</a>
+
                     </div>
                 </div>
             </div>

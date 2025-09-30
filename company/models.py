@@ -40,14 +40,23 @@ class Branch(models.Model):
         ("Enterprise", "Enterprise"),
     ]
 
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL, 
-        on_delete=models.CASCADE, 
-        related_name="branches"
-    )
+    # models.py
+    # user = models.ForeignKey(
+    #     settings.AUTH_USER_MODEL,
+    #     on_delete=models.CASCADE,
+    #     null=True,
+    #     blank=True,
+    #     related_name="branches"   # ✅ avoids clash with User.branch
+    # )
+
 
     company_name = models.CharField(max_length=100)
-    company = models.CharField(max_length=100, blank=True, null=True)
+    # company = models.CharField(max_length=100, blank=True, null=True)
+    company = models.ForeignKey(
+        "Company",
+        on_delete=models.CASCADE,
+        related_name="branches"
+    )
     branch_code = models.CharField(max_length=6)
     branch_name = models.CharField(max_length=90)
     logo = models.ImageField(upload_to='branch_logos/', blank=True, null=True)
@@ -58,6 +67,8 @@ class Branch(models.Model):
     bvn_number = models.CharField(max_length=11)
     phone_number = models.CharField(max_length=20)
     phone_verified = models.BooleanField(default=False)
+
+    head_office = models.BooleanField(default=False)
     otp_code = models.CharField(max_length=6, null=True, blank=True)
     plan = models.CharField(max_length=15, choices=PLAN_CHOICES, default="Starter")
     session_date = models.DateField(null=True, blank=True, default=now)
@@ -70,13 +81,15 @@ class Branch(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    def save(self, *args, **kwargs):
-        # Automatically set company = branch_name
-        self.company = self.branch_name
+    
 
-        # If expire_date is not set yet (new branch), set it to 30 days from today
-        if not self.expire_date:
-            self.expire_date = now().date() + timedelta(days=30)
+    def save(self, *args, **kwargs):
+        # ❌ REMOVE THIS LINE:
+        # self.company = self.branch_name   ← DELETE IT
+
+        # Only set expire_date if not already set (e.g., on creation)
+        if not self.expire_date and not self.pk:  # only on first save
+            self.expire_date = timezone.now().date() + timedelta(days=30)
 
         super().save(*args, **kwargs)
 

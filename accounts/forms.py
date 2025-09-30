@@ -17,7 +17,16 @@ class UserForm(forms.ModelForm):
     username = forms.CharField(widget=forms.TextInput(attrs={'placeholder': 'Enter Username', 'required': 'required'}))
     email = forms.EmailField(widget=forms.EmailInput(attrs={'placeholder': 'Enter Email', 'required': 'required'}))
     phone_number = forms.CharField(widget=forms.TextInput(attrs={'placeholder': 'Enter Phone Number', 'required': 'required'}))
-    branch = forms.ModelChoiceField(queryset=Branch.objects.all(), empty_label="Select Branch", required=False)
+    branch = forms.ModelChoiceField(
+    queryset=Branch.objects.all(),
+    empty_label="Select Branch",
+    required=True )
+    role = forms.TypedChoiceField(
+        choices=[(User.SYSTEM_ADMINISTRATOR, 'System Administrator')],
+        coerce=int,
+        empty_value=None,
+        widget=forms.Select(attrs={'class': 'form-select', 'required': 'required'})
+    )
     # If the branch field is needed:
     # branch = forms.ModelChoiceField(queryset=Branch.objects.all(), empty_label="Select Branch", required=True)
     
@@ -26,7 +35,7 @@ class UserForm(forms.ModelForm):
 
     class Meta:
         model = User
-        fields = ['profile_picture', 'first_name', 'last_name', 'username', 'email', 'role', 'phone_number', 'password', 'cashier_gl', 'cashier_ac']  # Add branch to the list of fields
+        fields = ['profile_picture', 'first_name', 'last_name', 'username', 'email', 'role', 'branch','phone_number', 'password', 'cashier_gl', 'cashier_ac']  # Add branch to the list of fields
 
     def clean(self):
         cleaned_data = super(UserForm, self).clean()
@@ -36,6 +45,7 @@ class UserForm(forms.ModelForm):
         if password != confirm_password:
             raise forms.ValidationError("Password does not match!")
 
+        cleaned_data['role'] = User.SYSTEM_ADMINISTRATOR
         return cleaned_data
 
 

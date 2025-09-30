@@ -157,15 +157,24 @@
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">Branch</label>
-                            <select class="form-control" name="branch">
-                                <option value="">All Branches</option>
-                                {% for branch in branches %}
-                                <option value="{{ branch.id }}" 
-                                    {% if selected_branch and branch.id == selected_branch.id %}selected{% endif %}>
-                                    {{ branch.branch_name }}
-                                </option>
-                                {% endfor %}
-                            </select>
+           <select class="form-control" name="branch">
+    {% if user_branch.head_office %}
+        <option value="">All Branches</option>
+        {% for branch in branches %}
+            <option value="{{ branch.id }}" 
+                {% if selected_branch and branch.id == selected_branch.id %}selected{% endif %}>
+                {{ branch.branch_name }}
+            </option>
+        {% endfor %}
+    {% else %}
+        {% for branch in branches %}
+            <option value="{{ branch.id }}" selected>
+                {{ branch.branch_name }}
+            </option>
+        {% endfor %}
+    {% endif %}
+</select>
+
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">Product</label>

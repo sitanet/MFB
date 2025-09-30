@@ -6,6 +6,7 @@ from .models import Customer
 
 class CustomerForm(forms.ModelForm):
     sms = forms.BooleanField(required=False, label="Send SMS Notification", initial=False)
+    email_alert = forms.BooleanField(required=False, label="Send Email Notification", initial=False)
     class Meta:
         model = Customer
         fields = '__all__'

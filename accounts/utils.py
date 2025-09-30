@@ -79,58 +79,28 @@ def send_notification(mail_subject, mail_template, context):
 import requests
 import logging
 from django.conf import settings
+# from company.models import SmsDelivery  # Uncomment if you want delivery tracking
 
 logger = logging.getLogger(__name__)
 
-def send_sms(phone_number, message):
-    api_key = settings.TERMII_API_KEY
-    sender_id = settings.TERMII_SENDER_ID
-    url = settings.TERMII_SMS_URL
 
-    payload = {
-        "to": phone_number,
-        "from": sender_id,
-        "sms": message,
-        "type": "plain",
-        "channel": "generic",
-        "api_key": api_key,
-    }
-
+def send_sms(phone_number, message, branch=None):
+    """
+    Send SMS using Termii API.
+    - Reads API config from settings.py
+    - Ensures phone number is in correct format
+    - Returns True/False
+    """
     try:
-        response = requests.post(url, json=payload)
-        response_data = response.json() if response.text else {}
-
-        # Print full response for debugging
-        logger.info(f"SMS Response: {response.status_code}, {response.text}")
-
-        if response.status_code == 200 and response_data.get("message") == "Successfully Sent":
-            logger.info(f"✅ SMS successfully sent to {phone_number}")
-            return True
-        else:
-            logger.warning(f"❌ SMS failed for {phone_number}. Response: {response_data}")
+        if not phone_number:
+            logger.error("No phone number provided.")
             return False
 
-    except requests.exceptions.RequestException as e:
-        logger.error(f"🚨 Network Error while sending SMS: {e}")
-        return False
-
-
-
-
-
-import requests
-import logging
-from django.conf import settings
-from company.models import SmsDelivery  # Optional: if tracking delivery
-
-logger = logging.getLogger(__name__)
-
-def _send_otp_sms(phone_number, message, branch=None):
-    """Send OTP via Termii API"""
-    try:
-        if not phone_number or not phone_number.startswith('+'):
-            logger.error(f"Invalid phone number: {phone_number}")
-            return False
+        # Normalize: ensure +234 format (or whatever your country code is)
+        if phone_number.startswith("0"):
+            phone_number = "+234" + phone_number[1:]
+        elif not phone_number.startswith("+"):
+            logger.warning(f"Phone number not in international format: {phone_number}")
 
         payload = {
             "api_key": settings.TERMII_API_KEY,
@@ -138,23 +108,33 @@ def _send_otp_sms(phone_number, message, branch=None):
             "from": settings.TERMII_SENDER_ID,
             "sms": message,
             "type": "plain",
-            "channel": "dnd"
+            "channel": "generic",  # or "generic" depending on your use case
         }
 
-        response = requests.post(
-            settings.TERMII_SMS_URL,
-            json=payload,
-            timeout=15
-        )
+        response = requests.post(settings.TERMII_SMS_URL, json=payload, timeout=15)
+        response_data = response.json() if response.text else {}
 
-        if response.status_code == 200:
-            logger.info(f"OTP sent to {phone_number}")
-            # Optional: save to SmsDelivery
+        logger.info(f"[SMS] Response: {response.status_code}, {response.text}")
+
+        if response.status_code == 200 and response_data.get("message") == "Successfully Sent":
+            logger.info(f"✅ SMS successfully sent to {phone_number}")
+
+            # Optional: Track in DB
+            # SmsDelivery.objects.create(
+            #     phone_number=phone_number,
+            #     message=message,
+            #     status="sent",
+            #     branch=branch
+            # )
+
             return True
-        else:
-            logger.error(f"Failed to send SMS: {response.text}")
-            return False
 
+        logger.warning(f"❌ SMS failed for {phone_number}. Response: {response_data}")
+        return False
+
+    except requests.exceptions.RequestException as e:
+        logger.error(f"🚨 Network Error while sending SMS: {e}")
+        return False
     except Exception as e:
-        logger.exception("Error sending OTP SMS")
+        logger.exception("🚨 Unexpected error while sending SMS")
         return False

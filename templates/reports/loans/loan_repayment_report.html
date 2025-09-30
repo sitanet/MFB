@@ -1,3 +1,4 @@
+<!-- templates/reports/loans/loan_repayment_report.html -->
 {% extends 'base.html' %}
 
 {% block content %}
@@ -5,179 +6,253 @@
   @media print {
     @page {
       size: A4 portrait;
-      margin: 20mm 15mm 20mm 15mm;
+      margin: 15mm;
     }
     body {
-      -webkit-print-color-adjust: exact; /* print background colors */
+      -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
-      font-size: 12pt;
+      font-size: 11pt;
       line-height: 1.4;
       color: #000 !important;
       background: #fff !important;
     }
-    button {
+    button, .no-print {
       display: none !important;
     }
     .container {
-      width: auto !important;
-      max-width: 100% !important;
+      width: 100% !important;
       padding: 0 !important;
       margin: 0 !important;
     }
     table {
-      page-break-inside: auto;
       width: 100%;
       border-collapse: collapse;
-      font-size: 11pt;
+      font-size: 10pt;
     }
     thead {
       display: table-header-group;
     }
-    tbody {
-      display: table-row-group;
-    }
     tr {
       page-break-inside: avoid;
-      page-break-after: auto;
     }
+  }
+
+  /* Custom Colors */
+  .card-green {
+    background-color: #d4edda !important;
+    border-color: #c3e6cb;
+    color: #155724;
+  }
+  .card-orange {
+    background-color: #fff3cd !important;
+    border-color: #ffeaa7;
+    color: #856404;
+  }
+  .text-green {
+    color: #28a745 !important;
+  }
+  .text-orange {
+    color: #fd7e14 !important;
+  }
+  .bg-green-light {
+    background-color: #f8fff9;
+  }
+  .border-green {
+    border-left: 4px solid #28a745 !important;
+  }
+  .border-orange {
+    border-left: 4px solid #fd7e14 !important;
   }
 </style>
 
 <div class="container py-4">
-
-  <!-- Top Actions -->
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2 class="fw-bold">Loan Repayment Report</h2>
-    <div>
-      <button onclick="window.print()" class="btn btn-outline-secondary btn-sm">Print</button>
-      <button class="btn btn-outline-info btn-sm">Help</button>
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold text-green">Loan Repayment Report</h2>
+    <div class="no-print">
+      <button onclick="window.print()" class="btn btn-outline-success btn-sm me-2">
+        <i class="fas fa-print"></i> Print
+      </button>
+      <button class="btn btn-outline-secondary btn-sm">
+        <i class="fas fa-question-circle"></i> Help
+      </button>
     </div>
   </div>
 
   <!-- Filter Form -->
   {% if not repayment_list %}
-  <form method="post" class="card p-4 shadow-sm mb-5">
-    {% csrf_token %}
-    <div class="row g-3 align-items-end">
-      <div class="col-md-3">
-        <label class="form-label">{{ form.start_date.label }}</label>
-        {{ form.start_date }}
-      </div>
-      <div class="col-md-3">
-        <label class="form-label">{{ form.end_date.label }}</label>
-        {{ form.end_date }}
-      </div>
-      <div class="col-md-3">
-        <label class="form-label">{{ form.branch.label }}</label>
-        {{ form.branch }}
-      </div>
-      <div class="col-md-2">
-        <label class="form-label">{{ form.gl_no.label }}</label>
-        {{ form.gl_no }}
-      </div>
-      <div class="col-md-1">
-        <label class="form-label">{{ form.cycle.label }}</label>
-        {{ form.cycle }}
-      </div>
-      <div class="col-md-12 text-end">
-        <button type="submit" class="btn btn-primary mt-3">Generate Report</button>
-      </div>
+  <div class="card border-green shadow-sm mb-5">
+    <div class="card-header bg-green-light fw-bold">
+      <i class="fas fa-filter me-2"></i>Filter Repayment Records
     </div>
-  </form>
+    <div class="card-body">
+      <form method="post">
+        {% csrf_token %}
+        <div class="row g-3">
+          <div class="col-md-3">
+            <label class="form-label fw-bold">{{ form.start_date.label }}</label>
+            {{ form.start_date }}
+          </div>
+          <div class="col-md-3">
+            <label class="form-label fw-bold">{{ form.end_date.label }}</label>
+            {{ form.end_date }}
+          </div>
+          <div class="col-md-3">
+            <label class="form-label fw-bold">{{ form.branch.label }}</label>
+            {{ form.branch }}
+          </div>
+          <div class="col-md-2">
+            <label class="form-label fw-bold">{{ form.account.label }}</label>
+            {{ form.account }}
+          </div>
+          <div class="col-md-1">
+            <label class="form-label fw-bold">{{ form.cycle.label }}</label>
+            {{ form.cycle }}
+          </div>
+          <div class="col-12 text-end mt-2">
+            <button type="submit" class="btn btn-success px-4">
+              <i class="fas fa-search me-1"></i> Generate Report
+            </button>
+          </div>
+        </div>
+        {% if error_message %}
+          <div class="alert alert-danger mt-3">{{ error_message }}</div>
+        {% endif %}
+      </form>
+    </div>
+  </div>
   {% endif %}
 
   <!-- Report Output -->
   {% if repayment_list %}
-  <div class="mb-4">
-    <h5 class="fw-bold text-uppercase">Loan Repayment Report</h5>
-    <p class="text-muted mb-1">Branch: {{ branch_name }} | Period: {{ start_date }} to {{ end_date }}</p>
-    <p class="text-muted">Date Generated: {{ current_date }}</p>
+  <div class="card mb-4 border-0 shadow-sm">
+    <div class="card-body bg-light">
+      <h5 class="fw-bold text-uppercase text-green mb-2">Loan Repayment Summary</h5>
+      <p class="mb-1">
+        <strong>Company:</strong> {{ company_name }} |
+        <strong>Branch:</strong> {{ branch_name }}
+      </p>
+      <p class="mb-1">
+        <strong>Period:</strong>
+        {% if start_date %}{{ start_date|date:"d/m/Y" }}{% else %}All{% endif %}
+        to
+        {% if end_date %}{{ end_date|date:"d/m/Y" }}{% else %}All{% endif %}
+      </p>
+      <p class="mb-0"><strong>Generated:</strong> {{ current_date }}</p>
+    </div>
   </div>
 
   <!-- Summary Cards -->
-  <div class="row text-white text-center mb-4">
+  <div class="row mb-4 g-3">
     <div class="col-md-3">
-      <div class="p-3 bg-primary rounded shadow-sm">
-        <h6>PRINCIPAL PAID</h6>
-        <p class="fs-5">₦{{ grand_total_principal }}</p>
+      <div class="card card-green h-100 text-center shadow-sm">
+        <div class="card-body">
+          <h6 class="fw-bold">PRINCIPAL PAID</h6>
+          <p class="fs-5 mb-0">₦{{ grand_total_principal|floatformat:2 }}</p>
+        </div>
       </div>
     </div>
     <div class="col-md-3">
-      <div class="p-3 bg-info rounded shadow-sm">
-        <h6>INTEREST PAID</h6>
-        <p class="fs-5">₦{{ grand_total_interest }}</p>
+      <div class="card card-orange h-100 text-center shadow-sm">
+        <div class="card-body">
+          <h6 class="fw-bold">INTEREST PAID</h6>
+          <p class="fs-5 mb-0">₦{{ grand_total_interest|floatformat:2 }}</p>
+        </div>
       </div>
     </div>
     <div class="col-md-3">
-      <div class="p-3 bg-danger rounded shadow-sm">
-        <h6>PENALTY PAID</h6>
-        <p class="fs-5">₦{{ grand_total_penalty }}</p>
+      <div class="card card-orange h-100 text-center shadow-sm">
+        <div class="card-body">
+          <h6 class="fw-bold">PENALTY PAID</h6>
+          <p class="fs-5 mb-0">₦{{ grand_total_penalty|floatformat:2 }}</p>
+        </div>
       </div>
     </div>
     <div class="col-md-3">
-      <div class="p-3 bg-warning text-dark rounded shadow-sm">
-        <h6>TOTAL PAID</h6>
-        <p class="fs-5">₦{{ total_paid_sum }}</p>
+      <div class="card border-success h-100 text-center shadow-sm">
+        <div class="card-body text-success">
+          <h6 class="fw-bold">TOTAL PAID</h6>
+          <p class="fs-5 mb-0">₦{{ total_paid_sum|floatformat:2 }}</p>
+        </div>
       </div>
     </div>
   </div>
 
   {% if loan %}
-  <div class="row text-white text-center mb-4">
+  <div class="row mb-4 g-3">
     <div class="col-md-6">
-      <div class="p-3 bg-primary rounded shadow-sm">
-        <h6>TOTAL DISBURSED</h6>
-        <p class="fs-5">₦{{ grand_total_disbursed }}</p>
+      <div class="card card-green h-100 text-center shadow-sm">
+        <div class="card-body">
+          <h6 class="fw-bold">TOTAL DISBURSED</h6>
+          <p class="fs-5 mb-0">₦{{ grand_total_disbursed|floatformat:2 }}</p>
+        </div>
       </div>
     </div>
     <div class="col-md-6">
-      <div class="p-3 bg-secondary rounded shadow-sm">
-        <h6>OUTSTANDING AMOUNT</h6>
-        <p class="fs-5">₦{{ outstanding_amount }}</p>
+      <div class="card card-orange h-100 text-center shadow-sm">
+        <div class="card-body">
+          <h6 class="fw-bold">OUTSTANDING AMOUNT</h6>
+          <p class="fs-5 mb-0">₦{{ outstanding_amount|floatformat:2 }}</p>
+        </div>
       </div>
     </div>
   </div>
   {% endif %}
 
   <!-- Detailed Table -->
-  <div class="table-responsive">
-    <table class="table table-bordered table-striped">
-      <thead class="table-light">
-        <tr>
-          <th>#</th>
-          <th>Customer</th>
-          <th>Branch</th>
-          <th>GL No</th>
-          <th>Ac No</th>
-          <th>Cycle</th>
-          <th>Date</th>
-          <th>Trx No</th>
-          <th>Principal</th>
-          <th>Interest</th>
-          <th>Penalty</th>
-          <th>Total Paid</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for row in repayment_list %}
-        <tr>
-          <td>{{ row.counter }}</td>
-          <td>{{ row.customer_name }}</td>
-          <td>{{ row.branch_name }}</td>
-          <td>{{ row.gl_no }}</td>
-          <td>{{ row.ac_no }}</td>
-          <td>{{ row.cycle }}</td>
-          <td>{{ row.trx_date|date:"d/m/Y" }}</td>
-          <td>{{ row.trx_no }}</td>
-          <td>{{ row.principal }}</td>
-          <td>{{ row.interest }}</td>
-          <td>{{ row.penalty }}</td>
-          <td>{{ row.total_paid }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+  <div class="card shadow-sm">
+    <div class="card-header bg-white border-bottom">
+      <h6 class="mb-0 fw-bold text-green">
+        <i class="fas fa-list me-2"></i>Repayment Details
+      </h6>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>#</th>
+            <th>Customer</th>
+            <th>Branch</th>
+            <th>GL No</th>
+            <th>Ac No</th>
+            <th>Cycle</th>
+            <th>Date</th>
+            <th>Trx No</th>
+            <th>Principal</th>
+            <th>Interest</th>
+            <th>Penalty</th>
+            <th>Total Paid</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in repayment_list %}
+          <tr>
+            <td>{{ row.counter }}</td>
+            <td>{{ row.customer_name }}</td>
+            <td>{{ row.branch_name }}</td>
+            <td>{{ row.gl_no }}</td>
+            <td>{{ row.ac_no }}</td>
+            <td>{{ row.cycle }}</td>
+            <td>{{ row.trx_date|date:"d/m/Y" }}</td>
+            <td>{{ row.trx_no }}</td>
+            <td class="text-green fw-bold">₦{{ row.principal|floatformat:2 }}</td>
+            <td class="text-orange">₦{{ row.interest|floatformat:2 }}</td>
+            <td class="text-orange">₦{{ row.penalty|floatformat:2 }}</td>
+            <td class="fw-bold">₦{{ row.total_paid|floatformat:2 }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   </div>
+
+  {% else %}
+    {% if request.method == 'POST' %}
+    <div class="alert alert-warning d-flex align-items-center mt-5" role="alert">
+      <i class="fas fa-exclamation-triangle me-3 fs-4 text-orange"></i>
+      <div>No repayment records found for the selected criteria.</div>
+    </div>
+    {% endif %}
   {% endif %}
 </div>
 {% endblock %}

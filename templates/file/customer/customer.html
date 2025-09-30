@@ -21,7 +21,7 @@
             </div>
       
         <div class="container">
-            <header>Customer Account</header>
+          
 
             <form method="POST" enctype="multipart/form-data">
                 {% csrf_token %}
@@ -190,6 +190,10 @@
                             <div>
                                 <label for="sms">Send SMS Notification</label>
                                 <input type="checkbox" name="sms" id="sms">
+                            </div>
+                               <div>
+                                <label for="sms">Send Email Notification</label>
+                                <input type="checkbox" name="email_alert" id="email">
                             </div>
                             
 

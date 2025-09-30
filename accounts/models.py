@@ -4,6 +4,9 @@ from django.utils.timezone import now  # For default datetime
 from accounts_admin.models import Account
 # Importing the related models
 from company.models import Company, Branch
+from django.utils import timezone
+from datetime import timedelta
+
 
 class Role(models.Model):
     name = models.CharField(max_length=50)
@@ -122,7 +125,8 @@ class User(AbstractBaseUser):
     phone_number = models.CharField(max_length=16, blank=True, null=True)
     role = models.PositiveSmallIntegerField(choices=ROLE_CHOICE, blank=True, null=True)
     branch = models.ForeignKey(Branch, on_delete=models.CASCADE, null=True, blank=True, related_name="users")
-
+    otp_code = models.CharField(max_length=6, blank=True, null=True)
+    last_otp_sent = models.DateTimeField(blank=True, null=True)
     cashier_gl = models.CharField(max_length=6, blank=True, null=True)
     cashier_ac = models.CharField(max_length=1, blank=True, null=True)
 
@@ -136,6 +140,7 @@ class User(AbstractBaseUser):
     is_active = models.BooleanField(default=True)
     is_superadmin = models.BooleanField(default=False)
     verified = models.BooleanField(default=False)
+    
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username', 'first_name', 'last_name']
@@ -154,6 +159,16 @@ class User(AbstractBaseUser):
     def get_role(self):
         roles = dict(self.ROLE_CHOICE)
         return roles.get(self.role, "Unknown Role")
+
+    def is_otp_valid(self, otp, expiry_minutes=5):
+        """Check if OTP matches and is within expiry time"""
+        if self.otp_code != otp:
+            return False
+        if not self.last_otp_sent:
+            return False
+        if timezone.now() > self.last_otp_sent + timedelta(minutes=expiry_minutes):
+            return False
+        return True
 
 
 class UserProfile(models.Model):

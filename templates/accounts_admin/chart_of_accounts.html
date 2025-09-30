@@ -139,25 +139,47 @@
                                     <a class="submit" href="{% url 'delete_chart_of_account' grandchild.id %}">Delete</a>
                                     <ul class="children" style="display:none;">
                                         {% for greatgrandchild in grandchild.account_set.all %}
-                                        <li class="greatgrandchild">
-                                            {% if greatgrandchild.account_set.all %}
-                                            <span class="toggle" onclick="toggleChildren(this)">+</span>
-                                            {% endif %}
-                                            <span class="gl-name" 
-                                                  data-gl-no="{{ greatgrandchild.gl_no }}" 
-                                                  data-gl-name="{{ greatgrandchild.gl_name }}" 
-                                                  data-account-type="{{ greatgrandchild.account_type }}" 
-                                                  data-currency="{{ greatgrandchild.currency }}" 
-                                                  data-double-entry-type="{{ greatgrandchild.double_entry_type }}" 
-                                                  data-header="{{ greatgrandchild.header_id }}" 
-                                                  data-is-non-financial="{{ greatgrandchild.is_non_financial }}">
-                                                {{ greatgrandchild.gl_no }} {{ greatgrandchild.gl_name }}
-                                            </span>
-                                            <a href="{% url 'update_chart_of_account' greatgrandchild.id %}">Edit</a>
-                                            <!-- <a class="submit" href="{% url 'delete_chart_of_account' greatgrandchild.id %}">Delete</a> -->
-                                            <a class="submit" href="{% url 'delete_chart_of_account' greatgrandchild.id %}" style="color: red;">Delete</a>
+                                    <li class="greatgrandchild">
+    {% if greatgrandchild.account_set.all %}
+    <span class="toggle" onclick="toggleChildren(this)">+</span>
+    {% endif %}
+    <span class="gl-name" 
+          data-gl-no="{{ greatgrandchild.gl_no }}" 
+          data-gl-name="{{ greatgrandchild.gl_name }}" 
+          data-account-type="{{ greatgrandchild.account_type }}" 
+          data-currency="{{ greatgrandchild.currency }}" 
+          data-double-entry-type="{{ greatgrandchild.double_entry_type }}" 
+          data-header="{{ greatgrandchild.header_id }}" 
+          data-is-non-financial="{{ greatgrandchild.is_non_financial }}">
+        {{ greatgrandchild.gl_no }} {{ greatgrandchild.gl_name }}
+    </span>
+    <a href="{% url 'update_chart_of_account' greatgrandchild.id %}">Edit</a>
+    <a class="submit" href="{% url 'delete_chart_of_account' greatgrandchild.id %}" style="color: red;">Delete</a>
 
-                                        </li>
+    <!-- 🔽 New nested level -->
+    <ul class="children" style="display:none;">
+        {% for gggrandchild in greatgrandchild.account_set.all %}
+        <li class="greatgreatgrandchild">
+            {% if gggrandchild.account_set.all %}
+            <span class="toggle" onclick="toggleChildren(this)">+</span>
+            {% endif %}
+            <span class="gl-name" 
+                  data-gl-no="{{ gggrandchild.gl_no }}" 
+                  data-gl-name="{{ gggrandchild.gl_name }}" 
+                  data-account-type="{{ gggrandchild.account_type }}" 
+                  data-currency="{{ gggrandchild.currency }}" 
+                  data-double-entry-type="{{ gggrandchild.double_entry_type }}" 
+                  data-header="{{ gggrandchild.header_id }}" 
+                  data-is-non-financial="{{ gggrandchild.is_non_financial }}">
+                {{ gggrandchild.gl_no }} {{ gggrandchild.gl_name }}
+            </span>
+            <a href="{% url 'update_chart_of_account' gggrandchild.id %}">Edit</a>
+            <a class="submit" href="{% url 'delete_chart_of_account' gggrandchild.id %}" style="color: red;">Delete</a>
+        </li>
+        {% endfor %}
+    </ul>
+</li>
+
                                         {% endfor %}
                                     </ul>
                                 </li>

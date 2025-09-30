@@ -214,6 +214,16 @@
                             </select>
                         </div>
                         <div class="col-md-3">
+    <div class="form-check">
+        <input class="form-check-input" type="checkbox" id="include_non_zero" 
+               name="include_non_zero" {% if include_non_zero %}checked{% endif %}>
+        <label class="form-check-label" for="include_non_zero">
+            Include Non-Zero Only
+        </label>
+    </div>
+</div>
+
+                        <div class="col-md-3">
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="exclude_ac_no_one" 
                                        name="exclude_ac_no_one" {% if exclude_ac_no_one %}checked{% endif %}>

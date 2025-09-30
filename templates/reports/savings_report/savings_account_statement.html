@@ -279,9 +279,14 @@
                                     <td>{{ item.trx_date|date:"M d, Y" }}</td>
                                     <td>{{ item.trx_no }}</td>
                                     <td>{{ item.description }}</td>
-                                    <td class="amount text-danger">{% if item.debit %}{{ item.debit|floatformat:2|intcomma }}{% else %}-{% endif %}</td>
-                                    <td class="amount text-success">{% if item.credit %}{{ item.credit|floatformat:2|intcomma }}{% else %}-{% endif %}</td>
-                                    <td class="amount">{{ item.balance|floatformat:2|intcomma }}</td>
+<td class="amount text-danger">
+    {% if item.debit %}{{ item.debit|floatformat:2|intcomma }}{% else %}-{% endif %}
+</td>
+<td class="amount text-success">
+    {% if item.credit %}{{ item.credit|floatformat:2|intcomma }}{% else %}-{% endif %}
+</td>
+<td class="amount">{{ item.balance|floatformat:2|intcomma }}</td>
+
                                     <td class="text-center">{{ item.days_without_activity }}</td>
                                 </tr>
                                 {% endfor %}

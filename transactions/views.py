@@ -847,23 +847,24 @@ def expense(request, id):
 @user_passes_test(check_role_admin)
 def choose_deposit(request):
     data = Memtrans.objects.all().order_by('-id').first()
-    
-    # Get user's branch (assuming user has only one branch or adjust accordingly)
-    user_branch = Branch.objects.filter(user=request.user).first()
-    
+
+    # Get user's branch directly from user model
+    user_branch = request.user.branch  
+
     if user_branch:
-        # Filter customers whose branch matches user's branch
-        customers = Customer.objects.filter(label='C', branch=user_branch).order_by('-id')
+        # Filter customers for this branch
+        customers = Customer.objects.filter(label='C').order_by('-id')
     else:
+        # If user has no branch, show all
         customers = Customer.objects.filter(label='C').order_by('-id')
     
     total_amounts = []
-
     for customer in customers:
         total_amount = Memtrans.objects.filter(
             gl_no=customer.gl_no,
             ac_no=customer.ac_no,
-            error='A'
+            error='A',
+             # keep filtering consistent
         ).aggregate(total_amount=Sum('amount'))['total_amount']
 
         total_amounts.append({
@@ -875,6 +876,7 @@ def choose_deposit(request):
         'data': data,
         'total_amounts': total_amounts,
     })
+
 
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)

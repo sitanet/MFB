@@ -1,260 +1,256 @@
 {% extends 'base.html' %}
-
 {% load static %}
 
 {% block content %}
-    {% include 'includes/alerts.html' %}
+{% include 'includes/alerts.html' %}
 
-    <style>
-        /* Add your CSS styles here */
-        .container-fluid {
-            padding: 20px;
-        }
+<style>
+    /* Global Container */
+    .container-fluid { padding: 40px 25px; background: #f4f6f9; min-height: 100vh; }
 
-        .column_title {
-            margin-bottom: 20px;
-        }
+    /* Page Title */
+    .page-title h2 {
+        font-weight: 700;
+        color: #2c3e50;
+        font-size: 2rem;
+        letter-spacing: 0.5px;
+    }
 
-        .page_title h2 {
-            margin: 0;
-            color: #333;
-        }
+    /* Card Styles */
+    .form-card, .print-card {
+        padding: 30px;
+        border-radius: 18px;
+        background: #fff;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+        transition: transform 0.2s ease;
+    }
+    .form-card:hover, .print-card:hover { transform: translateY(-3px); }
 
-        h5 {
-            margin: 10px 0;
-            color: #555;
-        }
+    /* Form Inputs */
+    .form-label { font-weight: 600; color: #2c3e50; }
+    .form-control { border-radius: 10px; }
 
-        .table-section {
-            margin-top: 20px;
-        }
+    /* Buttons */
+    .btn-submit {
+        margin-top: 25px;
+        font-weight: 600;
+        border-radius: 10px;
+        transition: all 0.2s ease-in-out;
+    }
+    .btn-submit:hover { background: #218838; transform: scale(1.02); }
+    .btn-print {
+        border-radius: 10px;
+        font-weight: 600;
+        padding: 10px 20px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
 
-        p {
-            margin-bottom: 5px;
-            color: #666;
-        }
+    /* Report Header */
+    .report-header h4 { font-weight: 700; color: #2c3e50; font-size: 1.5rem; }
+    .report-header h5 { font-weight: 600; color: #34495e; margin-top: 3px; }
+    .office-address { font-style: italic; color: #7f8c8d; margin: 5px 0 10px; }
+    .report-header .text-primary { font-weight: 700; font-size: 1.2rem; }
 
-        .table {
-            width: 100%;
-            margin-top: 10px;
-        }
+    /* Table */
+    .table {
+        border-radius: 10px;
+        overflow: hidden;
+    }
+    .table thead {
+        background: linear-gradient(90deg, #2c3e50, #34495e);
+        color: #fff;
+    }
+    .table th, .table td {
+        padding: 14px;
+        vertical-align: middle;
+        font-size: 0.95rem;
+    }
+    .table tbody tr:nth-child(even) { background: #f9fbfd; }
+    .table tbody tr:hover { background: #eef3f7; transition: background 0.2s; }
 
-        th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-        }
+    /* Totals Row */
+    .total-row td {
+        font-weight: 700;
+        background: #e9ecef;
+        color: #2c3e50;
+        font-size: 1rem;
+    }
 
-        th {
-            background-color: #333;
-            color: #fff;
-        }
+    /* Totals Section */
+    .totals-left p {
+        font-weight: 600;
+        color: #2c3e50;
+        font-size: 1.05rem;
+        margin-bottom: 6px;
+    }
+    .totals-left strong {
+        font-size: 1.1rem;
+        color: #27ae60;
+    }
 
-        tr:hover {
-            background-color: #f5f5f5;
-        }
+    /* Print media */
+    @media print {
+        body * { visibility: hidden; }
+        .printable-area, .printable-area * { visibility: visible; }
+        .printable-area { position: absolute; left: 0; top: 0; width: 100%; padding: 20px; }
+        .btn-print { display: none; }
+    }
+</style>
 
-        .total-row {
-            border-bottom: 3px solid #000;
-            border-top: 3px solid #000;
-        }
+<div class="container-fluid">
 
-        .total-row td {
-            font-weight: bold;
-            color: #333;
-        }
-
-        .office-address {
-            margin-bottom: 20px;
-        }
-
-        .totals-left {
-            float: left;
-        }
-
-        .totals-right {
-            float: right;
-        }
-
-        .print-btn {
-            margin: 20px 0;
-            text-align: right;
-        }
-
-        .hidden {
-            display: none;
-        }
-
-        @media print {
-            body * {
-                visibility: hidden;
-            }
-            .printable-area, .printable-area * {
-                visibility: visible;
-            }
-            .printable-area {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100%;
-                padding: 20px;
-                box-sizing: border-box;
-            }
-            .print-btn {
-                display: none;
-            }
-        }
-    </style>
-
-    <div class="container-fluid">
-        <div class="row column_title">
-            <div class="col-md-12">
-                <div class="page_title">
-                    <h2>Balance Sheet</h2>
-                </div>
-            </div>
-        </div>
-
-        <!-- Print Button -->
-        <div class="row print-btn">
-            <div class="col-md-12 text-right">
-                <button onclick="window.print()" class="btn btn-primary">Print</button>
-            </div>
-        </div>
-
-        <!-- Form for input -->
-        <form id="generateForm" method="post" action="{% url 'balance_sheet' %}" class="chart_of_account p-5 shadow-lg rounded rounded-5">
-            {% csrf_token %}
-            <div class="form-row">
-                <div class="form-group col-md-3">
-                    <label for="start_date">Select Start Date</label>
-                    <input type="date" class="form-control bg-light" name="start_date" id="start_date" value="{{ start_date }}">
-                </div>
-                <div class="form-group col-md-3">
-                    <label for="end_date">Select End Date</label>
-                    <input type="date" class="form-control bg-light" name="end_date" id="end_date" value="{{ end_date }}">
-                </div>
-                <div class="form-group col-md-3">
-                    <label for="branch">Select Branch</label>
-                    <select class="form-control bg-light" name="branch" id="branch">
-                        <option value="">All Branches</option>
-                        {% for branch in branches %}
-                            <option value="{{ branch.id }}" {% if branch.id|stringformat:"s" == selected_branch %}selected{% endif %}>{{ branch.branch_name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <button type="submit" class="btn w- btn-success mt-4 shadow-sm">Submit</button>
-            </div>
-        </form>
-
-        <!-- Balance Sheet Results (Initially hidden) -->
-        <div class="col-md-12 printable-area hidden">
-            <div class="white_shd full margin_bottom_30">
-                <div class="table_section padding_infor_info">
-                    <div class="row">
-                        <div class="col-md-12 text-center">
-                            <h4>{{ branch.company_name }}</h4>
-                            <p>{{ branch.branch_name }}</p>
-                            <p class="office-address">{{ branch.office_address }}</p>
-                            <h5 style="color: #1115f0;">Balance Sheet</h5>
-                        </div>
-                    </div>
-                    <div class="row" style="padding: 10px; border-radius: 5px;">
-                        <div class="row">
-                            <div class="col-md-12 text-center">
-                                <h5 style="color: #336699; text-align: center;">Balance Sheet</h5>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <p>Reporting from <strong>{{ start_date }}</strong> To <strong>{{ end_date }}</strong></p>
-                        </div>
-                    </div>
-
-                    <div class="table-responsive-sm">
-                        <table class="table">
-                            <thead class="thead-dark">
-                                <tr>
-                                    <th>GL No.</th>
-                                    <th>Account Name</th>
-                                    <th>Debit</th>
-                                    <th>Credit</th>
-                                    <th>Balance</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for entry in balance_sheet_data %}
-                                    <tr>
-                                        <td>{{ entry.gl_no }}</td>
-                                        <td>{{ entry.gl_name }}</td>
-                                        <td>{{ entry.debit }}</td>
-                                        <td>{{ entry.credit }}</td>
-                                        <td>{{ entry.balance }}</td>
-                                    </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                        <div class="totals-left">
-                            <p>Total Debit: {{ total_debit }}</p>
-                            <p>Total Credit: {{ total_credit }}</p>
-                            <p>Total Balance: {{ total_balance }}</p>
-                        </div>
-                        <div class="totals-right">
-                            {% if subtotal_4 %}
-                                <p>Total Incomes: {{ subtotal_4 }}</p>
-                            {% endif %}
-                            {% if subtotal_5 %}
-                                <p>Total Expenses: {{ subtotal_5 }}</p>
-                            {% endif %}
-                            <p><strong>Net Income: {{ net_income }}</strong></p>
-                        </div>
- 
-                    </div>
-                    {% if subtotal_4 or subtotal_5 %}
-                    <p style="font-size: 18px; font-weight: bold; {% if net_income < 0 %}color: red;{% endif %}">
-                        <em>The Net position of Statement of Profit or Loss as at {{ end_date }} is:</em> N{{ net_income }}
-                    </p>
-                {% endif %}
-                </div>
-              
-            </div>
-           
+    <!-- Page Title -->
+    <div class="row mb-4">
+        <div class="col-md-12 text-center page-title">
+            <h2>📊 Balance Sheet Report</h2>
         </div>
     </div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            var startDateInput = document.getElementById('start_date');
-            var endDateInput = document.getElementById('end_date');
-            var generateForm = document.getElementById('generateForm');
-            var resultsArea = document.querySelector('.printable-area');
-            var branchDate = '{{ branch_date }}'; // Changed from company_date to branch_date
+    <!-- Form Card -->
+    <div class="row justify-content-center" id="formSection">
+        <div class="col-md-10 form-card">
+            <form id="generateForm" method="post" action="{% url 'balance_sheet' %}">
+                {% csrf_token %}
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label for="start_date" class="form-label">Start Date</label>
+                        <input type="date" class="form-control" name="start_date" id="start_date" value="{{ start_date }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="end_date" class="form-label">End Date</label>
+                        <input type="date" class="form-control" name="end_date" id="end_date" value="{{ end_date }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="branch" class="form-label">Select Branch</label>
+                        {% if is_head_office %}
+                            <select class="form-control" name="branch" id="branch">
+                                <option value="">All Branches</option>
+                                {% for branch in branches %}
+                                    <option value="{{ branch.id }}" {% if branch.id|stringformat:"s" == selected_branch %}selected{% endif %}>{{ branch.branch_name }}</option>
+                                {% endfor %}
+                            </select>
+                        {% else %}
+                            <input type="text" class="form-control" value="{{ user_branch.branch_name }}" disabled>
+                            <input type="hidden" name="branch" value="{{ user_branch.id }}">
+                        {% endif %}
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button type="submit" class="btn btn-success w-100 btn-submit shadow-sm">Generate Report</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
 
-            // Hide the results area if there is no data
-            {% if balance_sheet_data %}
-                resultsArea.classList.remove('hidden');
-                generateForm.classList.add('hidden');
-            {% endif %}
+    <!-- Print Button -->
+    {% if balance_sheet_data %}
+    <div class="row mt-4">
+        <div class="col-md-12 text-end">
+            <button onclick="window.print()" class="btn btn-primary btn-print shadow-sm">🖨 Print Report</button>
+        </div>
+    </div>
+    {% endif %}
 
-            startDateInput.addEventListener('change', function() {
-                var selectedDate = new Date(startDateInput.value);
-                var branchDateObj = new Date(branchDate);
+    <!-- Report Card -->
+    {% if balance_sheet_data %}
+    <div class="row printable-area mt-4" id="reportSection">
+        <div class="col-md-12 print-card">
+            <!-- Header -->
+            <div class="text-center report-header mb-4">
+                {% if is_all_branches %}
+                    <h4>{{ user_branch.company_name }}</h4>
+                    <h5>All Branches (Consolidated Report)</h5>
+                {% elif selected_branch_obj %}
+                    <h4>{{ selected_branch_obj.company_name }}</h4>
+                    <h5>{{ selected_branch_obj.branch_name }}</h5>
+                    <p class="office-address">{{ selected_branch_obj.office_address }}</p>
+                {% else %}
+                    <h4>{{ user_branch.company_name }}</h4>
+                    <h5>{{ user_branch.branch_name }}</h5>
+                    <p class="office-address">{{ user_branch.office_address }}</p>
+                {% endif %}
+                <h5 class="text-primary mt-2">Balance Sheet</h5>
+                <p>Reporting From <strong>{{ start_date }}</strong> To <strong>{{ end_date }}</strong></p>
+            </div>
 
-                if (selectedDate > branchDateObj) {
-                    alert('Please select a date not greater than the session date.');
-                    startDateInput.value = '{{ branch_date }}'; // Changed from company_date to branch_date
-                }
-            });
+            <!-- Table -->
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover">
+                    <thead>
+                        <tr>
+                            <th>GL No.</th>
+                            <th>Account Name</th>
+                            <th>Debit (₦)</th>
+                            <th>Credit (₦)</th>
+                            <th>Balance (₦)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for entry in balance_sheet_data %}
+                        <tr>
+                            <td>{{ entry.gl_no }}</td>
+                            <td>{{ entry.gl_name }}</td>
+                            <td>{{ entry.debit|floatformat:2 }}</td>
+                            <td>{{ entry.credit|floatformat:2 }}</td>
+                            <td>{{ entry.balance|floatformat:2 }}</td>
+                        </tr>
+                        {% endfor %}
+                        <tr class="total-row">
+                            <td colspan="2">Grand Total</td>
+                            <td>{{ total_debit|floatformat:2 }}</td>
+                            <td>{{ total_credit|floatformat:2 }}</td>
+                            <td>{{ total_balance|floatformat:2 }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
 
-            endDateInput.addEventListener('change', function() {
-                var selectedDate = new Date(endDateInput.value);
-                var branchDateObj = new Date(branchDate);
+            <!-- Totals -->
+            <div class="row mt-4">
+                <div class="col-md-6 totals-left">
+                    {% if subtotal_4 %}
+                        <p>💰 Total Incomes: {{ subtotal_4|floatformat:2 }}</p>
+                    {% endif %}
+                    {% if subtotal_5 %}
+                        <p>📉 Total Expenses: {{ subtotal_5|floatformat:2 }}</p>
+                    {% endif %}
+                    <p><strong>⚖️ Net Income: {{ net_income|floatformat:2 }}</strong></p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
-                if (selectedDate > branchDateObj) {
-                    alert('Please select a date not greater than the session date.');
-                    endDateInput.value = '{{ branch_date }}'; // Changed from company_date to branch_date
-                }
-            });
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const startDateInput = document.getElementById('start_date');
+        const endDateInput = document.getElementById('end_date');
+        const branchDate = new Date('{{ branch_date|default:"9999-12-31" }}');
+
+        startDateInput.addEventListener('change', function() {
+            const selected = new Date(startDateInput.value);
+            if (selected > branchDate) {
+                alert('Start Date cannot be greater than session date.');
+                startDateInput.value = '{{ branch_date }}';
+            }
         });
-    </script>
 
+        endDateInput.addEventListener('change', function() {
+            const selected = new Date(endDateInput.value);
+            if (selected > branchDate) {
+                alert('End Date cannot be greater than session date.');
+                endDateInput.value = '{{ branch_date }}';
+            }
+        });
+
+        // Hide form if report is available
+        const formSection = document.getElementById('formSection');
+        const reportSection = document.getElementById('reportSection');
+        if (reportSection) {
+            formSection.style.display = 'none';
+        }
+    });
+</script>
 {% endblock %}

@@ -14,7 +14,10 @@ def company_list(request):
 
 def branch_list(request):
     branches = Branch.objects.all()
+    print("DEBUG: branches type:", type(branches))
+    print("DEBUG: branches queryset:", branches)
     return render(request, 'branch/branch_list.html', {'branches': branches})
+
 
 
 
@@ -189,133 +192,293 @@ import random
 
 from .forms import BranchForm
  # Update this if you use a different import
+# @login_required
+from django.shortcuts import render, redirect
+from django.contrib import messages
+import random
+import logging
+from django.core.mail import EmailMultiAlternatives
+from django.urls import reverse
+from django.conf import settings
+from .forms import BranchForm
+from .models import Company
+from accounts.utils import send_sms  # 👈 Termii SMS util
 
-@login_required
+logger = logging.getLogger(__name__)
+
+
 def create_branch(request):
     try:
-        # Prevent duplicate branch creation
-        if hasattr(request.user, 'branch') and request.user.branch:
-            messages.warning(request, 'Your account already has a branch.')
-            return redirect('dashboard')
+        print("🔍 Entered create_branch view")
+
+        company = Company.objects.first()
+        print(f"✅ Company fetched: {company}")
 
         if request.method == 'POST':
+            print("📩 Received POST request")
             form = BranchForm(request.POST, request.FILES)
+
             if form.is_valid():
+                print("✅ Form is valid")
+
+                branch = form.save(commit=False)
+                branch.company = company
+                branch.phone_verified = False
+                branch.otp_code = str(random.randint(100000, 999999))
+                branch.save()
+                print(f"💾 Branch saved with ID: {branch.id}")
+
+                # ------------------------------------------------------
+                # ✅ Send Email
+                # ------------------------------------------------------
                 try:
-                    with transaction.atomic():
-                        branch = form.save(commit=False)
+                    subject = "🎉 Branch Registration Successful"
+                    from_email = settings.DEFAULT_FROM_EMAIL
+                    recipient_email = branch.company.email  
 
-                        # Link to authenticated user
-                        branch.user = request.user
-                        branch.company_name = branch.branch_name
-                        branch.phone_verified = False
-                        branch.otp_code = str(random.randint(100000, 999999))
-                        branch.save()
+                    register_url = request.build_absolute_uri(reverse("register"))
 
-                        # ✅ Save branch reference to user
-                        request.user.branch = branch
-                        request.user.save()
-                        print("Branch assigned to user successfully.")
+                    text_content = f"""
+Dear {branch.company.contact_person},
 
-                        # ✅ Send OTP if phone number exists
-                        phone_number = getattr(request.user, 'phone_number', None)
-                        if phone_number:
-                            try:
-                                sms_sent = _send_otp_sms(
-                                    phone_number,
-                                    f"Your verification code: {branch.otp_code}",
-                                    branch
-                                )
-                                if sms_sent:
-                                    messages.success(request, 'Verification code sent to your phone.')
-                                    return redirect('verify_phone')
-                                else:
-                                    messages.warning(request, 'OTP could not be sent. You can request it again later.')
-                            except Exception as e:
-                                print(f"SMS sending error: {e}")
-                                messages.warning(request, 'OTP sending failed due to system error.')
+Your branch "{branch.branch_name}" has been successfully created under company "{branch.company.company_name}".
+
+Branch Code: {branch.branch_code}
+Contact Phone: {branch.company.contact_phone_no}
+OTP Code: {branch.otp_code}
+
+To complete setup, please register using the link below:
+{register_url}
+
+Thank you,
+{branch.company.company_name}
+"""
+
+                    html_content = f"""
+                    <html>
+                    <body>
+                        <h2>Branch Registration Successful 🎉</h2>
+                        <p>Dear <strong>{branch.company.contact_person}</strong>,</p>
+                        <p>Your branch has been successfully created.</p>
+
+                        <p><strong>Branch Name:</strong> {branch.branch_name}</p>
+                        <p><strong>Branch Code:</strong> {branch.branch_code}</p>
+                        <p><strong>OTP Code:</strong> {branch.otp_code}</p>
+
+                        <p style="margin-top:20px;">👉 Click below to complete registration:</p>
+                        <a href="{register_url}"
+                           style="display:inline-block; padding:12px 25px; background:#007bff; color:#fff; text-decoration:none;">
+                           Complete Registration
+                        </a>
+                    </body>
+                    </html>
+                    """
+
+                    msg = EmailMultiAlternatives(subject, text_content, from_email, [recipient_email])
+                    msg.attach_alternative(html_content, "text/html")
+                    msg.send()
+
+                    print("✅ Professional email sent successfully")
+                except Exception as mail_error:
+                    logger.exception("Email sending failed")
+                    print(f"❌ Email sending failed: {mail_error}")
+                    messages.warning(request, "Branch created, but email could not be sent.")
+
+                # ------------------------------------------------------
+                # ✅ Send SMS
+                # ------------------------------------------------------
+                try:
+                    phone_number = branch.company.contact_phone_no
+                    if phone_number:
+                        sms_message = (
+                            f"🎉 Branch '{branch.branch_name}' created under {branch.company.company_name}.\n"
+                            f"Branch Code: {branch.branch_code}\n"
+                            f"OTP: {branch.otp_code}\n"
+                            f"Register here: {request.build_absolute_uri(reverse('register'))}"
+                        )
+
+                        print(f"[DEBUG-SMS] Sending SMS to {phone_number} with message: {sms_message}")
+                        if send_sms(phone_number, sms_message):
+                            print(f"📲 SMS sent successfully to {phone_number}")
                         else:
-                            messages.warning(request, 'No phone number found for OTP verification.')
+                            print(f"⚠️ SMS failed for {phone_number}")
+                            messages.warning(request, "Branch created, but SMS could not be delivered.")
+                    else:
+                        print("⚠️ No phone number found for company, skipping SMS.")
+                except Exception as sms_error:
+                    logger.exception("SMS sending failed")
+                    print(f"❌ SMS sending failed: {sms_error}")
+                    messages.warning(request, "Branch created, but SMS could not be sent.")
 
-                except ValueError as e:
-                    messages.error(request, str(e))
-                except Exception as e:
-                    print(f"Error creating branch: {e}")
-                    messages.error(request, "System error. Please try again.")
+                messages.success(request, "Branch created successfully. Notification sent via Email and SMS.")
+                return redirect('branch_list')
+
             else:
-                for field, errors in form.errors.items():
-                    for error in errors:
-                        messages.error(request, f"{field}: {error}")
+                print("❌ Form is invalid")
+                print(form.errors)
         else:
-            # GET method: pre-fill form if user is authenticated
-            initial_data = {
-                'branch_name': f"{request.user.first_name or request.user.username}'s Branch",
-                'phone_number': getattr(request.user, 'phone_number', '')
-            }
-            form = BranchForm(initial=initial_data)
+            print("📄 Received GET request, rendering form")
+            form = BranchForm()
 
-        return render(request, 'branch/create_branch.html', {
-            'form': form,
-            'phone_valid': hasattr(request.user, 'phone_number') and 
-                           request.user.phone_number and 
-                           request.user.phone_number.startswith('+')
-        })
+        return render(request, 'branch/create_branch.html', {'form': form, 'company': company})
 
     except Exception as e:
-        print(f"Unexpected error: {e}")
+        print(f"💥 Unexpected error: {e}")
         messages.error(request, "A system error occurred. Please contact support.")
-        return redirect('home')
+        return redirect('create_branch')
+
+
+
+
 
         
 # views.py
+import threading
+from django.core.mail import EmailMessage
+from django.template.loader import render_to_string
+from django.contrib import messages
+from django.shortcuts import render, redirect
+from django.conf import settings
+import logging
+
+logger = logging.getLogger(__name__)
+
+# Background function to send OTP via SMS and Email
+def deliver_verification_otp_async(branch_id, otp, phone_number, email):
+    """Send verification OTP to both phone and email in background"""
+    print(f"[DEBUG-BG] 🚀 Starting async verification OTP delivery for branch {branch_id}")
+    
+    try:
+        from .models import Branch  # Adjust import path as needed
+        branch = Branch.objects.get(pk=branch_id)
+        
+        # Send SMS
+        if phone_number:
+            print(f"[DEBUG-BG] 📱 Sending verification SMS to {phone_number}")
+            try:
+                from .utils import _send_otp_sms  # Adjust import path as needed
+                _send_otp_sms(phone_number, f"Your FinanceFlex branch verification code: {otp}", branch=branch)
+                print(f"[DEBUG-BG] 📱 Verification SMS sent successfully")
+            except Exception as e:
+                logger.error(f"[DEBUG-BG] Verification SMS failed: {e}")
+        
+        # Send Email
+        if email:
+            print(f"[DEBUG-BG] 📧 Sending verification email to {email}")
+            try:
+                subject = "FinanceFlex Branch Phone Verification"
+                html_content = render_to_string('branch/email/verification_otp_email.html', {
+                    'branch': branch,
+                    'otp': otp,
+                    'user': branch.user  # Assuming branch has a user relationship
+                })
+                email_message = EmailMessage(
+                    subject=subject,
+                    body=html_content,
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    to=[email],
+                )
+                email_message.content_subtype = "html"
+                email_message.send()
+                print(f"[DEBUG-BG] 📧 Verification email sent successfully")
+            except Exception as e:
+                logger.error(f"[DEBUG-BG] Verification email failed: {e}")
+                
+        print(f"[DEBUG-BG] ✅ Async verification OTP delivery completed for branch {branch_id}")
+        
+    except Exception as e:
+        logger.error(f"[DEBUG-BG] Verification OTP delivery error: {e}")
+
+import random
+import threading
+from datetime import timedelta
+from django.utils.timezone import now
 from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.core.mail import send_mail
+from django.conf import settings
 
 @login_required
 def verify_phone(request):
     user = request.user
-    if not user.branch:
-        return redirect('create_branch')
-    
+    if not hasattr(user, "branch"):
+        return redirect("create_branch")
+
     branch = user.branch
-    
-    if request.method == 'POST':
-        entered_otp = request.POST.get('otp', '')
-        if entered_otp == branch.otp_code:
+
+    # ✅ On GET, only generate OTP if not already set (avoid overwriting on refresh)
+    if request.method == "GET" and not branch.otp_code:
+        otp = str(random.randint(100000, 999999))
+        branch.otp_code = otp
+        branch.otp_generated_at = now()  # ✅ track timestamp for expiry
+        branch.save()
+        print(f"[DEBUG] Generated verification OTP: {otp} for branch {branch.id}")
+
+        # Choose contact info
+        phone_number = getattr(branch, "phone_number", None) or getattr(user, "phone_number", None)
+        email = getattr(user, "email", None)
+
+        # ✅ Send OTP in background thread
+        thread = threading.Thread(
+            target=deliver_verification_otp_async,
+            args=(branch.id, otp, phone_number, email)
+        )
+        thread.daemon = True
+        thread.start()
+        print("[DEBUG] 🚀 Verification OTP delivery initiated")
+
+    # ✅ On POST, verify OTP
+    if request.method == "POST":
+        entered_otp = request.POST.get("otp", "").strip()
+        print(f"[DEBUG] Entered OTP: {entered_otp}, Stored OTP: {branch.otp_code}")
+
+        # Optional: enforce expiry (5 minutes)
+        otp_valid = True
+        if hasattr(branch, "otp_generated_at") and branch.otp_generated_at:
+            if now() > branch.otp_generated_at + timedelta(minutes=5):
+                otp_valid = False
+
+        if otp_valid and entered_otp == branch.otp_code:
             branch.phone_verified = True
+            branch.otp_code = None  # ✅ clear OTP
+            branch.otp_generated_at = None
             branch.save()
-            messages.success(request, 'Phone verification successful!')
-            return redirect('dashboard')
-        messages.error(request, 'Invalid OTP. Please try again.')
-    
-    return render(request, 'branch/verify_phone.html')
+            messages.success(request, "Phone verification successful!")
+            return redirect("dashboard")
+        else:
+            messages.error(request, "Invalid or expired OTP. Please try again.")
+
+    return render(request, "branch/verify_phone.html")
 
 
-
-
-
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import redirect
-from django.contrib import messages
-import random
+from django.core.mail import send_mail
 
 @login_required
-def resend_otp(request):
+def resend_otp_branch(request):
     user = request.user
-    if not user.branch:
+
+    if not hasattr(user, "branch"):
         return redirect('create_branch')
 
     branch = user.branch
-    # Generate a new 6-digit OTP
+
+    # Generate OTP
     new_otp = str(random.randint(100000, 999999))
     branch.otp_code = new_otp
     branch.save()
 
-    # TODO: Replace with actual SMS sending logic
-    print(f"Resending OTP {new_otp} to {branch.phone_number}")
+    # Send email
+    send_mail(
+        subject="Your OTP Code",
+        message=f"Your OTP is {new_otp}",
+        from_email=settings.DEFAULT_FROM_EMAIL, # or settings.DEFAULT_FROM_EMAIL
+        recipient_list=[user.email],
+        fail_silently=False,
+    )
 
-    # Show a success message and redirect to the verify phone page
-    messages.success(request, 'A new OTP has been sent to your phone number.')
-    return redirect('verify_phone')
+    messages.success(request, "A new OTP has been sent to your email.")
+    return redirect("verify_phone")
 
 
 
@@ -405,26 +568,33 @@ from django.utils import timezone
 @user_passes_test(check_role_admin)
 @login_required
 
-def session_mgt(request):
-    # Access the branch associated with the logged-in user
-    branch = request.user.branch  # Assuming the 'branch' field is part of the User model
+def session_mgt(request, branch_id):
+    # Get the branch — ensure user has access (optional security check)
+    branch = get_object_or_404(Branch, id=branch_id)
+
+    # Optional: Restrict access to user's own branch (recommended)
+    if hasattr(request.user, 'branch') and request.user.branch_id != branch_id:
+        messages.error(request, "You do not have permission to manage this branch's session.")
+        return redirect('dashboard')  # or another safe page
 
     if request.method == 'POST':
         form = EndSession(request.POST, instance=branch)
         if form.is_valid():
-            # Check if session_status is "Open" and update system_date
             session_status = form.cleaned_data.get('session_status')
             if session_status == 'Open':
-                branch.system_date_date = timezone.now()
-            
-            form.save()  # Save the branch instance
-            messages.success(request, 'Session Change Successfully')
-            return redirect('session_mgt')  # Redirect to the same page after successful update
+                # Assuming system_date_date is a DateField
+                branch.system_date_date = timezone.now().date()
+            form.save()
+            messages.success(request, 'Session updated successfully.')
+            # ✅ Redirect with branch_id to match URL pattern
+            return redirect('session_mgt', branch_id=branch_id)
     else:
         form = EndSession(instance=branch)
-    
-    return render(request, 'company/session_mgt.html', {'form': form})
 
+    return render(request, 'company/session_mgt.html', {
+        'form': form,
+        'branch': branch
+    })
 
 
 

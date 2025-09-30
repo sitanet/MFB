@@ -1,319 +1,278 @@
 {% extends 'base.html' %}
-
 {% load static %}
-
+{% load humanize %}
 {% block content %}
-    {% include 'includes/alerts.html' %}
+<link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
 
-    <style>
-        .container-fluid {
-            padding: 20px;
-        }
+<style>
+  body {
+    background: #f5f6f8;
+    font-family: "Segoe UI", Tahoma, sans-serif;
+    font-size: 14px;
+    color: #333;
+  }
 
-        .column_title {
-            margin-bottom: 20px;
-        }
+  .container-report {
+    max-width: 1000px;
+    margin: 20px auto;
+    padding: 15px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+  }
 
-        .page_title h2 {
-            margin: 0;
-            color: #333;
-        }
+  .report-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 8px;
+    margin-bottom: 15px;
+    border-bottom: 2px solid #444;
+  }
 
-        h5 {
-            margin: 10px 0;
-            color: #555;
-        }
+  .report-title {
+    font-size: 18px;
+    font-weight: bold;
+    color: #004d4d;
+  }
 
-        .table-section {
-            margin-top: 20px;
-        }
+  .actions button {
+    margin-left: 6px;
+    font-size: 13px;
+  }
 
-        p {
-            margin-bottom: 5px;
-            color: #666;
-        }
+  .card {
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 12px;
+    margin-bottom: 15px;
+    background: #fafafa;
+  }
 
-        .table {
-            width: 100%;
-            margin-top: 10px;
-        }
+  .form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+  }
 
-        th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-        }
+  .form-group label {
+    font-weight: 600;
+    font-size: 12px;
+    margin-bottom: 4px;
+    display: block;
+  }
 
-        th {
-            background-color: #333;
-            color: #fff;
-        }
+  .form-control {
+    font-size: 13px;
+    padding: 6px 8px;
+    border-radius: 4px;
+  }
 
-        tr:hover {
-            background-color: #f5f5f5;
-        }
+  .btn-primary, .btn-success {
+    font-size: 13px;
+    font-weight: 600;
+    padding: 6px 14px;
+    border-radius: 4px;
+  }
 
-        .total-row {
-            border-bottom: 3px solid #000;
-            border-top: 3px solid #000;
-        }
+  /* Summary */
+  .summary-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 15px;
+  }
 
-        .total-row td {
-            font-weight: bold;
-            color: #333;
-        }
+  .summary {
+    flex: 1;
+    min-width: 150px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 8px;
+    background: #fff;
+    text-align: center;
+  }
 
-        .negative-value {
-            color: red;
-        }
+  .summary .label {
+    font-size: 12px;
+    color: #666;
+    font-weight: 600;
+  }
 
-        .office-address {
-            margin-bottom: 20px;
-        }
+  .summary .value {
+    font-weight: bold;
+    font-size: 15px;
+    color: #004d4d;
+    margin-top: 4px;
+  }
 
-        .form-row {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
+  /* Table */
+  .table-wrap {
+    overflow-x: auto;
+  }
 
-        .form-group {
-            flex: 1;
-            min-width: 200px;
-        }
+  table.report-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+  }
 
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
+  table.report-table th,
+  table.report-table td {
+    border: 1px solid #ccc;
+    padding: 6px 8px;
+    text-align: right;
+  }
 
-        .form-group select, .form-group input {
-            width: 100%;
-            padding: 8px;
-            box-sizing: border-box;
-        }
+  table.report-table th {
+    background: #004d4d;
+    color: #fff;
+    text-align: center;
+    font-size: 12px;
+    font-weight: bold;
+  }
 
-        .print-button {
-            background-color: #149414;
-            color: #fff;
-            border: none;
-            border-radius: 5px;
-            padding: 10px 20px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: background-color 0.3s, box-shadow 0.3s;
-        }
+  table.report-table td.left {
+    text-align: left;
+  }
 
-        .print-button:hover {
-            background-color: #00332e;
-        }
+  table.report-table tbody tr:nth-child(even) {
+    background: #f9f9f9;
+  }
 
-        .print-button:focus {
-            outline: none;
-        }
+  .total-row {
+    background: #004d4d;
+    color: white;
+    font-weight: bold;
+  }
 
-        .print-button:active {
-            box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
-        }
+  /* Print */
+  @media print {
+    .no-print { display: none !important; }
+    body { background: white !important; }
+    .container-report { border: none; padding: 0; }
+    table.report-table { font-size: 9pt; }
+  }
+</style>
 
-        /* Print-specific styles */
-        @media print {
-            .container-fluid {
-                padding: 0;
-            }
+<div class="container-report">
 
-            .table {
-                border-collapse: collapse;
-            }
+  <div class="report-header">
+    <div class="report-title">Loan Repayment Schedule</div>
+    <div class="actions no-print">
+      <button class="btn btn-primary btn-sm" onclick="window.print()">Print</button>
+      <button class="btn btn-outline-secondary btn-sm" onclick="alert('Export not implemented')">Export</button>
+    </div>
+  </div>
 
-            th, td {
-                border: 1px solid #000;
-            }
+  {% if error_message %}
+    <div class="alert alert-danger">{{ error_message }}</div>
+  {% endif %}
 
-            .page_title {
-                text-align: center;
-                margin-bottom: 20px;
-            }
-
-            .no-print {
-                display: none;
-            }
-
-            /* Hide the form on print */
-            #form-container {
-                display: none;
-            }
-        }
-    </style>
-
-    <div class="container-fluid">
-        <div class="row column_title">
-            <div class="col-md-12">
-                <div class="page_title">
-                    <h2>Loan Repayment Schedule</h2>
-                </div>
-            </div>
+  <div class="card no-print">
+    <form method="post" id="loan-search-form">
+      {% csrf_token %}
+      <div class="form-row">
+        <div class="form-group">
+          <label>Branch</label>
+          {{ form.branch }}
         </div>
-
-        <!-- Print Button -->
-        <div class="text-right no-print">
-            <button class="print-button" onclick="window.print()">Print</button>
+        <div class="form-group">
+          <label>Account (GL)</label>
+          {{ form.account }}
         </div>
-
-        <!-- Form inside a card -->
-        <div id="form-container" class="card" {% if form_submitted %}style="display: none;"{% endif %}>
-            <div class="card-body">
-                <form id="loan-form" method="post" action="{% url 'loan_repayment_schedule' %}">
-                    {% csrf_token %}
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="branch">Branch:</label>
-                            <select id="branch" name="branch" class="form-control">
-                                <option value="">Select a Branch</option>
-                                {% for branch in branches %}
-                                    <option value="{{ branch.id }}">{{ branch.branch_name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="account">Account:</label>
-                            <select id="account" name="account" class="form-control">
-                                <option value="">Select an Account</option>
-                                {% for account in accounts %}
-                                    <option value="{{ account.id }}">{{ account.gl_no }} - {{ account.gl_name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="ac_no">Account No:</label>
-                            <input type="text" id="ac_no" name="ac_no" class="form-control" value="{{ request.POST.ac_no }}">
-                        </div>
-                        <div class="form-group">
-                            <label for="cycle">Cycle:</label>
-                            <input type="text" id="cycle" name="cycle" class="form-control" value="{{ request.POST.cycle }}">
-                        </div>
-                        <div class="form-group" style="flex: 0 0 auto;">
-                            <button type="submit" class="btn btn-primary">Submit</button>
-                        </div>
-                    </div>
-                </form>
-            </div>
+        <div class="form-group">
+          <label>Account No</label>
+          <input name="ac_no" id="ac_no" class="form-control" value="{{ ac_no_value|default:'' }}">
         </div>
+        <div class="form-group">
+          <label>Cycle</label>
+          <input name="cycle" id="cycle" class="form-control" value="{{ cycle_value|default:'' }}">
+        </div>
+      </div>
+      <div class="d-flex justify-content-end mt-3">
+        <button type="submit" class="btn btn-success">Generate Report</button>
+      </div>
+    </form>
+  </div>
 
-        <!-- Loan Ledger Card Content -->
-        {% if form_submitted %}
-            {% if ledger_card %}
-                <div class="col-md-12">
-                    <div class="white_shd full margin_bottom_30">
-                        <div class="table_section padding_infor_info">
-                            <div class="row">
-                                <div class="col-md-12 text-center">
-                                    <h4>{{ branch.company_name }}</h4>
-                                    <p class="office-address">{{ branch.office_address }}</p>
-                                </div>
-                            </div>
-                            <div class="row" style="padding: 10px; border-radius: 5px;">
-                                <div class="row">
-                                    <div class="col-md-12 text-center">
-                                        <h5 style="color: #336699; text-align: center;">Loan Repayment Schedule</h5>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <p><strong>Full Name:</strong> {{ customer.get_full_name }}</p>
-                                    <p><strong>Address:</strong> {{ customer.address }}</p>
-                                    <p><strong>Product No:</strong> {{ customer.gl_no }}</p>
-                                    <p><strong>Loan No & Cycle No:</strong> {{ customer.ac_no }} . {{ loan.cycle }}</p>
-                                    <p><strong>Disbursement Amount:</strong> {{ disbursement_amount }}</p>
-                                </div>
-                                <div class="col-md-6">
-                                    <p><strong>Loan Period:</strong> {{ num_installments }} {{ loan_period }} months</p>
-                                    <p><strong>Disbursement Date:</strong> {{ disbursement_date }}</p>
-                                    <p><strong>No of Installments:</strong> {{ num_installments }}</p>
-                                    <p><strong>Annual Interest Rate:</strong> {{ annual_interest_rate }}%</p>
-                                </div>
-                            </div>
-
-                            <div class="table-responsive-sm table-section">
-                                <table class="table">
-                                    <thead class="thead-dark">
-                                        <tr>
-                                            <th>Trx Date</th>
-                                            <th>Trx Naration</th>
-                                            <th>Cycle</th>
-                                            <th>Principal</th>
-                                            <th>Interest</th>
-                                            <th>Penalty</th>
-                                            <th>Total Payment</th>
-                                            <th>Principal Balance</th>
-                                            <th>Interest Balance</th>
-                                            <th>Penalty Balance</th>
-                                            <th>Total Balance</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for entry in ledger_card %}
-                                            <tr>
-                                                <td>{{ entry.trx_date }}</td>
-                                                <td>{{ entry.trx_naration }}</td>
-                                                <td>{{ entry.cycle }}</td>
-                                                <td class="{% if entry.principal < 0 %}negative-value{% endif %}">{{ entry.principal }}</td>
-                                                <td class="{% if entry.interest < 0 %}negative-value{% endif %}">{{ entry.interest }}</td>
-                                                <td class="{% if entry.penalty < 0 %}negative-value{% endif %}">{{ entry.penalty }}</td>
-                                                <td class="{% if entry.total_payment < 0 %}negative-value{% endif %}">{{ entry.total_payment }}</td>
-                                                <td class="{% if entry.principal_balance < 0 %}negative-value{% endif %}">{{ entry.principal_balance }}</td>
-                                                <td class="{% if entry.interest_balance < 0 %}negative-value{% endif %}">{{ entry.interest_balance }}</td>
-                                                <td class="{% if entry.penalty_balance < 0 %}negative-value{% endif %}">{{ entry.penalty_balance }}</td>
-                                                <td class="{% if entry.total_balance < 0 %}negative-value{% endif %}">{{ entry.total_balance }}</td>
-                                            </tr>
-                                        {% endfor %}
-                                        <tr class="total-row">
-                                            <td colspan="3"><strong>Total</strong></td>
-                                            <td></td>
-                                            <td></td>
-                                            <td></td>
-                                            <td class="{% if total_payment < 0 %}negative-value{% endif %}">{{ total_payment }}</td>
-                                            <td class="{% if principal_balance < 0 %}negative-value{% endif %}">{{ principal_balance }}</td>
-                                            <td class="{% if interest_balance < 0 %}negative-value{% endif %}">{{ interest_balance }}</td>
-                                            <td class="{% if penalty_balance < 0 %}negative-value{% endif %}">{{ penalty_balance }}</td>
-                                            <td class="{% if total_balance < 0 %}negative-value{% endif %}">{{ total_balance }}</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            {% else %}
-                <div class="col-md-12">
-                    <div class="alert alert-warning" role="alert">
-                        No records found for the provided criteria.
-                    </div>
-                </div>
-            {% endif %}
-        {% endif %}
+  {% if form_submitted %}
+    <div class="summary-row">
+      <div class="summary"><div class="label">Total Disbursed</div><div class="value">₦ {{ grand_total_disbursed|floatformat:2|intcomma }}</div></div>
+      <div class="summary"><div class="label">Principal Paid</div><div class="value">₦ {{ grand_total_principal|floatformat:2|intcomma }}</div></div>
+      <div class="summary"><div class="label">Interest Paid</div><div class="value">₦ {{ grand_total_interest|floatformat:2|intcomma }}</div></div>
+      <div class="summary"><div class="label">Penalty Paid</div><div class="value">₦ {{ grand_total_penalty|floatformat:2|intcomma }}</div></div>
+      <div class="summary"><div class="label">Outstanding</div><div class="value">₦ {{ outstanding_amount|floatformat:2|intcomma }}</div></div>
     </div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            // Handle form submission and hide the form after submission
-            const form = document.getElementById('loan-form');
-            const formContainer = document.getElementById('form-container');
+    <div class="card">
+      <div class="d-flex justify-content-between flex-wrap">
+        <div>
+          <strong>{{ company_name|default:"—" }}</strong><br>
+          <small>{{ branch_name|default:"—" }}</small>
+        </div>
+        <div class="text-end">
+          <div><strong>Customer:</strong> {{ customer_name|default:"—" }}</div>
+          <div><strong>Loan/Acct:</strong>
+            {% if loan %}{{ loan.ac_no }} · Cycle {{ loan.cycle }}{% else %}{{ ac_no_value|default:"—" }}{% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
 
-            if (form) {
-                form.addEventListener('submit', function () {
-                    formContainer.style.display = 'none';
-                });
-            }
-
-            // Handle print button functionality
-            const printButton = document.querySelector('.print-button');
-            if (printButton) {
-                printButton.addEventListener('click', function () {
-                    window.print();
-                });
-            }
-        });
-    </script>
+    <div class="table-wrap">
+      <table class="report-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th class="left">Date</th>
+            <th class="left">Trx</th>
+            <th class="left">Narration</th>
+            <th>Cyc</th>
+            <th>Prin</th>
+            <th>Int</th>
+            <th>Pen</th>
+            <th>Total Paid</th>
+            <th>Prin Bal</th>
+            <th>Int Bal</th>
+            <th>Pen Bal</th>
+            <th>Total Bal</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for entry in ledger_card %}
+            <tr>
+              <td class="left">{{ entry.counter }}</td>
+              <td class="left">{{ entry.trx_date|date:"d/m/Y" }}</td>
+              <td class="left">{{ entry.trx_no|truncatechars:10 }}</td>
+              <td class="left">{{ entry.trx_naration|default:entry.trx_type|truncatechars:20 }}</td>
+              <td>{{ entry.cycle }}</td>
+              <td>₦ {{ entry.principal|floatformat:2|intcomma }}</td>
+              <td>₦ {{ entry.interest|floatformat:2|intcomma }}</td>
+              <td>₦ {{ entry.penalty|floatformat:2|intcomma }}</td>
+              <td>₦ {{ entry.total_payment|floatformat:2|intcomma }}</td>
+              <td>₦ {{ entry.principal_balance|floatformat:2|intcomma }}</td>
+              <td>₦ {{ entry.interest_balance|floatformat:2|intcomma }}</td>
+              <td>₦ {{ entry.penalty_balance|floatformat:2|intcomma }}</td>
+              <td>₦ {{ entry.total_balance|floatformat:2|intcomma }}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="13" class="left">No ledger entries found.</td></tr>
+          {% endfor %}
+          <tr class="total-row">
+            <td colspan="5" class="left">TOTAL</td>
+            <td>₦ {{ grand_total_principal|floatformat:2|intcomma }}</td>
+            <td>₦ {{ grand_total_interest|floatformat:2|intcomma }}</td>
+            <td>₦ {{ grand_total_penalty|floatformat:2|intcomma }}</td>
+            <td>₦ {{ total_paid_sum|floatformat:2|intcomma }}</td>
+            <td>{% if ledger_card %}₦ {{ final_principal_balance|floatformat:2|intcomma }}{% else %}--{% endif %}</td>
+            <td>{% if ledger_card %}₦ {{ final_interest_balance|floatformat:2|intcomma }}{% else %}--{% endif %}</td>
+            <td>{% if ledger_card %}₦ {{ final_penalty_balance|floatformat:2|intcomma }}{% else %}--{% endif %}</td>
+            <td>₦ {{ final_total_balance|floatformat:2|intcomma }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+</div>
 {% endblock %}

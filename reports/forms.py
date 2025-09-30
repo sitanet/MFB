@@ -15,7 +15,7 @@ from company.models import Company, Branch
 class TrialBalanceForm(forms.Form):
     start_date = forms.DateField()
     end_date = forms.DateField()
-    branch = forms.ModelChoiceField(queryset=Company.objects.all(), required=False)
+    branch = forms.ModelChoiceField(queryset=Branch.objects.all(), required=False)
 
 
 
@@ -28,21 +28,27 @@ class BalanceSheetForm(forms.Form):
     branch = forms.ModelChoiceField(queryset=Company.objects.all(), required=False)
 
 
-
-
 from django import forms
-from company.models import Branch  # Use Branch instead of Company
+from company.models import Branch
 from accounts.models import User
 from accounts_admin.models import Account
 
 class TransactionForm(forms.Form):
-    start_date = forms.DateField(required=True, widget=forms.TextInput(attrs={'type': 'date'}))
-    end_date = forms.DateField(required=True, widget=forms.TextInput(attrs={'type': 'date'}))
-    
-    # Use Branch instead of Company
-    branch = forms.ModelChoiceField(queryset=Branch.objects.all(), required=False, empty_label="Select Branch")
+    start_date = forms.DateField(
+        required=True, widget=forms.TextInput(attrs={'type': 'date'})
+    )
+    end_date = forms.DateField(
+        required=True, widget=forms.TextInput(attrs={'type': 'date'})
+    )
 
-    user = forms.ModelChoiceField(queryset=User.objects.all(), required=False)
+    branch = forms.ModelChoiceField(
+        queryset=Branch.objects.none(),
+        required=False
+    )
+    user = forms.ModelChoiceField(
+        queryset=User.objects.none(),
+        required=False
+    )
     
     code = forms.ChoiceField(
         choices=[
@@ -66,6 +72,15 @@ class TransactionForm(forms.Form):
         widget=forms.TextInput(attrs={'type': 'number', 'placeholder': 'Enter Account Number'})
     )
 
+    def __init__(self, *args, **kwargs):
+        branches = kwargs.pop('branches', Branch.objects.none())
+        users = kwargs.pop('users', User.objects.none())
+        super().__init__(*args, **kwargs)
+        self.fields['branch'].queryset = branches
+        self.fields['branch'].empty_label = "All Branches"
+
+        self.fields['user'].queryset = users
+        self.fields['user'].empty_label = "All Users"
 
 
 
@@ -124,6 +139,9 @@ from django import forms
 from accounts_admin.models import Account
 
 # forms.py
+from django import forms
+from company.models import Branch
+from accounts_admin.models import Account
 
 from django import forms
 from company.models import Branch
@@ -131,37 +149,34 @@ from accounts_admin.models import Account
 
 class LoanLedgerCardForm(forms.Form):
     branch = forms.ModelChoiceField(
-        queryset=Branch.objects.none(),  # Start with empty queryset
+        queryset=Branch.objects.all(),  
         label='Branch',
         empty_label='Select a Branch',
         widget=forms.Select(attrs={'class': 'form-control'})
     )
     account = forms.ModelChoiceField(
-        queryset=Account.objects.none(),  # Start with empty queryset
+        queryset=Account.objects.filter(gl_no__startswith="104"),  # ✅ Only GL starting with 104
         label='Account',
         empty_label='Select an Account',
         widget=forms.Select(attrs={'class': 'form-control'})
     )
     ac_no = forms.CharField(
-        max_length=20, 
-        required=False, 
+        max_length=20,
+        required=False,
         widget=forms.TextInput(attrs={'class': 'form-control'})
     )
     cycle = forms.CharField(
-        max_length=20, 
-        required=False, 
+        max_length=20,
+        required=False,
         widget=forms.TextInput(attrs={'class': 'form-control'})
     )
 
-    def __init__(self, *args, user_branch=None, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Filter branches by user's branch
-        if user_branch:
-            self.fields['branch'].queryset = Branch.objects.filter(id=user_branch.id)
-            self.fields['account'].queryset = Account.objects.filter(branch=user_branch)
-        
-        # Customize the account field to display gl_no and gl_name in the dropdown
-        self.fields['account'].label_from_instance = lambda obj: f"{obj.gl_no} - {obj.gl_name}"
+        # ✅ Make account labels more descriptive
+        self.fields['account'].label_from_instance = (
+            lambda obj: f"{obj.gl_no} - {obj.gl_name}"
+        )
 
 
 
@@ -184,7 +199,6 @@ from django.db.models import Q
 from django import forms
 from company.models import Branch
 from accounts_admin.models import Account
-
 class LoanDisbursementReportForm(forms.Form):
     reporting_date = forms.DateField(
         label='Reporting Date',
@@ -211,18 +225,23 @@ class LoanDisbursementReportForm(forms.Form):
 
     def __init__(self, *args, user_branch=None, **kwargs):
         super().__init__(*args, **kwargs)
-        
+
         if user_branch:
-            # Filter branches to only user's branch
+            # 🔹 Restrict to user's branch and GL accounts that start with 104
             self.fields['branch'].queryset = Branch.objects.filter(id=user_branch.id)
-            
-            # Filter accounts for the branch
             self.fields['gl_no'].queryset = Account.objects.filter(
-                branch=user_branch
+                branch=user_branch,
+                gl_no__startswith="104"
             ).order_by('gl_no')
-            
-            # Format account display in dropdown
-            self.fields['gl_no'].label_from_instance = lambda obj: f"{obj.gl_no} - {obj.gl_name}"
+        else:
+            # 🔹 Show all branches and only GLs that start with 104
+            self.fields['branch'].queryset = Branch.objects.all().order_by('branch_name')
+            self.fields['gl_no'].queryset = Account.objects.filter(
+                gl_no__startswith="104"
+            ).order_by('gl_no')
+
+        # Format GL account display
+        self.fields['gl_no'].label_from_instance = lambda obj: f"{obj.gl_no} - {obj.gl_name}"
 
 
 

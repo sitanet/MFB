@@ -109,18 +109,31 @@
                     <input type="date" class="form-control" name="reporting_date" 
                            value="{{ reporting_date|date:'Y-m-d' }}" required>
                 </div>
-                <div class="col-md-3">
-                    <label class="form-label">Branch</label>
-                    <select class="form-control" name="branch">
-                        <option value="">All Branches</option>
-                        {% for branch in branches %}
-                        <option value="{{ branch.id }}" 
-                            {% if selected_branch and branch.id == selected_branch.id %}selected{% endif %}>
-                            {{ branch.branch_name }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </div>
+<div class="col-md-3">
+    <label class="form-label">Branch</label>
+    {% if user_branch and not user_branch_is_head_office %}
+        <!-- Non-head-office user: show only their branch -->
+        <input type="text" class="form-control" value="{{ user_branch.branch_name }}" disabled>
+        <input type="hidden" name="branch" value="{{ user_branch.id }}">
+    {% elif user_branch_is_head_office %}
+        <!-- Head-office user: show all branches -->
+        <select name="branch" class="form-control">
+            <option value="">All Branches</option>
+            {% for b in branches %}
+                <option value="{{ b.id }}"
+                    {% if selected_branch and selected_branch.id == b.id %}selected{% endif %}>
+                    {{ b.branch_name }} ({{ b.branch_code }})
+                </option>
+            {% endfor %}
+        </select>
+    {% endif %}
+</div>
+
+
+
+
+
+
                 <div class="col-md-3">
                     <label class="form-label">Product</label>
                     <select class="form-control" name="gl_no">

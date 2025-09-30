@@ -122,8 +122,9 @@ CACHES = {
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'FinanceflexData',
+        # 'NAME': 'FinanceflexData',
         # 'NAME': 'ENUGU_DEMO',
+        'NAME': 'Flex_Data',
         'USER': 'postgres',
         'PASSWORD': 'People',
         'HOST': 'localhost',

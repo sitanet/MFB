@@ -1,103 +1,376 @@
-{% extends "base.html" %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Branch</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
 
-{% block content %}
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-md-12">
-            <div class="page_title">
-                <h2>Edit Branch</h2>
+        :root {
+            --primary: #22c55e;
+            --primary-dark: #16a34a;
+            --secondary: #ff7f00;
+            --secondary-dark: #e67300;
+            --light: #f8fafc;
+            --dark: #1e293b;
+            --gray: #64748b;
+            --light-gray: #e2e8f0;
+            --success: #10b981;
+            --danger: #ef4444;
+            --border-radius: 8px;
+            --box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --transition: all 0.3s ease;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f0fdf4 0%, #fff7ed 100%);
+            color: var(--dark);
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Navigation Bar */
+        .navbar {
+            background: white;
+            box-shadow: var(--box-shadow);
+            padding: 0 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-bottom: 3px solid var(--primary);
+        }
+
+        .nav-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+            height: 70px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        .logo i {
+            font-size: 1.8rem;
+            color: var(--secondary);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 1.5rem;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: var(--dark);
+            font-weight: 600;
+            padding: 8px 16px;
+            border-radius: var(--border-radius);
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .nav-links a:hover,
+        .nav-links a.active {
+            color: var(--dark);
+            font-weight: 700;
+        }
+
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 3px;
+            background: var(--secondary);
+            transition: var(--transition);
+            border-radius: 3px;
+        }
+
+        .nav-links a:hover::after,
+        .nav-links a.active::after {
+            width: 100%;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1.5rem;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid var(--light-gray);
+        }
+
+        .page-header h1 {
+            font-size: 2rem;
+            color: var(--dark);
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            font-weight: 700;
+        }
+
+        .form-container {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            box-shadow: var(--box-shadow);
+            margin-bottom: 2rem;
+            border-top: 4px solid var(--secondary);
+            position: relative;
+        }
+
+        .form-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 70px;
+            height: 70px;
+            background: radial-gradient(circle, var(--secondary) 0%, transparent 70%);
+            opacity: 0.1;
+            border-radius: 0 0 0 50%;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.3rem;
+            font-weight: 600;
+            color: var(--dark);
+            font-size: 0.95rem;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 8px 12px;
+            border: 2px solid var(--light-gray);
+            border-radius: var(--border-radius);
+            font-size: 0.95rem;
+            background-color: #f8fafc;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--secondary);
+            box-shadow: 0 0 0 3px rgba(255, 127, 0, 0.2);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.25rem;
+        }
+
+        @media (max-width: 992px) {
+            .form-row {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border-radius: var(--border-radius);
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            border: none;
+            font-size: 0.95rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-success {
+            background: var(--secondary);
+            color: white;
+            box-shadow: 0 2px 4px rgba(255, 127, 0, 0.2);
+        }
+
+        .btn-success:hover {
+            background: var(--secondary-dark);
+            transform: translateY(-2px);
+        }
+
+        .messages {
+            list-style: none;
+            padding: 0;
+            margin-bottom: 1rem;
+        }
+
+        .messages li {
+            background: #fff8e1;
+            padding: 0.5rem 1rem;
+            border-radius: var(--border-radius);
+            margin-bottom: 0.5rem;
+            border-left: 3px solid var(--secondary);
+        }
+
+        .footer {
+            text-align: center;
+            padding: 1.5rem;
+            color: var(--gray);
+            font-size: 0.85rem;
+            margin-top: auto;
+            border-top: 1px solid var(--light-gray);
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-top: 1rem;
+            color: var(--primary);
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="{% url 'company_list' %}" class="logo">
+                <i class="fas fa-leaf"></i>
+                <span>FinanceFlex</span>
+            </a>
+            <div class="nav-links">
+                <a href="{% url 'create_company' %}" class="nav-link">Company Registration</a>
+                <a href="{% url 'create_branch' %}" class="nav-link active">Branch Management</a>
+                <a href="{% url 'company_list' %}" class="nav-link">Company List</a>
+                <a href="{% url 'branch_list' %}" class="nav-link">Branch List</a>
             </div>
         </div>
+    </nav>
 
-        <!-- Edit Branch Form -->
-        <form method="POST" class="branch-edit-form p-5 shadow-lg rounded rounded-5">
-            {% csrf_token %}
-            
-            <!-- Display messages -->
-            {% if messages %}
-            <ul class="messages">
-                {% for message in messages %}
-                <li style="font-size: 20px; color: brown; font-weight: bold;" {% if message.tags %} class="{{ message.tags }}"{% endif %}>
-                    {{ message }}
-                </li>
-                {% endfor %}
-            </ul>
-            {% endif %}
+    <div class="container">
+        <div class="page-header">
+            <h1>Edit Branch</h1>
+        </div>
 
-            <!-- Display form errors -->
-            <h6 style="color: red;">{{ form.errors }}</h6>
-            
-            <!-- Form fields -->
-            <div class="form-row">
-                <!-- Branch Code -->
-                <div class="form-group col-md-4">
-                    <label for="branch_code">Branch Code</label>
-                    <input type="text" class="form-control bg-light" id="branch_code" name="branch_code" value="{{ branch.branch_code }}">
+        <div class="form-container">
+            <form method="POST">
+                {% csrf_token %}
+
+                {% if messages %}
+                    <ul class="messages">
+                        {% for message in messages %}
+                            <li>{{ message }}</li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+
+                {% if form.errors %}
+                    <div style="color: red; margin-bottom: 1rem;">{{ form.errors }}</div>
+                {% endif %}
+
+                <div class="form-row">
+                    <!-- Branch Code -->
+                    <div class="form-group">
+                        <label for="branch_code">Branch Code</label>
+                        <input type="text" class="form-control" id="branch_code" name="branch_code" value="{{ branch.branch_code }}">
+                    </div>
+
+                    <!-- Company -->
+                    <div class="form-group">
+                        <label for="company">Company</label>
+                        <select class="form-control" id="company" name="company">
+                            {% for company in companies %}
+                                <option value="{{ company.id }}" {% if branch.company.id == company.id %}selected{% endif %}>
+                                    {{ company.company_name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Branch Name -->
+                    <div class="form-group">
+                        <label for="branch_name">Branch Name</label>
+                        <input type="text" class="form-control" id="branch_name" name="branch_name" value="{{ branch.branch_name }}">
+                    </div>
+
+                    <!-- Session Date -->
+                    <div class="form-group">
+                        <label for="session_date">Session Date</label>
+                        <input type="date" class="form-control" id="session_date" name="session_date" value="{{ branch.session_date|date:'Y-m-d' }}">
+                    </div>
+
+                    <!-- System Date -->
+                    <div class="form-group">
+                        <label for="system_date">System Date</label>
+                        <input type="date" class="form-control" id="system_date" name="system_date_date" value="{{ branch.system_date_date|date:'Y-m-d' }}">
+                    </div>
+
+                    <!-- Session Status -->
+                    <div class="form-group">
+                        <label for="session_status">Session Status</label>
+                        <input type="text" class="form-control" id="session_status" value="{{ branch.session_status }}" disabled>
+                        <input type="hidden" name="session_status" value="{{ branch.session_status }}">
+                    </div>
+
+                    <!-- Plan -->
+                    <div class="form-group">
+                        <label for="plan">Plan</label>
+                        <select class="form-control" id="plan" name="plan">
+                            {% for value, label in form.plan.field.choices %}
+                                <option value="{{ value }}" {% if branch.plan == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
                 </div>
 
-                <!-- Company Dropdown -->
-                <div class="form-group col-md-4">
-                  <label for="company">Company</label>
-                  <select class="form-control bg-light" id="company" name="company">
-                      {% for company in companies %}
-                      <option value="{{ company.id }}" {% if branch.company.id == company.id %}selected{% endif %}>
-                          {{ company.company_name }}
-                      </option>
-                      {% endfor %}
-                  </select>
-              </div>
-              
+                <button type="submit" class="btn btn-success" style="width: 100%; margin-top: 1rem;">
+                    <i class="fas fa-save"></i> Save Changes
+                </button>
 
-                <!-- Branch Name -->
-                <div class="form-group col-md-4">
-                    <label for="branch_name">Branch Name</label>
-                    <input type="text" class="form-control bg-light" id="branch_name" name="branch_name" value="{{ branch.branch_name }}">
-                </div>
-
-                <!-- Session Date -->
-                <div class="form-group col-md-4">
-                    <label for="session_date">Session Date</label>
-                    <input type="date" class="form-control bg-light" id="session_date" name="session_date" value="{{ branch.session_date|date:'Y-m-d' }}">
-                </div>
-
-                <!-- System Date -->
-                <div class="form-group col-md-4">
-                  <label for="system_date">System Date</label>
-                  <input type="date" class="form-control bg-light" id="system_date" 
-                         name="system_date_date" value="{{ branch.system_date_date|date:'Y-m-d' }}">
-              </div>
-
-                <!-- Session Status -->
-                <div class="form-group col-md-4">
-                  <label for="session_status">Session Status</label>
-                  <input type="text" class="form-control bg-light" id="session_status" 
-                         value="{{ branch.session_status }}" disabled>
-                  <input type="hidden" name="session_status" value="{{ branch.session_status }}">
-              </div>
-
-              <div class="form-group col-md-4">
-                <label for="plan">Plan</label>
-                <select class="form-control bg-light" id="plan" name="plan">
-                    {% for value, label in form.plan.field.choices %}
-                        <option value="{{ value }}" {% if branch.plan == value %}selected{% endif %}>
-                            {{ label }}
-                        </option>
-                    {% endfor %}
-                </select>
-            </div>
-            
-              
-              
-            </div>
-
-            <!-- Submit Button -->
-            <div class="form-row">
-                <button type="submit" class="btn btn-success mt-4 shadow-sm">Save Changes</button>
-            </div>
-
-            <!-- Back Link -->
-            <a href="{% url 'branch_list' %}" style="color: green; font-weight: bold;">Back to Branch List</a>
-        </form>
+                <a href="{% url 'branch_list' %}" class="back-link">
+                    <i class="fas fa-arrow-left"></i> Back to Branch List
+                </a>
+            </form>
+        </div>
     </div>
-</div>
-{% endblock %}
+
+    <div class="footer">
+        <p>FinanceFlex Management System &copy; 2023 | Financial Solutions</p>
+    </div>
+</body>
+</html>

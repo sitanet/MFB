@@ -6,403 +6,223 @@
 {% include 'includes/alerts.html' %}
 
 <style>
-    :root {
-        --primary: #3498db;
-        --secondary: #2c3e50;
-        --success: #27ae60;
-        --danger: #e74c3c;
-        --light: #ecf0f1;
-        --dark: #34495e;
-        --gray: #95a5a6;
-    }
-
-    .report-container {
-        background: white;
-        border-radius: 10px;
-        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
-        overflow: hidden;
-    }
-
-    .report-header {
-        background: linear-gradient(135deg, var(--primary), var(--secondary));
-        color: white;
-        padding: 1.5rem;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    }
-
-    .report-title {
-        font-weight: 600;
-        letter-spacing: 0.5px;
-    }
-
-    .report-subtitle {
-        font-weight: 300;
-        opacity: 0.9;
-    }
-
-    .report-period {
-        background: var(--light);
-        padding: 1rem;
-        border-radius: 5px;
-        margin: 1.5rem 0;
-    }
-
-    .report-table {
-        width: 100%;
-        border-collapse: separate;
-        border-spacing: 0;
-        font-size: 0.9rem;
-    }
-
-    .report-table thead th {
-        background: var(--secondary);
-        color: white;
-        padding: 0.75rem 1rem;
-        font-weight: 500;
-        position: sticky;
-        top: 0;
-    }
-
-    .report-table tbody td {
-        padding: 0.75rem 1rem;
-        border-bottom: 1px solid #eee;
-        vertical-align: middle;
-    }
-
-    .report-table tbody tr:hover {
-        background: rgba(52, 152, 219, 0.05);
-    }
-
-    .total-row {
-        background: var(--light);
-        font-weight: 600;
-    }
-
-    .total-row td {
-        border-top: 2px solid var(--dark);
-        border-bottom: 2px solid var(--dark);
-    }
-
-    .subtotal-row {
-        background-color: #e9ecef;
-        font-weight: 500;
-    }
-
-    .product-header {
-        background-color: #d4edda;
-        font-weight: 500;
-    }
-
-    .form-container {
-        background: white;
-        border-radius: 10px;
-        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
-        padding: 1.5rem;
-        margin-bottom: 1.5rem;
-    }
-
-    .btn-print {
-        background: var(--secondary);
-        border: none;
-    }
-
-    .btn-print:hover {
-        background: var(--dark);
-    }
-
-    .btn-generate {
-        background: var(--success);
-        border: none;
-        padding: 0.5rem 1.5rem;
-    }
-
-    .amount {
-        font-family: 'Courier New', monospace;
-        text-align: right;
-    }
-
-    .days-column {
-        text-align: center;
-    }
-
-    .status-active {
-        color: var(--success);
-        font-weight: 500;
-    }
-
-    .status-inactive {
-        color: var(--danger);
-        font-weight: 500;
-    }
-
-    @media print {
-        .no-print { display: none !important; }
-        .report-header { background: white !important; color: black !important; }
-        .report-table thead th { background: white !important; color: black !important; }
-        body { font-size: 11pt; }
-        .report-table { font-size: 10pt; }
-    }
+:root {
+  --primary: #3498db; --secondary: #2c3e50; --light: #ecf0f1; --dark: #34495e;
+  --success: #27ae60; --danger: #e74c3c;
+}
+.report-container { background: #fff; border-radius: 10px; box-shadow: 0 .5rem 1rem rgba(0,0,0,.08); overflow: hidden; }
+.report-header { background: linear-gradient(135deg,var(--primary),var(--secondary)); color: #fff; padding: 1.25rem; }
+.report-title { font-weight: 600; }
+.report-subtitle { font-weight: 300; opacity: .95; }
+.form-container { background: #fff; padding: 1rem; border-radius: 8px; box-shadow: 0 .25rem .5rem rgba(0,0,0,.03); margin-bottom: 1rem; }
+.report-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: .95rem; }
+.report-table thead th { background: var(--secondary); color: #fff; padding: .75rem 1rem; position: sticky; top: 0; }
+.report-table tbody td { padding: .6rem .9rem; border-bottom: 1px solid #eee; vertical-align: middle; }
+.amount { font-family: 'Courier New', monospace; text-align: right; }
+.days-column { text-align: center; }
+.no-data { padding: 1.25rem; background: #fff3cd; border-radius: 6px; color: #856404; }
+@media print { .no-print { display: none !important } .report-header{ background: #fff !important; color: #000 !important } }
 </style>
 
 <div class="container-fluid">
-    <div class="row mb-4">
-        <div class="col-12 d-flex justify-content-between align-items-center">
-            <h2 class="mb-0">Savings Account Status</h2>
-            {% if account_status_data %}
-            <div class="no-print">
-                <button onclick="window.print()" class="btn btn-print text-white">
-                    <i class="fas fa-print mr-2"></i>Print
-                </button>
-            </div>
-            {% endif %}
-        </div>
+  <div class="row mb-3">
+    <div class="col-12 d-flex justify-content-between align-items-center">
+      <h2 class="mb-0">Savings Account Status</h2>
+
+      {% if customer_data %}
+      <div class="no-print">
+        <button onclick="window.print()" class="btn btn-secondary">
+          <i class="fas fa-print me-1"></i> Print
+        </button>
+      </div>
+      {% endif %}
     </div>
+  </div>
 
-    <div class="row mb-4 no-print">
-        <div class="col-12">
-            <div class="form-container {% if account_status_data %}d-none{% endif %}">
-                <form method="post">
-                    {% csrf_token %}
-                    <div class="row g-3">
-                        <div class="col-md-3">
-                            <label class="form-label">Start Date</label>
-                            <input type="date" class="form-control" name="start_date" 
-                                   value="{{ start_date|date:'Y-m-d' }}" required>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">End Date</label>
-                            <input type="date" class="form-control" name="end_date" 
-                                   value="{{ end_date|date:'Y-m-d' }}" required>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Branch</label>
-                            <select class="form-control" name="branch">
-                                <option value="">All Branches</option>
-                                {% for branch in branches %}
-                                <option value="{{ branch.id }}" 
-                                    {% if selected_branch and branch.id == selected_branch.id %}selected{% endif %}>
-                                    {{ branch.branch_name }} ({{ branch.branch_code }})
-                                </option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Product</label>
-                            <select class="form-control" name="gl_no">
-                                <option value="">All Products</option>
-                                {% for gl_account in gl_accounts %}
-                                <option value="{{ gl_account.gl_no }}" 
-                                    {% if selected_gl_no == gl_account.gl_no %}selected{% endif %}>
-                                    {{ gl_account.gl_no }} - {{ gl_account.gl_name }}
-                                </option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Region</label>
-                            <select class="form-control" name="region">
-                                <option value="">All Regions</option>
-                                {% for region in regions %}
-                                <option value="{{ region.id }}" 
-                                    {% if selected_region and region.id == selected_region.id %}selected{% endif %}>
-                                    {{ region.region_name }}
-                                </option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Account Officer</label>
-                            <select class="form-control" name="credit_officer">
-                                <option value="">All Officers</option>
-                                {% for officer in account_officers %}
-                                <option value="{{ officer.id }}" 
-                                    {% if selected_officer and officer.id == selected_officer.id %}selected{% endif %}>
-                                    {{ officer.user }}
-                                </option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="include_non_zero" 
-                                       name="include_non_zero" {% if include_non_zero %}checked{% endif %}>
-                                <label class="form-check-label" for="include_non_zero">
-                                    Include Non-Zero Only
-                                </label>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="exclude_ac_no_one" 
-                                       name="exclude_ac_no_one" {% if exclude_ac_no_one %}checked{% endif %}>
-                                <label class="form-check-label" for="exclude_ac_no_one">
-                                    Exclude Internal Accounts
-                                </label>
-                            </div>
-                        </div>
-                        <div class="col-12 text-end">
-                            <button type="submit" class="btn btn-generate text-white">
-                                <i class="fas fa-file-alt mr-2"></i>Generate Report
-                            </button>
-                        </div>
-                    </div>
-                </form>
+  <!-- FILTER FORM (GET). Hidden when customer_data is present -->
+  <div class="row mb-4 no-print">
+    <div class="col-12">
+      <div class="form-container {% if customer_data %}d-none{% endif %}">
+        <form method="get" class="row g-3">
+          <div class="col-md-3">
+            <label class="form-label">Start Date</label>
+            <input type="date" name="start_date" class="form-control" value="{{ start_date|default:'' }}">
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label">End Date</label>
+            <input type="date" name="end_date" class="form-control" value="{{ end_date|default:'' }}">
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label">Branch</label>
+            <select name="branch" class="form-control">
+              {% if user_branch and user_branch.head_office %}
+                <option value="">All Branches</option>
+              {% endif %}
+              {% for b in branches %}
+                <option value="{{ b.id }}"
+                  {% if selected_branch and selected_branch.id == b.id %}selected{% endif %}>
+                  {{ b.branch_name }} ({{ b.branch_code }})
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label">Product</label>
+            <select name="gl_no" class="form-control">
+              <option value="">All Products</option>
+              {% for ga in gl_accounts %}
+                <option value="{{ ga.gl_no }}" {% if selected_gl_no == ga.gl_no %}selected{% endif %}>
+                  {{ ga.gl_no }} - {{ ga.gl_name }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label">Region</label>
+            <select name="region" class="form-control">
+              <option value="">All Regions</option>
+              {% for r in regions %}
+                <option value="{{ r.id }}" {% if selected_region and selected_region.id == r.id %}selected{% endif %}>
+                  {{ r.region_name }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label">Account Officer</label>
+            <select name="account_officer" class="form-control">
+              <option value="">All Officers</option>
+              {% for ao in account_officers %}
+                <option value="{{ ao.id }}" {% if selected_officer and selected_officer.id == ao.id %}selected{% endif %}>
+                  {{ ao.user.get_full_name|default:ao.user }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- checkboxes -->
+          <div class="col-md-3 d-flex align-items-center">
+            <div class="form-check me-3">
+              <input class="form-check-input" type="checkbox" id="include_non_zero" name="include_non_zero" value="on"
+                {% if include_non_zero %}checked{% endif %}>
+              <label class="form-check-label" for="include_non_zero">Include Non-Zero Only</label>
             </div>
-        </div>
-    </div>
 
-    {% if account_status_data %}
-    <div class="row">
-        <div class="col-12">
-            <div class="report-container">
-                <div class="report-header">
-                    <h3 class="report-title">SAVINGS ACCOUNT STATUS</h3>
-                    <h5 class="report-subtitle mb-0">
-                        {% if company %}
-                            {{ company.name|upper }}
-                        {% else %}
-                            ALL BRANCHES
-                        {% endif %}
-                        {% if selected_branch %} | {{ selected_branch.branch_name|upper }} ({{ selected_branch.branch_code }}){% endif %}
-                    </h5>
-                </div>
-
-                <div class="p-4">
-                    <div class="report-period">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <strong>Period:</strong> 
-                                {% if start_date %}{{ start_date|date:"F d, Y" }}{% else %}Start{% endif %} to 
-                                {% if end_date %}{{ end_date|date:"F d, Y" }}{% else %}End{% endif %}
-                            </div>
-                            <div class="col-md-6 text-end">
-                                <strong>Generated:</strong> 
-                                {% now "F d, Y h:i A" %}
-                            </div>
-                            {% if selected_gl_no %}
-                            <div class="col-md-6">
-                                {% for gl_no, data in account_status_data.items %}
-                                    {% if forloop.first %}
-                                        <strong>Product:</strong> {{ gl_no }} - {{ data.gl_name }}
-                                    {% endif %}
-                                {% endfor %}
-                            </div>
-                            {% endif %}
-                            {% if selected_region %}
-                            <div class="col-md-6 text-end">
-                                <strong>Region:</strong> {{ selected_region.name }}
-                            </div>
-                            {% endif %}
-                        </div>
-                    </div>
-
-                    <div class="table-responsive">
-                        <table class="report-table">
-                            <thead>
-                                <tr>
-                                    <th>GL No</th>
-                                    <th>Account No</th>
-                                    <th>Customer Name</th>
-                                    <th>Address</th>
-                                    <th class="text-end">Balance</th>
-                                    <th>Last Transaction</th>
-                                    <th class="days-column">Inactive Days</th>
-                                    <th>Registered</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for gl_no, data in account_status_data.items %}
-                                    <tr class="product-header">
-                                        <td colspan="9">
-                                            {{ gl_no }} - {{ data.gl_name }}
-                                            <span style="float: right;">
-                                                {{ data.count }} accounts
-                                            </span>
-                                        </td>
-                                    </tr>
-                                    {% for account in data.accounts %}
-                                    <tr>
-                                        <td>{{ account.gl_no }}</td>
-                                        <td>{{ account.ac_no }}</td>
-                                        <td>{{ account.first_name }} {{ account.middle_name }} {{ account.last_name }}</td>
-                                        <td>{{ account.address }}</td>
-                                        <td class="amount">{{ account.account_balance|floatformat:2|intcomma }}</td>
-                                        <td>{{ account.last_trx_date|date:"M d, Y" }}</td>
-                                        <td class="days-column">{{ account.days_without_activity }}</td>
-                                        <td>{{ account.reg_date|date:"M d, Y" }}</td>
-                                        <td class="{% if account.status == 'Active' %}status-active{% else %}status-inactive{% endif %}">
-                                            {{ account.status }}
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                    <tr class="subtotal-row">
-                                        <td colspan="4" class="text-end"><strong>Subtotal for {{ gl_no }}</strong></td>
-                                        <td class="amount"><strong>{{ data.subtotal|floatformat:2|intcomma }}</strong></td>
-                                        <td colspan="4"></td>
-                                    </tr>
-                                {% endfor %}
-                            </tbody>
-                            <tfoot>
-                                <tr class="total-row">
-                                    <td colspan="4" class="text-end"><strong>Grand Total</strong></td>
-                                    <td class="amount"><strong>{{ grand_total|floatformat:2|intcomma }}</strong></td>
-                                    <td colspan="4"></td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
-
-                    <div class="mt-4 text-muted small">
-                        <div class="d-flex justify-content-between">
-                            <div>
-                                <strong>Note:</strong> 
-                                Days without activity calculated as of {% now "F d, Y" %}.
-                                Negative balances indicate overdrawn accounts.
-                            </div>
-                            <div>
-                                Generated by: {{ request.user.get_full_name|default:request.user.username }}
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="exclude_ac_no_one" name="exclude_ac_no_one" value="on"
+                {% if exclude_ac_no_one %}checked{% endif %}>
+              <label class="form-check-label" for="exclude_ac_no_one">Exclude Internal Accounts</label>
             </div>
-        </div>
+          </div>
+
+          <div class="col-md-3 d-flex align-items-end">
+            <button type="submit" class="btn btn-success w-100">
+              <i class="fas fa-filter me-1"></i> Generate
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
-    {% endif %}
+  </div>
+
+  <!-- REPORT -->
+  {% if customer_data %}
+  <div class="row">
+    <div class="col-12">
+      <div class="report-container">
+        <div class="report-header">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <h4 class="report-title mb-0">SAVINGS ACCOUNT STATUS</h4>
+              <div class="report-subtitle small">
+                {% if user_company_name %}{{ user_company_name|upper }}{% else %}ALL BRANCHES{% endif %}
+                {% if selected_branch %} | {{ selected_branch.branch_name|upper }}{% endif %}
+              </div>
+            </div>
+            <div class="text-end small">
+              <div><strong>Period:</strong> {% if start_date %}{{ start_date|date:"F d, Y" }}{% endif %} to {% if end_date %}{{ end_date|date:"F d, Y" }}{% endif %}</div>
+              <div><strong>Generated:</strong> {% now "F d, Y h:i A" %}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="p-4">
+          <div class="mb-2 small text-muted">
+            Results: <strong>{{ customer_data|length }}</strong> account{{ customer_data|length|pluralize }}. Grand total: <strong>{{ grand_total|floatformat:2|intcomma }}</strong>.
+          </div>
+
+          <div class="table-responsive">
+            <table class="report-table">
+              <thead>
+                <tr>
+                  <th>GL No</th>
+                  <th>Account No</th>
+                  <th>Customer Name</th>
+                  <th class="text-end">Balance</th>
+                  <th>Last Transaction</th>
+                  <th class="days-column">Inactive Days</th>
+                  <th>Registered</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {% for entry in customer_data %}
+                <tr>
+                  <td>{{ entry.customer.gl_no }}</td>
+                  <td>{{ entry.customer.ac_no }}</td>
+                  <td>
+                    {{ entry.customer.first_name }}{% if entry.customer.middle_name %} {{ entry.customer.middle_name }}{% endif %} {{ entry.customer.last_name }}
+                  </td>
+                  <td class="amount">{{ entry.balance|floatformat:2|intcomma }}</td>
+                  <td>{% if entry.last_transaction_date %}{{ entry.last_transaction_date|date:"M d, Y" }}{% else %}-{% endif %}</td>
+                  <td class="days-column">{{ entry.days_without_activity|default:"-" }}</td>
+                  <td>{{ entry.reg_date|date:"M d, Y" }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+
+              <tfoot>
+                <tr class="total-row">
+                  <td colspan="3" class="text-end fw-bold">GRAND TOTAL</td>
+                  <td class="amount"><strong>{{ grand_total|floatformat:2|intcomma }}</strong></td>
+                  <td colspan="3"></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          <div class="mt-3 small text-muted d-flex justify-content-between">
+            <div><strong>Note:</strong> Days without activity counted in calendar days from last transaction to today.</div>
+            <div>Generated by: {{ request.user.get_full_name|default:request.user.username }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="row">
+    <div class="col-12">
+      <div class="no-data">No customer accounts found for the selected filters.</div>
+    </div>
+  </div>
+  {% endif %}
 </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Form validation
-    const form = document.querySelector('form');
-    if (form) {
-        form.addEventListener('submit', function() {
-            const submitBtn = this.querySelector('button[type="submit"]');
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Generating...';
-        });
-    }
-
-    // Date validation
-    const startDate = document.querySelector('input[name="start_date"]');
-    const endDate = document.querySelector('input[name="end_date"]');
-    
-    if (startDate && endDate) {
-        startDate.addEventListener('change', function() {
-            if (endDate.value && this.value > endDate.value) {
-                alert('Start date cannot be after end date');
-                this.value = '';
-            }
-        });
-        
-        endDate.addEventListener('change', function() {
-            if (startDate.value && this.value < startDate.value) {
-                alert('End date cannot be before start date');
-                this.value = '';
-            }
-        });
-    }
+  // simple client-side date validation
+  const start = document.querySelector('input[name="start_date"]');
+  const end = document.querySelector('input[name="end_date"]');
+  if (start && end) {
+    start.addEventListener('change', () => { if (end.value && start.value > end.value) { alert('Start date cannot be after End date'); start.value = ''; }});
+    end.addEventListener('change', () => { if (start.value && end.value < start.value) { alert('End date cannot be before Start date'); end.value = ''; }});
+  }
 });
 </script>
+
 {% endblock %}

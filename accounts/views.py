@@ -132,54 +132,220 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
+from .models import Branch
+from .forms import UserForm  # adjust to your form name
+import random
+from django.core.mail import EmailMultiAlternatives
+from django.conf import settings
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.utils import timezone
+from .forms import UserForm
+from company.models import Branch
+from django.contrib.auth import get_user_model
+from .utils import send_sms   # ✅ Import Termii SMS util
+
+User = get_user_model()
+
+
 def register(request):
-    if request.method == 'POST':
+    print("🔍 Entered register view")
+
+    if User.objects.exists():
+        print("⚠️ User already exists. Showing message on registration page.")
+        messages.error(request, "A user already exists. Multiple users are not allowed.")
+        return render(request, "accounts/public_reg.html", {"form": None})
+
+    if request.method == "POST":
+        print("📩 Received POST request with data:", request.POST.dict())
         form = UserForm(request.POST)
+
         if form.is_valid():
+            print("✅ Form is valid")
             user = form.save(commit=False)
-            user.set_password(form.cleaned_data['password'])
-            user.is_active = True
-            user.verified = False
+            user.branch = form.cleaned_data['branch']
+            user.set_password(form.cleaned_data["password"])
+
+            otp_code = str(random.randint(100000, 999999))
+            user.otp_code = otp_code
+            user.last_otp_sent = timezone.now()
             user.save()
+            print(f"👤 User created: {user.username}, email: {user.email}, OTP: {otp_code}")
 
-            # Build activation link
-            uid = urlsafe_base64_encode(force_bytes(user.pk))
-            token = default_token_generator.make_token(user)
-            activation_link = request.build_absolute_uri(
-                reverse('activate', kwargs={'uidb64': uid, 'token': token})
-            )
-
-            subject = 'Complete Your Registration'
-
-            # Render HTML email content
-            html_content = render_to_string('accounts/email/activation_email.html', {
-                'user': user,
-                'activation_link': activation_link
-            })
-
-            email = EmailMessage(
-                subject=subject,
-                body=html_content,
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                to=[user.email],
-            )
-            email.content_subtype = "html"  # Important to set content type to HTML
-
+            # ✅ Send Email
             try:
-                email.send(fail_silently=False)
-                messages.success(request, 'Registration successful! Please check your email to complete setup.')
-            except Exception as e:
-                logger.exception(f"Activation email sending failed for user {user.email}")
-                messages.warning(request, 'User created, but email could not be sent. Please contact support.')
-                return redirect('contact_support')
+                subject = "Your OTP Code"
+                from_email = settings.DEFAULT_FROM_EMAIL
+                recipient_list = [user.email]
 
-            return redirect('login')
+                text_content = f"""
+Hi {user.first_name},
+
+Your account has been created successfully.
+Here is your OTP code: {otp_code}
+
+Verify your account:
+http://127.0.0.1:8000/accounts/user_verify_otp/
+
+Thank you!
+"""
+
+                html_content = f"""
+                <html>
+                <body>
+                    <p>Hi {user.first_name},</p>
+                    <p>Your account has been created successfully.</p>
+                    <p><strong>Your OTP Code:</strong> {otp_code}</p>
+                    <a href="http://127.0.0.1:8000/accounts/user_verify_otp/"
+                       style="display:inline-block; padding:10px 20px; background:#28a745; color:#fff; text-decoration:none;">
+                       Verify Account
+                    </a>
+                    <p>Thank you,<br>{user.branch.company_name}</p>
+                </body>
+                </html>
+                """
+
+                msg = EmailMultiAlternatives(subject, text_content, from_email, recipient_list)
+                msg.attach_alternative(html_content, "text/html")
+                msg.send()
+                print(f"📧 OTP email sent to {user.email}")
+            except Exception as e:
+                print(f"❌ Email sending failed: {e}")
+                messages.warning(request, "User created, but failed to send OTP email.")
+
+            # ✅ Send SMS
+            try:
+                if user.phone_number:
+                    sms_message = f"Hi {user.first_name}, your OTP is {otp_code}. Verify at: http://127.0.0.1:8000/accounts/user_verify_otp/"
+                    print(f"[DEBUG-SMS] Sending OTP SMS to {user.phone_number}: {sms_message}")
+                    if send_sms(user.phone_number, sms_message):
+                        print(f"📲 SMS sent successfully to {user.phone_number}")
+                    else:
+                        print(f"⚠️ SMS sending failed for {user.phone_number}")
+                        messages.warning(request, "OTP email sent, but SMS failed.")
+                else:
+                    print("⚠️ User has no phone number, skipping SMS.")
+            except Exception as sms_err:
+                print(f"❌ SMS error: {sms_err}")
+                messages.warning(request, "User created, but failed to send OTP SMS.")
+
+            messages.success(request, "User registered successfully. OTP sent via Email & SMS.")
+            return redirect("register")
         else:
-            messages.error(request, 'Please correct the errors below.')
+            print("❌ Form is invalid:", form.errors)
     else:
+        print("📄 Received GET request")
         form = UserForm()
 
-    return render(request, 'accounts/public_reg.html', {'form': form})
+    return render(request, "accounts/public_reg.html", {"form": form})
+
+
+def user_verify_otp(request):
+    print("🔍 Entered user_verify_otp view")
+
+    user = User.objects.first()
+    if not user:
+        print("❌ No user found")
+        messages.error(request, "No registered user found. Please register first.")
+        return redirect("register")
+
+    can_resend = False
+    countdown_seconds = 30
+    if user.last_otp_sent:
+        elapsed = (timezone.now() - user.last_otp_sent).total_seconds()
+        if elapsed >= 30:
+            can_resend = True
+        else:
+            countdown_seconds = int(30 - elapsed)
+    else:
+        can_resend = True
+
+    if request.method == "POST":
+        otp = request.POST.get("otp")
+        print(f"📝 OTP entered: {otp}")
+
+        if user.is_otp_valid(otp):
+            print("✅ OTP is valid")
+            user.verified = True
+            user.save()
+            messages.success(request, "OTP verified successfully. You can now log in.")
+            return redirect("login")
+        else:
+            print("❌ Invalid OTP")
+            messages.error(request, "OTP is invalid or expired.")
+
+    return render(request, "accounts/user_verify_otp.html", {
+        "can_resend": can_resend,
+        "countdown_seconds": countdown_seconds,
+    })
+
+
+def user_resend_otp(request):
+    print("🔍 Entered user_resend_otp view")
+
+    try:
+        user = User.objects.first()
+        if not user:
+            print("❌ No registered user found")
+            messages.error(request, "No registered user found. Please register first.")
+            return redirect("register")
+
+        otp_code = str(random.randint(100000, 999999))
+        user.otp_code = otp_code
+        user.last_otp_sent = timezone.now()
+        user.save()
+        print(f"🆕 New OTP for {user.email}: {otp_code}")
+
+        # ✅ Send Email
+        try:
+            subject = "Your New OTP Code"
+            from_email = settings.DEFAULT_FROM_EMAIL
+            recipient_list = [user.email]
+
+            text_content = f"Hi {user.first_name},\nYour new OTP is: {otp_code}\n\nVerify at: http://127.0.0.1:8000/accounts/user_verify_otp/"
+            html_content = f"""
+            <html><body>
+                <p>Hi {user.first_name},</p>
+                <p>Your new OTP is <strong>{otp_code}</strong></p>
+                <a href="http://127.0.0.1:8000/accounts/user_verify_otp/"
+                   style="padding:10px 20px; background:#28a745; color:#fff; text-decoration:none;">Verify Account</a>
+                <p>Thank you,<br>{user.branch.company_name}</p>
+            </body></html>
+            """
+
+            msg = EmailMultiAlternatives(subject, text_content, from_email, recipient_list)
+            msg.attach_alternative(html_content, "text/html")
+            msg.send()
+            print(f"📧 Resent OTP email to {user.email}")
+        except Exception as e:
+            print(f"❌ Failed to resend OTP email: {e}")
+            messages.warning(request, "OTP email could not be sent.")
+
+        # ✅ Send SMS
+        try:
+            if user.phone_number:
+                sms_message = f"Hi {user.first_name}, your new OTP is {otp_code}. Verify at: http://127.0.0.1:8000/accounts/user_verify_otp/"
+                print(f"[DEBUG-SMS] Sending new OTP SMS to {user.phone_number}: {sms_message}")
+                if send_sms(user.phone_number, sms_message):
+                    print(f"📲 SMS resent successfully to {user.phone_number}")
+                else:
+                    print(f"⚠️ SMS resend failed for {user.phone_number}")
+                    messages.warning(request, "OTP email sent, but SMS failed.")
+            else:
+                print("⚠️ User has no phone number, skipping SMS.")
+        except Exception as sms_err:
+            print(f"❌ SMS resend error: {sms_err}")
+            messages.warning(request, "OTP resend failed via SMS.")
+
+        messages.success(request, f"A new OTP has been sent to {user.email} and phone.")
+    except Exception as e:
+        print(f"❌ Resend OTP error: {e}")
+        messages.error(request, "An error occurred while resending OTP.")
+
+    return redirect("user_verify_otp")
+
 
 
 
@@ -321,130 +487,190 @@ def edit_user(request, id):
 #     return render(request, 'accounts/login.html')
 
 
-
-# accounts/views.py
-import logging
-import random
+import threading
+from random import randint
+from django.utils import timezone
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.contrib.auth import authenticate
-from django.utils import timezone
-from django.core.cache import cache
-from .models import Branch, User
+from django.core.mail import EmailMultiAlternatives
 from django.conf import settings
-
-from django.shortcuts import render, redirect
-from django.contrib.auth import authenticate, login as auth_login
-from django.contrib import messages
-from django.utils import timezone
-from django.core.mail import EmailMessage
-from django.template.loader import render_to_string
-from django.conf import settings
-from random import randint
-from .utils import _send_otp_sms
- # or User if using default
-from django.shortcuts import render, redirect
-from django.contrib.auth import authenticate, login as auth_login
-from django.contrib import messages
-from django.utils import timezone
-from django.core.mail import EmailMessage
-from django.template.loader import render_to_string
-from django.conf import settings
-from random import randint
-from .utils import _send_otp_sms
 import logging
 
-logger = logging.getLogger(__name__)  # use Django’s logging system
+# adjust this import path to where your utils.py actually lives
+from .utils import send_sms
+
+logger = logging.getLogger(__name__)
+
+
+def _send_otp_background(user_id, otp, phone_number, email, branch):
+    """
+    Send OTP via SMS (Termii) and Email in a background thread.
+    Accepts exactly: user_id, otp, phone_number, email, branch.
+    Debug prints are included to follow background execution in console.
+    """
+    print(f"[DEBUG-BG] called _send_otp_background(user_id={user_id!r}, otp={otp!r}, "
+          f"phone_number={phone_number!r}, email={email!r}, branch={getattr(branch, 'id', None)!r})")
+    logger.debug(f"[BG] start sending otp for user {user_id}")
+
+    # --- Input validation & sanitization ---
+    if not isinstance(otp, int) or not (100000 <= otp <= 999999):
+        logger.error(f"[OTP] Invalid OTP for user {user_id}: {otp}")
+        print(f"[DEBUG-BG] ❌ Invalid OTP: {otp!r}")
+        return
+
+    if phone_number is not None and not isinstance(phone_number, str):
+        phone_number = str(phone_number)
+
+    if email:
+        if not isinstance(email, str) or '@' not in email:
+            logger.error(f"[EMAIL] Invalid email for user {user_id}: {email!r}")
+            print(f"[DEBUG-BG] ❌ Invalid email: {email!r}")
+            email = None
+
+    print(f"[DEBUG-BG] 🚀 Sending OTP {otp} | Phone: {phone_number!r} | Email: {email!r}")
+
+    try:
+        # --- SMS via send_sms helper ---
+        if phone_number:
+            try:
+                print(f"[DEBUG-BG][SMS] Attempting to send SMS to {phone_number}")
+                sms_message = f"Your OTP code is: {otp}"
+                sms_ok = False
+                if send_sms:
+                    sms_ok = send_sms(phone_number, sms_message, branch=branch)
+                else:
+                    print("[DEBUG-BG][SMS] send_sms helper not available (import issue)")
+
+                if sms_ok:
+                    print(f"[SMS] ✅ OTP sent to {phone_number}")
+                    logger.info(f"[SMS] OTP sent to {phone_number} for user {user_id}")
+                else:
+                    print(f"[SMS] ⚠️ Failed to send OTP to {phone_number}")
+                    logger.warning(f"[SMS] Failed to send OTP to {phone_number} for user {user_id}")
+
+            except Exception as sms_exc:
+                logger.exception(f"[SMS-ERROR] Error sending SMS for user {user_id}: {sms_exc}")
+                print(f"[DEBUG-BG][SMS] Exception while sending SMS: {sms_exc}")
+
+        # --- Email ---
+        if email:
+            try:
+                print(f"[DEBUG-BG][EMAIL] Preparing email to {email}")
+                subject = "Your OTP Code"
+                from_email = settings.DEFAULT_FROM_EMAIL
+                recipient_list = [email]
+
+                company_name = getattr(branch, "company_name", "Support Team")
+                text_content = f"Hi,\n\nYour OTP code is: {otp}\n\nPlease verify your account."
+                html_content = f"""
+                <html>
+                <body>
+                    <p>Hi,</p>
+                    <p>Your OTP code is: <strong>{otp}</strong></p>
+                    <p>Verify your account <a href='http://127.0.0.1:8000/accounts/verify_otp/'>here</a>.</p>
+                    <p>Thank you,<br>{company_name}</p>
+                </body>
+                </html>
+                """
+
+                msg = EmailMultiAlternatives(subject, text_content, from_email, recipient_list)
+                msg.attach_alternative(html_content, "text/html")
+                msg.send()
+                print(f"[EMAIL] ✅ OTP sent to {email}")
+                logger.info(f"[EMAIL] OTP sent to {email} for user {user_id}")
+
+            except Exception as email_exc:
+                logger.exception(f"[EMAIL-ERROR] Failed sending OTP email to {email} for user {user_id}: {email_exc}")
+                print(f"[DEBUG-BG][EMAIL] Exception while sending email: {email_exc}")
+
+        print("[DEBUG-BG] ✅ Background OTP delivery completed")
+        logger.debug(f"[BG] completed sending otp for user {user_id}")
+
+    except Exception as e:
+        logger.exception(f"[ERROR-BG] OTP delivery failed for user {user_id}: {e}")
+        print(f"[DEBUG-BG] ⚠️ Background error: {e}")
 
 
 def login(request):
     if request.user.is_authenticated:
-        print("[DEBUG] User already authenticated, redirecting to myAccount")
+        print("[DEBUG] User already authenticated → redirect to myAccount")
+        logger.debug("User already authenticated; redirecting to myAccount")
         return redirect('myAccount')
 
     if request.method == 'POST':
-        email = request.POST.get('email')
+        email = request.POST.get('email', '').strip()
         password = request.POST.get('password')
-        print(f"[DEBUG] Login attempt for email: {email}")
+
+        print(f"[DEBUG] Login attempt for email: {email!r}")
+        logger.debug(f"Login attempt for email: {email!r}")
+
+        if not email or not password:
+            messages.error(request, "Email and password are required.")
+            print("[DEBUG] Missing email or password")
+            return render(request, 'accounts/login.html')
 
         try:
             user = authenticate(request, username=email, password=password)
             if user is None:
-                print("[DEBUG] Authentication failed: Invalid credentials")
-                raise ValueError("Invalid credentials")
+                messages.error(request, "Invalid email or password.")
+                print("[DEBUG] Authentication failed")
+                return redirect('login')
 
-            print(f"[DEBUG] User {user.id} authenticated successfully")
+            print(f"[DEBUG] Authenticated user ID: {user.id}")
+            logger.debug(f"Authenticated user id: {user.id}")
 
-            if not user.verified:
-                print("[DEBUG] Account verification check failed")
-                raise ValueError("Account not verified")
+            # Account verification checks
+            if not getattr(user, "verified", False):
+                messages.error(request, "Your account is not verified. Please contact support.")
+                print(f"[DEBUG] User {user.id} not verified")
+                return redirect('login')
 
             if user.branch and user.branch.expire_date < timezone.now().date():
-                print(f"[DEBUG] Branch license expired on {user.branch.expire_date}")
-                raise ValueError("Branch license expired")
+                messages.error(request, "Your branch license has expired.")
+                print(f"[DEBUG] Branch license expired for branch id: {getattr(user.branch, 'id', None)}")
+                return redirect('login')
 
-            # Generate OTP
+            # Generate 6-digit OTP
             otp = randint(100000, 999999)
-            otp_message = f"Your verification code: {otp}"
-            print(f"[DEBUG] Generated OTP: {otp} (Not for production logging)")
+            print(f"[DEBUG] Generated OTP: {otp}")
+            logger.debug(f"Generated OTP for user {user.id}")
 
-            # Store in session
+            # Store in session (for OTP verification step)
             request.session['otp_data'] = {
                 'user_id': user.id,
                 'otp': otp,
                 'timestamp': timezone.now().isoformat()
             }
             print("[DEBUG] OTP stored in session")
+            logger.debug("OTP stored in session for user %s", user.id)
 
-            # SMS Delivery
-            user_phone = getattr(user, 'phone_number', None)
-            if user_phone:
-                print(f"[DEBUG] Attempting SMS delivery to {user_phone}")
-                try:
-                    sms_result = _send_otp_sms(user_phone, otp_message, branch=user.branch)
-                    print(f"[DEBUG] SMS API response: {sms_result}")
-                    if sms_result and getattr(sms_result, 'status', None) == 'success':
-                        print("[DEBUG] SMS delivery successful")
-                    else:
-                        print("[DEBUG] SMS delivery may have failed (check provider logs)")
-                except Exception as sms_error:
-                    logger.error(f"[ERROR] SMS delivery failed: {str(sms_error)}", exc_info=True)
-            else:
-                print(f"[DEBUG] No phone number available (Field value: {user_phone})")
-                print(f"[DEBUG] User object fields: {[f.name for f in user._meta.get_fields()]}")
+            # Start background thread (using kwargs like before)
+            kwargs = {
+                'user_id': user.id,
+                'otp': otp,
+                'phone_number': getattr(user, 'phone_number', None),
+                'email': getattr(user, 'email', None),
+                'branch': getattr(user, 'branch', None)
+            }
+            print(f"[DEBUG] Starting background thread with kwargs: {kwargs}")
+            thread = threading.Thread(target=_send_otp_background, kwargs=kwargs)
+            thread.daemon = True
+            thread.start()
+            print("[DEBUG] 🚀 Background OTP thread started (using kwargs)")
+            logger.debug("Background OTP thread started for user %s", user.id)
 
-            # Email Delivery
-            print(f"[DEBUG] Preparing email delivery to {user.email}")
-            subject = "Your One-Time Password (OTP)"
-            html_content = render_to_string('accounts/email/otp_email.html', {
-                'user': user,
-                'otp': otp
-            })
-
-            email_message = EmailMessage(
-                subject=subject,
-                body=html_content,
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                to=[user.email],
-            )
-            email_message.content_subtype = "html"
-
-            try:
-                email_message.send()
-                print(f"[DEBUG] Email successfully queued for delivery to {user.email}")
-            except Exception as email_error:
-                logger.error(f"[ERROR] Email delivery failed: {str(email_error)}", exc_info=True)
-
-            print("[DEBUG] Redirecting to OTP verification")
+            messages.success(request, "OTP sent! Check your email and phone.")
             return redirect('verify_otp')
 
         except Exception as e:
-            logger.error(f"[ERROR] Login process failed: {str(e)}", exc_info=True)
-            messages.error(request, str(e))
+            error_msg = str(e) or "An unexpected error occurred during login."
+            logger.exception(f"[ERROR] Login failed for {email}: {error_msg}")
+            print(f"[DEBUG] Login exception for {email}: {error_msg}")
+            messages.error(request, error_msg)
             return redirect('login')
 
     return render(request, 'accounts/login.html')
-
 
 
 from django.shortcuts import render, redirect
@@ -454,8 +680,10 @@ from django.core.cache import cache
 from django.utils import timezone
 import logging
 from .models import User  # Adjust to your actual User model
+from .utils import send_sms  # 👈 import your SMS util
 
 logger = logging.getLogger(__name__)
+
 
 def verify_otp(request):
     # ✅ Step 1: Ensure session data is present
@@ -468,52 +696,206 @@ def verify_otp(request):
     session_otp = otp_data.get('otp')
     otp_timestamp = otp_data.get('timestamp')  # Optional for expiry check
 
+    # ✅ Fetch user
+    try:
+        user = User.objects.get(pk=user_id)
+    except User.DoesNotExist:
+        messages.error(request, "User not found.")
+        return redirect('login')
+
     if request.method == 'POST':
         entered_otp = request.POST.get('otp')
+        action = request.POST.get('action')  # e.g. "verify" or "resend"
+
+        # ✅ Handle OTP resend
+        if action == "resend":
+            from random import randint
+            new_otp = randint(100000, 999999)
+
+            # Store in session + cache
+            request.session['otp_data']['otp'] = new_otp
+            cache.set(f'otp_{user_id}', new_otp, timeout=300)  # 5 min expiry
+
+            # Send SMS
+            if getattr(user, "phone_number", None):
+                message = f"Your OTP code is {new_otp}. It will expire in 5 minutes."
+                logger.debug(f"[OTP-RESEND] Sending new OTP {new_otp} to {user.phone_number}")
+                send_sms(user.phone_number, message)
+
+            messages.success(request, "A new OTP has been sent to your phone.")
+            return redirect('verify_otp')
 
         # ✅ Step 2: Check cache
         cache_otp = cache.get(f'otp_{user_id}')
-        logger.debug(f"Verifying OTP for user {user_id}: Cache={cache_otp}, Session={session_otp}, Entered={entered_otp}")
+        logger.debug(
+            f"Verifying OTP for user {user_id}: "
+            f"Cache={cache_otp}, Session={session_otp}, Entered={entered_otp}"
+        )
 
         # ✅ Step 3: Validate OTP
         if entered_otp and (str(entered_otp) == str(session_otp) or str(entered_otp) == str(cache_otp)):
-            try:
-                user = User.objects.get(pk=user_id)
-                auth_login(request, user)
+            auth_login(request, user)
 
-                # ✅ Step 4: Cleanup
-                cache.delete(f'otp_{user_id}')
-                request.session.pop('otp_data', None)
+            # ✅ Step 4: Cleanup
+            cache.delete(f'otp_{user_id}')
+            request.session.pop('otp_data', None)
 
-                messages.success(request, "Logged in successfully!")
-                return redirect('myAccount')
-
-            except User.DoesNotExist:
-                messages.error(request, "User not found.")
-                return redirect('login')
+            messages.success(request, "Logged in successfully!")
+            return redirect('myAccount')
 
         else:
             messages.error(request, "Invalid OTP.")
 
-    return render(request, 'accounts/verify_otp.html')
+    return render(request, 'accounts/verify_otp.html', {"user": user})
 
 
+
+# views.py
+import logging
 from django.shortcuts import redirect
 from django.contrib import messages
+from django.core.mail import send_mail
+from django.utils import timezone
+from .models import User  # Make sure this is your actual User model
+
+logger = logging.getLogger(__name__)
+
+# views.py
+
+
+import threading
+from django.core.mail import send_mail
+from django.conf import settings
+from django.contrib import messages
+from django.shortcuts import redirect
+from .models import User
+import logging
+
+logger = logging.getLogger(__name__)
+
+# Background task function WITH debug prints
+import threading
+from django.core.mail import send_mail
+from django.conf import settings
+from django.contrib import messages
+from django.shortcuts import redirect
+from .models import User
+import logging
+
+logger = logging.getLogger(__name__)
+
+# Background task function WITH debug prints
+# def _send_otp_background(phone_number, email, otp, branch, request):
+    # """Send OTP in background thread"""
+    # print(f"[DEBUG-BG] 🚀 Background OTP delivery started")
+    # print(f"[DEBUG-BG] Phone: {phone_number}, Email: {email}, OTP: {otp}")
+    
+    # sent_any = False
+    
+    # # Send SMS if phone exists
+    # if phone_number:
+    #     print(f"[DEBUG-BG] 📱 Processing SMS for: {phone_number}")
+    #     try:
+    #         # Format phone number
+    #         if not phone_number.startswith('+'):
+    #             formatted_phone = f"+{phone_number.lstrip('+')}"
+    #         else:
+    #             formatted_phone = phone_number
+                
+    #         print(f"[DEBUG-BG] 📱 Formatted phone: {formatted_phone}")
+            
+    #         sms_success = _send_otp_sms(formatted_phone, f"Your FinanceFlex OTP is {otp}", branch)
+    #         print(f"[DEBUG-BG] 📱 SMS result: {'✅ Success' if sms_success else '❌ Failed'}")
+            
+    #         if sms_success:
+    #             # Note: messages in background threads may not work reliably
+    #             sent_any = True
+    #         else:
+    #             logger.warning(f"Background SMS failed for {formatted_phone}")
+    #     except Exception as e:
+    #         print(f"[DEBUG-BG] 📱 SMS exception: {str(e)}")
+    #         logger.error(f"Background SMS error: {e}")
+    # else:
+    #     print("[DEBUG-BG] 📱 No phone number provided")
+
+    # # Send Email if email exists
+    # if email:
+    #     print(f"[DEBUG-BG] 📧 Processing email for: {email}")
+    #     try:
+    #         send_mail(
+    #             subject="FinanceFlex: Your OTP Code",
+    #             message=f"Your one-time password is: {otp}\n\nValid for 5 minutes.",
+    #             from_email=settings.DEFAULT_FROM_EMAIL,
+    #             recipient_list=[email],
+    #             fail_silently=False,
+    #         )
+    #         print("[DEBUG-BG] 📧 Email sent successfully")
+    #         sent_any = True
+    #     except Exception as e:
+    #         print(f"[DEBUG-BG] 📧 Email exception: {str(e)}")
+    #         logger.error(f"Background email error: {e}")
+    # else:
+    #     print("[DEBUG-BG] 📧 No email provided")
+
+    # print(f"[DEBUG-BG] ✅ Background delivery completed. Sent: {sent_any}")
 
 def resend_otp(request):
-    if request.method == "POST":
-        phone_number = request.session.get('phone_number')  # Assuming phone_number is stored in session
-        otp = request.session.get('otp')  # Assuming OTP is stored in session
+    print("[DEBUG] === RESEND OTP REQUEST STARTED ===")
+    
+    if request.method != "POST":
+        print("[DEBUG] ❌ Non-POST request received")
+        return redirect("verify_otp")
 
-        if phone_number and otp:
-            # Resend the OTP using your Termii send_sms function
-            send_sms(phone_number, f"Your OTP code is {otp}")
-            messages.success(request, "OTP has been resent to your phone.")
-        else:
-            messages.error(request, "Unable to resend OTP. Please try again.")
+    otp_data = request.session.get('otp_data')
+    if not otp_data:
+        print("[DEBUG] ❌ otp_data not found in session")
+        messages.error(request, "Session expired. Please log in again.")
+        return redirect('login')
 
-    return redirect('verify_otp')  # Redirect back to the OTP verification page
+    print(f"[DEBUG] ✅ Found otp_data: {otp_data}")
+    
+    user_id = otp_data.get('user_id')
+    if not user_id:
+        print("[DEBUG] ❌ user_id missing in otp_data")
+        messages.error(request, "User info missing. Please log in again.")
+        return redirect('login')
+
+    try:
+        user = User.objects.get(pk=user_id)
+        phone_number = getattr(user, 'phone_number', None)
+        email = user.email
+        print(f"[DEBUG] 👤 User found: {user.email} | Phone: {phone_number}")
+
+        # Generate new OTP
+        new_otp = str(randint(100000, 999999))
+        otp_data['otp'] = new_otp
+        request.session['otp_data'] = otp_data
+        print(f"[DEBUG] 🔑 New OTP generated: {new_otp}")
+
+        # ✅ START BACKGROUND TASK
+        print("[DEBUG] 🚀 Starting background delivery thread...")
+        thread = threading.Thread(
+            target=_send_otp_background,
+            args=(phone_number, email, new_otp, user.branch, request)
+        )
+        thread.daemon = True
+        thread.start()
+        print("[DEBUG] ✅ Background thread started successfully")
+
+        messages.success(request, "OTP delivery initiated! Check your phone and email shortly.")
+        
+    except User.DoesNotExist:
+        print(f"[DEBUG] ❌ User with ID {user_id} does not exist")
+        messages.error(request, "Account not found. Please log in again.")
+        return redirect('login')
+    except Exception as e:
+        print(f"[DEBUG] 🚨 Unexpected error: {str(e)}")
+        logger.error(f"Resend OTP error: {str(e)}")
+        messages.error(request, "Failed to initiate OTP resend.")
+
+    print("[DEBUG] === RESEND OTP REQUEST COMPLETED ===")
+    return redirect("verify_otp")
+
 
 
 def logout(request):

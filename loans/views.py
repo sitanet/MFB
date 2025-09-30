@@ -527,35 +527,63 @@ def loan_disbursement_reversal(request, id):
         'account': account,'company':company, 'company_date':company_date,
     })
 
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render
+from .models import Loans
+
+@login_required
 def choose_to_disburse(request):
-    user_branch=request.user.branch.company
-    customers = Loans.objects.select_related('customer').filter(approval_status='T', disb_status='F', branch__company=user_branch)
+    # Get the branch of the logged-in user
+    user_branch = request.user.branch  
+
+    # Filter loans that belong to the user's branch, approved but not disbursed
+    customers = Loans.objects.select_related('customer').filter(
+        approval_status='T',
+        disb_status='F',
+        branch=user_branch
+    )
+
+    # Debugging (optional): print customer names
     for customer in customers:
         if customer.customer:
             print(customer.customer.first_name)
         else:
             print("No associated customer for this loan.")
-    # Pass the customers data to the template
+
+    # Render results
     return render(request, 'loans/choose_to_disburse.html', {'customers': customers})
+
 
  # Assuming you have this utility function
 
 
 
 
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render
+from .models import Loans
 
-
+@login_required
 def choose_to_direct_disburse(request):
-    user_branch=request.user.branch.company
-    customers = Loans.objects.select_related('customer').filter(approval_status='F', disb_status='F', branch__company=user_branch)
+    # Get the logged-in user's branch
+    user_branch = request.user.branch  
+
+    # Filter loans that belong to this branch, not approved yet and not disbursed
+    customers = Loans.objects.select_related('customer').filter(
+        approval_status='F',
+        disb_status='F',
+        branch=user_branch
+    )
+
+    # Debugging: print customer names
     for customer in customers:
         if customer.customer:
             print(customer.customer.first_name)
         else:
             print("No associated customer for this loan.")
+
     # Pass the customers data to the template
     return render(request, 'loans/choose_to_disburse.html', {'customers': customers})
-
 
 
 from decimal import InvalidOperation
@@ -928,14 +956,17 @@ def loan_schedule_view(request, loan_id):
     loan_instance = get_object_or_404(Loans, id=loan_id)
     loan_schedule = loan_instance.calculate_loan_schedule()
     customers = loan_instance.customer
-    company = Company.objects.first()
+
+    # ✅ Get the branch from the loan
+    branch = loan_instance.branch  
+    # ✅ Get the company from the branch
+    company = branch.company  
+
     print(f"Loan Instance: {loan_id}")
 
     total_interest_sum = sum(payment['interest_payment'] for payment in loan_schedule)
     total_principal_sum = sum(payment['principal_payment'] for payment in loan_schedule)
     total_payments_sum = sum(payment['total_payment'] for payment in loan_schedule)
-   
-
 
     context = {
         'loan_instance': loan_instance,
@@ -945,14 +976,11 @@ def loan_schedule_view(request, loan_id):
         'total_payments_sum': total_payments_sum,
         'customers': customers,
         'company': company,
-    
-        
+        'branch': branch,   # ✅ Pass branch separately
     }
 
-
-  
-
     return render(request, 'loans/loan_schedule_template.html', context)
+
 
 
 

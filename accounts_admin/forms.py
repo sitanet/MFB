@@ -102,7 +102,7 @@ class loanProductSettingsForm(forms.ModelForm):
             'loan_commit_ac_vat',
             'fixed_dep_int_gl_no',
             'fixed_dep_int_ac_no',
-            'branch',
+           
         ]
         
 

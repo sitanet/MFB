@@ -51,8 +51,8 @@ class Account(models.Model):
     branch = models.ForeignKey(
         Branch, on_delete=models.CASCADE, related_name="accounts", null=True, blank=True
     )
-    gl_name = models.CharField(max_length=80, blank=True, null=True)
-    gl_no = models.CharField(max_length=10, blank=True, null=True)
+    gl_name = models.CharField(max_length=80, unique=True)
+    gl_no = models.CharField(max_length=10, unique=True)
     account_type = models.PositiveIntegerField(choices=ACCOUNT_TYPE, default=ASSETS, blank=True)
     currency = models.PositiveIntegerField(choices=CURRENCY, default=US_DOLLAR, blank=True)
     double_entry_type = models.PositiveIntegerField(choices=DOUBLE_ENTRY, default=DEBIT_CREDIT, blank=True)

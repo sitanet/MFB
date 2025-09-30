@@ -29,6 +29,8 @@ urlpatterns = [
 
 
     path('register/', views.register, name='register'),
+    path('user_verify_otp/', views.user_verify_otp, name='user_verify_otp'),
+    path('user_resend_otp/', views.user_resend_otp, name='user_resend_otp'),
     path('contact-support/', views.contact_support, name='contact_support'),
   
  

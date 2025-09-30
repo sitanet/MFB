@@ -2,249 +2,288 @@
 
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <!-- Basic meta tags -->
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="viewport" content="initial-scale=1, maximum-scale=1">
-    <title>Register</title>
+    <title>Register — FinanceFlex</title>
 
-    <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="{% static 'css/style.css' %}" />
-
-    <!-- Optional: Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" />
-
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <!-- Custom Styles -->
     <style>
         body {
-            background-image: url('{% static "images/savings.jpg" %}');
-            background-size: cover;
-            background-position: center;
+            background: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), 
+                        url('{% static "images/savings.jpg" %}') center/cover no-repeat fixed;
             height: 100vh;
             margin: 0;
-            font-family: Arial, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
-        .registration-form {
-            background-color: rgba(255, 255, 255, 0.8); /* Semi-transparent background */
-            padding: 40px;
-            border-radius: 8px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        .registration-card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            padding: 2.5rem;
             width: 100%;
-            max-width: 400px;
+            max-width: 480px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .registration-card::before {
+            content: '';
             position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-        }
-
-        .registration-form h3 {
-            font-size: 24px;
-            font-weight: bold;
-            text-align: center;
-            color: #2d6a4f; /* Green */
-            margin-bottom: 20px;
-        }
-
-        .registration-form .form-control {
-            border-radius: 5px;
-            box-shadow: none;
-            margin-bottom: 15px;
-        }
-
-        .registration-form .btn-primary {
-            background-color: #ff6f00; /* Orange */
-            border: none;
-            font-weight: bold;
-            padding: 10px;
-            border-radius: 5px;
+            top: 0;
+            left: 0;
             width: 100%;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            height: 6px;
+            background: linear-gradient(90deg, #2d6a4f, #ff6f00);
         }
 
-        .registration-form .btn-primary:hover {
-            background-color: #ff8f00; /* Lighter Orange */
+        .registration-card h2 {
+            color: #2d6a4f;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 1.5rem;
+            font-size: 1.8rem;
         }
 
-        .registration-form a {
-            color: #2d6a4f; /* Green */
-            text-decoration: none;
-            font-size: 14px;
+        .form-control, .form-select {
+            border: 1px solid #ced4da;
+            border-radius: 10px;
+            padding: 0.65rem 1rem;
+            transition: all 0.3s ease;
+            font-size: 0.95rem;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: #2d6a4f;
+            box-shadow: 0 0 0 0.2rem rgba(45, 106, 79, 0.25);
+            outline: none;
+        }
+
+        .input-group-text {
+            background: #f8f9fa;
+            border: 1px solid #ced4da;
+            border-radius: 10px 0 0 10px;
+            color: #6c757d;
+        }
+
+        .form-control:focus + .input-group-text,
+        .input-group:focus-within .input-group-text {
+            border-color: #2d6a4f;
+        }
+
+        .btn-register {
+            background: linear-gradient(to right, #2d6a4f, #ff6f00);
+            border: none;
+            color: white;
+            font-weight: 600;
+            padding: 0.75rem;
+            border-radius: 10px;
+            font-size: 1.05rem;
+            transition: transform 0.2s, box-shadow 0.2s;
+            width: 100%;
+            margin-top: 1rem;
+        }
+
+        .btn-register:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(45, 106, 79, 0.4);
+        }
+
+        .login-link {
             display: block;
             text-align: center;
-            margin-top: 10px;
+            margin-top: 1.2rem;
+            color: #2d6a4f;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s;
         }
 
-        .registration-form a:hover {
+        .login-link:hover {
+            color: #ff6f00;
             text-decoration: underline;
         }
 
-        .row-spacing {
-            margin-bottom: 10px;
+        .messages {
+            list-style: none;
+            padding: 0;
+            margin-bottom: 1rem;
         }
 
-        /* Reduced gap between fields */
-        .row.g-2 .col-md-6 {
-            padding-left: 5px;
-            padding-right: 5px;
+        .messages li {
+            padding: 0.5rem;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            background: #f8d7da;
+            color: #721c24;
+            font-size: 0.9rem;
         }
 
-        /* Beautify Modal */
-        .modal-content {
+        .alert-danger {
             border-radius: 10px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+            margin-bottom: 1rem;
         }
 
-        .modal-header {
-            background-color: #2d6a4f; /* Green */
-            color: white;
-            border-top-left-radius: 10px;
-            border-top-right-radius: 10px;
+        /* Hide default browser validation tooltips */
+        input:invalid {
+            box-shadow: none;
         }
 
-        .modal-body {
-            font-size: 16px;
-            line-height: 1.6;
+        /* Responsive tweaks */
+        @media (max-width: 576px) {
+            .registration-card {
+                margin: 1rem;
+                padding: 1.8rem;
+            }
         }
-
-        .modal-footer {
-            background-color: #f8f9fa;
-            border-bottom-left-radius: 10px;
-            border-bottom-right-radius: 10px;
-        }
-
-        .modal-footer .btn {
-            background-color: #2d6a4f; /* Green */
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-        }
-
-        .modal-footer .btn:hover {
-            background-color: #22543d; /* Darker Green */
-        }
-
-        /* Modal close button style */
-        .btn-close-white {
-            color: white;
-        }
-
     </style>
 </head>
 
 <body>
-    <div class="container-fluid">
-        <div class="row justify-content-center align-items-center" style="height: 100vh;">
-            <div class="col-12 col-md-4">
-                <div class="registration-form">
-                    <h3>Register</h3>
+    <div class="registration-card">
+        <h2>Create Your Account</h2>
+        <p>Please create User Account</p>
 
-                    {% if messages %}
-                    <ul class="messages">
-                        {% for message in messages %}
-                        <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+        {% if messages %}
+            <ul class="messages">
+                {% for message in messages %}
+                    <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+
+        <form method="POST" enctype="multipart/form-data" action="{% url 'register' %}">
+            {% csrf_token %}
+
+            {% if form.errors %}
+                <div class="alert alert-danger">
+                    <ul class="mb-0">
+                        {% for field in form %}
+                            {% for error in field.errors %}
+                                <li><strong>{{ field.label }}:</strong> {{ error }}</li>
+                            {% endfor %}
+                        {% endfor %}
+                        {% for error in form.non_field_errors %}
+                            <li>{{ error }}</li>
                         {% endfor %}
                     </ul>
-                    {% endif %}
+                </div>
+            {% endif %}
 
-                    <form method="POST" enctype="multipart/form-data" action="{% url 'register' %}">
-                        {% csrf_token %}
-
-
-                        {% if form.errors %}
-    <div class="alert alert-danger">
-        <ul>
-            {% for field in form %}
-                {% for error in field.errors %}
-                    <li><strong>{{ field.label }}:</strong> {{ error }}</li>
-                {% endfor %}
-            {% endfor %}
-            {% for error in form.non_field_errors %}
-                <li>{{ error }}</li>
-            {% endfor %}
-        </ul>
-    </div>
-{% endif %}
-
-                        <!-- First and Last Name on the same row -->
-                        <div class="row g-2">
-                            <div class="col-md-6">
-                                <input class="form-control" type="text" name="first_name" placeholder="First Name" required>
-                            </div>
-                            <div class="col-md-6">
-                                <input class="form-control" type="text" name="last_name" placeholder="Last Name" required>
-                            </div>
-                        </div>
-
-                        <!-- Email and Phone Number on the same row -->
-                        <div class="row g-2">
-                            <div class="col-md-6">
-                                <input class="form-control" type="email" name="email" placeholder="Email Address" required>
-                            </div>
-                            <div class="col-md-6">
-                                <input class="form-control" type="tel" name="phone_number" value="+234" required>
-                            </div>
-                        </div>
-
-                        <!-- Role and Username on the same row -->
-                        <div class="row g-2">
-                            <div class="col-md-6">
-                                <select class="form-control" name="role" required>
-                                    <option value="" disabled selected>Select Role</option>
-                                    {% for value, label in form.role.field.choices %}
-                                    <option value="{{ value }}">{{ label }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <input class="form-control" type="text" name="username" placeholder="Username" required>
-                            </div>
-                        </div>
-
-                        <!-- Password and Confirm Password on the same row -->
-                        <div class="row g-2">
-                            <div class="col-md-6">
-                                <input class="form-control" type="password" name="password" placeholder="Password" required>
-                            </div>
-                            <div class="col-md-6">
-                                <input class="form-control" type="password" name="confirm_password" placeholder="Confirm Password" required>
-                            </div>
-                        </div>
-
-                        <div class="row g-2">
-                            <div class="col-md-6">
-                                <input class="form-control mt-3" type="text" name="cashier_gl" value="10101">
-                            </div>
-                            <div class="col-md-6">
-                                <input class="form-control mt-3" type="text" name="cashier_ac" value="1" >
-                            </div>
-                        </div>
-
-                        <button type="submit" class="btn btn-primary mt-4">Register</button>
-                    </form>
-
-                    <a href="{% url 'login' %}">Already have an account? Login</a>
+            <!-- First & Last Name -->
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-person"></i></span>
+                        <input class="form-control" type="text" name="first_name" placeholder="First Name" required>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-person"></i></span>
+                        <input class="form-control" type="text" name="last_name" placeholder="Last Name" required>
+                    </div>
                 </div>
             </div>
-        </div>
+
+            <!-- Email & Phone -->
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                        <input class="form-control" type="email" name="email" placeholder="Email" required>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-telephone"></i></span>
+                        <input class="form-control" type="tel" name="phone_number" value="+234" required>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Role & Username -->
+            <div class="row g-3 mb-3">
+                <div class="col-12">
+                    <select class="form-select" name="role" required>
+                        <option value="" disabled selected>Role</option>
+                        {% for value, label in form.role.field.choices %}
+                            <option value="{{ value }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Branch Selection -->
+<div class="row g-3 mb-3">
+    <div class="col-12">
+        <select class="form-select" name="branch" required>
+            <option value="" disabled selected>Select Branch</option>
+            {% for branch in form.branch.field.queryset %}
+                <option value="{{ branch.id }}">{{ branch.branch_name }}{% if branch.company_name %} — {{ branch.company_name }}{% endif %}</option>
+            {% endfor %}
+        </select>
+    </div>
+</div>
+                <div class="col-12">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-person-circle"></i></span>
+                        <input class="form-control" type="text" name="username" placeholder="Username" required>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Passwords -->
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                        <input class="form-control" type="password" name="password" placeholder="Password" required>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
+                        <input class="form-control" type="password" name="confirm_password" placeholder="Confirm" required>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hidden GL & AC (optional: you might hide these or style differently) -->
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <input type="hidden" class="form-control" type="text" name="cashier_gl" value="10111" readonly>
+                </div>
+                <div class="col-md-6">
+                    <input type="hidden" class="form-control" type="text" name="cashier_ac" value="1" readonly>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-register">Register Account</button>
+        </form>
+
+        <!-- <a href="{% url 'user_resend_otp' %}" class="login-link">← Resend OTP</a> -->
     </div>
 
-    <!-- Modal for displaying welcome information -->
-    <div class="modal fade" id="infoModal" tabindex="-1" aria-labelledby="infoModalLabel" aria-hidden="true">
+    <!-- Modal (unchanged, but you can style it further if needed) -->
+    <div class="modal fade" id="infoModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="infoModalLabel">Welcome to FinanceFlex</h5>
+                <div class="modal-header" style="background: linear-gradient(90deg, #2d6a4f, #22543d); color: white;">
+                    <h5 class="modal-title">Welcome to FinanceFlex</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body text-secondary">
+                <div class="modal-body">
                     <p><strong>FinanceFlex</strong> is a modern core banking platform available as a service for financial institutions across various countries and currencies. <strong>Note:</strong> FinanceFlex does <strong>not</strong> provide loans.</p>
                     <p>We bill in <strong>USD</strong>, with the flexibility to accept payments in your local currency.</p>
-
                     <p>Eligible organizations include:</p>
                     <ul>
                         <li>Microfinance Banks (MFBs)</li>
@@ -252,34 +291,25 @@
                         <li>Fintechs, Neobanks, Cooperative Societies</li>
                         <li>Saccos, Lenders, Financial NGOs, Funds Managers</li>
                     </ul>
-
                     <p>Organizations must submit valid business or license documents. If you don’t yet have a financial license, visit <a href="https://corporatepermit.com" target="_blank">corporatepermit.com</a> to apply.</p>
-
                     <p><strong>Registration Fee:</strong> $15 (one-time) with KYC documentation required.</p>
-
                     <p>Need help? Contact:</p>
                     <ul>
                         <li><i class="bi bi-telephone"></i> <a href="tel:+2348066311516">+234 806 663 11516</a></li>
                         <li><i class="bi bi-envelope"></i> <a href="mailto:support@sitanetorbit.com">support@sitanetorbit.com</a></li>
                     </ul>
-
-                    <hr>
-                    <p><strong>Useful Links:</strong></p>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- jQuery and Bootstrap JS -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
-
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Show the modal when the page loads
-        $(document).ready(function() {
-            $('#infoModal').modal('show');
+        document.addEventListener('DOMContentLoaded', function() {
+            const modal = new bootstrap.Modal(document.getElementById('infoModal'));
+            modal.show();
         });
     </script>
 </body>
-
 </html>
