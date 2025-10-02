@@ -1,4 +1,5 @@
 from django.db import models
+
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 from django.utils.timezone import now  # For default datetime
 from accounts_admin.models import Account
@@ -6,6 +7,13 @@ from accounts_admin.models import Account
 from company.models import Company, Branch
 from django.utils import timezone
 from datetime import timedelta
+
+import random
+import string
+from django.utils.text import slugify
+
+
+
 
 
 class Role(models.Model):
@@ -101,6 +109,7 @@ class User(AbstractBaseUser):
     CUSTOMER_SERVICE_UNIT = 10
     TELLER = 11
     M_I_S_OFFICER = 12
+    CUSTOMER = 13 
 
     ROLE_CHOICE = (
         (SYSTEM_ADMINISTRATOR, 'System Administration'),
@@ -115,6 +124,7 @@ class User(AbstractBaseUser):
         (CUSTOMER_SERVICE_UNIT, 'Customer Service Unit'),
         (TELLER, 'Teller'),
         (M_I_S_OFFICER, 'Management Information System'),
+        (CUSTOMER, 'Customer'),
     )
 
     profile_picture = models.ImageField(upload_to='users/profile_pictures', default='images/avatar.jpg')
@@ -129,6 +139,11 @@ class User(AbstractBaseUser):
     last_otp_sent = models.DateTimeField(blank=True, null=True)
     cashier_gl = models.CharField(max_length=6, blank=True, null=True)
     cashier_ac = models.CharField(max_length=1, blank=True, null=True)
+
+    activation_code = models.CharField(max_length=20, blank=True, null=True, unique=True)
+    customer = models.ForeignKey('customers.Customer', on_delete=models.CASCADE, null=True, blank=True)
+
+
 
     # Required fields
     date_joined = models.DateTimeField(auto_now_add=True)
@@ -171,6 +186,16 @@ class User(AbstractBaseUser):
         return True
 
 
+    def save(self, *args, **kwargs):
+        """Auto-generate activation code if role is Customer"""
+        if self.role == self.CUSTOMER and not self.activation_code and self.branch:
+            branch_code = slugify(self.branch.branch_name)[:3].upper()  # first 3 chars of branch
+            random_part = ''.join(random.choices(string.ascii_uppercase + string.digits, k=7))
+            self.activation_code = f"{branch_code}{random_part}"
+        super().save(*args, **kwargs)
+
+
+
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, blank=True, null=True)
     address = models.CharField(max_length=250, blank=True, null=True)
@@ -202,3 +227,7 @@ class Clients(models.Model):
 
     def __str__(self):
         return self.name
+
+
+
+

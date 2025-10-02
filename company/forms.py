@@ -25,11 +25,12 @@ class BranchForm(forms.ModelForm):
 
     class Meta:
         model = Branch
+        exclude = ['company']  # 👈 remove company from form
         fields = [
-            'company',  # 👈 use the FK, not company_name
             'branch_code', 'branch_name', 'logo', 'address',
             'cac_number', 'license_number', 'company_type', 'bvn_number', 'plan',
-            'session_date', 'system_date_date', 'session_status'
+            'session_date', 'system_date_date', 'session_status',
+            'contact_person', 'contact_phone_no', 'contact_email',  # 👈 ensure email field is here
         ]
         widgets = {
             'branch_name': forms.TextInput(attrs={'placeholder': 'e.g. Akobo Branch'}),
@@ -40,7 +41,6 @@ class BranchForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
 
         if not self.instance.pk:
-            # Auto-generate unique 4-digit branch code
             self.fields['branch_code'].initial = self.generate_branch_code()
 
         for field_name, field in self.fields.items():
@@ -52,6 +52,7 @@ class BranchForm(forms.ModelForm):
             code = str(random.randint(1000, 9999))
             if code not in existing_codes:
                 return code
+
 
 
 

@@ -133,10 +133,27 @@ class Customer(models.Model):
 
 
 
+from accounts.models import User
 
 
+class KYCDocument(models.Model):
+    DOCUMENT_TYPES = (
+        ('PASSPORT', 'Passport'),
+        ('NATIONAL_ID', 'National ID'),
+        ('PROOF_OF_ADDRESS', 'Proof of Address'),
+        # Add more as needed
+    )
 
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='kyc_documents')
+    document_type = models.CharField(max_length=20, choices=DOCUMENT_TYPES)
+    file = models.FileField(upload_to='kyc_documents/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    verified = models.BooleanField(default=False)
+    verified_by = models.ForeignKey('accounts.User', on_delete=models.SET_NULL, null=True, blank=True)
+    notes = models.TextField(blank=True, null=True)
 
+    def __str__(self):
+        return f"{self.customer.get_full_name()} - {self.get_document_type_display()}"
 
 
 

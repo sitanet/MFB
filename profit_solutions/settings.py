@@ -54,6 +54,9 @@ INSTALLED_APPS = [
     'fixed_assets',
     'fixed_deposit',
     # 'audit_trail',
+    'rest_framework',
+    'rest_framework_simplejwt',
+    'api',
    
 ]
 
@@ -165,6 +168,17 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
+# REST_FRAMEWORK = {
+#     'DEFAULT_AUTHENTICATION_CLASSES': (
+#         'rest_framework_simplejwt.authentication.JWTAuthentication',
+#     ),
+#     'DEFAULT_PERMISSION_CLASSES': (
+#         'rest_framework.permissions.IsAuthenticated',  # default: all views require auth
+#     ),
+# }
+
+
+
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
 
@@ -215,3 +229,7 @@ TERMII_API_KEY = "TLDfcyAogBKwuMYnxvPHatThWJqfkOFffeNMTNJaucRjzaoSSeTHugQkzIgDDS
 TERMII_SENDER_ID = "FinanceFlex"
 TERMII_SMS_URL = "https://api.ng.termii.com/api/sms/send"
 SMS_DELIVERY_WEBHOOK_URL = None
+
+
+
+

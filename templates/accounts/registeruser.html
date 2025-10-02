@@ -3,10 +3,12 @@
 {% load static %}
 
 {% block content %}
+
       
             {% include 'includes/alerts.html' %}
                                     
-            
+
+       
                <div class="container-fluid">
                      <div class="row column_title">
                          <div class="col-md-12">
@@ -32,17 +34,22 @@
                               <input type="text" name="branch" class="form-control bg-light" value="{{form.branch.value}}">
                               
                            </div> -->
-                           <div class="form-group col-md-6">
-                              <label for="branch">Branch</label>
-                              <select class="form-control bg-light" name="branch" id="branch" required disabled>
-                                 
-                                  {% for branch in branches %}
-                                      <option value="{{ branch.id }}" {% if branch.id == form.branch.value %}selected{% endif %}>
-                                          {{ branch.branch_name }}
-                                      </option>
-                                  {% endfor %}
-                              </select>
-                          </div>
+<select class="form-control bg-light" id="branch_display" disabled>
+    {% for branch in branches %}
+        <option value="{{ branch.id }}" 
+            {% if branch.id == form.branch.value %}selected{% endif %}>
+            {{ branch.branch_name }}
+        </option>
+    {% endfor %}
+</select>
+
+<!-- hidden field for actual form submission -->
+<input type="hidden" name="branch" 
+       value="{% for branch in branches %}{% if branch.id == form.branch.value %}{{ branch.id }}{% endif %}{% endfor %}">
+
+
+
+
                           
                            <div class="form-group col-md-6">
                               <label for="fName">First Name</label>
@@ -76,6 +83,21 @@
    
                               </select>
                            </div>
+
+<div class="form-group col-md-6">
+    <label for="customer">Customer (Optional)</label>
+    <select name="customer" class="form-control bg-light select2" id="customer">
+        <option value="">Select Customer</option>
+        {% for cust in form.customer.field.queryset %}
+            <option value="{{ cust.id }}" 
+                {% if form.customer.value|stringformat:"s" == cust.id|stringformat:"s" %}selected{% endif %}>
+                {{ cust.first_name }} {{ cust.last_name }} {% if cust.ac_no %}- {{ cust.ac_no }}{% endif %}
+            </option>
+        {% endfor %}
+    </select>
+</div>
+
+
                            <div class="form-group col-md-6">
                             <label for="fName">Username</label>
                             <input type="text" name="username" class="form-control bg-light" placeholder="Username">
@@ -111,7 +133,16 @@
                 </div>
             
          
-            
+    <script>
+    $(document).ready(function() {
+        $('#customer').select2({
+            placeholder: "Select Customer",
+            allowClear: true,  // Allows clearing the selection
+            width: '100%'      // Make it full width
+        });
+    });
+</script>
+        
             
             
                   {% endblock %}

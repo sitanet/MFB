@@ -54,65 +54,49 @@ def check_role_team_member(user):
         return True
     else:
         raise PermissionDenied
-        
+
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
 def registeruser(request):
-    # Get the branches available to the user based on their role or branch
-    if request.user.is_authenticated:
-        # If the logged-in user has a branch (e.g., a branch manager or general manager)
-        if request.user.branch:
-            branches = Branch.objects.filter(id=request.user.branch.id)  # Only show the user's assigned branch
-        else:
-            branches = Branch.objects.all()  # If no branch assigned to the user, show all branches
+    # ✅ Branch filtering logic
+    if request.user.branch:
+        allowed_branches = Branch.objects.filter(id=request.user.branch.id)
     else:
-        branches = Branch.objects.all()  # If not logged in, show all branches (or restrict as needed)
-    
+        allowed_branches = Branch.objects.all()
+
     if request.method == 'POST':
-        form = UserForm(request.POST)
+        form = UserForm(request.POST, request.FILES)  # ✅ include files
+        form.fields['branch'].queryset = allowed_branches  # ✅ restrict queryset
+
         if form.is_valid():
-            # Extract data from the form
-            first_name = form.cleaned_data['first_name']
-            last_name = form.cleaned_data['last_name']
-            username = form.cleaned_data['username']
-            email = form.cleaned_data['email']
-            password = form.cleaned_data['password']
-            phone_number = form.cleaned_data['phone_number']
-            role = form.cleaned_data['role']
-            branch = form.cleaned_data['branch']  # Get the branch from form submission
-            cashier_gl = form.cleaned_data['cashier_gl']
-            cashier_ac = form.cleaned_data['cashier_ac']
+            user = form.save(commit=False)
 
-            # Create the new user
-            user = User.objects.create_user(
-                first_name=first_name,
-                last_name=last_name,
-                username=username,
-                email=email,
-                role=role,
-                phone_number=phone_number,
-                branch=branch,  # Set branch to the one selected in the form
-                cashier_gl=cashier_gl,
-                cashier_ac=cashier_ac,
-                password=password
-            )
-            user.save()
+            # If branch not selected but user only has 1 branch → auto-assign it
+            if not form.cleaned_data.get('branch') and allowed_branches.count() == 1:
+                user.branch = allowed_branches.first()
 
+            # Cashier fields already optional in form, so just set them
+            user.cashier_gl = form.cleaned_data.get('cashier_gl') or None
+            user.cashier_ac = form.cleaned_data.get('cashier_ac') or None
+
+            user.save()  # ✅ password & activation_code already handled in form.save()
             messages.success(request, 'You have successfully registered the user!')
-
-            return redirect('display_all_user')  # Redirect to your user display page
+            return redirect('display_all_user')
         else:
             messages.error(request, 'There were errors in the form.')
             print(form.errors)
     else:
         form = UserForm()
+        form.fields['branch'].queryset = allowed_branches
 
-    # Pass the branches to the context, so the form can render the dropdown list
+        # Auto-select branch if user has only one available
+        if allowed_branches.count() == 1:
+            form.initial['branch'] = allowed_branches.first().id
+
     context = {
         'form': form,
-        'branches': branches,  # Provide the branches to the template
+        'branches': allowed_branches,
     }
-
     return render(request, 'accounts/registeruser.html', context)
 
 
@@ -611,7 +595,8 @@ def login(request):
             return render(request, 'accounts/login.html')
 
         try:
-            user = authenticate(request, username=email, password=password)
+            user = authenticate(request, email=email, password=password)
+
             if user is None:
                 messages.error(request, "Invalid email or password.")
                 print("[DEBUG] Authentication failed")
