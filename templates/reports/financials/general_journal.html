@@ -1,171 +1,210 @@
-
 {% extends "base.html" %}
 {% block content %}
 
 {% include 'includes/alerts.html' %}
+
+<style>
+    /* ===== Page Layout ===== */
+    .container-fluid {
+        background: linear-gradient(135deg, #f9fafc, #eef1f5);
+        min-height: 100vh;
+        padding: 40px 25px;
+    }
+
+    .page_title h2 {
+        font-weight: 700;
+        color: #2c3e50;
+        text-align: center;
+        margin-bottom: 40px;
+        position: relative;
+    }
+    .page_title h2::after {
+        content: "";
+        width: 80px;
+        height: 3px;
+        background: #27ae60;
+        display: block;
+        margin: 10px auto 0;
+        border-radius: 3px;
+    }
+
+    /* ===== Form Card ===== */
+    .journal-card {
+        background: #fff;
+        border-radius: 18px;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+        padding: 40px;
+        transition: all 0.3s ease;
+    }
+    .journal-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+    }
+
+    /* ===== Form Controls ===== */
+    label {
+        font-weight: 600;
+        color: #34495e;
+    }
+    .form-control {
+        border-radius: 10px;
+        border: 1px solid #dee2e6;
+        box-shadow: none;
+        transition: all 0.2s ease;
+    }
+    .form-control:focus {
+        border-color: #27ae60;
+        box-shadow: 0 0 5px rgba(39, 174, 96, 0.3);
+    }
+
+    /* ===== Buttons ===== */
+    .btn-success {
+        border-radius: 10px;
+        padding: 10px 25px;
+        font-weight: 600;
+        transition: all 0.2s ease;
+    }
+    .btn-success:hover {
+        transform: scale(1.05);
+        background: #229954;
+    }
+
+    /* ===== Section Labels ===== */
+    .fw-bold {
+        color: #2c3e50;
+    }
+
+    /* ===== Balances Display ===== */
+    .balance-box {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 15px;
+        margin-top: 10px;
+        font-size: 0.95rem;
+    }
+    .balance-box strong {
+        color: #27ae60;
+    }
+
+    /* ===== Responsive ===== */
+    @media (max-width: 767px) {
+        .journal-card {
+            padding: 25px;
+        }
+    }
+</style>
+
 <div class="container-fluid">
-      <div class="row">
-          <div class="col-md-12">
-              <div class="page_title">
-                  <h2>Genaral Journal</h2>
-              </div>
-          </div>
-          <!-- ................. -------------------------------->
-          <div class="container  deposit p-5 shadow-lg rounded rounded-5">
+    <div class="page_title">
+        <h2>📘 General Journal Entry</h2>
+    </div>
 
-          
-                     
+    <div class="container journal-card">
+        <form method="POST">
+            {% csrf_token %}
+            {% if messages %}
+            <ul class="messages list-unstyled mb-3">
+                {% for message in messages %}
+                <li style="font-size: 16px; color: brown; font-weight: 600;">{{ message }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+            {{ form.errors }}
 
-              <div  class="mb-5">
-                  <!-- <div class="col-md-2 m-auto">
-                      <h4 class=" text-center text-light bg-success  py-2 rounded rounded-5">Deposit
-                      </h4>
-                  </div> -->
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label for="branch">Branch</label>
+                    <input type="text" class="form-control bg-light" id="branch" name="branch" value="{{ user.branch }}" readonly>
+                </div>
 
+                <div class="col-md-3">
+                    <label for="trx_no">Transaction No.</label>
+                    <input type="text" class="form-control bg-light" id="trx_no" value="{{ data.trx_no }}" readonly>
+                </div>
 
-                  <form method="POST"  >
+                <div class="col-md-3">
+                    <label for="ses_date">Session Date</label>
+                    <input type="date" class="form-control bg-light" id="ses_date" name="ses_date" value="{{ company_date }}">
+                </div>
+            </div>
 
-                    {% csrf_token %}
-                    {% if messages %}
-                    <ul class="messages">
-                        {% for message in messages %}
-                            <li style="font-size: 20px; color: brown; font-weight: bold;"  {% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
-                        {% endfor %}
-                    </ul>
-                    {% endif %}
-                    {{ form.errors }}
-                      <div class="form-row">
-                    
-                       
-                          <div class="col-md-3">
-                              <label class="fw-bold" for="branch">Branch:</label>
-                              <input type="text" class="form-control bg-light" id="branch" name="branch" value="{{ user.branch }}" readonly>
-                          </div>
-                          <div class="col-md-3 ">
-                           
-                        </div>
-                          <div class="col-md-3 ">
-                            <label class="fw-bold" for="branch">Transaction No:</label>
-                            <input type="text" class="form-control bg-light" id="branch" value="{{data.trx_no}}" readonly>
-                           
-                          
-                        </div>
-                          <div class="col-md-3 col-md-offset-9">
-                            <label class="fw-bold" for="branch">Session Date:</label>
-                            <input type="date" class="form-control bg-light" id="ses_date" name="ses_date" value="{{ company_date }}">
-                        </div>
-                        
-                          <!-- form 2 -->
-                          <div class="col-md-12 mb-2">
-                              <!-- <label class="fw-bold" for="tellerName">Full Name:</label> -->
-                              <span class="fw-bold" id="tellerName" hidden></span>
-                          </div>
-                          <div class="col-md-6">
-                              <label for="tellerGlNo">GL No.:</label>
-                              <input type="text" class="form-control bg-light"  name="gl_no_cashier" >
-                          </div>
-                          <div class="col-md-6">
-                              <label for="tellerAccountNo">Account No.:</label>
-                              <input type="text"  class="form-control bg-light"
-                                  id="tellerAccountNo" name="ac_no_cashier" value="{{user.cashier_ac}}" readonly>
-                                  
-                          </div>
+            <hr class="my-4">
 
-                          <!-- form 2 ends here -->
+            <!-- Teller Section -->
+            <h5 class="fw-bold mb-3 text-success">Teller Information</h5>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label for="gl_no_cashier">GL No.</label>
+                    <input type="text" class="form-control bg-light" name="gl_no_cashier">
+                </div>
+                <div class="col-md-6">
+                    <label for="tellerAccountNo">Account No.</label>
+                    <input type="text" class="form-control bg-light" id="tellerAccountNo" name="ac_no_cashier" value="{{ user.cashier_ac }}" readonly>
+                </div>
+            </div>
 
-                          <!-- form 1 -->
+            <hr class="my-4">
 
+            <!-- Customer Section -->
+            <h5 class="fw-bold mb-3 text-primary">Customer Information</h5>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label for="glNoInput1">GL No.</label>
+                    <input type="text" class="form-control bg-light" id="glNoInput1" name="gl_no" value="{{ customer.gl_no }}" readonly>
+                </div>
+                <div class="col-md-6">
+                    <label for="accountNoInput1">Account No.</label>
+                    <input type="text" class="form-control bg-light" id="accountNoInput1" name="ac_no" value="{{ customer.ac_no }}" readonly>
+                </div>
+                <div class="col-md-6">
+                    <label for="amount">Amount</label>
+                    <input type="number" class="form-control bg-light" id="amount" placeholder="0.00" name="amount">
+                </div>
+                <div class="col-md-6">
+                    <label for="description">Description</label>
+                    <textarea id="description" class="form-control bg-light" name="description" rows="2"></textarea>
+                </div>
+            </div>
 
-                          <div class="col-md-12 mt-3 mb-2">
-                      
-                              <span class="fw-bold" id="customerName" hidden></span>
-                          </div>
-                          <div class="col-md-6">
-                              <label for="glNoInput">GL No.:</label>
-                              <input type="text" class="form-control bg-light" id="glNoInput1" name="gl_no" value="{{customer.gl_no}}" readonly>
-                          </div>
-                          <div class="col-md-6">
-                              <label for="accountNoInput">Account No.:</label>
-                              <input type=" text" class="form-control bg-light"  id="accountNoInput1" name="ac_no"
-                              value="{{customer.ac_no}}" readonly>
-                          </div>
-                       
-                          <div class="col-md-6 mt-3">
-                              <label for="deposit_description">Amount:</label>
-                              <input type="number"  class="form-control bg-light"
-                                  id="deposit_description" placeholder="0.00" name="amount">
-                          </div>
-                          <div class="col-md-6 mt-3">
-                              <label for="deposit_description">Description:</label>
-                              <!-- <input type="text" name="deposit_description" class="form-control bg-light"
-                                  id="deposit_description"> -->
-                              <textarea  id="deposit_description"
-                                  class="form-control bg-light" cols="30" rows="2" name="description"></textarea>
-                          </div>
-                          <!-- form 1 ends here -->
-                      </div>
-                      <div class="row mt-4">
-                          <div class="col-md-6">
-                              <div>
-                                 
-                                  <strong style="color: red; font-weight: bold;"> DEBIT: </strong>   <span class="fw-bold" id="teller_fullName2"></span>
-                              </div>
-                              <div>
-                                <label class=" mt-2">Available Balance:</label>
-                                <span id="customer_available_balance"></span>
-                            </div>
-                            <div>
-                                <label>Total Balance:</label>
-                                <span id="customer_total_balance"></span>
-                            </div>
-                          </div>
-                          <div class="col-md-6">
-                              <div>
-                                 
-                                  <span class="fw-bold" id="customerName2">CREDIT:{{customers_with_cashier_gl.balance}}</span> <strong style="color: green; font-weight: bold;"> {{customer.first_name}} {{customer.middle_name}} {{customer.last_name}}</strong> 
-                              </div>
-                            
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <h6 class="fw-bold text-danger">DEBIT</h6>
+                    <div class="balance-box">
+                        <p><strong>Available Balance:</strong> <span id="customer_available_balance"></span></p>
+                        <p><strong>Total Balance:</strong> <span id="customer_total_balance"></span></p>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="fw-bold text-success">CREDIT</h6>
+                    <p class="fw-bold">{{ customer.first_name }} {{ customer.middle_name }} {{ customer.last_name }}</p>
+                    <div class="balance-box">
+                        <p><strong>Current Balance:</strong> ₦{{ formatted_balance }}</p>
+                        <p><strong>Available Balance:</strong> ₦{{ formatted_balance }}</p>
+                    </div>
+                </div>
+            </div>
 
-                              <div>
-                                <label class="mt-2">Current Balance:<strong style="color: green; font-weight: bold;"> {{formatted_balance}}</strong></label>
-                                <span id="teller_available_balance"> </span>
-                              
-                             
-                            </div>
-                            <div>
-                                <label>Available Balance:</label>
-                                <span id="teller_balance"><strong style="color: black; font-weight: bold;"> {{formatted_balance}} </strong></span>
-                            </div>
-                          </div>
-                      </div>
-                      <div class="mt-8">
-                        
-                           
-                          <button class="btn btn-success shadow-sm" type="Submit">Save</button>
-                      </div>
-                  </form>
-              </div>
-          </div>
-          <!-- ------------------- -->
+            <div class="mt-5 text-end">
+                <button class="btn btn-success shadow-sm" type="submit">💾 Save Journal Entry</button>
+            </div>
+        </form>
+    </div>
+</div>
 
-      </div>
-  </div>
-  
-
-  <script>
+<script>
     document.addEventListener('DOMContentLoaded', function() {
-        var sessionDateInput = document.getElementById('ses_date');
-        var companyDate = '{{ company_date }}'; // Assuming company_date is in the 'YYYY-MM-DD' format
+        const sessionDateInput = document.getElementById('ses_date');
+        const companyDate = '{{ company_date }}';
 
         sessionDateInput.addEventListener('change', function() {
-            var selectedDate = new Date(sessionDateInput.value);
-            var companyDateObj = new Date(companyDate);
-
+            const selectedDate = new Date(sessionDateInput.value);
+            const companyDateObj = new Date(companyDate);
             if (selectedDate > companyDateObj) {
                 alert('Please select a date not greater than the session date.');
-                sessionDateInput.value = '{{ company_date }}'; // Clear the input value
+                sessionDateInput.value = '{{ company_date }}';
             }
         });
     });
 </script>
+
 {% endblock %}

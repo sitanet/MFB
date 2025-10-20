@@ -1,76 +1,148 @@
-
 {% extends 'base.html' %}
-
 {% load static %}
 
 {% block content %}
-            
-                    
-                       
+{% include 'includes/alerts.html' %}
 
+<style>
+    /* ===== Global Container ===== */
+    .container-fluid {
+        background: linear-gradient(135deg, #fefefe, #f9fafc);
+        min-height: 100vh;
+        padding: 40px 25px;
+    }
+
+    /* ===== Page Title ===== */
+    .page_title h2 {
+        font-weight: 700;
+        color: #2c3e50;
+        text-align: center;
+        margin-bottom: 40px;
+        position: relative;
+    }
+    .page_title h2::after {
+        content: "";
+        width: 90px;
+        height: 4px;
+        background: linear-gradient(90deg, #f39c12, #27ae60);
+        display: block;
+        margin: 10px auto 0;
+        border-radius: 4px;
+    }
+
+    /* ===== Form Card ===== */
+    .form-card {
+        background: #fff;
+        border-radius: 18px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+        padding: 40px;
+        transition: all 0.3s ease;
+        border-top: 6px solid #f39c12;
+    }
+    .form-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+    }
+
+    /* ===== Form Labels ===== */
+    label {
+        font-weight: 600;
+        color: #34495e;
+    }
+
+    /* ===== Inputs ===== */
+    .form-control {
+        border-radius: 10px;
+        border: 1px solid #dee2e6;
+        transition: all 0.2s ease;
+    }
+    .form-control:focus {
+        border-color: #f39c12;
+        box-shadow: 0 0 5px rgba(243, 156, 18, 0.3);
+    }
+
+    /* ===== Buttons ===== */
+    .btn-success {
+        background: linear-gradient(90deg, #27ae60, #f39c12);
+        border: none;
+        color: #fff;
+        border-radius: 10px;
+        padding: 10px 25px;
+        font-weight: 600;
+        transition: all 0.2s ease;
+    }
+    .btn-success:hover {
+        transform: scale(1.05);
+        background: linear-gradient(90deg, #f39c12, #27ae60);
+    }
+
+    /* ===== Responsive ===== */
+    @media (max-width: 767px) {
+        .form-card {
+            padding: 25px;
+        }
+        .page_title h2 {
+            font-size: 1.4rem;
+        }
+    }
+</style>
+
+<div class="container-fluid">
+    <!-- Page Title -->
+    <div class="page_title">
+        <h2>📘 Trial Balance</h2>
+    </div>
+
+    <!-- Form Section -->
+    <div class="row justify-content-center">
+        <div class="col-md-8 form-card">
+            <form id="generateForm" method="post" action="{% url 'trial_balance' %}">
+                {% csrf_token %}
+
+                {{ form.errors }}
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="start_date">Select Start Date</label>
+                        <input type="date" class="form-control bg-light" name="start_date" id="start_date" value="{{ company_date }}">
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="end_date">Select End Date</label>
+                        <input type="date" class="form-control bg-light" name="end_date" id="end_date" value="{{ company_date }}">
+                    </div>
+                </div>
+
+                <input type="hidden" id="pageInput" name="page" value="">
                 
-                       
-                        {% include 'includes/alerts.html' %}
-                        
-                            {{ form.errors }}
-                        
-                        <!-- dashboard inner -->
-            
-                        
-                        <div class="container-fluid">
-                               <div class="row column_title">
-                                  <div class="col-md-12">
-                                     <div class="page_title">
-                                        <h2>Trial Balance</h2>
-                                     </div>
-                                  </div>
-                               </div>
-             
-             <form id="generateForm" method="post" action="{% url 'trial_balance' %}" class="chart_of_account p-5 shadow-lg rounded rounded-5">
-                                        {% csrf_token %}
-                                 <div class="form-row">
-                                        <div class="form-group col-md-3">
-                                            <label for="general_ledger_accout_name">Select Start Date </label>
-                                            <input type="date" class="form-control bg-light"
-                                                  
-                                                  name="start_date"  id="ses_date" value="{{company_date}}">
-                                      </div>
-                                      <div class="form-group col-md-3">
-                                        <label for="general_ledger_accout_name">Select End Date </label>
-                                        <input type="date" class="form-control bg-light"
-                                              name="end_date" id="ses_date" value="{{company_date}}">
-                                    </div>
-                                  
-                                  
-                                    </div>
-                                        <input type="hidden" id="pageInput" name="page" value="">
-                                        <button type="submit"  class="btn w- btn-success mt-4 shadow-sm">Submit</button>
-                                    </form>
+                <div class="text-center mt-4">
+                    <button type="submit" class="btn btn-success w-50 shadow-sm">Generate Report</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
-                                
-                            </div>
-                 
-                     
-                         
-                    
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const startDateInput = document.getElementById('start_date');
+        const endDateInput = document.getElementById('end_date');
+        const companyDate = '{{ company_date }}';
 
+        startDateInput.addEventListener('change', function() {
+            if (new Date(startDateInput.value) > new Date(companyDate)) {
+                alert('Start date cannot be greater than the session date.');
+                startDateInput.value = '{{ company_date }}';
+            }
+        });
 
-                    
-     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-        var sessionDateInput = document.getElementById('ses_date');
-        var companyDate = '{{ company_date }}'; // Assuming company_date is in the 'YYYY-MM-DD' format
-                            
-        sessionDateInput.addEventListener('change', function() {
-            var selectedDate = new Date(sessionDateInput.value);
-            var companyDateObj = new Date(companyDate);
-                            
-            if (selectedDate > companyDateObj) {
-            alert('Please select a date not greater than the session date.');
-                sessionDateInput.value = '{{ company_date }}'; // Clear the input value
-                }
-            });
-           });
-         </script>
+        endDateInput.addEventListener('change', function() {
+            if (new Date(endDateInput.value) > new Date(companyDate)) {
+                alert('End date cannot be greater than the session date.');
+                endDateInput.value = '{{ company_date }}';
+            }
+        });
+    });
+</script>
 
 {% endblock %}

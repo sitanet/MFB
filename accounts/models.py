@@ -12,6 +12,8 @@ import random
 import string
 from django.utils.text import slugify
 
+from django.contrib.auth.hashers import make_password, check_password
+
 
 
 
@@ -143,6 +145,15 @@ class User(AbstractBaseUser):
     activation_code = models.CharField(max_length=20, blank=True, null=True, unique=True)
     customer = models.ForeignKey('customers.Customer', on_delete=models.CASCADE, null=True, blank=True)
 
+    # 💳 Transaction PIN (securely hashed)
+    transaction_pin = models.CharField(
+        max_length=128,
+        blank=True,
+        null=True,
+        help_text="Securely hashed 4–6 digit transaction PIN"
+    )
+
+
 
 
     # Required fields
@@ -164,6 +175,21 @@ class User(AbstractBaseUser):
 
     def __str__(self):
         return self.username
+
+
+
+        # 🔐 --- Transaction PIN management ---
+    def set_transaction_pin(self, raw_pin):
+        """Hash and set a new transaction PIN."""
+        if raw_pin:
+            self.transaction_pin = make_password(raw_pin)
+
+    def check_transaction_pin(self, raw_pin):
+        """Verify that the provided PIN matches the stored hash."""
+        if not self.transaction_pin:
+            return False
+        return check_password(raw_pin, self.transaction_pin)
+
 
     def has_perm(self, perm, obj=None):
         return self.is_admin
@@ -193,6 +219,12 @@ class User(AbstractBaseUser):
             random_part = ''.join(random.choices(string.ascii_uppercase + string.digits, k=7))
             self.activation_code = f"{branch_code}{random_part}"
         super().save(*args, **kwargs)
+
+
+        # ✅ Auto-hash PIN if a plain PIN is assigned
+        if self.transaction_pin and not self.transaction_pin.startswith("pbkdf2_"):
+            self.transaction_pin = make_password(self.transaction_pin)
+
 
 
 

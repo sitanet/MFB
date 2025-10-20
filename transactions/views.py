@@ -884,8 +884,8 @@ def choose_withdrawal(request):
     # Get the latest transaction (if any exists)
     latest_transaction = Memtrans.objects.order_by('-id').first()
 
-    # Get company names of branches linked to logged-in user
-    user_company_names = Branch.objects.filter(user=request.user).values_list('company_name', flat=True)
+    # ✅ Fixed line — use 'users' instead of 'user'
+    user_company_names = Branch.objects.filter(users=request.user).values_list('company_name', flat=True)
 
     # Filter customers with label 'C' whose branch's company_name is in user_company_names
     customers = Customer.objects.filter(

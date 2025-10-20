@@ -383,29 +383,179 @@ def myAccount(request):
     redirectUrl = detectUser(user)
     return redirect(redirectUrl)
 
-@login_required(login_url='login')
+# @login_required(login_url='login')
+# def dashboard(request):
+
+#     return render(request, 'accounts/dashboard.html')
+
+from django.shortcuts import render
+from django.db.models import Sum, Count
+from django.utils import timezone
+from transactions.models import Memtrans
+from loans.models import Loans
+from customers.models import Customer
+from company.models import Branch
+from accounts_admin.models import Category
+from decimal import Decimal
+
+
 def dashboard(request):
-    # member = Member.objects.filter(status=1).count()
-    # member_inctive = Member.objects.filter(status=2).count()
-    # member_male = Member.objects.filter(gender=1).count()
-    # member_female = Member.objects.filter(gender=2).count()
-    # member_single = Member.objects.filter(marital_status=1).count()
-    # member_married = Member.objects.filter(marital_status=2).count()
-    
+    # --- Date Setup ---
+    today = timezone.now()
+    current_month = today.month
+    current_year = today.year
 
-    # context = {
-    #     'member': member,
-    #     'member_inctive': member_inctive,
-    #     'member_male': member_male,
-    #     'member_female': member_female,
-    #     'member_single': member_single,
-    #     'member_married': member_married,
-    # }
-    return render(request, 'accounts/dashboard.html')
+    # --- Current Month Deposits ---
+    current_month_deposits = (
+        Memtrans.objects.filter(
+            ses_date__month=current_month,
+            ses_date__year=current_year,
+            amount__gt=0,
+            account_type='C'
+        ).aggregate(total=Sum('amount'))['total'] or 0
+    )
 
+    # --- Current Month Loans (disbursed only) ---
+    current_month_loans = (
+        Loans.objects.filter(
+            appli_date__month=current_month,
+            appli_date__year=current_year,
+            disb_status='T'
+        ).aggregate(total=Sum('loan_amount'))['total'] or 0
+    )
 
+    # --- Accumulated Deposits (YTD) ---
+    total_deposits = (
+        Memtrans.objects.filter(
+            ses_date__year=current_year,
+            amount__gt=0,
+            account_type='C'
+        ).aggregate(total=Sum('amount'))['total'] or 0
+    )
 
+    # --- Accumulated Loans (YTD, disbursed only) ---
+    total_loans = (
+        Loans.objects.filter(
+            disb_status='T',
+            disbursement_date__year=current_year
+        ).aggregate(total=Sum('loan_amount'))['total'] or 0
+    )
 
+    total_customers = Customer.objects.count()
+
+    # --- NPL Ratio ---
+    npl_ratio = 0
+    if Loans.objects.exists():
+        total_loans_count = Loans.objects.count()
+        defaulted_count = Loans.objects.filter(approval_status='Defaulted').count()
+        npl_ratio = (
+            round((defaulted_count / total_loans_count) * 100, 2)
+            if total_loans_count > 0 else 0
+        )
+
+    # --- Deposit vs Loan Monthly Trend (₦ Billion) ---
+    months = [
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+    ]
+    deposits_trend = []
+    loans_trend = []
+
+    for m in range(1, 13):
+        deposits = (
+            Memtrans.objects.filter(
+                ses_date__month=m,
+                ses_date__year=current_year,
+                amount__gt=0,
+                account_type='C'
+            ).aggregate(total=Sum('amount'))['total'] or 0
+        )
+
+        loans = (
+            Loans.objects.filter(
+                appli_date__month=m,
+                appli_date__year=current_year,
+                disb_status='T'
+            ).aggregate(total=Sum('loan_amount'))['total'] or 0
+        )
+
+        deposits_trend.append(float(deposits) / 1_000_000_000)
+        loans_trend.append(float(loans) / 1_000_000_000)
+
+    # --- Customer Segmentation ---
+    segmentation = {}
+    for cat in Category.objects.all():
+        segmentation[cat.category_name] = Customer.objects.filter(cust_cat=cat).count()
+
+    # --- Branch Performance ---
+    branch_data = []
+    for branch in Branch.objects.all():
+        cust_count = Customer.objects.filter(branch=branch).count()
+
+        branch_deposits = (
+            Memtrans.objects.filter(
+                branch=branch,
+                amount__gt=0,
+                account_type='C'
+            ).aggregate(total=Sum('amount'))['total'] or 0
+        )
+
+        branch_loans = (
+            Loans.objects.filter(branch=branch, disb_status='T')
+            .aggregate(total=Sum('loan_amount'))['total'] or 0
+        )
+
+        profit = Decimal(branch_loans) * Decimal('0.05')
+
+        npl = Loans.objects.filter(branch=branch, approval_status='Defaulted').count()
+        total_loans_branch = Loans.objects.filter(branch=branch).count()
+        npl_ratio_branch = (
+            round((npl / total_loans_branch) * 100, 2)
+            if total_loans_branch > 0 else 0
+        )
+
+        # --- Branch Status (Dynamic) ---
+        if npl_ratio_branch < 5 and branch_deposits > 0:
+            status = "Excellent"
+        elif npl_ratio_branch < 10:
+            status = "Good"
+        elif npl_ratio_branch < 15:
+            status = "Fair"
+        else:
+            status = "Poor"
+
+        branch_data.append({
+            "name": branch.branch_name,
+            "location": branch.branch_code,
+            "customers": cust_count,
+            "deposits": branch_deposits,
+            "loans": branch_loans,
+            "profit": profit,
+            "npl_ratio": npl_ratio_branch,
+            "status": status,
+        })
+
+    # --- Context ---
+    context = {
+        # Current Month
+        "current_month_deposits": current_month_deposits,
+        "current_month_loans": current_month_loans,
+
+        # Accumulated (YTD)
+        "total_deposits": total_deposits,
+        "total_loans": total_loans,
+        "total_customers": total_customers,
+        "npl_ratio": npl_ratio,
+
+        # Charts & Lists
+        "months": months,
+        "deposits_trend": deposits_trend,
+        "loans_trend": loans_trend,
+        "segmentation": segmentation,
+        "branch_data": branch_data,
+    }
+
+    return render(request, 'accounts/dashboard.html', context)
 
 
 

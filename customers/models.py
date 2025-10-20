@@ -63,6 +63,22 @@ class Customer(models.Model):
     sms = models.BooleanField(default=False)
     email_alert = models.BooleanField(default=True)
 
+        # 🔑 New fields
+    bvn = models.CharField(max_length=11, blank=True, null=True)
+    nin = models.CharField(max_length=16, blank=True, null=True)
+
+    # 🔑 NEW FIELD for 9PSB Wallet
+    wallet_account = models.CharField(max_length=20, blank=True, null=True, unique=True)
+    transfer_limit = models.DecimalField(
+    max_digits=12, 
+    decimal_places=2, 
+    blank=True, 
+    null=True, 
+    default=0.00,
+    help_text="Maximum transfer limit in Naira."
+)
+
+
 
 # Group
     group = models.ForeignKey(Group, on_delete=models.SET_NULL, null=True, blank=True, related_name='members')

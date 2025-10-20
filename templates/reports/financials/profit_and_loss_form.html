@@ -2,124 +2,190 @@
 {% load static %}
 
 {% block content %}
-            
-    {% include 'includes/alerts.html' %}
+{% include 'includes/alerts.html' %}
 
-    <style>
-
-           /* Add your CSS styles here */
-           .container-fluid {
-            padding: 20px;
-        }
-
-        .column_title {
-            margin-bottom: 20px;
-        }
-
-        .page_title h2 {
-            margin: 0;
-            color: #333;
-        }
-
-        h5 {
-            margin: 10px 0;
-            color: #555;
-        }
-
-        .table-section {
-            margin-top: 20px;
-        }
-
-        p {
-            margin-bottom: 5px;
-            color: #666;
-        }
-
-        .table {
-            width: 100%;
-            margin-top: 10px;
-        }
-
-        th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-        }
-
-        th {
-            background-color: #333;
-            color: #fff;
-        }
-
-        tr:hover {
-            background-color: #f5f5f5;
-        }
-
-        .total-row {
-            border-bottom: 3px solid #000;
-            border-top: 3px solid #000;
-        }
-
-        .total-row td {
-            font-weight: bold;
-            color: #333;
-        }
-        .office-address {
-        margin-bottom: 20px; /* Adjust the value as needed */
+<style>
+    /* ===== Global Container ===== */
+    .container-fluid {
+        background: linear-gradient(135deg, #fefefe, #f9fafc);
+        min-height: 100vh;
+        padding: 40px 25px;
     }
-    .totals-left {
-            float: left;
+
+    /* ===== Page Title ===== */
+    .page_title h2 {
+        font-weight: 700;
+        color: #2c3e50;
+        text-align: center;
+        margin-bottom: 40px;
+        position: relative;
+    }
+    .page_title h2::after {
+        content: "";
+        width: 90px;
+        height: 4px;
+        background: linear-gradient(90deg, #f39c12, #27ae60);
+        display: block;
+        margin: 10px auto 0;
+        border-radius: 4px;
+    }
+
+    /* ===== Form Card ===== */
+    .form-card {
+        background: #fff;
+        border-radius: 18px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+        padding: 40px;
+        transition: all 0.3s ease;
+        border-top: 6px solid #f39c12;
+    }
+    .form-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+    }
+
+    /* ===== Company Header ===== */
+    .company-header {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+    .company-header h4 {
+        font-weight: 700;
+        color: #27ae60;
+    }
+    .company-header p {
+        color: #7f8c8d;
+        margin: 3px 0;
+    }
+    .office-address {
+        font-style: italic;
+        color: #95a5a6;
+    }
+
+    /* ===== Form Controls ===== */
+    label {
+        font-weight: 600;
+        color: #34495e;
+    }
+    .form-control {
+        border-radius: 10px;
+        border: 1px solid #dee2e6;
+        transition: all 0.2s ease;
+    }
+    .form-control:focus {
+        border-color: #f39c12;
+        box-shadow: 0 0 5px rgba(243, 156, 18, 0.3);
+    }
+
+    /* ===== Buttons ===== */
+    .btn-success {
+        background: linear-gradient(90deg, #27ae60, #f39c12);
+        border: none;
+        color: #fff;
+        border-radius: 10px;
+        padding: 10px 25px;
+        font-weight: 600;
+        transition: all 0.2s ease;
+    }
+    .btn-success:hover {
+        transform: scale(1.05);
+        background: linear-gradient(90deg, #f39c12, #27ae60);
+    }
+
+    /* ===== Table Styles (for results display) ===== */
+    .table {
+        width: 100%;
+        border-radius: 10px;
+        overflow: hidden;
+        margin-top: 30px;
+    }
+    .table thead {
+        background: linear-gradient(90deg, #27ae60, #f39c12);
+        color: #fff;
+    }
+    .table th, .table td {
+        padding: 14px;
+        vertical-align: middle;
+    }
+    .table tbody tr:nth-child(even) {
+        background: #f9fbfd;
+    }
+    .table tbody tr:hover {
+        background: #fef7ef;
+        transition: background 0.2s;
+    }
+    .total-row td {
+        font-weight: 700;
+        background: #fafafa;
+        color: #2c3e50;
+    }
+
+    /* ===== Responsive ===== */
+    @media (max-width: 767px) {
+        .form-card {
+            padding: 25px;
         }
-        .totals-right {
-            float: right;
+        .page_title h2 {
+            font-size: 1.4rem;
         }
-    </style>
+    }
+</style>
 
-    <div class="container-fluid">
-        <div class="row column_title">
-            <div class="col-md-12">
-                <div class="page_title">
-                    <h2>Profit and Loss Statement</h2>
-                </div>
-            </div>
-        </div>
-
-        <!-- Full Name Section -->
-       
-
-        <!-- Profit and Loss Statement Form -->
-        <div class="col-md-12">
-         
-            <div class="white_shd full margin_bottom_30">
-                <div class="table_section padding_infor_info">
-                    <div class="row">
-                        <div class="col-md-12 text-center">
-                            <h4>{{ company.company_name }}</h4>
-                            <p>{{ company.branch_name }}</p>
-                            <p class="office-address">{{ company.office_address }}</p>
-                            
-                        </div>
-                     
-                    </div>
-                    <form id="generateForm" method="post" action="{% url 'profit_and_loss' %}" class="chart_of_account p-5 shadow-lg rounded rounded-5">
-                        {% csrf_token %}
-                        <div class="form-row">
-                            <div class="form-group col-md-3">
-                                <label for="start_date">Select Start Date </label>
-                                <input type="date" class="form-control bg-light" name="start_date" id="start_date" value="{{ company_date }}">
-                            </div>
-                            <div class="form-group col-md-3">
-                                <label for="end_date">Select End Date </label>
-                                <input type="date" class="form-control bg-light" name="end_date" id="end_date" value="{{ company_date }}">
-                            </div>
-                        </div>
-                        <input type="hidden" id="pageInput" name="page" value="">
-                        <button type="submit" class="btn btn-success mt-4 shadow-sm">Submit</button>
-                    </form>
-                </div>
-            </div>
-            <!-- End of Profit and Loss Statement Form -->
-        </div>
+<div class="container-fluid">
+    <!-- Page Title -->
+    <div class="page_title">
+        <h2>📊 Profit & Loss Statement</h2>
     </div>
 
+    <!-- Report Card -->
+    <div class="row justify-content-center">
+        <div class="col-md-10 form-card">
+            <div class="company-header">
+                <h4>{{ company.company_name }}</h4>
+                <p>{{ company.branch_name }}</p>
+                <p class="office-address">{{ company.office_address }}</p>
+            </div>
+
+            <form id="generateForm" method="post" action="{% url 'profit_and_loss' %}">
+                {% csrf_token %}
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label for="start_date">Start Date</label>
+                        <input type="date" class="form-control bg-light" name="start_date" id="start_date" value="{{ company_date }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="end_date">End Date</label>
+                        <input type="date" class="form-control bg-light" name="end_date" id="end_date" value="{{ company_date }}">
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <button type="submit" class="btn btn-success w-100 shadow-sm">Generate Report</button>
+                    </div>
+                </div>
+                <input type="hidden" id="pageInput" name="page" value="">
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const startDateInput = document.getElementById('start_date');
+        const endDateInput = document.getElementById('end_date');
+        const companyDate = '{{ company_date }}';
+
+        startDateInput.addEventListener('change', function() {
+            if (new Date(startDateInput.value) > new Date(companyDate)) {
+                alert('Start date cannot be greater than the session date.');
+                startDateInput.value = '{{ company_date }}';
+            }
+        });
+
+        endDateInput.addEventListener('change', function() {
+            if (new Date(endDateInput.value) > new Date(companyDate)) {
+                alert('End date cannot be greater than the session date.');
+                endDateInput.value = '{{ company_date }}';
+            }
+        });
+    });
+</script>
 {% endblock %}

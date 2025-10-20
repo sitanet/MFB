@@ -5,108 +5,198 @@
 {% include 'includes/alerts.html' %}
 
 <style>
-    /* Global Container */
-    .container-fluid { padding: 40px 25px; background: #f4f6f9; min-height: 100vh; }
+    :root {
+        --orange: #f97316;
+        --green: #16a34a;
+        --green-dark: #15803d;
+        --bg-light: #f4f6f9;
+        --text-dark: #1e293b;
+    }
 
-    /* Page Title */
+    body { background: var(--bg-light); }
+
+    /* Page Container */
+    .container-fluid {
+        padding: 40px 25px;
+        min-height: 100vh;
+    }
+
+    /* Title */
     .page-title h2 {
-        font-weight: 700;
-        color: #2c3e50;
-        font-size: 2rem;
-        letter-spacing: 0.5px;
+        font-weight: 800;
+        background: linear-gradient(135deg, var(--orange), var(--green));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        text-align: center;
+        margin-bottom: 1rem;
+        font-size: 2.2rem;
     }
 
-    /* Card Styles */
+    .title-underline {
+        width: 120px;
+        height: 5px;
+        border-radius: 4px;
+        background: linear-gradient(135deg, var(--orange), var(--green));
+        margin: 0 auto 30px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+
+    /* Cards */
     .form-card, .print-card {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+        transition: all 0.3s ease;
         padding: 30px;
-        border-radius: 18px;
-        background: #fff;
-        box-shadow: 0 8px 24px rgba(0,0,0,0.08);
-        transition: transform 0.2s ease;
+        border: 1px solid rgba(0,0,0,0.05);
     }
-    .form-card:hover, .print-card:hover { transform: translateY(-3px); }
 
-    /* Form Inputs */
-    .form-label { font-weight: 600; color: #2c3e50; }
-    .form-control { border-radius: 10px; }
+    .form-card:hover, .print-card:hover {
+        transform: translateY(-3px);
+    }
+
+    /* Labels & Inputs */
+    .form-label {
+        font-weight: 600;
+        color: var(--text-dark);
+    }
+
+    .form-control {
+        border-radius: 10px;
+        border: 1px solid #e5e7eb;
+        transition: all 0.2s ease;
+    }
+
+    .form-control:focus {
+        border-color: var(--green);
+        box-shadow: 0 0 0 0.15rem rgba(22, 163, 74, 0.25);
+    }
 
     /* Buttons */
     .btn-submit {
-        margin-top: 25px;
         font-weight: 600;
-        border-radius: 10px;
-        transition: all 0.2s ease-in-out;
+        border-radius: 12px;
+        background: linear-gradient(135deg, var(--orange), var(--green));
+        border: none;
+        color: #fff;
+        transition: all 0.3s ease;
+        padding: 0.7rem 1.2rem;
     }
-    .btn-submit:hover { background: #218838; transform: scale(1.02); }
+
+    .btn-submit:hover {
+        background: linear-gradient(135deg, var(--green-dark), var(--orange));
+        transform: translateY(-2px);
+        box-shadow: 0 4px 10px rgba(22, 163, 74, 0.25);
+    }
+
     .btn-print {
-        border-radius: 10px;
+        background: linear-gradient(135deg, var(--orange), var(--green));
+        border: none;
         font-weight: 600;
+        border-radius: 10px;
+        color: white;
         padding: 10px 20px;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        transition: 0.3s;
+    }
+
+    .btn-print:hover {
+        background: linear-gradient(135deg, var(--green-dark), var(--orange));
+        transform: translateY(-2px);
     }
 
     /* Report Header */
-    .report-header h4 { font-weight: 700; color: #2c3e50; font-size: 1.5rem; }
-    .report-header h5 { font-weight: 600; color: #34495e; margin-top: 3px; }
-    .office-address { font-style: italic; color: #7f8c8d; margin: 5px 0 10px; }
-    .report-header .text-primary { font-weight: 700; font-size: 1.2rem; }
+    .report-header h4 {
+        font-weight: 700;
+        color: var(--text-dark);
+        font-size: 1.6rem;
+    }
 
-    /* Table */
+    .report-header h5 {
+        color: #475569;
+        margin-top: 3px;
+    }
+
+    .office-address {
+        font-style: italic;
+        color: #64748b;
+        margin-bottom: 10px;
+    }
+
+    .report-header .text-primary {
+        font-weight: 700;
+        font-size: 1.2rem;
+        background: linear-gradient(135deg, var(--orange), var(--green));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    /* Table Styling */
     .table {
         border-radius: 10px;
         overflow: hidden;
+        margin-top: 10px;
     }
+
     .table thead {
-        background: linear-gradient(90deg, #2c3e50, #34495e);
+        background: linear-gradient(90deg, var(--orange), var(--green));
         color: #fff;
     }
+
     .table th, .table td {
         padding: 14px;
-        vertical-align: middle;
         font-size: 0.95rem;
+        vertical-align: middle;
     }
-    .table tbody tr:nth-child(even) { background: #f9fbfd; }
-    .table tbody tr:hover { background: #eef3f7; transition: background 0.2s; }
 
-    /* Totals Row */
+    .table tbody tr:nth-child(even) {
+        background: #f9fafb;
+    }
+
+    .table tbody tr:hover {
+        background: #eef3f7;
+        transition: 0.3s;
+    }
+
     .total-row td {
         font-weight: 700;
-        background: #e9ecef;
-        color: #2c3e50;
-        font-size: 1rem;
+        background: #e2e8f0;
+        color: var(--text-dark);
     }
 
-    /* Totals Section */
+    /* Totals */
     .totals-left p {
         font-weight: 600;
-        color: #2c3e50;
-        font-size: 1.05rem;
-        margin-bottom: 6px;
-    }
-    .totals-left strong {
-        font-size: 1.1rem;
-        color: #27ae60;
+        color: var(--text-dark);
     }
 
-    /* Print media */
+    .totals-left strong {
+        font-size: 1.1rem;
+        color: var(--green);
+    }
+
+    /* Print Mode */
     @media print {
         body * { visibility: hidden; }
         .printable-area, .printable-area * { visibility: visible; }
         .printable-area { position: absolute; left: 0; top: 0; width: 100%; padding: 20px; }
         .btn-print { display: none; }
     }
+
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
 </style>
 
 <div class="container-fluid">
 
-    <!-- Page Title -->
-    <div class="row mb-4">
-        <div class="col-md-12 text-center page-title">
-            <h2>📊 Balance Sheet Report</h2>
-        </div>
+    <!-- Title -->
+    <div class="text-center page-title">
+        <h2>📊 Balance Sheet Report</h2>
+        <div class="title-underline"></div>
     </div>
 
-    <!-- Form Card -->
+    <!-- Form -->
     <div class="row justify-content-center" id="formSection">
         <div class="col-md-10 form-card">
             <form id="generateForm" method="post" action="{% url 'balance_sheet' %}">
@@ -135,7 +225,7 @@
                         {% endif %}
                     </div>
                     <div class="col-md-3 d-flex align-items-end">
-                        <button type="submit" class="btn btn-success w-100 btn-submit shadow-sm">Generate Report</button>
+                        <button type="submit" class="btn btn-submit w-100 shadow-sm">Generate Report</button>
                     </div>
                 </div>
             </form>
@@ -146,12 +236,12 @@
     {% if balance_sheet_data %}
     <div class="row mt-4">
         <div class="col-md-12 text-end">
-            <button onclick="window.print()" class="btn btn-primary btn-print shadow-sm">🖨 Print Report</button>
+            <button onclick="window.print()" class="btn btn-print shadow-sm">🖨 Print Report</button>
         </div>
     </div>
     {% endif %}
 
-    <!-- Report Card -->
+    <!-- Report Section -->
     {% if balance_sheet_data %}
     <div class="row printable-area mt-4" id="reportSection">
         <div class="col-md-12 print-card">
@@ -220,7 +310,6 @@
         </div>
     </div>
     {% endif %}
-
 </div>
 
 <script>
@@ -229,28 +318,20 @@
         const endDateInput = document.getElementById('end_date');
         const branchDate = new Date('{{ branch_date|default:"9999-12-31" }}');
 
-        startDateInput.addEventListener('change', function() {
-            const selected = new Date(startDateInput.value);
+        function validateDate(input, label) {
+            const selected = new Date(input.value);
             if (selected > branchDate) {
-                alert('Start Date cannot be greater than session date.');
-                startDateInput.value = '{{ branch_date }}';
+                alert(label + ' cannot be greater than session date.');
+                input.value = '{{ branch_date }}';
             }
-        });
+        }
 
-        endDateInput.addEventListener('change', function() {
-            const selected = new Date(endDateInput.value);
-            if (selected > branchDate) {
-                alert('End Date cannot be greater than session date.');
-                endDateInput.value = '{{ branch_date }}';
-            }
-        });
+        startDateInput.addEventListener('change', () => validateDate(startDateInput, 'Start Date'));
+        endDateInput.addEventListener('change', () => validateDate(endDateInput, 'End Date'));
 
-        // Hide form if report is available
         const formSection = document.getElementById('formSection');
         const reportSection = document.getElementById('reportSection');
-        if (reportSection) {
-            formSection.style.display = 'none';
-        }
+        if (reportSection) formSection.style.display = 'none';
     });
 </script>
 {% endblock %}

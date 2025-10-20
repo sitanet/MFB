@@ -1,62 +1,149 @@
 {% extends "base.html" %}
-
 {% block content %}
 
-<div class="container-fluid">
-  <div class="row">
-    <!-- Chart of Account will come here -->
-  </div>
+<style>
+  /* ===== Page Layout ===== */
+  .container-fluid {
+    background: linear-gradient(135deg, #fff8f2, #f9fff8);
+    padding: 40px 20px;
+    min-height: 100vh;
+  }
 
+  .page_title h2 {
+    font-weight: 700;
+    text-align: center;
+    color: #2e3b32;
+    margin-bottom: 50px;
+    position: relative;
+  }
+  .page_title h2::after {
+    content: "";
+    width: 100px;
+    height: 3px;
+    background: linear-gradient(90deg, #ff8c00, #27ae60);
+    display: block;
+    margin: 12px auto 0;
+    border-radius: 3px;
+  }
+
+  /* ===== Dashboard Cards ===== */
+  .card-link {
+    text-decoration: none;
+  }
+
+  .account_setting {
+    background: #ffffff;
+    border-radius: 18px;
+    padding: 40px 10px;
+    text-align: center;
+    transition: all 0.3s ease;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+    cursor: pointer;
+  }
+
+  .account_setting:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(255, 140, 0, 0.25);
+  }
+
+  .account_setting i {
+    font-size: 45px;
+    margin-bottom: 15px;
+    transition: all 0.3s ease;
+  }
+
+  .account_setting h5 {
+    color: #2c3e50;
+    font-weight: 600;
+    margin-top: 10px;
+  }
+
+  .account_setting:hover h5 {
+    color: #27ae60;
+  }
+
+  .account_setting:hover i {
+    transform: scale(1.1);
+    filter: drop-shadow(0 0 8px rgba(255, 140, 0, 0.5));
+  }
+
+  /* ===== Icon Colors (Consistent Palette) ===== */
+  .fa-balance-scale { color: #ff8c00; } /* Orange */
+  .fa-file-invoice-dollar { color: #27ae60; } /* Green */
+  .fa-chart-line { color: #3498db; } /* Blue */
+  .fa-file-alt { color: #8e44ad; } /* Purple */
+
+  /* ===== Print Adjustments ===== */
+  @media print {
+    body {
+      margin: 0;
+      padding: 0;
+    }
+    body * {
+      visibility: hidden;
+    }
+    .container-fluid,
+    .container-fluid * {
+      visibility: visible;
+    }
+    .container-fluid {
+      position: absolute;
+      top: 0; /* Ensures print starts near top */
+      left: 0;
+      width: 100%;
+      margin: 0;
+      padding-top: 10px;
+    }
+  }
+</style>
+
+<div class="container-fluid">
   <div class="container-fluid">
-    <div class="row">
+    <div class="row justify-content-center">
       <div class="col-md-12">
         <div class="page_title">
-          <h2>Financial Report</h2>
+          <h2>📊 Financial Report</h2>
         </div>
       </div>
 
-      <div class="col-md-3 mb-3">
-        <div class="account_setting py-5 fs-1 bg-white">
-          <div class="couter_icon col-md-10">
-            <i class="couter_icon fa fa-balance-scale" style="font-size: 24px; color: #f39c12;"></i>
+      <!-- Trial Balance -->
+      <div class="col-md-3 mb-4">
+        <a href="{% url 'trial_balance' %}" class="card-link">
+          <div class="account_setting shadow-sm">
+            <i class="fa fa-balance-scale"></i>
+            <h5>Trial Balance</h5>
           </div>
-          <a href="{% url 'trial_balance' %}" class="text-center">
-            <h5 class="my-2">Trial Balance</h5>
-          </a>
-        </div>
+        </a>
       </div>
 
-      <div class="col-md-3 mb-3">
-        <div class="account_setting py-5 fs-1 bg-white rounded rounded-5">
-          <div class="couter_icon col-md-10">
-            <i class="couter_icon fa fa-file-invoice-dollar" style="font-size: 24px; color: #27ae60;"></i>
+      <!-- Balance Sheet -->
+      <div class="col-md-3 mb-4">
+        <a href="{% url 'balance_sheet' %}" class="card-link">
+          <div class="account_setting shadow-sm">
+            <i class="fa fa-file-invoice-dollar"></i>
+            <h5>Balance Sheet</h5>
           </div>
-          <a href="{% url 'balance_sheet' %}" class="text-center">
-            <h5 class="my-2">Balance Sheet</h5>
-          </a>
-        </div>
+        </a>
       </div>
 
-      <div class="col-md-3 mb-3">
-        <div class="account_setting py-5 fs-1 bg-white">
-          <div class="couter_icon col-md-10">
-            <i class="couter_icon fa fa-chart-line" style="font-size: 24px; color: #3498db;"></i>
+      <!-- Profit/Loss Report -->
+      <div class="col-md-3 mb-4">
+        <a href="{% url 'profit_and_loss' %}" class="card-link">
+          <div class="account_setting shadow-sm">
+            <i class="fa fa-chart-line"></i>
+            <h5>Profit &amp; Loss Report</h5>
           </div>
-          <a href="{% url 'profit_and_loss' %}" class="text-center">
-            <h5 class="my-2">Profit/Loss Report</h5>
-          </a>
-        </div>
+        </a>
       </div>
 
-      <div class="col-md-3 mb-3">
-        <div class="account_setting py-5 fs-1 bg-white shadow-lg rounded rounded-5">
-          <div class="couter_icon col-md-10">
-            <i class="couter_icon fa fa-file-alt" style="font-size: 24px; color: #8e44ad;"></i>
+      <!-- General Report -->
+      <div class="col-md-3 mb-4">
+        <a href="{% url 'customer_list' %}" class="card-link">
+          <div class="account_setting shadow-sm">
+            <i class="fa fa-file-alt"></i>
+            <h5>General Report</h5>
           </div>
-          <a href="{% url 'customer_list' %}" class="text-center">
-            <h5 class="my-2">General Report</h5>
-          </a>
-        </div>
+        </a>
       </div>
 
     </div>

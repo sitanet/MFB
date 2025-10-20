@@ -1,14 +1,5 @@
-{% extends "base.html" %}
-{% block content %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FinanceFlex Banking Dashboard</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% extends 'base.html' %}
+{% load humanize %}
     <style>
         :root {
             /* Orange & Green Theme */
@@ -457,334 +448,398 @@
             }
         }
     </style>
-</head>
-<body>
-    <div class="container-fluid py-4">
-        <!-- Header Section -->
-        <div class="row mb-4">
-            <div class="col-md-12">
-                <div class="page-header">
-                    <h2><i class="fas fa-university"></i> FinanceFlex Banking Dashboard</h2>
-                    <p style="color: white;">Comprehensive overview of your financial institution's performance</p>
-                </div>
-            </div>
-        </div>
 
-        <!-- Summary Cards -->
-        <div class="summary-cards">
-            <div class="summary-card orange">
-                <div class="summary-card-icon summary-card-orange">
-                    <i class="fas fa-wallet"></i>
-                </div>
-                <div class="summary-card-value">₦4.78T</div>
-                <div class="summary-card-label">Total Deposits</div>
-                <div class="summary-card-trend trend-up">
-                    <i class="fas fa-arrow-up"></i> 12.4% from last month
-                </div>
-            </div>
-            
-            <div class="summary-card green">
-                <div class="summary-card-icon summary-card-green">
-                    <i class="fas fa-hand-holding-usd"></i>
-                </div>
-                <div class="summary-card-value">₦3.70T</div>
-                <div class="summary-card-label">Total Loans</div>
-                <div class="summary-card-trend trend-up">
-                    <i class="fas fa-arrow-up"></i> 8.2% from last month
-                </div>
-            </div>
-            
-            <div class="summary-card orange">
-                <div class="summary-card-icon summary-card-orange">
-                    <i class="fas fa-users"></i>
-                </div>
-                <div class="summary-card-value">24,510</div>
-                <div class="summary-card-label">Active Customers</div>
-                <div class="summary-card-trend trend-up">
-                    <i class="fas fa-arrow-up"></i> 3.7% from last month
-                </div>
-            </div>
-            
-            <div class="summary-card green">
-                <div class="summary-card-icon summary-card-green">
-                    <i class="fas fa-exclamation-triangle"></i>
-                </div>
-                <div class="summary-card-value">5.8%</div>
-                <div class="summary-card-label">NPL Ratio</div>
-                <div class="summary-card-trend trend-down">
-                    <i class="fas fa-arrow-down"></i> 0.3% from last month
-                </div>
-            </div>
-        </div>
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Page Title -->
+    <!-- Dashboard Title -->
+<div class="text-center my-5">
+    <h3 class="fw-bold dashboard-title">
+        📊 FinanceFlex Performance Dashboard
+    </h3>
+    <div class="title-underline mx-auto mt-2"></div>
+</div>
 
-        <!-- Charts -->
-        <div class="row">
-            <div class="col-xl-8 col-lg-7 mb-4">
-                <div class="card">
-                    <div class="card-header">
-                        <h6 class="card-title orange">
-                            <i class="fas fa-chart-bar"></i> Deposits vs Loans Overview
-                        </h6>
-                        <div class="dropdown">
-                            <button class="dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="fas fa-ellipsis-v"></i>
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuButton">
-                                <li><a class="dropdown-item" href="#">Last 30 Days</a></li>
-                                <li><a class="dropdown-item" href="#">Last Quarter</a></li>
-                                <li><a class="dropdown-item" href="#">Last Year</a></li>
-                            </ul>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <div class="chart-container">
-                            <canvas id="depositsLoansChart"></canvas>
-                        </div>
-                        <div class="chart-legend">
-                            <div class="legend-item">
-                                <div class="legend-color" style="background-color: var(--primary-orange);"></div>
-                                <span>Deposits</span>
-                            </div>
-                            <div class="legend-item">
-                                <div class="legend-color" style="background-color: var(--primary-green);"></div>
-                                <span>Loans</span>
-                            </div>
-                            <div class="legend-item">
-                                <i class="fas fa-sync-alt"></i>
-                                <span>Updated 1 hour ago</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+<!-- Title Styling -->
+<style>
+    .dashboard-title {
+        background: linear-gradient(135deg, #f97316, #16a34a);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-size: 2rem;
+        letter-spacing: 0.5px;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+    }
 
-            <div class="col-xl-4 col-lg-5 mb-4">
-                <div class="card">
-                    <div class="card-header">
-                        <h6 class="card-title green">
-                            <i class="fas fa-users"></i> Customer Segmentation
-                        </h6>
-                        <i class="fas fa-user-tag text-orange"></i>
-                    </div>
-                    <div class="card-body">
-                        <div class="chart-container">
-                            <canvas id="customerSegmentationChart"></canvas>
-                        </div>
-                        <div class="mt-4 text-center">
-                            <div class="d-flex justify-content-center gap-3 mb-3">
-                                <div class="d-flex align-items-center gap-1">
-                                    <div class="legend-color" style="background-color: var(--primary-orange);"></div>
-                                    <span>Retail (62%)</span>
-                                </div>
-                                <div class="d-flex align-items-center gap-1">
-                                    <div class="legend-color" style="background-color: var(--primary-green);"></div>
-                                    <span>Business (28%)</span>
-                                </div>
-                                <div class="d-flex align-items-center gap-1">
-                                    <div class="legend-color" style="background-color: var(--success);"></div>
-                                    <span>Premium (10%)</span>
-                                </div>
-                            </div>
-                            <button class="btn btn-outline-orange">
-                                <i class="fas fa-download"></i> Export Data
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+    .title-underline {
+        width: 120px;
+        height: 5px;
+        border-radius: 4px;
+        background: linear-gradient(135deg, #f97316, #16a34a);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
 
-        <!-- Branch Performance Table -->
-        <div class="row">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header">
-                        <h6 class="card-title orange">
-                            <i class="fas fa-map-marker-alt"></i> Branch Performance
-                        </h6>
-                        <button class="btn btn-orange">
-                            <i class="fas fa-download"></i> Export Report
-                        </button>
-                    </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Branch</th>
-                                        <th>Location</th>
-                                        <th>Customers</th>
-                                        <th>Deposits</th>
-                                        <th>Loans</th>
-                                        <th>Profit</th>
-                                        <th>NPL Ratio</th>
-                                        <th>Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td><strong>Lagos Main</strong></td>
-                                        <td>Victoria Island</td>
-                                        <td>5,420</td>
-                                        <td class="text-orange">₦1.25T</td>
-                                        <td class="text-green">₦980B</td>
-                                        <td class="text-success">₦42.5B</td>
-                                        <td>4.2%</td>
-                                        <td><span class="badge badge-success">Excellent</span></td>
-                                    </tr>
-                                    <tr>
-                                        <td><strong>Abuja Central</strong></td>
-                                        <td>Central Business District</td>
-                                        <td>4,850</td>
-                                        <td class="text-orange">₦890B</td>
-                                        <td class="text-green">₦720B</td>
-                                        <td class="text-success">₦31.2B</td>
-                                        <td>5.1%</td>
-                                        <td><span class="badge badge-success">Excellent</span></td>
-                                    </tr>
-                                    <tr>
-                                        <td><strong>Port Harcourt</strong></td>
-                                        <td>GRA Phase 2</td>
-                                        <td>3,920</td>
-                                        <td class="text-orange">₦750B</td>
-                                        <td class="text-green">₦610B</td>
-                                        <td class="text-success">₦28.7B</td>
-                                        <td>5.8%</td>
-                                        <td><span class="badge badge-primary">Good</span></td>
-                                    </tr>
-                                    <tr>
-                                        <td><strong>Kano</strong></td>
-                                        <td>Zaria Road</td>
-                                        <td>3,450</td>
-                                        <td class="text-orange">₦680B</td>
-                                        <td class="text-green">₦550B</td>
-                                        <td class="text-success">₦25.1B</td>
-                                        <td>6.5%</td>
-                                        <td><span class="badge badge-primary">Good</span></td>
-                                    </tr>
-                                    <tr>
-                                        <td><strong>Ibadan</strong></td>
-                                        <td>Bodija</td>
-                                        <td>2,870</td>
-                                        <td class="text-orange">₦520B</td>
-                                        <td class="text-green">₦420B</td>
-                                        <td class="text-warning">₦18.3B</td>
-                                        <td>7.2%</td>
-                                        <td><span class="badge badge-warning">Fair</span></td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
+    @media (max-width: 768px) {
+        .dashboard-title {
+            font-size: 1.6rem;
+        }
+        .title-underline {
+            width: 80px;
+            height: 4px;
+        }
+    }
+</style>
+
+
+    <!-- Summary Cards -->
+<!-- Summary Cards -->
+<div class="row text-center mb-4">
+    <!-- Current Month Deposits -->
+    <div class="col-md-3 mb-3">
+        <div class="card border-0 shadow-sm summary-card" style="background: linear-gradient(135deg, #fef3c7, #fefce8); border-left: 6px solid #16a34a;">
+            <div class="card-body">
+                <h6 class="text-muted mb-2">Current Month Deposits</h6>
+                <h4 class="fw-bold" style="color: #16a34a;">
+                    ₦{{ current_month_deposits|floatformat:2|intcomma }}
+                </h4>
             </div>
         </div>
     </div>
 
-    <script>
-        // Deposits vs Loans Chart
-        const depositsLoansCtx = document.getElementById('depositsLoansChart').getContext('2d');
-        const depositsLoansChart = new Chart(depositsLoansCtx, {
-            type: 'line',
-            data: {
-                labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
-                datasets: [{
-                    label: "Deposits",
-                    tension: 0.3,
-                    backgroundColor: "rgba(249, 115, 22, 0.08)",
-                    borderColor: "rgba(249, 115, 22, 1)",
+    <!-- Current Month Loans -->
+    <div class="col-md-3 mb-3">
+        <div class="card border-0 shadow-sm summary-card" style="background: linear-gradient(135deg, #fee2e2, #fff7ed); border-left: 6px solid #f97316;">
+            <div class="card-body">
+                <h6 class="text-muted mb-2">Current Month Loans</h6>
+                <h4 class="fw-bold" style="color: #ea580c;">
+                    ₦{{ current_month_loans|floatformat:2|intcomma }}
+                </h4>
+            </div>
+        </div>
+    </div>
+
+    <!-- Accumulated Deposits -->
+    <div class="col-md-3 mb-3">
+        <div class="card border-0 shadow-sm summary-card" style="background: linear-gradient(135deg, #dcfce7, #f0fdf4); border-left: 6px solid #16a34a;">
+            <div class="card-body">
+                <h6 class="text-muted mb-2">Accumulated Deposits (YTD)</h6>
+                <h4 class="fw-bold" style="color: #15803d;">
+                    ₦{{ total_deposits|floatformat:2|intcomma }}
+                </h4>
+            </div>
+        </div>
+    </div>
+
+    <!-- Accumulated Loans -->
+    <div class="col-md-3 mb-3">
+        <div class="card border-0 shadow-sm summary-card" style="background: linear-gradient(135deg, #fff7ed, #fef3c7); border-left: 6px solid #f97316;">
+            <div class="card-body">
+                <h6 class="text-muted mb-2">Accumulated Loans (YTD)</h6>
+                <h4 class="fw-bold" style="color: #ea580c;">
+                    ₦{{ total_loans|floatformat:2|intcomma }}
+                </h4>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- NPL & Customer Count -->
+<div class="row text-center mb-5">
+    <div class="col-md-6 mb-3">
+        <div class="card border-0 shadow-sm summary-card" style="background: linear-gradient(135deg, #f1f5f9, #f8fafc); border-left: 6px solid #16a34a;">
+            <div class="card-body">
+                <h6 class="text-muted mb-2">Total Customers</h6>
+                <h4 class="fw-bold text-dark">{{ total_customers|intcomma }}</h4>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 mb-3">
+        <div class="card border-0 shadow-sm summary-card" style="background: linear-gradient(135deg, #fef3c7, #fff7ed); border-left: 6px solid #f59e0b;">
+            <div class="card-body">
+                <h6 class="text-muted mb-2">NPL Ratio</h6>
+                <h4 class="fw-bold" style="color: #f59e0b;">{{ npl_ratio }}%</h4>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Deposit vs Loan Trend Chart -->
+<div class="card shadow-lg border-0 mb-5" style="border-radius: 16px; overflow: hidden;">
+    <div class="card-header text-white fw-bold" 
+         style="background: linear-gradient(135deg, #f97316, #16a34a); font-size: 1.1rem;">
+        📈 Deposit vs Loan Trend (₦ Billion)
+    </div>
+    <div class="card-body" style="background: #fffefc;">
+        <canvas id="trendChart" style="height: 300px;"></canvas>
+    </div>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const ctx = document.getElementById('trendChart').getContext('2d');
+    const trendChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: {{ months|safe }},
+            datasets: [
+                {
+                    label: 'Deposits (₦B)',
+                    data: {{ deposits_trend|safe }},
+                    borderColor: '#16a34a',
+                    backgroundColor: 'rgba(22, 163, 74, 0.1)',
+                    borderWidth: 3,
                     pointRadius: 4,
-                    pointBackgroundColor: "rgba(249, 115, 22, 1)",
-                    pointBorderColor: "rgba(249, 115, 22, 1)",
-                    pointHoverRadius: 5,
-                    pointHoverBackgroundColor: "rgba(249, 115, 22, 1)",
-                    pointHitRadius: 10,
-                    pointBorderWidth: 2,
-                    data: [3.8, 3.9, 4.0, 4.1, 4.2, 4.3, 4.4, 4.5, 4.55, 4.6, 4.7, 4.78],
-                }, {
-                    label: "Loans",
-                    tension: 0.3,
-                    backgroundColor: "rgba(22, 163, 74, 0.08)",
-                    borderColor: "rgba(22, 163, 74, 1)",
+                    pointBackgroundColor: '#16a34a',
+                    tension: 0.4
+                },
+                {
+                    label: 'Loans (₦B)',
+                    data: {{ loans_trend|safe }},
+                    borderColor: '#f97316',
+                    backgroundColor: 'rgba(249, 115, 22, 0.1)',
+                    borderWidth: 3,
                     pointRadius: 4,
-                    pointBackgroundColor: "rgba(22, 163, 74, 1)",
-                    pointBorderColor: "rgba(22, 163, 74, 1)",
-                    pointHoverRadius: 5,
-                    pointHoverBackgroundColor: "rgba(22, 163, 74, 1)",
-                    pointHitRadius: 10,
-                    pointBorderWidth: 2,
-                    data: [2.9, 3.0, 3.1, 3.2, 3.3, 3.4, 3.45, 3.5, 3.55, 3.6, 3.65, 3.7],
-                }]
+                    pointBackgroundColor: '#f97316',
+                    tension: 0.4
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { 
+                    position: 'bottom',
+                    labels: { 
+                        usePointStyle: true,
+                        boxWidth: 8 
+                    }
+                },
+                tooltip: { 
+                    backgroundColor: '#1e293b',
+                    titleColor: '#fff',
+                    bodyColor: '#e2e8f0',
+                    cornerRadius: 8 
+                }
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return context.dataset.label + ': ₦' + context.parsed.y + 'T';
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: 'rgba(203, 213, 225, 0.2)' }
+                },
+                x: {
+                    grid: { color: 'transparent' }
+                }
+            }
+        }
+    });
+</script>
+
+<!-- Card Hover Glow -->
+<style>
+    .summary-card {
+        transition: all 0.3s ease;
+        border-radius: 16px;
+    }
+    .summary-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 18px rgba(0, 0, 0, 0.1);
+    }
+</style>
+
+
+    <!-- Customer Segmentation -->
+<!-- Customer Segmentation (Medium Pie Chart) -->
+<div class="card shadow-sm border-0 mb-5">
+    <div class="card-header bg-light fw-bold">Customer Segmentation</div>
+    <div class="card-body">
+        {% if segmentation %}
+        <div class="chart-container" style="max-width: 600px; height: 320px; margin: 0 auto;">
+            <canvas id="segmentationChart"></canvas>
+        </div>
+
+        <!-- Chart.js -->
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script>
+            const segmentationLabels = [{% for key in segmentation.keys %}'{{ key }}'{% if not forloop.last %}, {% endif %}{% endfor %}];
+            const segmentationValues = [{% for value in segmentation.values %}{{ value }}{% if not forloop.last %}, {% endif %}{% endfor %}];
+
+            const segCtx = document.getElementById('segmentationChart').getContext('2d');
+            new Chart(segCtx, {
+                type: 'pie', // You can change to 'doughnut' for donut style
+                data: {
+                    labels: segmentationLabels,
+                    datasets: [{
+                        data: segmentationValues,
+                        backgroundColor: [
+                            '#16a34a',  // green
+                            '#f97316',  // orange
+                            '#22c55e',  // light green
+                            '#f59e0b',  // amber
+                            '#15803d',  // dark green
+                            '#ea580c'   // dark orange
+                        ],
+                        borderColor: '#ffffff',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Customer Segmentation by Category',
+                            color: '#0f172a',
+                            font: { size: 16, weight: 'bold' }
+                        },
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: '#0f172a',
+                                font: { size: 13 }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const value = context.raw.toLocaleString();
+                                    return `${context.label}: ${value}`;
+                                }
                             }
                         }
                     }
+                }
+            });
+        </script>
+        {% else %}
+        <p class="text-muted text-center">No customer categories available.</p>
+        {% endif %}
+    </div>
+</div>
+
+
+    <!-- Branch Performance -->
+<!-- Branch Performance Summary (Enhanced Design) -->
+<div class="card shadow-lg border-0 mb-5" style="border-radius: 16px; overflow: hidden;">
+    <div class="card-header text-white fw-bold" 
+         style="background: linear-gradient(135deg, #fb923c, #16a34a); font-size: 1.1rem;">
+        🏢 Branch Performance Summary
+    </div>
+    <div class="card-body p-4">
+        <div class="table-responsive">
+            <table class="table align-middle mb-0" style="border-collapse: separate; border-spacing: 0 0.5rem;">
+                <thead style="background-color: #f1f5f9;">
+                    <tr class="text-center text-dark">
+                        <th class="fw-semibold text-uppercase small py-3">Branch</th>
+                        <th class="fw-semibold text-uppercase small py-3">Code</th>
+                        <th class="fw-semibold text-uppercase small py-3">Customers</th>
+                        <th class="fw-semibold text-uppercase small py-3">Total Deposits</th>
+                        <th class="fw-semibold text-uppercase small py-3">Total Loans</th>
+                        <th class="fw-semibold text-uppercase small py-3">Profit (Est.)</th>
+                        <th class="fw-semibold text-uppercase small py-3">NPL Ratio (%)</th>
+                        <th class="fw-semibold text-uppercase small py-3">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for b in branch_data %}
+                    <tr class="text-center shadow-sm"
+                        style="background-color: #ffffff; transition: 0.3s; border-radius: 12px;">
+                        <td class="fw-semibold text-dark">{{ b.name }}</td>
+                        <td class="text-muted">{{ b.location }}</td>
+                        <td class="fw-semibold">{{ b.customers|intcomma }}</td>
+                        <td class="text-success fw-bold">₦{{ b.deposits|floatformat:2|intcomma }}</td>
+                        <td class="text-danger fw-bold">₦{{ b.loans|floatformat:2|intcomma }}</td>
+                        <td class="fw-semibold text-primary">₦{{ b.profit|floatformat:2|intcomma }}</td>
+                        <td class="fw-semibold">{{ b.npl_ratio }}</td>
+                        <td>
+                            {% if b.status == "Excellent" %}
+                                <span class="badge rounded-pill px-3 py-2" 
+                                      style="background-color: rgba(34,197,94,0.15); color: #15803d;">
+                                      {{ b.status }}
+                                </span>
+                            {% elif b.status == "Good" %}
+                                <span class="badge rounded-pill px-3 py-2" 
+                                      style="background-color: rgba(37,99,235,0.15); color: #1e40af;">
+                                      {{ b.status }}
+                                </span>
+                            {% elif b.status == "Fair" %}
+                                <span class="badge rounded-pill px-3 py-2" 
+                                      style="background-color: rgba(245,158,11,0.15); color: #b45309;">
+                                      {{ b.status }}
+                                </span>
+                            {% else %}
+                                <span class="badge rounded-pill px-3 py-2" 
+                                      style="background-color: rgba(239,68,68,0.15); color: #b91c1c;">
+                                      {{ b.status }}
+                                </span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-4">
+                            No branch performance data available.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Table Row Hover Style -->
+<style>
+    .table tbody tr:hover {
+        transform: scale(1.01);
+        background-color: #f9fafb !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+</style>
+
+</div>
+
+<!-- Chart.js Script -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const ctx = document.getElementById('trendChart').getContext('2d');
+    const trendChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: {{ months|safe }},
+            datasets: [
+                {
+                    label: 'Deposits (₦B)',
+                    data: {{ deposits_trend|safe }},
+                    borderColor: 'green',
+                    borderWidth: 2,
+                    fill: false,
+                    tension: 0.3
                 },
-                scales: {
-                    y: {
-                        beginAtZero: false,
-                        ticks: {
-                            callback: function(value) {
-                                return '₦' + value + 'T';
-                            },
-                            color: '#64748b'
-                        },
-                        grid: {
-                            color: 'rgba(0, 0, 0, 0.05)'
-                        }
-                    },
-                    x: {
-                        grid: {
-                            display: false
-                        },
-                        ticks: {
-                            color: '#64748b'
-                        }
-                    }
-                },
-                interaction: {
-                    intersect: false,
-                    mode: 'index'
+                {
+                    label: 'Loans (₦B)',
+                    data: {{ loans_trend|safe }},
+                    borderColor: 'red',
+                    borderWidth: 2,
+                    fill: false,
+                    tension: 0.3
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'bottom' },
+                tooltip: { mode: 'index', intersect: false }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true
                 }
             }
-        });
-
-        // Customer Segmentation Chart
-        const customerSegmentationCtx = document.getElementById('customerSegmentationChart').getContext('2d');
-        const customerSegmentationChart = new Chart(customerSegmentationCtx, {
-            type: 'doughnut',
-            data: {
-                labels: ["Retail", "Business", "Premium"],
-                datasets: [{
-                    data: [62, 28, 10],
-                    backgroundColor: ['#f97316', '#16a34a', '#22c55e'],
-                    borderWidth: 0,
-                    hoverOffset: 10
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                },
-                cutout: '75%'
-            }
-        });
-    </script>
-</body>
-</html>
+        }
+    });
+</script>
 {% endblock %}

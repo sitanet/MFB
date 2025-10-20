@@ -2,59 +2,147 @@
 {% load static %}
 
 {% block content %}
-    {% include 'includes/alerts.html' %}
-    <div class="container-fluid">
-        <div class="row column_title">
-            <div class="col-md-12">
-                <div class="page_title">
-                    <h2>Balance Sheet</h2>
-                </div>
+{% include 'includes/alerts.html' %}
+
+<style>
+    :root {
+        --primary-orange: #f97316;
+        --primary-green: #16a34a;
+        --primary-green-dark: #15803d;
+        --light-bg: #f9fafb;
+        --gray-400: #94a3b8;
+    }
+
+    .page_title h2 {
+        font-weight: 700;
+        font-size: 2rem;
+        background: linear-gradient(135deg, var(--primary-orange), var(--primary-green));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        text-align: center;
+        margin-top: 1rem;
+        margin-bottom: 2rem;
+        letter-spacing: 0.5px;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+    }
+
+    .chart_of_account {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        animation: fadeInUp 0.6s ease-in-out;
+        max-width: 700px;
+        margin: 0 auto;
+        background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+    }
+
+    .chart_of_account label {
+        font-weight: 600;
+        color: var(--gray-400);
+    }
+
+    .chart_of_account input[type="date"] {
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        transition: all 0.2s ease;
+    }
+
+    .chart_of_account input[type="date"]:focus {
+        border-color: var(--primary-green);
+        box-shadow: 0 0 0 0.2rem rgba(22, 163, 74, 0.2);
+    }
+
+    .btn-success {
+        background: linear-gradient(135deg, var(--primary-orange), var(--primary-green));
+        border: none;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        transition: all 0.3s ease;
+        padding: 0.6rem 1.5rem;
+        border-radius: 10px;
+    }
+
+    .btn-success:hover {
+        background: linear-gradient(135deg, var(--primary-green-dark), var(--primary-orange));
+        transform: translateY(-2px);
+        box-shadow: 0 4px 10px rgba(22, 163, 74, 0.25);
+    }
+
+    .form-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1.5rem;
+    }
+
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @media (max-width: 768px) {
+        .chart_of_account {
+            padding: 1.5rem;
+        }
+        .page_title h2 {
+            font-size: 1.75rem;
+        }
+    }
+</style>
+
+<div class="container-fluid">
+    <div class="row column_title">
+        <div class="col-md-12">
+            <div class="page_title">
+                <h2>📘 Balance Sheet</h2>
             </div>
         </div>
-        <form id="generateForm" method="post" action="{% url 'balance_sheet' %}" class="chart_of_account p-5 shadow-lg rounded rounded-5">
-            {% csrf_token %}
-            <div class="form-row">
-                <div class="form-group col-md-3">
-                    <label for="start_date">Select Start Date</label>
-                    <input type="date" class="form-control bg-light" name="start_date" id="start_date" value="{{ company_date }}">
-                </div>
-                <div class="form-group col-md-3">
-                    <label for="end_date">Select End Date</label>
-                    <input type="date" class="form-control bg-light" name="end_date" id="end_date" value="{{ company_date }}">
-                </div>
-            </div>
-            <button type="submit" class="btn w- btn-success mt-4 shadow-sm">Submit</button>
-        </form>
     </div>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            var startDateInput = document.getElementById('start_date');
-            var endDateInput = document.getElementById('end_date');
-            var companyDate = '{{ company_date }}';
 
-            startDateInput.addEventListener('change', function() {
-                var selectedStartDate = new Date(startDateInput.value);
-                var selectedEndDate = new Date(endDateInput.value);
-                var companyDateObj = new Date(companyDate);
+    <form id="generateForm" method="post" action="{% url 'balance_sheet' %}" class="chart_of_account p-5 shadow-lg">
+        {% csrf_token %}
+        <div class="form-row">
+            <div class="form-group col-md-6">
+                <label for="start_date">Select Start Date</label>
+                <input type="date" class="form-control bg-light" name="start_date" id="start_date" value="{{ company_date }}">
+            </div>
+            <div class="form-group col-md-6">
+                <label for="end_date">Select End Date</label>
+                <input type="date" class="form-control bg-light" name="end_date" id="end_date" value="{{ company_date }}">
+            </div>
+        </div>
+        <div class="text-center mt-4">
+            <button type="submit" class="btn btn-success shadow-sm">Generate Report</button>
+        </div>
+    </form>
+</div>
 
-                if (selectedStartDate > companyDateObj || selectedEndDate > companyDateObj) {
-                    alert('Please select a date not greater than the session date.');
-                    startDateInput.value = '{{ company_date }}';
-                    endDateInput.value = '{{ company_date }}';
-                }
-            });
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var startDateInput = document.getElementById('start_date');
+        var endDateInput = document.getElementById('end_date');
+        var companyDate = '{{ company_date }}';
 
-            endDateInput.addEventListener('change', function() {
-                var selectedStartDate = new Date(startDateInput.value);
-                var selectedEndDate = new Date(endDateInput.value);
-                var companyDateObj = new Date(companyDate);
+        function validateDate() {
+            var start = new Date(startDateInput.value);
+            var end = new Date(endDateInput.value);
+            var company = new Date(companyDate);
 
-                if (selectedStartDate > companyDateObj || selectedEndDate > companyDateObj) {
-                    alert('Please select a date not greater than the session date.');
-                    startDateInput.value = '{{ company_date }}';
-                    endDateInput.value = '{{ company_date }}';
-                }
-            });
-        });
-    </script>
+            if (start > company || end > company) {
+                alert('⚠️ Please select a date not greater than the session date.');
+                startDateInput.value = '{{ company_date }}';
+                endDateInput.value = '{{ company_date }}';
+            }
+        }
+
+        startDateInput.addEventListener('change', validateDate);
+        endDateInput.addEventListener('change', validateDate);
+    });
+</script>
 {% endblock %}

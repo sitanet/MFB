@@ -29,8 +29,8 @@ class BranchForm(forms.ModelForm):
         fields = [
             'branch_code', 'branch_name', 'logo', 'address',
             'cac_number', 'license_number', 'company_type', 'bvn_number', 'plan',
-            'session_date', 'system_date_date', 'session_status',
-            'contact_person', 'contact_phone_no', 'contact_email',  # 👈 ensure email field is here
+            'session_date', 'system_date_date', 'session_status'
+             # 👈 ensure email field is here
         ]
         widgets = {
             'branch_name': forms.TextInput(attrs={'placeholder': 'e.g. Akobo Branch'}),

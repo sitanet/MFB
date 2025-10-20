@@ -31,8 +31,8 @@ class Memtrans(models.Model):
     amount = models.DecimalField(max_digits=10, decimal_places=2) 
     description = models.CharField(max_length=100, null=True, blank=True) 
     error = models.CharField(max_length=10, null=True, blank=True, default='A') 
-    type = models.CharField(max_length=1, null=True, blank=True, default='N')
-    account_type = models.CharField(max_length=1, null=True, blank=True, default='N')
+    type = models.CharField(max_length=10, null=True, blank=True, default='N') 
+    account_type = models.CharField(max_length=10, null=True, blank=True, default='N')
     code = models.CharField(max_length=3, null=True, blank=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)  # Add user field
     trx_type = models.CharField(max_length=20, null=True, blank=True, default='')

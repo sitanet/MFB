@@ -30,9 +30,9 @@ urlpatterns = [
     path('admin/', admin.site.urls),
 
     # api
-    path('api/', include('api.urls')),  # include api app routes
-    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),  # login
-    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('api/v1/', include('api.urls')),  # include api app routes
+    # path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),  # login
+    # path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
         # end api
 
     path('accounts_admin/', include('accounts_admin.urls')),

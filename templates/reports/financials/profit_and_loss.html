@@ -1,126 +1,271 @@
 {% extends 'base.html' %}
 {% load static %}
 
+{% block content %}
+{% include 'includes/alerts.html' %}
+
 <style>
-    /* Your existing CSS styles remain the same */
     body {
-        font-family: 'Arial', sans-serif;
-        background-color: #f0f4f8;
+        font-family: 'Poppins', sans-serif;
+        background-color: #f4f6f9;
     }
-    /* ... (keep all your existing styles) ... */
+
+    .container-fluid {
+        padding: 40px;
+    }
+
+    /* Page Title */
+    .page_title h2 {
+        font-weight: 700;
+        color: #2c3e50;
+        text-align: center;
+        margin-bottom: 40px;
+        position: relative;
+    }
+
+    .page_title h2::after {
+        content: "";
+        width: 100px;
+        height: 4px;
+        background: linear-gradient(90deg, #f39c12, #27ae60);
+        display: block;
+        margin: 10px auto 0;
+        border-radius: 4px;
+    }
+
+    /* Form Card */
+    .chart_of_account {
+        background: #fff;
+        border-radius: 18px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+        transition: all 0.3s ease;
+        border-top: 5px solid #27ae60;
+    }
+
+    .chart_of_account:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+    }
+
+    label {
+        font-weight: 600;
+        color: #34495e;
+    }
+
+    .form-control {
+        border-radius: 10px;
+        border: 1px solid #dee2e6;
+        transition: all 0.2s ease;
+    }
+
+    .form-control:focus {
+        border-color: #f39c12;
+        box-shadow: 0 0 5px rgba(243, 156, 18, 0.3);
+    }
+
+    /* Buttons */
+    .btn-success {
+        background: linear-gradient(90deg, #27ae60, #f39c12);
+        border: none;
+        color: #fff;
+        border-radius: 10px;
+        padding: 10px 25px;
+        font-weight: 600;
+        transition: all 0.2s ease;
+    }
+
+    .btn-success:hover {
+        transform: scale(1.05);
+        background: linear-gradient(90deg, #f39c12, #27ae60);
+    }
+
+    /* Report Card */
+    .white_shd {
+        background: #fff;
+        border-radius: 20px;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+        padding: 30px;
+        border-top: 6px solid #f39c12;
+    }
+
+    .office-address {
+        font-style: italic;
+        color: #7f8c8d;
+    }
+
+    .thead-dark th {
+        background: linear-gradient(90deg, #27ae60, #f39c12);
+        color: #fff;
+        border: none;
+    }
+
+    .table {
+        border-radius: 10px;
+        overflow: hidden;
+        background: #fff;
+    }
+
+    .table th, .table td {
+        padding: 14px;
+        vertical-align: middle;
+    }
+
+    .table tbody tr:nth-child(even) {
+        background-color: #f9fbfd;
+    }
+
+    .table tbody tr:hover {
+        background-color: #fef7ef;
+        transition: 0.2s;
+    }
+
+    tfoot td {
+        font-weight: bold;
+        background-color: #fafafa;
+    }
+
+    .net-income {
+        font-weight: 700;
+        color: #27ae60;
+        font-size: 1.1rem;
+    }
+
+    .net-income.negative {
+        color: #e74c3c;
+    }
+
+    /* Print Button */
+    .btn-print {
+        float: right;
+        background: #f39c12;
+        color: #fff;
+        border: none;
+        border-radius: 10px;
+        padding: 10px 20px;
+        font-weight: 600;
+        transition: all 0.2s ease;
+    }
+
+    .btn-print:hover {
+        background: #27ae60;
+        transform: scale(1.05);
+    }
+
+    @media print {
+        body * { visibility: hidden; }
+        .printable-area, .printable-area * { visibility: visible; }
+        .printable-area { position: absolute; left: 0; top: 0; width: 100%; padding: 20px; }
+        .btn-print { display: none; }
+    }
+
+    @media (max-width: 768px) {
+        .chart_of_account { padding: 25px; }
+        .page_title h2 { font-size: 1.4rem; }
+    }
 </style>
 
-{% block content %}
-    <div class="container-fluid">
-        <div class="row column_title">
-            <div class="col-md-12">
-                <div class="page_title text-center">
-                    <h2>Profit and Loss Statement</h2>
-                </div>
+<div class="container-fluid">
+    <div class="row column_title">
+        <div class="col-md-12">
+            <div class="page_title">
+                <h2>Profit and Loss Statement</h2>
             </div>
         </div>
-
-        {% if not balance_sheet_data %}
-        <!-- Show form if no report is displayed -->
-        <form id="generateForm" method="post" action="{% url 'profit_and_loss' %}" class="chart_of_account p-5 shadow-lg rounded">
-            {% csrf_token %}
-            <div class="form-row">
-                <div class="form-group col-md-3">
-                    <label for="start_date">Select Start Date</label>
-                    <input type="date" class="form-control bg-light" name="start_date" id="start_date" value="{{ start_date|default:'' }}">
-                </div>
-                <div class="form-group col-md-3">
-                    <label for="end_date">Select End Date</label>
-                    <input type="date" class="form-control bg-light" name="end_date" id="end_date" value="{{ end_date|default:'' }}">
-                </div>
-                <div class="form-group col-md-3">
-                    <label for="branch">Select Branch</label>
-                    <select class="form-control bg-light" name="branch" id="branch">
-                        <option value="">All Branches</option>
-                        {% for branch in branches %}
-                            <option value="{{ branch.id }}" {% if branch.id == selected_branch %}selected{% endif %}>{{ branch.branch_name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-            </div>
-            <button type="submit" class="btn w- btn-success mt-4 shadow-sm">Submit</button>
-        </form>
-        {% endif %}
-
-        {% if balance_sheet_data %}
-        <!-- Display report only when balance_sheet_data is available -->
-        <div class="col-md-12 printable-area">
-            <div class="white_shd full margin_bottom_30">
-                <div class="table_section padding_infor_info">
-                    <div class="row">
-                        <div class="col-md-12 text-center">
-                            {% if branch %}
-                                <h4>{{ branch.branch_name }}</h4>
-                                <p class="office-address">{{ branch.office_address }}</p>
-                            {% endif %}
-                            <h5 style="color: #1115f0;">Statement of Profit or Loss</h5>
-                        </div>
-                    </div>
-                    <div class="row" style="padding: 10px; border-radius: 5px;">
-                        <div class="col-md-6">
-                            <p>Reporting from <strong>{{ start_date }}</strong> To <strong>{{ end_date }}</strong></p>
-                        </div>
-                    </div>
-
-                    <div class="table-responsive">
-                        <table class="table">
-                            <thead class="thead-dark">
-                                <tr>
-                                    <th>GL No.</th>
-                                    <th>Account Name</th>
-                                    <th>Debit</th>
-                                    <th>Credit</th>
-                                    <th>Balance</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for entry in balance_sheet_data %}
-                                    <tr>
-                                        <td>{{ entry.gl_no }}</td>
-                                        <td>{{ entry.gl_name }}</td>
-                                        <td>{{ entry.credit }}</td>
-                                        <td>{{ entry.debit }}</td>
-                                        <td>
-                                            {% if entry.balance < 0 %}
-                                                <span style="color:red;">{{ entry.balance }}</span>
-                                            {% else %}
-                                                {{ entry.balance }}
-                                            {% endif %}
-                                        </td>
-                                    </tr>
-                                {% endfor %}
-                            </tbody>
-                            <tfoot>
-                                <tr>
-                                    <td colspan="3"><strong>Total Debit:</strong> {{ total_credit }}</td>
-                                    <td colspan="2"><strong>Total Income:</strong> {{ subtotal_4 }}</td>
-                                </tr>
-                                <tr>
-                                    <td colspan="3"><strong>Total Credit:</strong> {{ total_debit }}</td>
-                                    <td colspan="2"><strong>Total Expenses:</strong> {{ subtotal_5 }}</td>
-                                </tr>
-                                <tr>
-                                    <td colspan="4" style="text-align: right;"><strong>Net Income:</strong></td>
-                                    <td>
-                                        {% if net_income < 0 %}
-                                            <span style="color:red;">{{ net_income }}</span>
-                                        {% else %}
-                                        <span style="color:red;">{{ net_income }}</span>
-                                           
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% endif %}
     </div>
+
+    {% if not balance_sheet_data %}
+    <!-- Display form when no report -->
+    <form id="generateForm" method="post" action="{% url 'profit_and_loss' %}" class="chart_of_account p-5">
+        {% csrf_token %}
+        <div class="form-row">
+            <div class="form-group col-md-3">
+                <label for="start_date">Start Date</label>
+                <input type="date" class="form-control bg-light" name="start_date" id="start_date" value="{{ start_date|default:'' }}">
+            </div>
+            <div class="form-group col-md-3">
+                <label for="end_date">End Date</label>
+                <input type="date" class="form-control bg-light" name="end_date" id="end_date" value="{{ end_date|default:'' }}">
+            </div>
+            <div class="form-group col-md-3">
+                <label for="branch">Branch</label>
+                <select class="form-control bg-light" name="branch" id="branch">
+                    <option value="">All Branches</option>
+                    {% for branch in branches %}
+                        <option value="{{ branch.id }}" {% if branch.id == selected_branch %}selected{% endif %}>{{ branch.branch_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <button type="submit" class="btn btn-success mt-4 shadow-sm">Generate Report</button>
+    </form>
+    {% endif %}
+
+    {% if balance_sheet_data %}
+    <!-- Report Section -->
+    <div class="col-md-12 printable-area mt-4">
+        <div class="white_shd full margin_bottom_30">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="text-primary fw-bold">Statement of Profit or Loss</h5>
+                <button onclick="window.print()" class="btn-print shadow-sm">🖨 Print</button>
+            </div>
+
+            <div class="text-center mb-4">
+                {% if branch %}
+                    <h4 class="fw-bold">{{ branch.branch_name }}</h4>
+                    <p class="office-address">{{ branch.office_address }}</p>
+                {% endif %}
+                <p class="text-muted">From <strong>{{ start_date }}</strong> To <strong>{{ end_date }}</strong></p>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover">
+                    <thead class="thead-dark">
+                        <tr>
+                            <th>GL No.</th>
+                            <th>Account Name</th>
+                            <th>Debit (₦)</th>
+                            <th>Credit (₦)</th>
+                            <th>Balance (₦)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for entry in balance_sheet_data %}
+                            <tr>
+                                <td>{{ entry.gl_no }}</td>
+                                <td>{{ entry.gl_name }}</td>
+                                <td>{{ entry.credit|floatformat:2 }}</td>
+                                <td>{{ entry.debit|floatformat:2 }}</td>
+                                <td>
+                                    {% if entry.balance < 0 %}
+                                        <span style="color:red;">{{ entry.balance|floatformat:2 }}</span>
+                                    {% else %}
+                                        {{ entry.balance|floatformat:2 }}
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="3"><strong>Total Debit:</strong> {{ total_credit|floatformat:2 }}</td>
+                            <td colspan="2"><strong>Total Income:</strong> {{ subtotal_4|floatformat:2 }}</td>
+                        </tr>
+                        <tr>
+                            <td colspan="3"><strong>Total Credit:</strong> {{ total_debit|floatformat:2 }}</td>
+                            <td colspan="2"><strong>Total Expenses:</strong> {{ subtotal_5|floatformat:2 }}</td>
+                        </tr>
+                        <tr>
+                            <td colspan="4" class="text-end"><strong>Net Income:</strong></td>
+                            <td class="{% if net_income < 0 %}net-income negative{% else %}net-income{% endif %}">
+                                {{ net_income|floatformat:2 }}
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
 {% endblock %}

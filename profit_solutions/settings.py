@@ -57,6 +57,8 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'api',
+    'django_filters',
+    'corsheaders',
    
 ]
 
@@ -70,8 +72,20 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     # 'audit_trail.middleware.AuditMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
+  
 
 ]
+
+
+
+
+# Allows any port on localhost for CORS
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^http://localhost(:\d+)?$",
+    r"^http://127\.0\.0\.1(:\d+)?$",
+]
+
 
 ROOT_URLCONF = 'profit_solutions.urls'
 
@@ -177,6 +191,40 @@ AUTH_PASSWORD_VALIDATORS = [
 #     ),
 # }
 
+
+
+
+REST_FRAMEWORK = {
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",  # safer default
+    ],
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+        # Optional keep Session for admin/browsable API:
+        # "rest_framework.authentication.SessionAuthentication",
+        # Optional during local dev only:
+        # "rest_framework.authentication.BasicAuthentication",
+    ],
+    "DEFAULT_FILTER_BACKENDS": [
+        "django_filters.rest_framework.DjangoFilterBackend",
+        "rest_framework.filters.SearchFilter",
+        "rest_framework.filters.OrderingFilter",
+    ],
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "PAGE_SIZE": 20,
+}
+
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:XXXXX",
+    "http://127.0.0.1:XXXXX",
+]
+CORS_ALLOW_CREDENTIALS = True
+
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:XXXXX",
+    "http://127.0.0.1:XXXXX",
+]
 
 
 # Internationalization
