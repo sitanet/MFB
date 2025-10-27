@@ -1,2 +1,88 @@
-*.pyc
+# =========================================
+# Django / Python
+# =========================================
 __pycache__/
+*.py[cod]
+*.pyc
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+*.manifest
+*.spec
+
+# SQLite database (ignore if using PostgreSQL)
+db.sqlite3
+*.db
+
+# Virtual environment
+venv/
+env/
+ENV/
+.venv/
+
+# Log files
+*.log
+logs/
+*.pot
+*.mo
+
+# Unit test / coverage reports
+.coverage
+.tox/
+nosetests.xml
+coverage.xml
+*.cover
+htmlcov/
+
+# Static and media files (collected)
+staticfiles/
+media/
+static/
+photo/
+sign/
+
+# Local settings and environment files
+.env
+.env.*
+*.local
+*.bak
+
+# IDEs and editors
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Migrations (optional: comment out if you want to track them)
+# */migrations/
+# !*/migrations/__init__.py
+
+# Byte-compiled and cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Backup and temp files
+*.swp
+*.swo
+*.tmp
+*.temp
+*.bak
+
+# PyInstaller
+build/
+dist/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+
+# =========================================
+# End of file
+# =========================================

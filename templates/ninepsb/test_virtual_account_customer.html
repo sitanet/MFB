@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Create Virtual Account - 9PSB</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f9f9f9;
+            margin: 40px auto;
+            max-width: 600px;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h2 { color: #333; }
+        p { font-size: 15px; }
+        form { margin-top: 20px; }
+        button {
+            background: #007bff;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover { background: #0056b3; }
+        .msg {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .success { background: #e7f9ed; color: #0a8a3e; }
+        .error { background: #ffe9e9; color: #c9302c; }
+        .customer-box {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid #007bff;
+        }
+    </style>
+</head>
+<body>
+    <h2>9PSB Virtual Account Creation Test</h2>
+
+    <div class="customer-box">
+        <p><strong>Customer:</strong> {{ customer.get_full_name }}</p>
+        <p><strong>Email:</strong> {{ customer.email }}</p>
+        <p><strong>Phone:</strong> {{ customer.phone_no }}</p>
+        <p><strong>Wallet Account:</strong> {{ customer.wallet_account|default:"Not yet created" }}</p>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit">Create Virtual Account</button>
+    </form>
+
+    {% if messages %}
+        {% for msg in messages %}
+            <div class="msg {% if msg.tags %}{{ msg.tags }}{% endif %}">{{ msg|safe }}</div>
+        {% endfor %}
+    {% endif %}
+
+    {% if result %}
+        <h3>Response Data</h3>
+        <pre>{{ result|json_script:"response" }}</pre>
+    {% endif %}
+</body>
+</html>

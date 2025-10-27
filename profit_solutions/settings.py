@@ -15,6 +15,22 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+import environ
+import os
+
+env = environ.Env()
+environ.Env.read_env()  # loads .env file
+
+
+
+from dotenv import load_dotenv
+
+load_dotenv()  # loads .env automatically
+
+PSB_BASE_URL = os.getenv("PSB_BASE_URL", "https://baastest.9psb.com.ng/ipaymw-api/v1")
+PSB_PUBLIC_KEY = os.getenv("PSB_PUBLIC_KEY")
+PSB_PRIVATE_KEY = os.getenv("PSB_PRIVATE_KEY")
+
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
@@ -59,6 +75,7 @@ INSTALLED_APPS = [
     'api',
     'django_filters',
     'corsheaders',
+    'ninepsb',
    
 ]
 
@@ -136,19 +153,19 @@ CACHES = {
 
 
 # LOCAL DATABASE
+import os
+
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        # 'NAME': 'FinanceflexData',
-        # 'NAME': 'ENUGU_DEMO',
-        'NAME': 'Flex_Data',
-        'USER': 'postgres',
-        'PASSWORD': 'People',
-        'HOST': 'localhost',
-        # 'HOST': 'finance-flex.ctqg0cgman7j.af-south-1.rds.amazonaws.com',  # Or your database host
-        'PORT': '5432',          
+        'ENGINE': os.environ.get('DB_ENGINE', 'django.db.backends.postgresql'),
+        'NAME': os.environ.get('DB_NAME'),
+        'USER': os.environ.get('DB_USER'),
+        'PASSWORD': os.environ.get('DB_PASSWORD'),
+        'HOST': os.environ.get('DB_HOST', 'localhost'),
+        'PORT': os.environ.get('DB_PORT', '5432'),
     }
 }
+
 
 # PRODUCTION DATABASE
 # DATABASES = {
@@ -262,22 +279,26 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'accounts.User'  # Example for a custom user model
 
 
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = "smtp.zoho.com"
-EMAIL_PORT = 587  # Use 465 if using SSL
-EMAIL_USE_TLS = True  # Set to False if using SSL
-EMAIL_USE_SSL = False  # Set to True if using SSL
-EMAIL_HOST_USER = "izekor@sitanetorbit.com"
-EMAIL_HOST_PASSWORD = "7AYUsXMyVN44"  # Use App Password if 2FA is enabled
-DEFAULT_FROM_EMAIL = "FinanceFlex <izekor@sitanetorbit.com>"
 
-# SMS API Configuration
-TERMII_API_KEY = "TLDfcyAogBKwuMYnxvPHatThWJqfkOFffeNMTNJaucRjzaoSSeTHugQkzIgDDS"
-# TERMII_SENDER_ID = "N-Alert"
-TERMII_SENDER_ID = "FinanceFlex"
-TERMII_SMS_URL = "https://api.ng.termii.com/api/sms/send"
-SMS_DELIVERY_WEBHOOK_URL = None
+# =====================
+# 📧 EMAIL CONFIG
+# =====================
+EMAIL_BACKEND = env("EMAIL_BACKEND", default="django.core.mail.backends.smtp.EmailBackend")
+EMAIL_HOST = env("EMAIL_HOST", default="smtp.zoho.com")
+EMAIL_PORT = env.int("EMAIL_PORT", default=587)
+EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
+EMAIL_USE_SSL = env.bool("EMAIL_USE_SSL", default=False)
+EMAIL_HOST_USER = env("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD")
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default=EMAIL_HOST_USER)
 
+# =====================
+# 📱 SMS CONFIG (Termii)
+# =====================
+TERMII_API_KEY = env("TERMII_API_KEY")
+TERMII_SENDER_ID = env("TERMII_SENDER_ID", default="FinanceFlex")
+TERMII_SMS_URL = env("TERMII_SMS_URL", default="https://api.ng.termii.com/api/sms/send")
+SMS_DELIVERY_WEBHOOK_URL = env("SMS_DELIVERY_WEBHOOK_URL", default=None)
 
 
 

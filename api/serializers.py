@@ -8,6 +8,8 @@ from customers.models import Customer, KYCDocument
 from loans.models import Loans, LoanHist
 from transactions.models import Memtrans
 
+from .helpers import normalize_account
+
 
 
 class RoleSerializer(serializers.ModelSerializer):
@@ -219,3 +221,108 @@ class PinVerifySerializer(serializers.Serializer):
         if not PIN_REGEX.match(value):
             raise serializers.ValidationError("PIN must be exactly 4 digits.")
         return value
+
+
+
+
+
+
+class CardFundSerializer(serializers.Serializer):
+    from_gl_no = serializers.CharField()
+    from_ac_no = serializers.CharField()
+    amount = serializers.DecimalField(max_digits=18, decimal_places=2)
+
+    def validate(self, data):
+        fg, fa = normalize_account(data.get("from_gl_no"), data.get("from_ac_no"))
+        amt = data.get("amount")
+        if amt is None or amt <= 0:
+            raise serializers.ValidationError({"amount": "Amount must be greater than zero"})
+        data["from_gl_no"], data["from_ac_no"] = fg, fa
+        return data
+
+
+class CardWithdrawSerializer(serializers.Serializer):
+    to_gl_no = serializers.CharField()
+    to_ac_no = serializers.CharField()
+    amount = serializers.DecimalField(max_digits=18, decimal_places=2)
+
+    def validate(self, data):
+        tg, ta = normalize_account(data.get("to_gl_no"), data.get("to_ac_no"))
+        amt = data.get("amount")
+        if amt is None or amt <= 0:
+            raise serializers.ValidationError({"amount": "Amount must be greater than zero"})
+        data["to_gl_no"], data["to_ac_no"] = tg, ta
+        return data
+
+
+from decimal import Decimal
+from rest_framework import serializers
+from customers.models import VirtualCard
+
+class VirtualCardApplySerializer(serializers.Serializer):
+    confirm = serializers.BooleanField(default=True)
+
+class VirtualCardApproveSerializer(serializers.Serializer):
+    approve = serializers.BooleanField(default=True)
+
+class VirtualCardSerializer(serializers.ModelSerializer):
+    last4 = serializers.SerializerMethodField()
+    holder = serializers.SerializerMethodField()
+    expiry = serializers.SerializerMethodField()
+
+    class Meta:
+        model = VirtualCard
+        fields = [
+            "id", "status",
+            "gl_no", "ac_no",
+            "last4", "holder", "expiry",
+            "created_at", "activated_at",
+        ]
+
+    def get_last4(self, obj):
+        num = (obj.card_number or "").replace(" ", "")
+        return num[-4:] if len(num) >= 4 else ""
+
+    def get_holder(self, obj):
+        user = getattr(getattr(obj, "customer", None), "user", None)
+        if user:
+            name = user.get_full_name()
+            return name or user.get_username()
+        return ""
+
+    def get_expiry(self, obj):
+        mm = str(obj.expiry_month).zfill(2)
+        yy = str(obj.expiry_year)[-2:]
+        return f"{mm}/{yy}"
+
+
+# NEW: fund/withdraw payloads
+from decimal import Decimal
+from rest_framework import serializers
+
+
+
+class CardFundSerializer(serializers.Serializer):
+    amount = serializers.DecimalField(max_digits=18, decimal_places=2, min_value=Decimal("0.01"))
+
+class CardWithdrawSerializer(serializers.Serializer):
+    amount = serializers.DecimalField(max_digits=18, decimal_places=2, min_value=Decimal("0.01"))
+
+
+
+
+
+from rest_framework import serializers
+from transactions.models import Memtrans  # Import from transactions app
+
+class MemtransSerializer(serializers.ModelSerializer):
+    # Your Memtrans model already has the perfect field names!
+    trx_no = serializers.CharField()
+    trx_type = serializers.CharField()
+    amount = serializers.DecimalField(max_digits=10, decimal_places=2)
+    sys_date = serializers.DateTimeField()
+    description = serializers.CharField()
+    
+    class Meta:
+        model = Memtrans
+        fields = ['trx_no', 'trx_type', 'amount', 'sys_date', 'description']

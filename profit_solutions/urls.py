@@ -45,5 +45,6 @@ urlpatterns = [
     path('reports/', include('reports.urls')),
     path('fixed_assets/', include('fixed_assets.urls')),
     path('fixed_deposit/', include('fixed_deposit.urls')),
+    path("ninepsb/", include("ninepsb.urls")),
     # path('audit/', include('audit_trail.urls')),
 ]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Test 9PSB Account Validation</title>
+    <style>
+        body { font-family: Arial; max-width: 600px; margin: 40px auto; background: #f9f9f9; padding: 20px; border-radius: 10px; }
+        h2 { color: #444; }
+        select, input, button { padding: 10px; width: 100%; margin: 8px 0; border: 1px solid #ccc; border-radius: 5px; }
+        .btn { background: #0a74da; color: white; cursor: pointer; border: none; }
+        .btn:hover { background: #095bb5; }
+        .msg { padding: 10px; margin: 10px 0; border-radius: 6px; }
+        .success { background: #e7f9ed; color: #0a8a3e; }
+        .error { background: #ffe9e9; color: #c9302c; }
+        pre { background: #fff; border: 1px solid #ccc; padding: 10px; border-radius: 5px; overflow-x: auto; }
+        .account-info { background: #fff; padding: 10px; border-radius: 5px; margin-top: 10px; border: 1px solid #ddd; }
+    </style>
+</head>
+<body>
+    <h2>Validate Bank Account (9PSB)</h2>
+
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="btn">Validate Account</button>
+    </form>
+
+    {% for msg in messages %}
+        <div class="msg {% if msg.tags %}{{ msg.tags }}{% endif %}">{{ msg }}</div>
+    {% endfor %}
+
+    {% if account_name %}
+        <div class="account-info">
+            <h3>✅ Account Details</h3>
+            <p><strong>Account Name:</strong> {{ account_name }}</p>
+            <p><strong>Account Number:</strong> {{ result.customer.account.number }}</p>
+            <p><strong>Bank Code:</strong> {{ result.customer.account.bank }}</p>
+        </div>
+    {% endif %}
+
+    {% if result %}
+        <h3>Raw API Response</h3>
+        <pre>{{ result|safe }}</pre>
+    {% endif %}
+</body>
+</html>

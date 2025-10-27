@@ -69,6 +69,9 @@ class Customer(models.Model):
 
     # 🔑 NEW FIELD for 9PSB Wallet
     wallet_account = models.CharField(max_length=20, blank=True, null=True, unique=True)
+    bank_name = models.CharField(max_length=100, blank=True, null=True)
+    bank_code = models.CharField(max_length=20, blank=True, null=True)
+
     transfer_limit = models.DecimalField(
     max_digits=12, 
     decimal_places=2, 
@@ -146,6 +149,77 @@ class Customer(models.Model):
                 )
 
         super().save(*args, **kwargs)
+
+
+# customers/models.py
+import uuid
+import random
+import secrets
+from django.db import models
+
+def _luhn_check_digit(number_without_check: str) -> int:
+    total = 0
+    reverse = list(map(int, number_without_check[::-1]))
+    for i, d in enumerate(reverse, start=1):
+        if i % 2 == 1:
+            total += d
+        else:
+            d2 = d * 2
+            if d2 > 9:
+                d2 -= 9
+            total += d2
+    return (10 - (total % 10)) % 10
+
+def generate_card_number(prefix: str = "539999", length: int = 16) -> str:
+    if not prefix.isdigit():
+        raise ValueError("prefix must be digits")
+    if len(prefix) >= length:
+        raise ValueError("prefix too long")
+    body_len = length - len(prefix) - 1
+    body = ''.join(str(random.randint(0, 9)) for _ in range(body_len))
+    check = _luhn_check_digit(prefix + body)
+    return prefix + body + str(check)
+
+def generate_cvv(length: int = 3) -> str:
+    return ''.join(str(secrets.randbelow(10)) for _ in range(length))
+
+
+class VirtualCard(models.Model):
+    STATUS_CHOICES = (
+        ('pending', 'pending'),
+        ('active', 'active'),
+        ('inactive', 'inactive'),
+    )
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='virtual_cards')
+    gl_no = models.CharField(max_length=5)           # fixed: "20501"
+    ac_no = models.CharField(max_length=5)           # unique per GL
+    card_number = models.CharField(max_length=19, unique=True, null=True, blank=True)
+    expiry_month = models.PositiveSmallIntegerField()
+    expiry_year = models.PositiveSmallIntegerField()
+    cvv = models.CharField(max_length=4)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
+    created_at = models.DateTimeField(auto_now_add=True)
+    activated_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['gl_no', 'ac_no'], name='uniq_virtual_card_gl_ac'),
+        ]
+
+    def save(self, *args, **kwargs):
+        if not self.card_number:
+            for _ in range(100):
+                candidate = generate_card_number()
+                if not type(self).objects.filter(card_number=candidate).exists():
+                    self.card_number = candidate
+                    break
+        if not self.cvv:
+            self.cvv = generate_cvv(3)
+        super().save(*args, **kwargs)
+
+
 
 
 

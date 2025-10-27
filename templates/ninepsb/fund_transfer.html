@@ -1,0 +1,90 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Fund Transfer</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        .error { color: red; }
+        .success { color: green; }
+        /* Optional: show small status message below the field */
+        #account-status {
+            font-size: 0.9em;
+            margin-top: -10px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+<h1>Fund Transfer</h1>
+
+{% if messages %}
+  <ul>
+    {% for message in messages %}
+      <li class="{{ message.tags }}">{{ message }}</li>
+    {% endfor %}
+  </ul>
+{% endif %}
+
+<form method="post" id="transferForm">
+  {% csrf_token %}
+  
+  <!-- Optional: status message placeholder -->
+  <div id="account-status"></div>
+  
+  {{ form.as_p }}
+  <button type="submit">Transfer Funds</button>
+</form>
+
+<script>
+$(document).ready(function() {
+    $("#id_recipient_account").on("blur", function() {
+        const accountNumber = $(this).val().trim();
+        const bankCode = $("#id_bank_code").val().trim();
+        const nameField = $("#id_recipient_name");
+        const statusDiv = $("#account-status");
+
+        // Clear previous status
+        statusDiv.text("");
+
+        if (accountNumber.length >= 10 && bankCode) {
+            nameField.prop("disabled", true); // Optional: disable while loading
+            $.ajax({
+                url: "{% url 'account_enquiry' %}",
+                data: { 
+                    account_number: accountNumber, 
+                    bank_code: bankCode 
+                },
+                dataType: "json",
+                success: function(response) {
+                    if (response.success) {
+                        nameField.val(response.account_name);
+                        // Optional: show success hint
+                        // statusDiv.html("✅ Account verified").css("color", "green");
+                    } else {
+                        nameField.val("");
+                        // Optional: show error hint
+                        // statusDiv.html("⚠️ " + response.error).css("color", "red");
+                    }
+                },
+                error: function(xhr, status, error) {
+                    nameField.val("");
+                    // Optional: statusDiv.text("Failed to verify account").css("color", "red");
+                },
+                complete: function() {
+                    nameField.prop("disabled", false); // Re-enable
+                }
+            });
+        } else {
+            if (!bankCode) {
+                nameField.val("");
+                // Optional: statusDiv.text("Select bank first").css("color", "orange");
+            }
+        }
+    });
+});
+</script>
+
+</body>
+</html>
