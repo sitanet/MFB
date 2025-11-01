@@ -1,0 +1,211 @@
+<!-- promotion/templates/promotion/banner_list.html -->
+{% extends 'promotion/base.html' %}
+
+{% block title %}Promotional Banners{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-bullhorn me-2"></i>Promotional Banners</h1>
+    <a href="{% url 'promotion:banner_create' %}" class="btn btn-success">
+        <i class="fas fa-plus me-1"></i>Create New Banner
+    </a>
+</div>
+
+<!-- Search and Filter Form -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Search</label>
+                <input type="text" name="search" class="form-control" 
+                       placeholder="Search title or subtitle..." 
+                       value="{{ search_query }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Status</label>
+                <select name="status" class="form-select">
+                    <option value="">All Statuses</option>
+                    {% for value, label in status_choices %}
+                        <option value="{{ value }}" {% if request.GET.status == value %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Type</label>
+                <select name="type" class="form-select">
+                    <option value="">All Types</option>
+                    {% for value, label in type_choices %}
+                        <option value="{{ value }}" {% if request.GET.type == value %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">&nbsp;</label>
+                <button type="submit" class="btn btn-primary d-block w-100">
+                    <i class="fas fa-search"></i> Search
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Banners Table -->
+<div class="card">
+    <div class="card-body">
+        {% if page_obj %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Preview</th>
+                            <th>Title</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th>Order</th>
+                            <th>Analytics</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for banner in page_obj %}
+                            <tr>
+                                <td>
+                                    <div class="color-preview" style="background-color: {{ banner.background_color }};"></div>
+                                </td>
+                                <td>
+                                    <strong>{{ banner.title }}</strong><br>
+                                    <small class="text-muted">{{ banner.subtitle|truncatechars:50 }}</small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-info">{{ banner.get_banner_type_display }}</span>
+                                </td>
+                                <td>
+                                    <span class="badge status-badge {{ banner.status }}">
+                                        {{ banner.get_status_display }}
+                                    </span>
+                                </td>
+                                <td>{{ banner.display_order }}</td>
+                                <td>
+                                    <small>
+                                        Views: <strong>{{ banner.view_count }}</strong><br>
+                                        Clicks: <strong>{{ banner.click_count }}</strong><br>
+                                        CTR: <strong>{{ banner.click_through_rate }}%</strong>
+                                    </small>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{% url 'promotion:banner_detail' banner.pk %}" 
+                                           class="btn btn-outline-info" title="View Details">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{% url 'promotion:banner_preview' banner.pk %}" 
+                                           class="btn btn-outline-secondary" title="Preview">
+                                            <i class="fas fa-mobile-alt"></i>
+                                        </a>
+                                        <a href="{% url 'promotion:banner_edit' banner.pk %}" 
+                                           class="btn btn-outline-primary" title="Edit">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <button class="btn btn-outline-warning toggle-status" 
+                                                data-banner-id="{{ banner.pk }}" title="Toggle Status">
+                                            <i class="fas fa-power-off"></i>
+                                        </button>
+                                        <a href="{% url 'promotion:banner_delete' banner.pk %}" 
+                                           class="btn btn-outline-danger" title="Delete">
+                                            <i class="fas fa-trash"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if page_obj.has_other_pages %}
+                <nav aria-label="Banner pagination">
+                    <ul class="pagination justify-content-center">
+                        {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}&search={{ search_query }}">
+                                    Previous
+                                </a>
+                            </li>
+                        {% endif %}
+
+                        {% for num in page_obj.paginator.page_range %}
+                            {% if page_obj.number == num %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ num }}</span>
+                                </li>
+                            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ num }}&search={{ search_query }}">
+                                        {{ num }}
+                                    </a>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}&search={{ search_query }}">
+                                    Next
+                                </a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            {% endif %}
+        {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-bullhorn fa-3x text-muted mb-3"></i>
+                <h3>No banners found</h3>
+                <p class="text-muted">Create your first promotional banner to get started.</p>
+                <a href="{% url 'promotion:banner_create' %}" class="btn btn-success">
+                    <i class="fas fa-plus me-1"></i>Create Banner
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    $('.toggle-status').click(function() {
+        const bannerId = $(this).data('banner-id');
+        const button = $(this);
+        
+        $.post(`{% url 'promotion:banner_toggle_status' 0 %}`.replace('0', bannerId), {
+            'csrfmiddlewaretoken': $('[name=csrfmiddlewaretoken]').val()
+        }).done(function(data) {
+            if (data.success) {
+                // Update status badge
+                const statusBadge = button.closest('tr').find('.status-badge');
+                statusBadge.removeClass('active inactive scheduled');
+                statusBadge.addClass(data.new_status);
+                statusBadge.text(data.status_display);
+                
+                // Show success message
+                const alertHtml = `
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        Status updated successfully!
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                `;
+                $('.container').prepend(alertHtml);
+            }
+        }).fail(function() {
+            alert('Error updating status. Please try again.');
+        });
+    });
+});
+</script>
+{% endblock %}

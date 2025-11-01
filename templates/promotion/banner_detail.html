@@ -1,0 +1,136 @@
+<!-- promotion/templates/promotion/banner_detail.html -->
+{% extends 'promotion/base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h2><i class="fas fa-eye me-2"></i>{{ banner.title }}</h2>
+                <div class="btn-group">
+                    <a href="{% url 'promotion:banner_edit' banner.pk %}" class="btn btn-primary">
+                        <i class="fas fa-edit me-1"></i>Edit
+                    </a>
+                    <a href="{% url 'promotion:banner_preview' banner.pk %}" class="btn btn-secondary">
+                        <i class="fas fa-mobile-alt me-1"></i>Preview
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong>Type:</strong> {{ banner.get_banner_type_display }}
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Status:</strong> 
+                        <span class="badge status-badge {{ banner.status }}">
+                            {{ banner.get_status_display }}
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <strong>Subtitle:</strong><br>
+                    {{ banner.subtitle }}
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <strong>Background Color:</strong><br>
+                        <div class="color-preview" style="background-color: {{ banner.background_color }};"></div>
+                        {{ banner.background_color }}
+                    </div>
+                    <div class="col-md-4">
+                        <strong>Icon:</strong> {{ banner.icon_name }}
+                    </div>
+                    <div class="col-md-4">
+                        <strong>Action Text:</strong> {{ banner.action_text }}
+                    </div>
+                </div>
+                
+                {% if banner.action_url %}
+                <div class="mb-3">
+                    <strong>Action URL:</strong><br>
+                    <a href="{{ banner.action_url }}" target="_blank">{{ banner.action_url }}</a>
+                </div>
+                {% endif %}
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong>Display Order:</strong> {{ banner.display_order }}
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Created:</strong> {{ banner.created_at|date:"M d, Y H:i" }}
+                    </div>
+                </div>
+                
+                {% if banner.start_date or banner.end_date %}
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong>Start Date:</strong> 
+                        {{ banner.start_date|date:"M d, Y H:i"|default:"Not set" }}
+                    </div>
+                    <div class="col-md-6">
+                        <strong>End Date:</strong> 
+                        {{ banner.end_date|date:"M d, Y H:i"|default:"Not set" }}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card analytics-card text-white">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-bar me-2"></i>Analytics</h5>
+            </div>
+            <div class="card-body text-center">
+                <div class="row">
+                    <div class="col-6">
+                        <h3>{{ banner.view_count }}</h3>
+                        <small>Views</small>
+                    </div>
+                    <div class="col-6">
+                        <h3>{{ banner.click_count }}</h3>
+                        <small>Clicks</small>
+                    </div>
+                </div>
+                <hr class="my-3">
+                <h4>{{ banner.click_through_rate }}%</h4>
+                <small>Click-through Rate</small>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5><i class="fas fa-mobile-alt me-2"></i>Mobile Preview</h5>
+            </div>
+            <div class="card-body">
+                <div class="banner-preview" style="background-color: {{ banner.background_color }};">
+                    <div class="d-flex">
+                        <div class="flex-grow-1">
+                            <h6>{{ banner.title }}</h6>
+                            <small>{{ banner.subtitle }}</small>
+                            <div class="mt-2">
+                                <span class="badge bg-light text-dark">{{ banner.action_text }}</span>
+                            </div>
+                        </div>
+                        <div class="ms-3">
+                            <i class="fas fa-star fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="mt-3">
+    <a href="{% url 'promotion:banner_list' %}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left me-1"></i>Back to List
+    </a>
+</div>
+{% endblock %}

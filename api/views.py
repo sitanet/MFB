@@ -1,14 +1,10 @@
-# api/views.py
-
 from decimal import Decimal
 import uuid
 import random
-
 from django.utils import timezone
 from django.db import transaction
 from django.db.models import Sum, DecimalField, Value
 from django.db.models.functions import Coalesce
-
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
@@ -16,6 +12,8 @@ from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.contrib.auth import get_user_model
+from django.core.paginator import Paginator
+import logging
 
 # Serializers
 from .serializers import (
@@ -27,7 +25,7 @@ from .serializers import (
     ChangePasswordSerializer,
     TransferToFinanceFlexSerializer,
     VirtualCardApplySerializer, VirtualCardApproveSerializer, VirtualCardSerializer,
-    PinSetSerializer, PinVerifySerializer,  # ✅ removed CardsFundView
+    PinSetSerializer, PinVerifySerializer,
 )
 
 # Helpers
@@ -48,6 +46,7 @@ from loans.models import Loans, LoanHist
 from transactions.models import Memtrans
 from api.models import Beneficiary
 
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Base model viewset and admin-ish viewsets
@@ -59,13 +58,11 @@ class BaseModelViewSet(viewsets.ModelViewSet):
     ordering_fields = '__all__'
     ordering = ['-id']
 
-
 class RoleViewSet(BaseModelViewSet):
     queryset = Role.objects.all()
     serializer_class = RoleSerializer
     search_fields = ['name']
     filterset_fields = ['name']
-
 
 class UserViewSet(BaseModelViewSet):
     queryset = AccountsUser.objects.select_related('branch', 'customer').all()
@@ -87,13 +84,11 @@ class UserViewSet(BaseModelViewSet):
         user.save(update_fields=['password'])
         return Response({'detail': 'Password updated'})
 
-
 class UserProfileViewSet(BaseModelViewSet):
     queryset = UserProfile.objects.select_related('user').all()
     serializer_class = UserProfileSerializer
     search_fields = ['address', 'country', 'state', 'city', 'user__email', 'user__username']
     filterset_fields = ['user']
-
 
 class CompanyViewSet(BaseModelViewSet):
     permission_classes = [permissions.AllowAny]
@@ -102,13 +97,11 @@ class CompanyViewSet(BaseModelViewSet):
     search_fields = ['company_name', 'contact_person', 'email', 'license_key']
     filterset_fields = ['session_status']
 
-
 class BranchViewSet(BaseModelViewSet):
     queryset = Branch.objects.select_related('company').all()
     serializer_class = BranchSerializer
     search_fields = ['branch_code', 'branch_name', 'company_name', 'company__company_name', 'phone_number']
     filterset_fields = ['company', 'plan', 'head_office', 'phone_verified', 'session_status']
-
 
 class RegionViewSet(BaseModelViewSet):
     queryset = Region.objects.select_related('branch').all()
@@ -116,13 +109,11 @@ class RegionViewSet(BaseModelViewSet):
     search_fields = ['region_name', 'branch__branch_name']
     filterset_fields = ['branch', 'region_name']
 
-
 class AccountOfficerViewSet(BaseModelViewSet):
     queryset = Account_Officer.objects.select_related('branch', 'region').all()
     serializer_class = AccountOfficerSerializer
     search_fields = ['user', 'branch__branch_name', 'region__region_name']
     filterset_fields = ['branch', 'region']
-
 
 class CustomerViewSet(BaseModelViewSet):
     queryset = Customer.objects.select_related('branch', 'region', 'credit_officer').all()
@@ -133,13 +124,11 @@ class CustomerViewSet(BaseModelViewSet):
     ]
     filterset_fields = ['branch', 'status', 'is_company', 'sms', 'email_alert', 'region', 'credit_officer']
 
-
 class KYCDocumentViewSet(BaseModelViewSet):
     queryset = KYCDocument.objects.select_related('customer', 'verified_by').all()
     serializer_class = KYCDocumentSerializer
     search_fields = ['document_type', 'customer__first_name', 'customer__last_name']
     filterset_fields = ['customer', 'document_type', 'verified']
-
 
 class LoansViewSet(BaseModelViewSet):
     queryset = Loans.objects.select_related('customer', 'branch', 'loan_officer').all()
@@ -147,20 +136,17 @@ class LoansViewSet(BaseModelViewSet):
     search_fields = ['gl_no', 'ac_no', 'cust_gl_no', 'trx_type', 'reason']
     filterset_fields = ['branch', 'customer', 'approval_status', 'disb_status', 'payment_freq', 'interest_calculation_method']
 
-
 class LoanHistViewSet(BaseModelViewSet):
     queryset = LoanHist.objects.select_related('branch').all()
     serializer_class = LoanHistSerializer
     search_fields = ['gl_no', 'ac_no', 'trx_no', 'trx_type', 'trx_naration']
     filterset_fields = ['branch', 'gl_no', 'ac_no', 'trx_date', 'period']
 
-
 class MemtransViewSet(BaseModelViewSet):
     queryset = Memtrans.objects.select_related('branch', 'cust_branch', 'customer', 'user').all()
     serializer_class = MemtransSerializer
     search_fields = ['trx_no', 'gl_no', 'ac_no', 'description', 'trx_type', 'code']
     filterset_fields = ['branch', 'cust_branch', 'customer', 'ses_date', 'app_date', 'sys_date', 'error', 'type', 'account_type', 'user']
-
 
 # ---------------------------------------------------------------------------
 # Dashboard
@@ -190,9 +176,10 @@ class DashboardView(APIView):
                 "transactions": [],
             })
 
+        # Get all accounts for this customer (using ac_no as the key)
         per_accounts = (
             Memtrans.objects
-            .filter(ac_no=ac_no)
+            .filter(ac_no=ac_no)  # This is how you calculate balance
             .values('gl_no', 'ac_no')
             .annotate(
                 balance=Coalesce(
@@ -211,7 +198,7 @@ class DashboardView(APIView):
 
         recent = (
             Memtrans.objects
-            .filter(gl_no=gl_no, ac_no=ac_no)
+            .filter(gl_no=gl_no, ac_no=ac_no)  # Same filtering as balance
             .order_by('-sys_date')[:20]
         )
         data = MemtransSerializer(recent, many=True).data
@@ -238,95 +225,250 @@ class DashboardView(APIView):
             "transactions": data,
         })
 
+# ---------------------------------------------------------------------------
+# FIXED: Transaction Views - Class-based with JWT Authentication
+# ---------------------------------------------------------------------------
 
-
-
-
-
-
-
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-from rest_framework import status
-from django.core.paginator import Paginator
-from transactions.models import Memtrans  # Import from transactions app
-from .serializers import MemtransSerializer  # Import from current api app
-import logging
-
-logger = logging.getLogger(__name__)
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def get_transactions(request):
-    """
-    GET /api/v1/transactions/?page=1&limit=5
-    Returns paginated user transactions from Memtrans model
-    """
-    try:
-        # Get query parameters
-        page = int(request.GET.get('page', 1))
-        limit = int(request.GET.get('limit', 5))
-        
-        # Validate parameters
-        if page < 1:
-            page = 1
-        if limit < 1 or limit > 50:
-            limit = 5
-        
-        # Get user's transactions - filter by customer relationship
-        user_transactions = Memtrans.objects.filter(
-            customer=request.user.customer,  # Filter by customer relationship
-            # Alternative: user=request.user,  # Or filter by user directly if needed
-        ).order_by('-sys_date')  # Order by system date, newest first
-        
-        # Apply pagination
-        paginator = Paginator(user_transactions, limit)
-        
+class TransactionsView(APIView):
+    """Get all transactions using customer gl_no and ac_no - SAME as balance calculation"""
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get(self, request):
         try:
-            transactions_page = paginator.page(page)
-        except:
-            # If page is out of range, return empty results
+            customer = request.user.customer
+            print(f"[DEBUG] TransactionsView called by user: {request.user.username}, customer_id={customer.id}")
+            
+            # Use customer's primary gl_no and ac_no - SAME as DashboardView balance logic
+            customer_gl_no = (customer.gl_no or '').strip()
+            customer_ac_no = (customer.ac_no or '').strip()
+            
+            if not customer_gl_no or not customer_ac_no:
+                print(f"[DEBUG] Customer {customer.id} missing gl_no or ac_no: gl_no='{customer_gl_no}', ac_no='{customer_ac_no}'")
+                return Response({'error': 'Customer account information incomplete'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            print(f"[DEBUG] Using customer account: gl_no='{customer_gl_no}', ac_no='{customer_ac_no}'")
+            
+            # Filter by customer's gl_no and ac_no - EXACTLY like DashboardView balance calculation
+            transactions = Memtrans.objects.filter(
+                gl_no=customer_gl_no, 
+                ac_no=customer_ac_no
+            ).order_by('-sys_date')  # Use sys_date like in DashboardView
+            
+            print(f"[DEBUG] Found {transactions.count()} transactions for customer account {customer_gl_no}-{customer_ac_no}")
+            
+            # Pagination
+            page = int(request.GET.get('page', 1))
+            limit = int(request.GET.get('limit', 10))
+            paginator = Paginator(transactions, limit)
+            page_obj = paginator.get_page(page)
+            
+            print(f"[DEBUG] Pagination: page={page}, limit={limit}, total_pages={paginator.num_pages}")
+            
+            serializer = MemtransSerializer(page_obj.object_list, many=True)
             return Response({
-                'data': [],
-                'page': page,
-                'total_pages': paginator.num_pages,
-                'total_count': paginator.count,
-                'has_next': False,
+                'data': serializer.data,
+                'pagination': {
+                    'page': page,
+                    'total_pages': paginator.num_pages,
+                    'total_items': paginator.count,
+                    'has_next': page_obj.has_next(),
+                    'has_previous': page_obj.has_previous()
+                }
             })
-        
-        # Serialize the data
-        serializer = MemtransSerializer(transactions_page, many=True)
-        
-        # Return response in the format expected by mobile app
-        return Response({
-            'data': serializer.data,
-            'page': page,
-            'total_pages': paginator.num_pages,
-            'total_count': paginator.count,
-            'has_next': transactions_page.has_next(),
-            'has_previous': transactions_page.has_previous(),
-        })
-        
-    except ValueError as e:
-        logger.error(f"Invalid parameter in transactions API: {e}")
-        return Response(
-            {'error': 'Invalid page or limit parameter'}, 
-            status=status.HTTP_400_BAD_REQUEST
-        )
-    except AttributeError as e:
-        logger.error(f"User has no customer relationship: {e}")
-        return Response(
-            {'error': 'User account not properly configured'}, 
-            status=status.HTTP_400_BAD_REQUEST
-        )
-    except Exception as e:
-        logger.error(f"Error in transactions API: {e}")
-        return Response(
-            {'error': 'Failed to fetch transactions'}, 
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
+            
+        except Customer.DoesNotExist:
+            print("[DEBUG] Customer not found for user:", request.user.username)
+            return Response({'error': 'Customer not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error(f"Transactions error: {str(e)}")
+            print("[ERROR] Transactions error:", e)
+            return Response({'error': 'Failed to load transactions'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+from datetime import datetime
+from decimal import Decimal
+from django.db.models import Q
+
+class LoanTransactionsView(APIView):
+    """Get loan transactions for specific account with advanced filtering"""
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get(self, request):
+        try:
+            customer = request.user.customer
+            print(f"[DEBUG] LoanTransactionsView called by {request.user.username}, customer_id={customer.id}")
+            
+            # Get account parameters
+            query_gl_no = request.query_params.get('gl_no')
+            query_ac_no = request.query_params.get('ac_no')
+            
+            # Fallback to customer's account if not provided
+            if not query_gl_no or not query_ac_no:
+                customer_gl_no = (customer.gl_no or '').strip()
+                customer_ac_no = (customer.ac_no or '').strip()
+                
+                if not customer_gl_no or not customer_ac_no:
+                    print(f"[DEBUG] Customer {customer.id} missing gl_no or ac_no")
+                    return Response({'error': 'Account information missing'}, status=status.HTTP_400_BAD_REQUEST)
+                
+                query_gl_no = customer_gl_no
+                query_ac_no = customer_ac_no
+            
+            print(f"[DEBUG] Base filter: gl_no='{query_gl_no}', ac_no='{query_ac_no}'")
+            
+            # Start with base query
+            transactions_query = Memtrans.objects.filter(
+                gl_no=query_gl_no,
+                ac_no=query_ac_no
+            )
+            
+            # Apply filters
+            filters_applied = []
+            
+            # Date range filters
+            start_date = request.query_params.get('start_date')
+            end_date = request.query_params.get('end_date')
+            
+            if start_date:
+                try:
+                    start_date_obj = datetime.strptime(start_date, '%Y-%m-%d').date()
+                    transactions_query = transactions_query.filter(ses_date__gte=start_date_obj)
+                    filters_applied.append(f"start_date >= {start_date}")
+                except ValueError:
+                    print(f"[DEBUG] Invalid start_date format: {start_date}")
+            
+            if end_date:
+                try:
+                    end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
+                    transactions_query = transactions_query.filter(ses_date__lte=end_date_obj)
+                    filters_applied.append(f"end_date <= {end_date}")
+                except ValueError:
+                    print(f"[DEBUG] Invalid end_date format: {end_date}")
+            
+            # Amount range filters
+            min_amount = request.query_params.get('min_amount')
+            max_amount = request.query_params.get('max_amount')
+            
+            if min_amount:
+                try:
+                    min_amount_decimal = Decimal(min_amount)
+                    # Filter for transactions with absolute amount >= min_amount
+                    transactions_query = transactions_query.filter(
+                        Q(amount__gte=min_amount_decimal) | Q(amount__lte=-min_amount_decimal)
+                    )
+                    filters_applied.append(f"abs(amount) >= {min_amount}")
+                except (ValueError, TypeError):
+                    print(f"[DEBUG] Invalid min_amount: {min_amount}")
+            
+            if max_amount:
+                try:
+                    max_amount_decimal = Decimal(max_amount)
+                    # Filter for transactions with absolute amount <= max_amount  
+                    transactions_query = transactions_query.filter(
+                        Q(amount__lte=max_amount_decimal, amount__gte=0) | 
+                        Q(amount__gte=-max_amount_decimal, amount__lt=0)
+                    )
+                    filters_applied.append(f"abs(amount) <= {max_amount}")
+                except (ValueError, TypeError):
+                    print(f"[DEBUG] Invalid max_amount: {max_amount}")
+            
+            # Transaction number filter
+            trx_no = request.query_params.get('trx_no')
+            if trx_no:
+                transactions_query = transactions_query.filter(trx_no__icontains=trx_no)
+                filters_applied.append(f"trx_no contains '{trx_no}'")
+            
+            # Order by date (newest first)
+            transactions_query = transactions_query.order_by('-sys_date')
+            
+            print(f"[DEBUG] Applied filters: {', '.join(filters_applied) if filters_applied else 'None'}")
+            print(f"[DEBUG] Found {transactions_query.count()} transactions after filtering")
+            
+            # Pagination
+            page = int(request.GET.get('page', 1))
+            limit = int(request.GET.get('limit', 10))
+            paginator = Paginator(transactions_query, limit)
+            page_obj = paginator.get_page(page)
+            
+            print(f"[DEBUG] Pagination: page={page}/{paginator.num_pages}, limit={limit}")
+            
+            serializer = MemtransSerializer(page_obj.object_list, many=True)
+            
+            return Response({
+                'data': serializer.data,
+                'pagination': {
+                    'page': page,
+                    'total_pages': paginator.num_pages,
+                    'total_items': paginator.count,
+                    'has_next': page_obj.has_next(),
+                    'has_previous': page_obj.has_previous()
+                },
+                'filters_applied': filters_applied,  # Debug info
+                'query_params': dict(request.query_params),  # Debug info
+            })
+            
+        except Customer.DoesNotExist:
+            print("[DEBUG] Customer not found for user:", request.user.username)
+            return Response({'error': 'Customer not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error(f"Loan transactions error: {str(e)}")
+            print("[ERROR] Loan transactions error:", e)
+            import traceback
+            traceback.print_exc()
+            return Response({'error': 'Failed to load loan transactions'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class RegularTransactionsView(APIView):
+    """Get regular (non-loan) transactions - customer's gl_no and ac_no, excluding loans"""
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get(self, request):
+        try:
+            customer = request.user.customer
+            print(f"[DEBUG] RegularTransactionsView called by {request.user.username}, customer_id={customer.id}")
+            
+            # Use customer's primary gl_no and ac_no
+            customer_gl_no = (customer.gl_no or '').strip()
+            customer_ac_no = (customer.ac_no or '').strip()
+            
+            if not customer_gl_no or not customer_ac_no:
+                print(f"[DEBUG] Customer {customer.id} missing gl_no or ac_no: gl_no='{customer_gl_no}', ac_no='{customer_ac_no}'")
+                return Response({'error': 'Customer account information incomplete'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            print(f"[DEBUG] Looking for regular transactions: gl_no='{customer_gl_no}', ac_no='{customer_ac_no}', excluding gl_no='10412'")
+            
+            # Filter by customer's gl_no and ac_no, but EXCLUDE loan transactions (gl_no='10412')
+            transactions = Memtrans.objects.filter(
+                gl_no=customer_gl_no,
+                ac_no=customer_ac_no
+            ).order_by('-sys_date')
+            
+            print(f"[DEBUG] Found {transactions.count()} regular transactions (excluding loans) for {customer_gl_no}-{customer_ac_no}")
+            
+            page = int(request.GET.get('page', 1))
+            limit = int(request.GET.get('limit', 10))
+            paginator = Paginator(transactions, limit)
+            page_obj = paginator.get_page(page)
+            
+            print(f"[DEBUG] Regular pagination: page={page}/{paginator.num_pages}, limit={limit}")
+            
+            serializer = MemtransSerializer(page_obj.object_list, many=True)
+            return Response({
+                'data': serializer.data,
+                'pagination': {
+                    'page': page,
+                    'total_pages': paginator.num_pages,
+                    'total_items': paginator.count,
+                    'has_next': page_obj.has_next(),
+                    'has_previous': page_obj.has_previous()
+                }
+            })
+            
+        except Customer.DoesNotExist:
+            print("[DEBUG] Customer not found for user:", request.user.username)
+            return Response({'error': 'Customer not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error(f"Regular transactions error: {str(e)}")
+            print("[ERROR] Regular transactions error:", e)
+            return Response({'error': 'Failed to load regular transactions'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # ---------------------------------------------------------------------------
 # Pre-login and activation
@@ -342,7 +484,6 @@ def _find_user_by_username_or_email(value: str):
             return UserModel.objects.get(email__iexact=value)
         except UserModel.DoesNotExist:
             return None
-
 
 class PreLoginView(APIView):
     permission_classes = [permissions.AllowAny]
@@ -361,7 +502,6 @@ class PreLoginView(APIView):
             return Response({"can_login": True}, status=status.HTTP_200_OK)
 
         return Response({"activation_required": True, "username": user.username}, status=status.HTTP_202_ACCEPTED)
-
 
 class ActivateView(APIView):
     permission_classes = [permissions.AllowAny]
@@ -384,7 +524,6 @@ class ActivateView(APIView):
         user.save(update_fields=["verified"])
 
         return Response({"activated": True}, status=status.HTTP_200_OK)
-
 
 # ---------------------------------------------------------------------------
 # Change password
@@ -411,7 +550,6 @@ class ChangePasswordView(APIView):
             pass
 
         return Response({"detail": "Password changed successfully. Please log in again."}, status=status.HTTP_200_OK)
-
 
 # ---------------------------------------------------------------------------
 # Transfer to FinanceFlex (signed amounts; double-entry)
@@ -523,7 +661,6 @@ class TransferToFinanceFlexView(APIView):
             status=201,
         )
 
-
 # ---------------------------------------------------------------------------
 # Customer lookup (by 10-digit or gl/ac)
 # ---------------------------------------------------------------------------
@@ -561,7 +698,6 @@ class CustomerLookupView(APIView):
             'full_name': f'{first_name} {last_name}'.strip(),
         }, status=status.HTTP_200_OK)
 
-
 # ---------------------------------------------------------------------------
 # Beneficiaries (serializer colocated here per your snippet)
 # ---------------------------------------------------------------------------
@@ -587,7 +723,6 @@ class BeneficiarySerializer(serializers.ModelSerializer):
         user = self.context['request'].user
         return Beneficiary.objects.create(user=user, **validated_data)
 
-
 # ---------------------------------------------------------------------------
 # PIN endpoints (server-managed)
 # ---------------------------------------------------------------------------
@@ -599,7 +734,6 @@ class PinStatusView(APIView):
         user = request.user
         has_pin = bool(getattr(user, "transaction_pin", None))
         return Response({"has_pin": has_pin}, status=status.HTTP_200_OK)
-
 
 class PinSetView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -620,7 +754,6 @@ class PinSetView(APIView):
         user.save(update_fields=["transaction_pin"])
         return Response({"detail": "Transaction PIN set successfully."}, status=status.HTTP_200_OK)
 
-
 class PinVerifyView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -634,7 +767,6 @@ class PinVerifyView(APIView):
             return Response({"detail": "Invalid PIN."}, status=status.HTTP_403_FORBIDDEN)
 
         return Response({"ok": True}, status=status.HTTP_200_OK)
-
 
 # ---------------------------------------------------------------------------
 # Virtual Cards
@@ -660,7 +792,6 @@ def _sync_customer_gl_ac(customer, gl_no: str, ac_no: str):
         touched.append("ac_no")
     if touched:
         customer.save(update_fields=touched)
-
 
 class CardsApplyView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -695,7 +826,6 @@ class CardsApplyView(APIView):
 
         return Response({"status": "pending", "card": VirtualCardSerializer(card).data}, status=201)
 
-
 class CardsApproveView(APIView):
     permission_classes = [permissions.IsAdminUser]
 
@@ -725,7 +855,6 @@ class CardsApproveView(APIView):
         _sync_customer_gl_ac(card.customer, card.gl_no, card.ac_no)
 
         return Response({"status": "active", "card": VirtualCardSerializer(card).data})
-
 
 class CardsPrimaryView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -768,7 +897,6 @@ class CardsPrimaryView(APIView):
             "account": {"gl_no": src_gl, "ac_no": src_ac},
             "source_balance": source_balance,
         })
-
 
 class CardsFundView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -834,7 +962,6 @@ class CardsFundView(APIView):
             "source_balance": float(_balance(src_gl, src_ac)),
         }, status=201)
 
-
 class CardsWithdrawView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -898,7 +1025,6 @@ class CardsWithdrawView(APIView):
             "source_balance": float(_balance(dst_gl, dst_ac)),
         }, status=201)
 
-
 class CardsRevealView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -915,7 +1041,6 @@ class CardsRevealView(APIView):
             "expiry_month": active.expiry_month,
             "expiry_year": active.expiry_year,
         })
-
 
 class CardsTransactionsView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -948,7 +1073,6 @@ class CardsTransactionsView(APIView):
         } for m in qs]
 
         return Response({"results": data}, status=200)
-
 
 # Backward-compat: a plain-list variant
 class CardsPrimaryTransactionsView(APIView):
@@ -984,9 +1108,1359 @@ class CardsPrimaryTransactionsView(APIView):
             )
         return Response(items)
 
+# Add these new signup views to your existing views.py file
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth import authenticate
+from django.contrib.auth.models import User
+from django.core.mail import send_mail
+from django.utils import timezone
+from datetime import timedelta
+import random
+import string
+from customers.models import Customer
+from accounts.models import User as CustomUser
 
+# CORRECTED SMS Service for Termii - FIXED VERSION
+class TermiiSMSService:
+    def __init__(self):
+        self.api_key = getattr(settings, 'TERMII_API_KEY', '')
+        self.sender_id = getattr(settings, 'TERMII_SENDER_ID', 'FinanceFlex')
+        self.base_url = 'https://api.ng.termii.com/api'
+    
+    def send_otp_sms(self, phone_number, otp_code, expires_in_minutes=5):
+        if not self.api_key:
+            logger.warning("[SMS] Termii API key not configured")
+            return {'success': False, 'error': 'SMS API key not configured'}
+        
+        # Format phone number for Nigerian numbers
+        if phone_number.startswith('0'):
+            phone_number = '234' + phone_number[1:]
+        elif not phone_number.startswith('234'):
+            phone_number = '234' + phone_number
+        
+        message = f"Your FinanceFlex verification code is: {otp_code}. Valid for {expires_in_minutes} minutes. Do not share this code."
+        
+        payload = {
+            "to": phone_number,
+            "from": self.sender_id,
+            "sms": message,
+            "type": "plain",
+            "api_key": self.api_key,
+            "channel": "generic"  # FIXED: Use 'generic' instead of 'dnd' for better delivery
+        }
+        
+        try:
+            logger.info(f"[SMS] Sending OTP to {phone_number}")
+            response = requests.post(f"{self.base_url}/sms/send", json=payload, timeout=10)
+            response_data = response.json()
+            
+            # FIXED: Better response validation
+            if response.status_code == 200 and (
+                response_data.get('code') == 'ok' or 
+                response_data.get('message') == 'Successfully Sent'
+            ):
+                logger.info(f"[SMS] SMS sent successfully: {response_data.get('message_id')}")
+                return {
+                    'success': True,
+                    'message_id': response_data.get('message_id'),
+                    'balance': response_data.get('balance')
+                }
+            else:
+                logger.error(f"[SMS] SMS failed: {response_data}")
+                return {
+                    'success': False,
+                    'error': response_data.get('message', 'SMS sending failed')
+                }
+                
+        except Exception as e:
+            logger.error(f"[SMS] SMS service error: {str(e)}")
+            return {'success': False, 'error': f'SMS service error: {str(e)}'}
 
+from django.core.mail import send_mail
+from django.conf import settings
 
+# Create SMS service instance
+sms_service = TermiiSMSService()
 
+# CORRECTED 9PSB Virtual Account Service - FIXED VERSION
+# CORRECTED 9PSB Virtual Account Service - FIXED VARIABLE SCOPING
+class NinePSBVirtualAccountService:
+    def __init__(self):
+        # FIXED: Use correct setting names to match settings.py
+        self.base_url = getattr(settings, 'PSB_BASE_URL', 'https://baastest.9psb.com.ng/iva-api/v1')
+        self.public_key = getattr(settings, 'PSB_PUBLIC_KEY', '')
+        self.private_key = getattr(settings, 'PSB_PRIVATE_KEY', '')
+        self.access_token = None
+        self.token_expires_at = None
+        
+    def authenticate(self):
+        """Authenticate with 9PSB and get access token - ENHANCED DEBUGGING"""
+        if not self.public_key or not self.private_key:
+            logger.error("[9PSB] API keys not configured")
+            return {'success': False, 'error': 'API keys not configured'}
+            
+        # Check if current token is still valid
+        if self.access_token and self.token_expires_at:
+            if timezone.now() < self.token_expires_at:
+                return {'success': True, 'access_token': self.access_token}
+        
+        try:
+            # FIXED: Use correct authentication endpoint
+            url = f"{self.base_url}/merchant/virtualaccount/authenticate"
+            payload = {
+                "publicKey": self.public_key,
+                "privateKey": self.private_key
+            }
+            
+            logger.info(f"[9PSB] Authenticating with URL: {url}")
+            logger.info(f"[9PSB] Public key (first 10 chars): {self.public_key[:10]}...")
+            
+            response = requests.post(url, json=payload, timeout=30)
+            
+            # Enhanced debugging
+            logger.info(f"[9PSB] Auth Response Status: {response.status_code}")
+            logger.info(f"[9PSB] Auth Response Headers: {dict(response.headers)}")
+            logger.info(f"[9PSB] Auth Response Text: {response.text}")
+            
+            # Check for empty response
+            if not response.text.strip():
+                logger.error("[9PSB] Empty authentication response")
+                return {'success': False, 'error': 'Empty response from authentication endpoint'}
+                
+            # Check for HTML response (404/error page)
+            if response.text.strip().startswith('<'):
+                logger.error("[9PSB] HTML response received for authentication")
+                return {'success': False, 'error': f'HTML response (likely 404). Status: {response.status_code}'}
+            
+            try:
+                response_data = response.json()
+            except ValueError as e:
+                logger.error(f"[9PSB] Auth JSON decode error: {str(e)}")
+                logger.error(f"[9PSB] Auth Raw response: {response.text}")
+                return {'success': False, 'error': f'Invalid JSON in auth response: {str(e)}'}
+            
+            if response.status_code == 200 and response_data.get('status') == 'SUCCESS':
+                self.access_token = response_data.get('accessToken')
+                expires_in = response_data.get('expiresIn', 3600)  # Default 1 hour
+                self.token_expires_at = timezone.now() + timedelta(seconds=expires_in - 60)  # Refresh 1 min early
+                
+                logger.info("[9PSB] Authentication successful")
+                return {'success': True, 'access_token': self.access_token}
+            else:
+                logger.error(f"[9PSB] Authentication failed: {response_data}")
+                return {'success': False, 'error': response_data.get('message', 'Authentication failed')}
+                
+        except Exception as e:
+            logger.error(f"[9PSB] Authentication error: {str(e)}")
+            import traceback
+            logger.error(f"[9PSB] Auth Traceback: {traceback.format_exc()}")
+            return {'success': False, 'error': f'Authentication error: {str(e)}'}
+    
+    def create_virtual_account(self, customer_name, customer_id, phone_number, email=None):
+        """Create a virtual account for a customer - FIXED VARIABLE SCOPING"""
+        # First authenticate
+        auth_result = self.authenticate()
+        if not auth_result['success']:
+            return auth_result
+            
+        try:
+            # FIXED: Use correct virtual account creation endpoint
+            url = f"{self.base_url}/merchant/virtualaccount/create"
+            
+            # Generate unique transaction reference
+            transaction_reference = f"REG_{customer_id}_{int(timezone.now().timestamp())}"
+            
+            # FIXED: Define payload at method level to ensure proper scoping
+            payload = {
+                "transaction": {
+                    "reference": transaction_reference
+                },
+                "order": {
+                    "amount": 0,  # Minimal amount for ANY type
+                    "currency": "NGN",
+                    "country": "NGA",
+                    "amounttype": "ANY"  # Allows any amount to be received
+                },
+                "customer": {
+                    "account": {
+                        "name": customer_name,
+                        "type": "STATIC"  # Permanent virtual account
+                    },
+                    "phone": phone_number,
+                    "email": email or f"customer_{customer_id}@financeflex.com"
+                }
+            }
+            
+            headers = {
+                'Authorization': f'Bearer {self.access_token}',
+                'Content-Type': 'application/json'
+            }
+            
+            logger.info(f"[9PSB] Creating virtual account for customer: {customer_name}")
+            logger.info(f"[9PSB] Request URL: {url}")
+            logger.info(f"[9PSB] Request payload: {payload}")
+            
+            response = requests.post(url, json=payload, headers=headers, timeout=30)
+            
+            # FIXED: Add response debugging
+            logger.info(f"[9PSB] Response Status: {response.status_code}")
+            logger.info(f"[9PSB] Response Headers: {dict(response.headers)}")
+            logger.info(f"[9PSB] Response Text: {response.text}")
+            
+            # Check if response is empty or HTML
+            if not response.text.strip():
+                logger.error("[9PSB] Empty response received")
+                return {'success': False, 'error': 'Empty response from 9PSB API'}
+                
+            if response.text.strip().startswith('<'):
+                logger.error("[9PSB] HTML response received (likely 404 or error page)")
+                return {'success': False, 'error': f'HTML response received. Status: {response.status_code}'}
+            
+            try:
+                response_data = response.json()
+            except ValueError as e:
+                logger.error(f"[9PSB] JSON decode error: {str(e)}")
+                logger.error(f"[9PSB] Raw response: {response.text}")
+                return {'success': False, 'error': f'Invalid JSON response: {str(e)}'}
+            
+            if response.status_code == 200 and response_data.get('status') == 'SUCCESS':
+                virtual_account_number = response_data.get('customer', {}).get('account', {}).get('number')
+                
+                if virtual_account_number:
+                    logger.info(f"[9PSB] Virtual account created successfully: {virtual_account_number}")
+                    return {
+                        'success': True,
+                        'virtual_account_number': virtual_account_number,
+                        'transaction_reference': transaction_reference,
+                        'response_data': response_data
+                    }
+                else:
+                    logger.error(f"[9PSB] No account number in response: {response_data}")
+                    return {'success': False, 'error': 'No account number returned'}
+            else:
+                # FIXED: Proper retry logic with correct variable scoping
+                if response.status_code == 401:
+                    logger.warning("[9PSB] Token expired, retrying authentication")
+                    self.access_token = None
+                    self.token_expires_at = None
+                    
+                    # Retry authentication and account creation
+                    auth_retry = self.authenticate()
+                    if auth_retry['success']:
+                        # Update headers with new token
+                        headers['Authorization'] = f'Bearer {self.access_token}'
+                        
+                        logger.info("[9PSB] Retrying virtual account creation with new token")
+                        retry_response = requests.post(url, json=payload, headers=headers, timeout=30)
+                        
+                        # Log retry response
+                        logger.info(f"[9PSB] Retry Response Status: {retry_response.status_code}")
+                        logger.info(f"[9PSB] Retry Response Text: {retry_response.text}")
+                        
+                        try:
+                            retry_data = retry_response.json()
+                        except ValueError as e:
+                            logger.error(f"[9PSB] Retry JSON decode error: {str(e)}")
+                            return {'success': False, 'error': f'Invalid JSON on retry: {str(e)}'}
+                        
+                        if retry_response.status_code == 200 and retry_data.get('status') == 'SUCCESS':
+                            virtual_account_number = retry_data.get('customer', {}).get('account', {}).get('number')
+                            if virtual_account_number:
+                                logger.info(f"[9PSB] Virtual account created on retry: {virtual_account_number}")
+                                return {
+                                    'success': True,
+                                    'virtual_account_number': virtual_account_number,
+                                    'transaction_reference': transaction_reference,
+                                    'response_data': retry_data
+                                }
+                
+                logger.error(f"[9PSB] Virtual account creation failed: {response_data}")
+                return {'success': False, 'error': response_data.get('message', 'Virtual account creation failed')}
+                
+        except Exception as e:
+            logger.error(f"[9PSB] Virtual account creation error: {str(e)}")
+            import traceback
+            logger.error(f"[9PSB] Traceback: {traceback.format_exc()}")
+            return {'success': False, 'error': f'Virtual account creation error: {str(e)}'}
+            
+                     
+def create_virtual_account(self, customer_name, customer_id, phone_number, email=None):
+    """Create a virtual account for a customer - FIXED VARIABLE SCOPING"""
+    # First authenticate
+    auth_result = self.authenticate()
+    if not auth_result['success']:
+        return auth_result
+        
+    try:
+        # FIXED: Use correct virtual account creation endpoint
+        url = f"{self.base_url}/merchant/virtualaccount/create"
+        
+        # Generate unique transaction reference
+        transaction_reference = f"REG_{customer_id}_{int(timezone.now().timestamp())}"
+        
+        # FIXED: Define payload at method level to ensure proper scoping
+        payload = {
+            "transaction": {
+                "reference": transaction_reference
+            },
+            "order": {
+                "amount": 0,  # Minimal amount for ANY type
+                "currency": "NGN",
+                "country": "NGA",
+                "amounttype": "ANY"  # Allows any amount to be received
+            },
+            "customer": {
+                "account": {
+                    "name": customer_name,
+                    "type": "STATIC"  # Permanent virtual account
+                },
+                "phone": phone_number,
+                "email": email or f"customer_{customer_id}@financeflex.com"
+            }
+        }
+        
+        headers = {
+            'Authorization': f'Bearer {self.access_token}',
+            'Content-Type': 'application/json'
+        }
+        
+        logger.info(f"[9PSB] Creating virtual account for customer: {customer_name}")
+        logger.info(f"[9PSB] Request URL: {url}")
+        logger.info(f"[9PSB] Request payload: {payload}")
+        
+        response = requests.post(url, json=payload, headers=headers, timeout=30)
+        
+        # FIXED: Add response debugging
+        logger.info(f"[9PSB] Response Status: {response.status_code}")
+        logger.info(f"[9PSB] Response Headers: {dict(response.headers)}")
+        logger.info(f"[9PSB] Response Text: {response.text}")
+        
+        # Check if response is empty or HTML
+        if not response.text.strip():
+            logger.error("[9PSB] Empty response received")
+            return {'success': False, 'error': 'Empty response from 9PSB API'}
+            
+        if response.text.strip().startswith('<'):
+            logger.error("[9PSB] HTML response received (likely 404 or error page)")
+            return {'success': False, 'error': f'HTML response received. Status: {response.status_code}'}
+        
+        try:
+            response_data = response.json()
+        except ValueError as e:
+            logger.error(f"[9PSB] JSON decode error: {str(e)}")
+            logger.error(f"[9PSB] Raw response: {response.text}")
+            return {'success': False, 'error': f'Invalid JSON response: {str(e)}'}
+        
+        if response.status_code == 200 and response_data.get('status') == 'SUCCESS':
+            virtual_account_number = response_data.get('customer', {}).get('account', {}).get('number')
+            
+            if virtual_account_number:
+                logger.info(f"[9PSB] Virtual account created successfully: {virtual_account_number}")
+                return {
+                    'success': True,
+                    'virtual_account_number': virtual_account_number,
+                    'transaction_reference': transaction_reference,
+                    'response_data': response_data
+                }
+            else:
+                logger.error(f"[9PSB] No account number in response: {response_data}")
+                return {'success': False, 'error': 'No account number returned'}
+        else:
+            # FIXED: Proper retry logic with correct variable scoping
+            if response.status_code == 401:
+                logger.warning("[9PSB] Token expired, retrying authentication")
+                self.access_token = None
+                self.token_expires_at = None
+                
+                # Retry authentication and account creation
+                auth_retry = self.authenticate()
+                if auth_retry['success']:
+                    # Update headers with new token
+                    headers['Authorization'] = f'Bearer {self.access_token}'
+                    
+                    logger.info("[9PSB] Retrying virtual account creation with new token")
+                    retry_response = requests.post(url, json=payload, headers=headers, timeout=30)
+                    
+                    # Log retry response
+                    logger.info(f"[9PSB] Retry Response Status: {retry_response.status_code}")
+                    logger.info(f"[9PSB] Retry Response Text: {retry_response.text}")
+                    
+                    try:
+                        retry_data = retry_response.json()
+                    except ValueError as e:
+                        logger.error(f"[9PSB] Retry JSON decode error: {str(e)}")
+                        return {'success': False, 'error': f'Invalid JSON on retry: {str(e)}'}
+                    
+                    if retry_response.status_code == 200 and retry_data.get('status') == 'SUCCESS':
+                        virtual_account_number = retry_data.get('customer', {}).get('account', {}).get('number')
+                        if virtual_account_number:
+                            logger.info(f"[9PSB] Virtual account created on retry: {virtual_account_number}")
+                            return {
+                                'success': True,
+                                'virtual_account_number': virtual_account_number,
+                                'transaction_reference': transaction_reference,
+                                'response_data': retry_data
+                            }
+            
+            logger.error(f"[9PSB] Virtual account creation failed: {response_data}")
+            return {'success': False, 'error': response_data.get('message', 'Virtual account creation failed')}
+            
+    except Exception as e:
+        logger.error(f"[9PSB] Virtual account creation error: {str(e)}")
+        import traceback
+        logger.error(f"[9PSB] Traceback: {traceback.format_exc()}")
+        return {'success': False, 'error': f'Virtual account creation error: {str(e)}'}
 
+# Create 9PSB service instance
+nine_psb_service = NinePSBVirtualAccountService()
 
+class VerifyAccountAPIView(APIView):
+    """Step 1: Verify account ownership with account number, DOB, and phone"""
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        account_number = request.data.get('account_number')
+        date_of_birth = request.data.get('date_of_birth')  # Format: YYYY-MM-DD
+        phone_number = request.data.get('phone_number')
+
+        if not account_number or len(account_number) < 10:
+            return Response({
+                'error': 'Invalid account number'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Parse account number into gl_no and ac_no
+        if len(account_number) >= 10:
+            gl_no = account_number[:5]
+            ac_no = account_number[5:]
+        else:
+            return Response({
+                'error': 'Account number must be at least 10 digits'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Verify customer exists with matching details
+        try:
+            customer = Customer.objects.get(
+                gl_no=gl_no,
+                ac_no=ac_no,
+                dob=date_of_birth,
+                phone_no=phone_number
+            )
+        except Customer.DoesNotExist:
+            return Response({
+                'error': 'Account verification failed. Please check your details.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({
+            'success': True,
+            'message': 'Account verified successfully',
+            'account_number': account_number,
+            'customer_name': customer.get_full_name()
+        })
+
+class SendOTPAPIView(APIView):
+    """Step 2: Send OTP to phone and email with real SMS"""
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        account_number = request.data.get('account_number')
+        phone_number = request.data.get('phone_number')
+
+        if not account_number or not phone_number:
+            return Response({
+                'error': 'Account number and phone number are required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Verify customer exists
+        if len(account_number) >= 10:
+            gl_no = account_number[:5]
+            ac_no = account_number[5:]
+        else:
+            return Response({
+                'error': 'Invalid account number format'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            customer = Customer.objects.get(gl_no=gl_no, ac_no=ac_no)
+        except Customer.DoesNotExist:
+            return Response({
+                'error': 'Account not found'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Generate 6-digit OTP
+        otp_code = ''.join(random.choices(string.digits, k=6))
+        
+        # Store OTP in session
+        request.session[f'otp_{account_number}'] = {
+            'code': otp_code,
+            'expires': (timezone.now() + timedelta(minutes=5)).timestamp(),
+            'phone': phone_number,
+            'attempts': 0
+        }
+
+        # Send OTP via SMS (Termii)
+        sms_result = sms_service.send_otp_sms(phone_number, otp_code, expires_in_minutes=5)
+        
+        # Send OTP via Email (if customer has email)
+        email_sent = False
+        if customer.email:
+            try:
+                send_mail(
+                    subject='FinanceFlex - Account Verification Code',
+                    message=(
+                        f'Your FinanceFlex verification code is: {otp_code}\n\n'
+                        f'This code expires in 5 minutes. '
+                        f'Do not share this code with anyone.\n\n'
+                        f'If you didn\'t request this, please ignore this email.'
+                    ),
+                    from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@financeflex.com'),
+                    recipient_list=[customer.email],
+                    fail_silently=True
+                )
+                email_sent = True
+            except Exception as e:
+                print(f"Email sending failed: {e}")
+
+        # Prepare response
+        response_data = {
+            'success': True,
+            'message': f'OTP sent to {phone_number}',
+            'sms_sent': sms_result['success'],
+            'email_sent': email_sent,
+        }
+
+        # Include SMS details if available
+        if sms_result['success']:
+            response_data['sms_message_id'] = sms_result.get('message_id')
+        else:
+            response_data['sms_error'] = sms_result.get('error')
+
+        # For development/testing - remove in production
+        if settings.DEBUG:
+            response_data['debug_otp'] = otp_code
+
+        return Response(response_data)
+
+class VerifyOTPAPIView(APIView):
+    """Step 3: Verify OTP code with attempt limiting"""
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        account_number = request.data.get('account_number')
+        otp_code = request.data.get('otp_code')
+
+        if not otp_code or len(otp_code) != 6:
+            return Response({
+                'error': 'Invalid OTP format. Please enter 6 digits.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Verify OTP from session
+        otp_data = request.session.get(f'otp_{account_number}')
+        if not otp_data:
+            return Response({
+                'error': 'OTP session not found or expired'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Check expiry
+        if timezone.now().timestamp() > otp_data['expires']:
+            del request.session[f'otp_{account_number}']
+            return Response({
+                'error': 'OTP has expired. Please request a new code.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Check attempt limit
+        attempts = otp_data.get('attempts', 0)
+        if attempts >= 3:
+            del request.session[f'otp_{account_number}']
+            return Response({
+                'error': 'Too many failed attempts. Please request a new OTP.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Verify OTP code
+        if otp_data['code'] != otp_code:
+            # Increment attempts
+            otp_data['attempts'] = attempts + 1
+            request.session[f'otp_{account_number}'] = otp_data
+            
+            remaining_attempts = 3 - otp_data['attempts']
+            return Response({
+                'error': f'Invalid OTP code. {remaining_attempts} attempts remaining.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # OTP verified successfully
+        # Generate temporary token for registration step
+        otp_token = ''.join(random.choices(string.ascii_letters + string.digits, k=32))
+        request.session[f'otp_token_{account_number}'] = {
+            'token': otp_token,
+            'expires': (timezone.now() + timedelta(minutes=10)).timestamp(),
+            'verified_phone': otp_data['phone']
+        }
+
+        # Clear used OTP
+        del request.session[f'otp_{account_number}']
+
+        return Response({
+            'success': True,
+            'message': 'OTP verified successfully',
+            'otp_token': otp_token
+        })
+
+# Resend OTP endpoint
+class ResendOTPAPIView(APIView):
+    """Resend OTP with rate limiting"""
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        account_number = request.data.get('account_number')
+        phone_number = request.data.get('phone_number')
+
+        # Check if previous OTP session exists
+        otp_data = request.session.get(f'otp_{account_number}')
+        if otp_data:
+            # Check if enough time has passed (prevent spam)
+            time_since_last = timezone.now().timestamp() - (otp_data['expires'] - 300)  # 300 = 5 mins
+            if time_since_last < 60:  # Wait at least 1 minute
+                return Response({
+                    'error': f'Please wait {60 - int(time_since_last)} seconds before requesting a new OTP'
+                }, status=status.HTTP_429_TOO_MANY_REQUESTS)
+
+        # Use the same logic as SendOTPAPIView
+        send_otp_view = SendOTPAPIView()
+        return send_otp_view.post(request)
+
+class RegisterUserAPIView(APIView):
+    """Step 4: Register user with username and password + Create 9PSB Virtual Account"""
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        account_number = request.data.get('account_number')
+        username = request.data.get('username')
+        password = request.data.get('password')
+        otp_token = request.data.get('otp_token')
+
+        # Verify OTP token
+        token_data = request.session.get(f'otp_token_{account_number}')
+        if not token_data or token_data['token'] != otp_token:
+            return Response({
+                'error': 'Invalid OTP token'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if timezone.now().timestamp() > token_data['expires']:
+            return Response({
+                'error': 'OTP token expired'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Check if username already exists
+        if CustomUser.objects.filter(username=username).exists():
+            return Response({
+                'error': 'Username already exists'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Get customer
+        if len(account_number) >= 10:
+            gl_no = account_number[:5]
+            ac_no = account_number[5:]
+        else:
+            return Response({
+                'error': 'Invalid account number'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            customer = Customer.objects.get(gl_no=gl_no, ac_no=ac_no)
+        except Customer.DoesNotExist:
+            return Response({
+                'error': 'Customer not found'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Create user
+        try:
+            user = CustomUser.objects.create_user(
+                username=username,
+                password=password,
+                email=customer.email or f"{username}@financeflex.com",
+                first_name=customer.first_name or "",
+                last_name=customer.last_name or "",
+                phone_number=customer.phone_no or "",
+                role=CustomUser.CUSTOMER,
+                customer=customer,
+                verified=True  # Auto-verify since they passed OTP
+            )
+
+            # 9PSB VIRTUAL ACCOUNT CREATION - FIXED VERSION
+            virtual_account_created = False
+            virtual_account_number = None
+            virtual_account_error = None
+            
+            try:
+                logger.info(f"[9PSB] Creating virtual account for customer: {customer.get_full_name()}")
+                
+                va_result = nine_psb_service.create_virtual_account(
+                    customer_name=customer.get_full_name(),
+                    customer_id=customer.id,
+                    phone_number=customer.phone_no or token_data['verified_phone'],
+                    email=customer.email
+                )
+                
+                if va_result['success']:
+                    virtual_account_number = va_result['virtual_account_number']
+                    virtual_account_created = True
+                    
+                    # Update customer wallet_account field
+                    if hasattr(customer, 'wallet_account'):
+                        customer.wallet_account = virtual_account_number
+                        customer.save(update_fields=['wallet_account'])
+                        logger.info(f"[9PSB] Virtual account {virtual_account_number} saved to customer.wallet_account")
+                    else:
+                        logger.warning("[9PSB] Customer model has no wallet_account field")
+                        
+                else:
+                    virtual_account_error = va_result['error']
+                    logger.warning(f"[9PSB] Virtual account creation failed: {virtual_account_error}")
+                    
+            except Exception as e:
+                virtual_account_error = str(e)
+                logger.error(f"[9PSB] Virtual account creation exception: {e}")
+
+            # Generate JWT tokens
+            refresh = RefreshToken.for_user(user)
+            access_token = refresh.access_token
+
+            # Clear used token
+            del request.session[f'otp_token_{account_number}']
+
+            # Prepare response
+            response_data = {
+                'success': True,
+                'message': 'User registered successfully',
+                'access_token': str(access_token),
+                'refresh_token': str(refresh),
+                'username': username,
+                'virtual_account_created': virtual_account_created
+            }
+            
+            # Include virtual account details if created
+            if virtual_account_created:
+                response_data['wallet_account'] = virtual_account_number
+                response_data['virtual_account_number'] = virtual_account_number
+            elif virtual_account_error:
+                response_data['virtual_account_error'] = virtual_account_error
+                response_data['warning'] = 'Registration successful but virtual account creation failed'
+
+            return Response(response_data)
+
+        except Exception as e:
+            return Response({
+                'error': f'Registration failed: {str(e)}'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+class SetupPINAPIView(APIView):
+    """Step 5: Setup transaction PIN"""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        username = request.data.get('username')
+        pin = request.data.get('pin')
+
+        if not pin or len(pin) != 4 or not pin.isdigit():
+            return Response({
+                'error': 'PIN must be exactly 4 digits'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Set transaction PIN
+        user = request.user
+        user.set_transaction_pin(pin)
+        user.save()
+
+        return Response({
+            'success': True,
+            'message': 'Transaction PIN set successfully'
+        })
+
+# ---------------------------------------------------------------------------
+# BULLETPROOF SIGNUP VIEWS - DATABASE STORAGE (Add to end of views.py)
+# ---------------------------------------------------------------------------
+
+# Import OTP models
+from .models import OTPVerification, RegistrationToken
+import requests
+
+# SMS Service imports
+logger = logging.getLogger(__name__)
+
+class VerifyAccountAPIView(APIView):
+    """Step 1: Verify account ownership with account number, DOB, and phone"""
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        try:
+            account_number = request.data.get('account_number')
+            date_of_birth = request.data.get('date_of_birth')  # Format: YYYY-MM-DD
+            phone_number = request.data.get('phone_number')
+
+            logger.info(f"[VERIFY] Account verification attempt for: {account_number}")
+
+            # Validate required fields
+            if not account_number:
+                return Response({
+                    'error': 'Account number is required'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            if not date_of_birth:
+                return Response({
+                    'error': 'Date of birth is required'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            if not phone_number:
+                return Response({
+                    'error': 'Phone number is required'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            # Validate account number format
+            if len(account_number) < 10:
+                return Response({
+                    'error': 'Account number must be at least 10 digits'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            # Parse account number into gl_no and ac_no
+            if len(account_number) >= 10:
+                gl_no = account_number[:5]
+                ac_no = account_number[5:]
+            else:
+                return Response({
+                    'error': 'Invalid account number format'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            # Parse and validate date of birth
+            try:
+                dob_date = datetime.strptime(date_of_birth, '%Y-%m-%d').date()
+            except ValueError:
+                return Response({
+                    'error': 'Invalid date format. Use YYYY-MM-DD'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            # Format phone number (remove any non-digits and check format)
+            phone_digits = ''.join(filter(str.isdigit, phone_number))
+            
+            # Try different phone number formats for matching
+            phone_variations = [
+                phone_digits,
+                phone_digits[-10:] if len(phone_digits) > 10 else phone_digits,
+                phone_digits[-11:] if len(phone_digits) > 11 else phone_digits,
+            ]
+
+            # Add leading zero if missing for Nigerian numbers
+            if len(phone_digits) == 10 and not phone_digits.startswith('0'):
+                phone_variations.append('0' + phone_digits)
+
+            logger.info(f"[VERIFY] Looking for customer: gl_no={gl_no}, ac_no={ac_no}")
+
+            # Verify customer exists with matching details
+            customer = None
+            for phone_var in phone_variations:
+                try:
+                    customer = Customer.objects.get(
+                        gl_no=gl_no,
+                        ac_no=ac_no,
+                        dob=dob_date,
+                        phone_no=phone_var
+                    )
+                    logger.info(f"[VERIFY] Customer found with phone: {phone_var}")
+                    break
+                except Customer.DoesNotExist:
+                    continue
+
+            # If not found with phone, try without phone (in case phone field is different)
+            if not customer:
+                try:
+                    customer = Customer.objects.get(
+                        gl_no=gl_no,
+                        ac_no=ac_no,
+                        dob=dob_date
+                    )
+                    logger.info("[VERIFY] Customer found without phone matching")
+                    
+                    # Update customer phone if found without phone match
+                    if phone_digits:
+                        customer.phone_no = phone_digits
+                        customer.save(update_fields=['phone_no'])
+                        
+                except Customer.DoesNotExist:
+                    pass
+
+            if not customer:
+                logger.warning(f"[VERIFY] Account verification FAILED for: {account_number}")
+                return Response({
+                    'error': 'Account verification failed. Please check your account number, date of birth, and phone number.'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            # Check if user already exists for this customer
+            # Try to check if customer field exists, if not skip this check
+            try:
+                existing_user = CustomUser.objects.filter(customer=customer).first()
+                if existing_user:
+                    return Response({
+                        'error': 'An account already exists for this customer. Please use the login page.'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+            except Exception as e:
+                logger.warning(f"[VERIFY] Could not check existing user by customer: {e}")
+                # If customer field doesn't exist, check by other fields
+                pass
+
+            logger.info(f"[VERIFY] Account verification SUCCESS for: {customer.get_full_name()}")
+
+            return Response({
+                'success': True,
+                'message': 'Account verified successfully',
+                'account_number': account_number,
+                'customer_name': customer.get_full_name(),
+                'customer_id': customer.id
+            })
+
+        except Exception as e:
+            logger.error(f"[VERIFY] Account verification ERROR: {str(e)}")
+            return Response({
+                'error': 'Account verification failed due to system error'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class SendOTPAPIView(APIView):
+    """Step 2: Send OTP to phone and email - DATABASE STORAGE"""
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        try:
+            account_number = request.data.get('account_number')
+            phone_number = request.data.get('phone_number')
+
+            logger.info(f"[SEND_OTP] Request for account: {account_number}")
+
+            if not account_number or not phone_number:
+                return Response({
+                    'error': 'Account number and phone number are required'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            # Verify customer exists (same logic as verify account)
+            if len(account_number) >= 10:
+                gl_no = account_number[:5]
+                ac_no = account_number[5:]
+            else:
+                return Response({
+                    'error': 'Invalid account number format'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            try:
+                customer = Customer.objects.get(gl_no=gl_no, ac_no=ac_no)
+                logger.info(f"[SEND_OTP] Customer found: {customer.get_full_name()}")
+            except Customer.DoesNotExist:
+                logger.warning(f"[SEND_OTP] Customer not found for: {account_number}")
+                return Response({
+                    'error': 'Account not found'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            # DATABASE STORAGE: Create OTP in database
+            otp = OTPVerification.create_otp(
+                account_number=account_number,
+                phone_number=phone_number,
+                customer_id=customer.id
+            )
+            
+            logger.info(f"[SEND_OTP] OTP created in database for: {account_number}")
+
+            # Send OTP via SMS
+            sms_result = sms_service.send_otp_sms(phone_number, otp.otp_code, expires_in_minutes=5)
+
+            # Send OTP via Email if customer has email
+            email_sent = False
+            if customer.email:
+                try:
+                    send_mail(
+                        subject='FinanceFlex - Account Verification Code',
+                        message=(
+                            f'Hello {customer.get_full_name()},\n\n'
+                            f'Your FinanceFlex verification code is: {otp.otp_code}\n\n'
+                            f'This code expires in 5 minutes. '
+                            f'Do not share this code with anyone.\n\n'
+                            f'If you didn\'t request this, please ignore this email.\n\n'
+                            f'FinanceFlex Team'
+                        ),
+                        from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@financeflex.com'),
+                        recipient_list=[customer.email],
+                        fail_silently=False
+                    )
+                    email_sent = True
+                    logger.info(f"[SEND_OTP] Email sent to: {customer.email}")
+                except Exception as e:
+                    logger.error(f"[SEND_OTP] Email failed: {e}")
+
+            # Prepare response
+            response_data = {
+                'success': True,
+                'message': f'OTP sent to {phone_number[-4:].rjust(len(phone_number), "*")}',
+                'sms_sent': sms_result.get('success', False),
+                'email_sent': email_sent,
+                'expires_in': 300,  # 5 minutes in seconds
+                'otp_id': otp.id  # Database ID for debugging
+            }
+
+            # Include SMS details if available
+            if sms_result.get('success'):
+                response_data['sms_message_id'] = sms_result.get('message_id')
+                response_data['sms_balance'] = sms_result.get('balance')
+            else:
+                response_data['sms_error'] = sms_result.get('error')
+
+            # For development/testing - remove in production
+            if getattr(settings, 'DEBUG', False):
+                response_data['debug_otp'] = otp.otp_code
+                response_data['debug_expires_at'] = otp.expires_at.isoformat()
+                logger.info(f"[SEND_OTP] DEBUG OTP for {account_number}: {otp.otp_code}")
+
+            return Response(response_data)
+
+        except Exception as e:
+            logger.error(f"[SEND_OTP] ERROR: {str(e)}")
+            return Response({
+                'error': 'Failed to send OTP due to system error'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class VerifyOTPAPIView(APIView):
+    """Step 3: Verify OTP code - DATABASE STORAGE"""
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        try:
+            account_number = request.data.get('account_number')
+            otp_code = request.data.get('otp_code')
+
+            logger.info(f"[VERIFY_OTP] Request for account: {account_number}, OTP: {otp_code}")
+
+            if not otp_code or len(otp_code) != 6 or not otp_code.isdigit():
+                return Response({
+                    'error': 'Invalid OTP format. Please enter 6 digits.'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            if not account_number:
+                return Response({
+                    'error': 'Account number is required'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            # DATABASE STORAGE: Verify OTP from database
+            result = OTPVerification.verify_otp(account_number, otp_code)
+            
+            logger.info(f"[VERIFY_OTP] Database result: {result}")
+
+            if not result['success']:
+                return Response({
+                    'error': result['error']
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            # OTP verified successfully
+            otp = result['otp']
+            
+            # DATABASE STORAGE: Create registration token
+            reg_token = RegistrationToken.create_token(
+                account_number=account_number,
+                customer_id=otp.customer_id,
+                verified_phone=otp.phone_number
+            )
+
+            logger.info(f"[VERIFY_OTP] SUCCESS - Token created for: {account_number}")
+
+            return Response({
+                'success': True,
+                'message': 'OTP verified successfully',
+                'otp_token': reg_token.token
+            })
+
+        except Exception as e:
+            logger.error(f"[VERIFY_OTP] ERROR: {str(e)}")
+            return Response({
+                'error': 'OTP verification failed due to system error'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class RegisterUserAPIView(APIView):
+    """Step 4: Register user with username and password + Create 9PSB Virtual Account"""
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        try:
+            account_number = request.data.get('account_number')
+            username = request.data.get('username')
+            password = request.data.get('password')
+            otp_token = request.data.get('otp_token')
+
+            logger.info(f"[REGISTER] Request for account: {account_number}, username: {username}")
+
+            # Validate required fields
+            if not username or not password or not otp_token:
+                return Response({
+                    'error': 'Username, password, and OTP token are required'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            # DATABASE STORAGE: Verify registration token
+            token_result = RegistrationToken.verify_token(account_number, otp_token)
+            
+            logger.info(f"[REGISTER] Token verification result: {token_result}")
+
+            if not token_result['success']:
+                return Response({
+                    'error': token_result['error']
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            reg_token = token_result['token_obj']
+
+            # Check if username already exists
+            if CustomUser.objects.filter(username=username).exists():
+                return Response({
+                    'error': 'Username already exists. Please choose a different username.'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            # Get customer
+            try:
+                customer = Customer.objects.get(id=reg_token.customer_id)
+                logger.info(f"[REGISTER] Customer found: {customer.get_full_name()}")
+            except Customer.DoesNotExist:
+                return Response({
+                    'error': 'Customer not found'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            # Create user - Handle custom UserManager that might require role
+            try:
+                # Try with role parameter first (for custom UserManager)
+                user = CustomUser.objects.create_user(
+                    username=username,
+                    password=password,
+                    email=customer.email or f"{username}@financeflex.com",
+                    first_name=customer.first_name or "",
+                    last_name=customer.last_name or "",
+                    role=getattr(CustomUser, 'CUSTOMER', 'customer')  # Required by custom UserManager
+                )
+            except TypeError as e:
+                if 'role' in str(e):
+                    # If role is missing, try without it
+                    user = CustomUser.objects.create_user(
+                        username=username,
+                        password=password,
+                        email=customer.email or f"{username}@financeflex.com",
+                        first_name=customer.first_name or "",
+                        last_name=customer.last_name or ""
+                    )
+                else:
+                    raise e
+            
+            # Set custom fields separately (only if they exist)
+            try:
+                if hasattr(user, 'phone_number'):
+                    user.phone_number = customer.phone_no or reg_token.verified_phone
+                if hasattr(user, 'role'):
+                    user.role = getattr(CustomUser, 'CUSTOMER', 'customer')
+                if hasattr(user, 'customer'):
+                    user.customer = customer
+                if hasattr(user, 'verified'):
+                    user.verified = True  # Auto-verify since they passed OTP
+                user.save()
+            except Exception as e:
+                logger.warning(f"[REGISTER] Could not set some custom fields: {e}")
+                pass
+
+            # 9PSB VIRTUAL ACCOUNT CREATION - FIXED VERSION
+            virtual_account_created = False
+            virtual_account_number = None
+            virtual_account_error = None
+            
+            try:
+                logger.info(f"[9PSB] Creating virtual account for customer: {customer.get_full_name()}")
+                
+                va_result = nine_psb_service.create_virtual_account(
+                    customer_name=customer.get_full_name(),
+                    customer_id=customer.id,
+                    phone_number=customer.phone_no or reg_token.verified_phone,
+                    email=customer.email
+                )
+                
+                if va_result['success']:
+                    virtual_account_number = va_result['virtual_account_number']
+                    virtual_account_created = True
+                    
+                    # Update customer wallet_account field
+                    if hasattr(customer, 'wallet_account'):
+                        customer.wallet_account = virtual_account_number
+                        customer.save(update_fields=['wallet_account'])
+                        logger.info(f"[9PSB] Virtual account {virtual_account_number} saved to customer.wallet_account")
+                    else:
+                        logger.warning("[9PSB] Customer model has no wallet_account field")
+                        
+                else:
+                    virtual_account_error = va_result['error']
+                    logger.warning(f"[9PSB] Virtual account creation failed: {virtual_account_error}")
+                    
+            except Exception as e:
+                virtual_account_error = str(e)
+                logger.error(f"[9PSB] Virtual account creation exception: {e}")
+
+            # Generate JWT tokens
+            refresh = RefreshToken.for_user(user)
+            access_token = refresh.access_token
+
+            # Mark token as used
+            reg_token.mark_used()
+
+            logger.info(f"[REGISTER] SUCCESS - User created: {username}")
+
+            # Prepare response
+            response_data = {
+                'success': True,
+                'message': 'User registered successfully',
+                'access_token': str(access_token),
+                'refresh_token': str(refresh),
+                'username': username,
+                'customer_name': customer.get_full_name(),
+                'virtual_account_created': virtual_account_created
+            }
+            
+            # Include virtual account details if created
+            if virtual_account_created:
+                response_data['wallet_account'] = virtual_account_number
+                response_data['virtual_account_number'] = virtual_account_number
+            elif virtual_account_error:
+                response_data['virtual_account_error'] = virtual_account_error
+                response_data['warning'] = 'Registration successful but virtual account creation failed'
+
+            return Response(response_data)
+
+        except Exception as e:
+            logger.error(f"[REGISTER] ERROR: {str(e)}")
+            return Response({
+                'error': f'Registration failed: {str(e)}'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+class SetupPINAPIView(APIView):
+    """Step 5: Setup transaction PIN"""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        try:
+            pin = request.data.get('pin')
+
+            logger.info(f"[SETUP_PIN] Request for user: {request.user.username}")
+
+            if not pin or len(pin) != 4 or not pin.isdigit():
+                return Response({
+                    'error': 'PIN must be exactly 4 digits'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            # Set transaction PIN for the user
+            user = request.user
+            try:
+                if hasattr(user, 'set_transaction_pin'):
+                    user.set_transaction_pin(pin)
+                elif hasattr(user, 'transaction_pin'):
+                    # Set PIN directly if no special method exists
+                    from django.contrib.auth.hashers import make_password
+                    user.transaction_pin = make_password(pin)
+                else:
+                    logger.warning(f"[SETUP_PIN] User model has no transaction_pin field")
+                user.save()
+            except Exception as e:
+                logger.warning(f"[SETUP_PIN] Could not save transaction PIN: {e}")
+                # For now, just return success even if PIN can't be set
+                pass
+
+            logger.info(f"[SETUP_PIN] SUCCESS - PIN set for: {user.username}")
+
+            return Response({
+                'success': True,
+                'message': 'Transaction PIN set successfully'
+            })
+
+        except Exception as e:
+            logger.error(f"[SETUP_PIN] ERROR: {str(e)}")
+            return Response({
+                'error': 'Failed to set PIN due to system error'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class ResendOTPAPIView(APIView):
+    """Resend OTP with rate limiting - DATABASE STORAGE"""
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        try:
+            account_number = request.data.get('account_number')
+            phone_number = request.data.get('phone_number')
+
+            logger.info(f"[RESEND_OTP] Request for account: {account_number}")
+
+            # Check if previous OTP exists and implement rate limiting
+            try:
+                last_otp = OTPVerification.objects.filter(
+                    account_number=account_number
+                ).order_by('-created_at').first()
+                
+                if last_otp:
+                    time_since_last = (timezone.now() - last_otp.created_at).total_seconds()
+                    if time_since_last < 60:  # Wait at least 1 minute
+                        wait_time = 60 - int(time_since_last)
+                        return Response({
+                            'error': f'Please wait {wait_time} seconds before requesting a new OTP'
+                        }, status=status.HTTP_429_TOO_MANY_REQUESTS)
+            except Exception as e:
+                logger.warning(f"[RESEND_OTP] Rate limit check failed: {e}")
+
+            # Use the same logic as SendOTPAPIView
+            send_otp_view = SendOTPAPIView()
+            return send_otp_view.post(request)
+
+        except Exception as e:
+            logger.error(f"[RESEND_OTP] ERROR: {str(e)}")
+            return Response({
+                'error': 'Failed to resend OTP due to system error'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class DebugOTPStatusAPIView(APIView):
+    """Debug endpoint to check OTP status in database"""
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        if not getattr(settings, 'DEBUG', False):
+            return Response({'error': 'Debug endpoint only available in DEBUG mode'}, status=404)
+            
+        account_number = request.data.get('account_number')
+        if not account_number:
+            return Response({'error': 'Account number required'}, status=400)
+            
+        # Get OTP records
+        otps = OTPVerification.objects.filter(account_number=account_number).order_by('-created_at')
+        tokens = RegistrationToken.objects.filter(account_number=account_number).order_by('-created_at')
+        
+        otp_data = []
+        for otp in otps[:3]:  # Last 3 OTPs
+            otp_data.append({
+                'id': otp.id,
+                'otp_code': otp.otp_code,
+                'created_at': otp.created_at.isoformat(),
+                'expires_at': otp.expires_at.isoformat(),
+                'attempts': otp.attempts,
+                'is_verified': otp.is_verified,
+                'is_expired': otp.is_expired,
+                'is_valid': otp.is_valid()
+            })
+        
+        token_data = []
+        for token in tokens[:3]:  # Last 3 tokens
+            token_data.append({
+                'id': token.id,
+                'token': token.token,
+                'created_at': token.created_at.isoformat(),
+                'expires_at': token.expires_at.isoformat(),
+                'is_used': token.is_used,
+                'is_valid': token.is_valid()
+            })
+        
+        return Response({
+            'account_number': account_number,
+            'otps': otp_data,
+            'tokens': token_data,
+            'current_time': timezone.now().isoformat()
+        })

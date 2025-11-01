@@ -76,6 +76,7 @@ INSTALLED_APPS = [
     'django_filters',
     'corsheaders',
     'ninepsb',
+    'adverts',
    
 ]
 
@@ -129,11 +130,11 @@ WSGI_APPLICATION = 'profit_solutions.wsgi.application'
 
 # settings.py
 # settings.py
-CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-    }
-}
+# CACHES = {
+#     'default': {
+#         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+#     }
+# }
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
@@ -300,5 +301,28 @@ TERMII_SENDER_ID = env("TERMII_SENDER_ID", default="FinanceFlex")
 TERMII_SMS_URL = env("TERMII_SMS_URL", default="https://api.ng.termii.com/api/sms/send")
 SMS_DELIVERY_WEBHOOK_URL = env("SMS_DELIVERY_WEBHOOK_URL", default=None)
 
+
+
+
+
+
+
+
+# CACHE CONFIGURATION (Required for OTP storage)
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+        'LOCATION': 'cache_table',
+        'TIMEOUT': 300,  # 5 minutes default timeout
+        'OPTIONS': {
+            'MAX_ENTRIES': 1000,
+            'CULL_FREQUENCY': 3,
+        }
+    }
+}
+
+# CORS CONFIGURATION (for Flutter app)
+CORS_ALLOW_ALL_ORIGINS = True  # For development
+CORS_ALLOW_CREDENTIALS = True
 
 

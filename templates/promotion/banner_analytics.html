@@ -1,0 +1,89 @@
+<!-- promotion/templates/promotion/banner_analytics.html -->
+{% extends 'promotion/base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<h1><i class="fas fa-chart-bar me-2"></i>Banner Analytics</h1>
+
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card analytics-card text-white">
+            <div class="card-body text-center">
+                <h2>{{ total_views }}</h2>
+                <p class="mb-0">Total Views</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card analytics-card text-white">
+            <div class="card-body text-center">
+                <h2>{{ total_clicks }}</h2>
+                <p class="mb-0">Total Clicks</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card analytics-card text-white">
+            <div class="card-body text-center">
+                <h2>{{ avg_ctr }}%</h2>
+                <p class="mb-0">Average CTR</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>Banner Performance</h3>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Banner</th>
+                        <th>Status</th>
+                        <th>Views</th>
+                        <th>Clicks</th>
+                        <th>CTR</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for banner in banners %}
+                        <tr>
+                            <td>
+                                <div class="color-preview me-2" style="background-color: {{ banner.background_color }};"></div>
+                                <strong>{{ banner.title }}</strong><br>
+                                <small class="text-muted">{{ banner.subtitle|truncatechars:40 }}</small>
+                            </td>
+                            <td>
+                                <span class="badge status-badge {{ banner.status }}">
+                                    {{ banner.get_status_display }}
+                                </span>
+                            </td>
+                            <td>{{ banner.view_count }}</td>
+                            <td>{{ banner.click_count }}</td>
+                            <td>
+                                <strong>{{ banner.click_through_rate }}%</strong>
+                                <div class="progress mt-1" style="height: 5px;">
+                                    <div class="progress-bar" style="width: {{ banner.click_through_rate }}%"></div>
+                                </div>
+                            </td>
+                            <td>
+                                <a href="{% url 'promotion:banner_detail' banner.pk %}" class="btn btn-sm btn-outline-info">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{% url 'promotion:banner_edit' banner.pk %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

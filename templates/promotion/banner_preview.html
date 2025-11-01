@@ -1,0 +1,44 @@
+<!-- promotion/templates/promotion/banner_preview.html -->
+{% extends 'promotion/base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h3><i class="fas fa-mobile-alt me-2"></i>Mobile App Preview</h3>
+                <small class="text-muted">How this banner appears in the mobile app</small>
+            </div>
+            <div class="card-body">
+                <div class="mobile-frame mx-auto" style="max-width: 300px; border: 3px solid #333; border-radius: 20px; padding: 20px; background: #f8f9fa;">
+                    <div class="banner-preview" style="background-color: {{ banner.background_color }};">
+                        <div class="d-flex">
+                            <div class="flex-grow-1">
+                                <h6>{{ banner.title }}</h6>
+                                <small>{{ banner.subtitle }}</small>
+                                <div class="mt-2">
+                                    <span class="badge bg-light text-dark">{{ banner.action_text }}</span>
+                                </div>
+                            </div>
+                            <div class="ms-3">
+                                <i class="fas fa-star fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-4 text-center">
+                    <a href="{% url 'promotion:banner_edit' banner.pk %}" class="btn btn-primary me-2">
+                        <i class="fas fa-edit me-1"></i>Edit Banner
+                    </a>
+                    <a href="{% url 'promotion:banner_list' %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>Back to List
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -308,21 +308,40 @@ class CardFundSerializer(serializers.Serializer):
 class CardWithdrawSerializer(serializers.Serializer):
     amount = serializers.DecimalField(max_digits=18, decimal_places=2, min_value=Decimal("0.01"))
 
-
-
-
+from rest_framework import serializers
+from transactions.models import Memtrans
 
 from rest_framework import serializers
-from transactions.models import Memtrans  # Import from transactions app
+from transactions.models import Memtrans
 
 class MemtransSerializer(serializers.ModelSerializer):
-    # Your Memtrans model already has the perfect field names!
-    trx_no = serializers.CharField()
-    trx_type = serializers.CharField()
-    amount = serializers.DecimalField(max_digits=10, decimal_places=2)
-    sys_date = serializers.DateTimeField()
-    description = serializers.CharField()
+    """Serializer for Memtrans model with correct date field handling"""
     
     class Meta:
         model = Memtrans
-        fields = ['trx_no', 'trx_type', 'amount', 'sys_date', 'description']
+        fields = '__all__'
+    
+    def to_representation(self, instance):
+        """Custom representation using ses_date instead of non-existent date field"""
+        
+        # Use ses_date as the primary transaction date (your Memtrans model has this field)
+        transaction_date = instance.ses_date
+        
+        return {
+            'id': instance.id,
+            'amount': float(instance.amount) if instance.amount else 0.0,
+            'type': instance.type or 'transaction',
+            'description': instance.description or '',
+            'date': transaction_date.isoformat() if transaction_date else '',  # FIXED: Using ses_date
+            'code': instance.code or '',
+            'gl_no': instance.gl_no or '',
+            'ac_no': instance.ac_no or '',
+            'trx_no': instance.trx_no or '',
+        }
+
+
+
+
+
+
+

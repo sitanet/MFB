@@ -1,0 +1,200 @@
+<!-- promotion/templates/promotion/banner_form.html -->
+{% extends 'promotion/base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h2><i class="fas fa-edit me-2"></i>{{ title }}</h2>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-8">
+                            <label class="form-label">{{ form.title.label }}</label>
+                            {{ form.title }}
+                            {% if form.title.errors %}
+                                <div class="text-danger">{{ form.title.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">{{ form.banner_type.label }}</label>
+                            {{ form.banner_type }}
+                            {% if form.banner_type.errors %}
+                                <div class="text-danger">{{ form.banner_type.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">{{ form.subtitle.label }}</label>
+                        {{ form.subtitle }}
+                        {% if form.subtitle.errors %}
+                            <div class="text-danger">{{ form.subtitle.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">{{ form.background_color.label }}</label>
+                            {{ form.background_color }}
+                            {% if form.background_color.errors %}
+                                <div class="text-danger">{{ form.background_color.errors }}</div>
+                            {% endif %}
+                            <small class="form-text text-muted">{{ form.background_color.help_text }}</small>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">{{ form.icon_name.label }}</label>
+                            {{ form.icon_name }}
+                            {% if form.icon_name.errors %}
+                                <div class="text-danger">{{ form.icon_name.errors }}</div>
+                            {% endif %}
+                            <small class="form-text text-muted">{{ form.icon_name.help_text }}</small>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">{{ form.action_text.label }}</label>
+                            {{ form.action_text }}
+                            {% if form.action_text.errors %}
+                                <div class="text-danger">{{ form.action_text.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">{{ form.action_url.label }}</label>
+                        {{ form.action_url }}
+                        {% if form.action_url.errors %}
+                            <div class="text-danger">{{ form.action_url.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">{{ form.image.label }}</label>
+                            {{ form.image }}
+                            {% if form.image.errors %}
+                                <div class="text-danger">{{ form.image.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">{{ form.thumbnail.label }}</label>
+                            {{ form.thumbnail }}
+                            {% if form.thumbnail.errors %}
+                                <div class="text-danger">{{ form.thumbnail.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">{{ form.status.label }}</label>
+                            {{ form.status }}
+                            {% if form.status.errors %}
+                                <div class="text-danger">{{ form.status.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">{{ form.display_order.label }}</label>
+                            {{ form.display_order }}
+                            {% if form.display_order.errors %}
+                                <div class="text-danger">{{ form.display_order.errors }}</div>
+                            {% endif %}
+                            <small class="form-text text-muted">{{ form.display_order.help_text }}</small>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">{{ form.start_date.label }}</label>
+                            {{ form.start_date }}
+                            {% if form.start_date.errors %}
+                                <div class="text-danger">{{ form.start_date.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">{{ form.end_date.label }}</label>
+                            {{ form.end_date }}
+                            {% if form.end_date.errors %}
+                                <div class="text-danger">{{ form.end_date.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">{{ form.target_user_types.label }}</label>
+                        {{ form.target_user_types }}
+                        {% if form.target_user_types.errors %}
+                            <div class="text-danger">{{ form.target_user_types.errors }}</div>
+                        {% endif %}
+                        <small class="form-text text-muted">{{ form.target_user_types.help_text }}</small>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'promotion:banner_list' %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-1"></i>Cancel
+                        </a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save me-1"></i>{{ submit_text }}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-mobile-alt me-2"></i>Live Preview</h5>
+            </div>
+            <div class="card-body">
+                <div id="banner-preview" class="banner-preview">
+                    <div class="d-flex">
+                        <div class="flex-grow-1">
+                            <h6 id="preview-title">Banner Title</h6>
+                            <small id="preview-subtitle">Banner subtitle goes here</small>
+                            <div class="mt-2">
+                                <span id="preview-action" class="badge bg-light text-dark">Action Text</span>
+                            </div>
+                        </div>
+                        <div class="ms-3">
+                            <i id="preview-icon" class="fas fa-star fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+                <small class="text-muted">Preview updates as you type</small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Live preview updates
+    function updatePreview() {
+        const title = $('#id_title').val() || 'Banner Title';
+        const subtitle = $('#id_subtitle').val() || 'Banner subtitle goes here';
+        const actionText = $('#id_action_text').val() || 'Action Text';
+        const backgroundColor = $('#id_background_color').val() || '#FF7A00';
+        
+        $('#preview-title').text(title);
+        $('#preview-subtitle').text(subtitle);
+        $('#preview-action').text(actionText);
+        $('#banner-preview').css('background-color', backgroundColor);
+    }
+    
+    // Update preview on input
+    $('#id_title, #id_subtitle, #id_action_text, #id_background_color').on('input', updatePreview);
+    
+    // Initial preview update
+    updatePreview();
+});
+</script>
+{% endblock %}

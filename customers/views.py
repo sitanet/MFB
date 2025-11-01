@@ -1015,3 +1015,10 @@ def customer_sms_email_alert(request):
         return redirect("customer_sms_email_alert")
 
     return render(request, "file/customer/customer_sms_email_alert.html", {"customers": customers})
+
+
+
+
+
+
+
