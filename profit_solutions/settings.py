@@ -27,9 +27,19 @@ from dotenv import load_dotenv
 
 load_dotenv()  # loads .env automatically
 
-PSB_BASE_URL = os.getenv("PSB_BASE_URL", "https://baastest.9psb.com.ng/ipaymw-api/v1")
-PSB_PUBLIC_KEY = os.getenv("PSB_PUBLIC_KEY")
-PSB_PRIVATE_KEY = os.getenv("PSB_PRIVATE_KEY")
+PSB_BASE_URL = os.getenv("PSB_BASE_URL", "https://baastest.9psb.com.ng/iva-api/v1").strip()
+PSB_PUBLIC_KEY = os.getenv("PSB_PUBLIC_KEY", "").strip()
+PSB_PRIVATE_KEY = os.getenv("PSB_PRIVATE_KEY", "").strip()
+
+PSB_ENABLED = True
+PSB_CURRENCY = "NGN"
+PSB_COUNTRY = "NGA"
+
+
+# PSB_BASE_URL = os.getenv("PSB_BASE_URL", "https://baastest.9psb.com.ng/ipaymw-api/v1")
+# PSB_IVA_BASE_URL = os.getenv("PSB_IVA_BASE_URL", "https://baastest.9psb.com.ng/iva-api/v1")
+# PSB_PUBLIC_KEY = os.getenv("PSB_PUBLIC_KEY")
+# PSB_PRIVATE_KEY = os.getenv("PSB_PRIVATE_KEY")
 
 
 # Quick-start development settings - unsuitable for production
