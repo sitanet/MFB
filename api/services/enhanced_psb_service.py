@@ -1,304 +1,390 @@
-# api/services/enhanced_psb_service.py
 """
-Enhanced 9PSB Service - Combines comprehensive functionality with parameter flexibility
+enhanced_psb_service.py
+
+Full-featured 9PSB integration service for:
+- Authentication with caching
+- Virtual account creation (flexible parameters)
+- Account validation
+- Bank list management
+- Fund transfer and status checks
+- Robust logging and defensive parsing
 """
 
-import requests
-import hashlib
 import json
 import logging
+import hashlib
+import uuid
+import requests
 from datetime import datetime, timedelta
+
+# Django imports
 from django.conf import settings
 from django.core.cache import cache
-from customers.models import Customer
-import uuid
+from django.db import transaction
+
+# Optional local model imports
+try:
+    from customers.models import Customer
+except Exception:
+    Customer = None
 
 logger = logging.getLogger(__name__)
 
+
 class Enhanced9PSBService:
     """
-    Comprehensive 9PSB service with:
-    - Flexible parameter handling (fixes original parameter mismatch)
-    - Authentication with caching
-    - Virtual account creation
-    - Bank list management
-    - Account validation
-    - Fund transfers
-    - Enhanced error handling
+    Comprehensive 9PSB service with improved error handling and flexible inputs.
     """
-    
+
     def __init__(self):
-        self.public_key = getattr(settings, 'PSB_PUBLIC_KEY', '')
-        self.private_key = getattr(settings, 'PSB_PRIVATE_KEY', '')
-        # FIXED: Use the correct base URL that actually works
-        self.base_url = getattr(settings, 'PSB_BASE_URL', 'https://baastest.9psb.com.ng/iva-api/v1')
-        self.currency = getattr(settings, 'PSB_CURRENCY', 'NGN')
-        self.country = getattr(settings, 'PSB_COUNTRY', 'NGA')
+        # Keys and urls come from Django settings; sensible defaults included for dev/testing
+        self.public_key = getattr(settings, "PSB_PUBLIC_KEY", "")
+        self.private_key = getattr(settings, "PSB_PRIVATE_KEY", "")
+        # Base URL should point to the API root (no trailing slash)
+        self.base_url = getattr(settings, "PSB_BASE_URL", "https://baastest.9psb.com.ng/iva-api/v1")
+        self.currency = getattr(settings, "PSB_CURRENCY", "NGN")
+        self.country = getattr(settings, "PSB_COUNTRY", "NGA")
         self._token = None
         self._token_expires_at = None
-    
-    # ==========================================================
-    # 🔐 AUTHENTICATION & TOKEN MANAGEMENT
-    # ==========================================================
-    
+        self.cache_key = getattr(settings, "PSB_CACHE_KEY", "psb_access_token")
+        # Optional toggle to disable PSB in non-production
+        self.enabled = getattr(settings, "PSB_ENABLED", True)
+
+    # -------------------------
+    # Token helpers / caching
+    # -------------------------
     def _is_token_valid(self):
-        """Check if current token is valid with 5-minute buffer"""
         if not self._token or not self._token_expires_at:
             return False
+        # Buffer so we refresh early
         buffer_time = datetime.now() + timedelta(minutes=5)
         return self._token_expires_at > buffer_time
-    
+
     def _get_cached_token(self):
-        """Get token from Django cache"""
-        cache_key = "psb_access_token"
-        cached_data = cache.get(cache_key)
-        if cached_data:
-            self._token = cached_data['token']
-            self._token_expires_at = cached_data['expires_at']
-            return self._token if self._is_token_valid() else None
-        return None
-    
+        cached = cache.get(self.cache_key)
+        if not cached:
+            return None
+        try:
+            token = cached.get("token")
+            expires_at = cached.get("expires_at")
+            # If stored as ISO string, parse
+            if isinstance(expires_at, str):
+                expires_at = datetime.fromisoformat(expires_at)
+            self._token = token
+            self._token_expires_at = expires_at
+            if self._is_token_valid():
+                return self._token
+            # else treat as invalid
+            return None
+        except Exception:
+            return None
+
     def _cache_token(self, token, expires_in=3600):
-        """Cache token with expiry"""
-        expires_at = datetime.now() + timedelta(seconds=expires_in - 300)  # 5 min buffer
-        cache_data = {
-            'token': token,
-            'expires_at': expires_at
-        }
-        cache.set("psb_access_token", cache_data, timeout=expires_in - 300)
+        # expires_in is seconds, store with 5 min buffer
+        # We set stored expiry slightly earlier to force refresh before real expiry
+        buffer_seconds = 300
+        store_timeout = max(expires_in - buffer_seconds, 60)
+        expires_at = datetime.now() + timedelta(seconds=expires_in - buffer_seconds)
+        cache_data = {"token": token, "expires_at": expires_at.isoformat()}
+        try:
+            cache.set(self.cache_key, cache_data, timeout=store_timeout)
+        except Exception:
+            logger.warning("[9PSB] Could not cache token; continuing without cache.")
         self._token = token
         self._token_expires_at = expires_at
-    
+
+    # -------------------------
+    # Authentication
+    # -------------------------
     def authenticate(self):
         """
-        Authenticate with 9PSB API using multiple endpoint strategies
-        Returns access token or raises exception
+        Authenticate with 9PSB.
+        Returns access token or raises Exception on failure.
         """
-        # Check if we have a valid cached token
-        cached_token = self._get_cached_token()
-        if cached_token:
+        # Return cached if valid
+        cached = self._get_cached_token()
+        if cached:
             logger.info("[9PSB] Using cached authentication token")
-            return cached_token
-        
+            return cached
+
         if not self.public_key or not self.private_key:
             raise Exception("9PSB API keys not configured in settings")
-        
-        logger.info(f"[9PSB] Authenticating with base URL: {self.base_url}")
-        
-        payload = {
-            "publickey": self.public_key,
-            "privatekey": self.private_key
-        }
-        
-        # FIXED: Use correct authentication endpoints for iva-api/v1 base URL
+
         auth_endpoints = [
-            "/merchant/virtualaccount/authenticate",  # Primary endpoint for iva-api/v1
-            "/merchant/authenticate",  # Alternative
-            "/authenticate"  # Fallback
+            "/merchant/virtualaccount/authenticate",
+            "/merchant/authenticate",
+            "/authenticate",
         ]
-        
+
         headers = {"Content-Type": "application/json"}
+        payload = {"publickey": self.public_key, "privatekey": self.private_key}
+
         last_error = None
-        
-        for endpoint in auth_endpoints:
-            url = f"{self.base_url}{endpoint}"
-            logger.info(f"[9PSB] Trying authentication endpoint: {endpoint}")
-            
+        for ep in auth_endpoints:
+            url = f"{self.base_url}{ep}"
             try:
-                response = requests.post(url, json=payload, headers=headers, timeout=30)
-                
-                # Handle non-JSON responses (HTML error pages)
-                content_type = response.headers.get('content-type', '').lower()
-                if 'text/html' in content_type:
-                    logger.warning(f"[9PSB] HTML response from {endpoint} (likely 404)")
-                    last_error = f"HTML response from {endpoint}"
+                logger.info(f"[9PSB] Authenticating using endpoint: {url}")
+                resp = requests.post(url, json=payload, headers=headers, timeout=30)
+                # If HTML response (e.g., 404 page), skip
+                content_type = resp.headers.get("content-type", "").lower()
+                if "text/html" in content_type:
+                    last_error = f"HTML response from {url} (likely 404)"
+                    logger.warning(f"[9PSB] {last_error}")
                     continue
-                
-                response.raise_for_status()
-                data = response.json()
-                
-                # Check for successful authentication
-                if data.get("code") == "00":
-                    token = data.get("access_token")
-                    expires_in = data.get("expires_in", 3600)
-                    
+
+                resp.raise_for_status()
+                data = resp.json()
+                logger.debug(f"[9PSB] Auth response: {json.dumps(data, indent=2)}")
+
+                # Accept code==00 as success even if access_token key name varies
+                if str(data.get("code")) == "00":
+                    token = data.get("access_token") or data.get("token") or data.get("accessToken")
+                    expires_in = int(data.get("expires_in", data.get("expiresIn", 3600)))
                     if token:
-                        logger.info(f"[9PSB] Authentication successful using endpoint: {endpoint}")
                         self._cache_token(token, expires_in)
+                        logger.info(f"[9PSB] Authentication successful via {ep}")
                         return token
                     else:
-                        last_error = "No access token in response"
+                        # If code=00 but token missing, still continue to other endpoints or fail
+                        last_error = {"code": data.get("code"), "message": "Auth success but missing token", "data": data}
+                        logger.warning(f"[9PSB] Auth returned code=00 but no token: {json.dumps(data)}")
+                        continue
                 else:
-                    message = data.get('message', 'Authentication failed')
-                    logger.warning(f"[9PSB] Auth failed at {endpoint}: {message}")
-                    last_error = f"Code {data.get('code')}: {message}"
-                    
+                    last_error = data.get("message") or f"Auth failed with code {data.get('code')}"
+                    logger.warning(f"[9PSB] Auth failed at {ep}: {last_error}")
+                    continue
+
             except requests.RequestException as e:
-                logger.warning(f"[9PSB] Network error at {endpoint}: {str(e)}")
-                last_error = f"Network error: {str(e)}"
+                last_error = f"Network error at {ep}: {str(e)}"
+                logger.warning(f"[9PSB] {last_error}")
                 continue
-            except json.JSONDecodeError:
-                logger.warning(f"[9PSB] Invalid JSON response from {endpoint}")
-                last_error = "Invalid JSON response"
+            except ValueError:
+                last_error = f"Invalid JSON from {ep}"
+                logger.warning(f"[9PSB] {last_error}")
                 continue
-        
-        error_msg = f"All authentication endpoints failed. Last error: {last_error}"
-        logger.error(f"[9PSB] {error_msg}")
-        raise Exception(f"❌ Authentication failed: {last_error}")
-    
-    def _make_authenticated_request(self, method, endpoint, payload=None, retry_auth=True):
-        """Make authenticated request with automatic token refresh"""
-        token = self.authenticate()
-        url = f"{self.base_url}{endpoint}"
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {token}"
-        }
-        
+
+        err_msg = f"All authentication endpoints failed. Last error: {last_error}"
+        logger.error(f"[9PSB] {err_msg}")
+        raise Exception(err_msg)
+
+    # -------------------------
+    # Internal authenticated request
+    # -------------------------
+    def _make_authenticated_request(self, method, endpoint_or_url, payload=None, params=None, retry_auth=True):
+        """
+        method: 'POST' or 'GET'
+        endpoint_or_url: full URL or path starting with '/'
+        """
+        if not self.enabled:
+            raise Exception("9PSB service is disabled in settings")
+
+        # Build full url if necessary
+        if endpoint_or_url.startswith("http://") or endpoint_or_url.startswith("https://"):
+            url = endpoint_or_url
+        else:
+            url = f"{self.base_url}{endpoint_or_url}"
+
+        # Ensure token
         try:
+            token = self.authenticate()
+        except Exception as e:
+            raise Exception(f"Authentication failed before request: {str(e)}")
+
+        headers = {"Content-Type": "application/json", "Authorization": f"Bearer {token}"}
+
+        try:
+            logger.info(f"[9PSB] {method} {url}")
             if method.upper() == "POST":
-                response = requests.post(url, json=payload, headers=headers, timeout=30)
+                resp = requests.post(url, json=payload, headers=headers, timeout=30)
             else:
-                response = requests.get(url, headers=headers, timeout=30)
-            
-            # Handle 401 with retry
-            if response.status_code == 401 and retry_auth:
-                logger.warning("[9PSB] Token expired, retrying with fresh token")
-                cache.delete("psb_access_token")  # Clear cached token
+                resp = requests.get(url, headers=headers, params=params, timeout=30)
+
+            # If 401, try to refresh once
+            if resp.status_code == 401 and retry_auth:
+                logger.warning("[9PSB] 401 Unauthorized - attempting token refresh")
+                try:
+                    cache.delete(self.cache_key)
+                except Exception:
+                    pass
                 self._token = None
                 self._token_expires_at = None
-                return self._make_authenticated_request(method, endpoint, payload, retry_auth=False)
-            
-            response.raise_for_status()
-            return response.json()
-            
+                # Re-authenticate and retry once
+                new_token = self.authenticate()
+                headers["Authorization"] = f"Bearer {new_token}"
+                if method.upper() == "POST":
+                    resp = requests.post(url, json=payload, headers=headers, timeout=30)
+                else:
+                    resp = requests.get(url, headers=headers, params=params, timeout=30)
+
+            resp.raise_for_status()
+            # Some endpoints return non-json or wrapped content; handle gracefully
+            try:
+                data = resp.json()
+            except ValueError:
+                # If not JSON, return raw text in a dict
+                data = {"raw_text": resp.text, "status_code": resp.status_code}
+            return data
+
         except requests.RequestException as e:
             raise Exception(f"API request failed: {str(e)}")
-    
-    # ==========================================================
-    # 🏦 VIRTUAL ACCOUNT CREATION (FIXED PARAMETER HANDLING)
-    # ==========================================================
-    
+        except Exception as e:
+            raise
+
+    # -------------------------
+    # Virtual account creation
+    # -------------------------
     def create_virtual_account(self, customer_data=None, **kwargs):
         """
-        Create virtual account with flexible parameter handling
-        
-        FIXED: Supports both parameter styles:
-        - create_virtual_account(customer_name="John", customer_id=1, ...)
-        - create_virtual_account({'name': 'John', 'customer_id': 1, ...})
+        Create virtual account with flexible parameter handling.
+
+        Usage:
+          create_virtual_account(customer_name="John Doe", customer_id=1, phone_number="234...", email="...")
+          or
+          create_virtual_account({'name': 'John Doe', 'customer_id': 1, 'phone': '080...', 'email': '...'})
         """
-        if not getattr(settings, 'PSB_ENABLED', True):
+        if not self.enabled:
             raise Exception("9PSB service is disabled in settings")
-        
-        # FIXED: Handle both calling conventions
+
+        # Normalize parameters to internal dict
         if customer_data is None:
-            # Called with individual kwargs
             customer_data = {
-                'name': kwargs.get('customer_name', ''),
-                'customer_id': kwargs.get('customer_id'),
-                'phone': kwargs.get('phone_number', ''),
-                'email': kwargs.get('email', '')
+                "name": kwargs.get("customer_name", ""),
+                "customer_id": kwargs.get("customer_id"),
+                "phone": kwargs.get("phone_number") or kwargs.get("phone"),
+                "email": kwargs.get("email", "")
             }
         else:
-            # Called with dictionary, merge with any kwargs
-            if 'name' not in customer_data and 'customer_name' in kwargs:
-                customer_data['name'] = kwargs['customer_name']
-            if 'customer_id' not in customer_data and 'customer_id' in kwargs:
-                customer_data['customer_id'] = kwargs['customer_id']
-            if 'phone' not in customer_data and 'phone_number' in kwargs:
-                customer_data['phone'] = kwargs['phone_number']
-            if 'email' not in customer_data and 'email' in kwargs:
-                customer_data['email'] = kwargs['email']
-        
-        # Generate unique reference
-        reference = f"VA{datetime.now().strftime('%Y%m%d%H%M%S')}{customer_data.get('customer_id', '')}"
-        
-        # Prepare payload for virtual account creation
+            # Merge kwargs if provided
+            if isinstance(customer_data, dict):
+                if "name" not in customer_data and "customer_name" in kwargs:
+                    customer_data["name"] = kwargs["customer_name"]
+                if "customer_id" not in customer_data and "customer_id" in kwargs:
+                    customer_data["customer_id"] = kwargs["customer_id"]
+                if "phone" not in customer_data and ("phone_number" in kwargs or "phone" in kwargs):
+                    customer_data["phone"] = kwargs.get("phone_number") or kwargs.get("phone")
+                if "email" not in customer_data and "email" in kwargs:
+                    customer_data["email"] = kwargs["email"]
+            else:
+                # Not dict — try to coerce single str to name
+                customer_data = {"name": str(customer_data)}
+
+        # Build unique reference per docs style
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        reference = f"{timestamp}{customer_data.get('customer_id', '')}{uuid.uuid4().hex[:6]}"
+
         payload = {
             "transaction": {"reference": reference},
             "order": {
-                "amount": 0,  # Static account
+                "amount": 0,
                 "currency": self.currency,
-                "description": f"Virtual Account for {customer_data.get('name', '')}".strip(),
+                "description": f"Virtual Account for {customer_data.get('name','')}".strip(),
                 "country": self.country,
-                "amounttype": "ANY"  # Allows any amount
+                "amounttype": "ANY"
             },
             "customer": {
                 "account": {
-                    "name": customer_data.get('name', ''),
+                    "name": customer_data.get("name", ""),
                     "type": "STATIC"
-                }
+                },
+                # include contact fields if present
+                "email": customer_data.get("email", ""),
+                "phone": customer_data.get("phone", "")
             }
         }
-        
-        # FIXED: Use correct virtual account endpoints for iva-api/v1 base URL
+
         va_endpoints = [
-            "/merchant/virtualaccount/create",  # Primary endpoint for iva-api/v1
-            "/virtualaccount/create"  # Alternative
+            "/merchant/virtualaccount/create",
+            "/merchant/virtual/create",
+            "/virtualaccount/create",
         ]
-        
+
         last_error = None
-        for endpoint in va_endpoints:
+        for ep in va_endpoints:
             try:
-                logger.info(f"[9PSB] Creating virtual account using endpoint: {endpoint}")
-                data = self._make_authenticated_request("POST", endpoint, payload)
-                
-                if data.get("code") == "00":
-                    # Parse response
-                    customer_account = data.get("customer", {}).get("account", {})
-                    bank_info = data.get("bank", {})
-                    
-                    account_number = customer_account.get("number")
-                    account_name = customer_account.get("name")
-                    bank_name = bank_info.get("name") or customer_account.get("bank") or "9PSB"
-                    bank_code = bank_info.get("code") or customer_account.get("bank_code") or "120001"
-                    
+                logger.info(f"[9PSB] Attempting VA create at endpoint: {ep}")
+                data = self._make_authenticated_request("POST", ep, payload)
+                logger.debug(f"[9PSB] VA raw response: {json.dumps(data, indent=2)}")
+
+                # Handle success
+                if str(data.get("code")) == "00":
+                    # try multiple places for account info
+                    customer_account = (
+                        (data.get("customer") or {}).get("account", {})
+                        or data.get("Account", {})
+                        or data.get("customer_account", {})
+                        or {}
+                    )
+                    bank_info = data.get("bank") or data.get("Bank") or {}
+                    # possible fields
+                    account_number = (
+                        customer_account.get("number")
+                        or customer_account.get("accountNumber")
+                        or data.get("accountNumber")
+                        or data.get("virtualAccountNumber")
+                        or data.get("virtual_account")
+                    )
+                    account_name = (
+                        customer_account.get("name")
+                        or data.get("accountName")
+                        or customer_data.get("name")
+                    )
+                    bank_name = bank_info.get("name") or data.get("bankName") or "9PSB"
+                    bank_code = bank_info.get("code") or bank_info.get("BankCode") or data.get("bankCode") or "120001"
+
                     if account_number:
-                        logger.info(f"[9PSB] Virtual account created: {account_number}")
-                        
-                        # Update customer record if customer_id provided
-                        if customer_data.get('customer_id'):
+                        # Update customer model if provided
+                        if customer_data.get("customer_id") and Customer:
                             try:
-                                customer = Customer.objects.get(id=customer_data['customer_id'])
-                                customer.wallet_account = account_number
-                                customer.bank_name = bank_name
-                                customer.bank_code = bank_code
-                                customer.save(update_fields=["wallet_account", "bank_name", "bank_code"])
-                                logger.info(f"[9PSB] Updated customer {customer_data['customer_id']} with virtual account")
+                                cust = Customer.objects.get(id=customer_data["customer_id"])
+                                cust.wallet_account = account_number
+                                cust.bank_name = bank_name
+                                cust.bank_code = bank_code
+                                cust.save(update_fields=["wallet_account", "bank_name", "bank_code"])
+                                logger.info(f"[9PSB] Updated Customer {cust.id} with VA {account_number}")
                             except Customer.DoesNotExist:
-                                logger.warning(f"[9PSB] Customer {customer_data['customer_id']} not found for update")
-                        
+                                logger.warning(f"[9PSB] Customer id {customer_data.get('customer_id')} not found to update VA")
+
                         return {
-                            'success': True,
-                            'virtual_account_number': account_number,
-                            'account_name': account_name,
-                            'bank_name': bank_name,
-                            'bank_code': bank_code,
-                            'transaction_reference': reference,
-                            'response_data': data
+                            "success": True,
+                            "virtual_account_number": account_number,
+                            "account_name": account_name,
+                            "bank_name": bank_name,
+                            "bank_code": bank_code,
+                            "transaction_reference": reference,
+                            "response_data": data
                         }
                     else:
-                        last_error = "No account number in response"
+                        # Code 00 but missing account number — return informative failure
+                        last_error = f"Success (code=00) but missing account number. Full response: {json.dumps(data)}"
+                        logger.warning(f"[9PSB] {last_error}")
+                        # Return partial info to caller so they can inspect response
+                        return {
+                            "success": False,
+                            "error": "Success response but missing virtual account number",
+                            "response_data": data
+                        }
+
                 else:
-                    last_error = data.get('message', 'Virtual account creation failed')
-                    
+                    # Not success
+                    msg = data.get("message") or data.get("msg") or "Virtual account creation failed"
+                    last_error = f"API returned code {data.get('code')}: {msg}"
+                    logger.warning(f"[9PSB] {last_error}")
+                    # continue to try other endpoints
+                    continue
+
             except Exception as e:
-                logger.warning(f"[9PSB] VA creation failed at {endpoint}: {str(e)}")
+                logger.warning(f"[9PSB] VA creation failed at {ep}: {str(e)}")
                 last_error = str(e)
                 continue
-        
+
+        # All endpoints failed
         logger.error(f"[9PSB] All virtual account endpoints failed: {last_error}")
-        return {
-            'success': False,
-            'error': f'Virtual account creation failed: {last_error}'
-        }
-    
-    # ==========================================================
-    # 👤 ACCOUNT VALIDATION
-    # ==========================================================
-    
+        return {"success": False, "error": last_error, "reference": reference}
+
+    # -------------------------
+    # Account validation
+    # -------------------------
     def validate_account(self, account_number: str, bank_code: str):
-        """Validate bank account via 9PSB API"""
         payload = {
             "customer": {
                 "account": {
@@ -307,83 +393,77 @@ class Enhanced9PSBService:
                 }
             }
         }
-        
-        data = self._make_authenticated_request("POST", "/merchant/account/enquiry", payload)
-        
-        if data.get("code") != "00":
-            raise Exception(f"❌ Account validation failed: {data.get('message')}")
-        
-        account_info = data.get("customer", {}).get("account", {})
-        account_name = account_info.get("name") or data.get("account_name")
-        
-        return {
-            "account_name": account_name,
-            "account_number": account_number,
-            "bank_code": bank_code,
-            "valid": True,
-            "full_response": data
-        }
-    
-    # ==========================================================
-    # 🏦 BANK LIST MANAGEMENT
-    # ==========================================================
-    
+
+        try:
+            data = self._make_authenticated_request("POST", "/merchant/account/enquiry", payload)
+            logger.debug(f"[9PSB] Account enquiry response: {json.dumps(data, indent=2)}")
+            if str(data.get("code")) != "00":
+                raise Exception(f"Account validation failed: {data.get('message') or data}")
+            account_info = (data.get("customer") or {}).get("account", {}) or {}
+            account_name = account_info.get("name") or data.get("account_name") or data.get("accountName")
+            return {
+                "account_name": account_name,
+                "account_number": account_number,
+                "bank_code": bank_code,
+                "valid": True,
+                "full_response": data
+            }
+        except Exception as e:
+            raise
+
+    # -------------------------
+    # Bank list
+    # -------------------------
     def fetch_bank_list(self):
-        """Fetch list of supported banks from 9PSB"""
-        data = self._make_authenticated_request("POST", "/merchant/transfer/getbanks")
-        
-        if data.get("code") != "00":
-            raise Exception(f"❌ Failed to fetch bank list: {data.get('message')}")
-        
-        banks = data.get("BankList", [])
-        logger.info(f"[9PSB] Fetched {len(banks)} banks from API")
-        
-        return banks
-    
+        try:
+            data = self._make_authenticated_request("POST", "/merchant/transfer/getbanks")
+            logger.debug(f"[9PSB] Bank list raw: {json.dumps(data, indent=2)}")
+            if str(data.get("code")) != "00":
+                raise Exception(f"Failed to fetch bank list: {data.get('message')}")
+            banks = data.get("BankList") or data.get("banks") or []
+            logger.info(f"[9PSB] Fetched {len(banks)} banks")
+            return banks
+        except Exception:
+            raise
+
     def update_bank_list(self):
-        """Fetch banks and update local database"""
         banks = self.fetch_bank_list()
-        
-        # Try to import PsbBank model, create if doesn't exist
         try:
             from ninepsb.models import PsbBank
-        except ImportError:
-            logger.warning("PsbBank model not found, skipping database update")
+        except Exception:
+            logger.warning("[9PSB] PsbBank model not found; returning banks without DB update")
             return banks
-        
+
         count = 0
-        for bank in banks:
+        for b in banks:
+            code = b.get("BankCode") or b.get("bankCode") or b.get("code")
+            name = b.get("BankName") or b.get("bankName") or b.get("name")
+            long_code = b.get("BankLongCode") or b.get("bankLongCode") or ""
+            if not code:
+                continue
             PsbBank.objects.update_or_create(
-                bank_code=bank.get("BankCode"),
-                defaults={
-                    "bank_name": bank.get("BankName"),
-                    "bank_long_code": bank.get("BankLongCode"),
-                    "active": True,
-                },
+                bank_code=code,
+                defaults={"bank_name": name or code, "bank_long_code": long_code, "active": True}
             )
             count += 1
-        
-        logger.info(f"[9PSB] Updated {count} banks in database")
+        logger.info(f"[9PSB] Updated {count} banks in DB")
         return banks
-    
-    # ==========================================================
-    # 💰 FUND TRANSFER
-    # ==========================================================
-    
+
+    # -------------------------
+    # Fund transfer
+    # -------------------------
     def _generate_transfer_hash(self, sender_account, beneficiary_account, bank_code, amount, reference):
-        """Generate SHA512 hash for 9PSB transfer"""
-        raw = f"{self.private_key}{sender_account}{beneficiary_account}{bank_code}{format(amount, '.2f')}{reference}"
+        """
+        Generate required SHA512 hash for secure fund transfer signature.
+        Adjust ordering/concatenation to match PSB documentation.
+        """
+        raw = f"{self.private_key}{sender_account}{beneficiary_account}{bank_code}{format(float(amount), '.2f')}{reference}"
         return hashlib.sha512(raw.encode("utf-8")).hexdigest().upper()
-    
-    def fund_transfer(self, sender_name, sender_account, beneficiary_name, beneficiary_account, 
-                     bank_code, amount, description="Wallet Transfer"):
-        """Perform fund transfer via 9PSB"""
+
+    def fund_transfer(self, sender_name, sender_account, beneficiary_name, beneficiary_account, bank_code, amount, description="Wallet Transfer"):
         reference = f"FT{datetime.now().strftime('%Y%m%d%H%M%S%f')[:20]}"
-        
-        hash_value = self._generate_transfer_hash(
-            sender_account, beneficiary_account, bank_code, amount, reference
-        )
-        
+        hash_value = self._generate_transfer_hash(sender_account, beneficiary_account, bank_code, amount, reference)
+
         payload = {
             "transaction": {"reference": reference},
             "order": {
@@ -403,118 +483,103 @@ class Enhanced9PSBService:
             },
             "hash": hash_value
         }
-        
-        data = self._make_authenticated_request("POST", "/merchant/account/transfer", payload)
-        
-        if data.get("code") != "00":
-            raise Exception(f"❌ Fund transfer failed: {data.get('message')}")
-        
-        logger.info(f"[9PSB] Fund transfer successful: {reference}")
-        return data
-    
+
+        try:
+            data = self._make_authenticated_request("POST", "/merchant/account/transfer", payload)
+            logger.debug(f"[9PSB] Transfer response: {json.dumps(data, indent=2)}")
+            if str(data.get("code")) != "00":
+                raise Exception(f"Fund transfer failed: {data.get('message')}")
+            logger.info(f"[9PSB] Fund transfer initiated: {reference}")
+            return data
+        except Exception:
+            raise
+
     def check_transfer_status(self, reference, linking_reference=None, external_reference=None):
-        """Check status of fund transfer"""
         params = {
             "reference": reference,
             "linkingreference": linking_reference or "",
             "externalreference": external_reference or ""
         }
-        
-        # Use GET request with params for status check
-        url = f"{self.base_url}/merchant/account/transfer/status"
-        headers = {"Authorization": f"Bearer {self.authenticate()}"}
-        
-        response = requests.get(url, headers=headers, params=params, timeout=30)
-        return response.json()
-    
-    # ==========================================================
-    # 🛠️ UTILITY METHODS
-    # ==========================================================
-    
+        try:
+            # Some APIs use GET with params
+            url = f"{self.base_url}/merchant/account/transfer/status"
+            headers = {"Authorization": f"Bearer {self.authenticate()}"}
+            resp = requests.get(url, headers=headers, params=params, timeout=30)
+            resp.raise_for_status()
+            return resp.json()
+        except Exception as e:
+            raise
+
+    # -------------------------
+    # Utilities
+    # -------------------------
     def _normalize_phone(self, phone):
-        """Normalize phone number to Nigerian format"""
         if not phone:
             return None
-        
-        phone = ''.join(filter(str.isdigit, phone))
-        
-        if phone.startswith('234'):
+        phone = "".join(filter(str.isdigit, str(phone)))
+        if phone.startswith("234"):
             return phone
-        elif phone.startswith('0'):
-            return '234' + phone[1:]
-        elif len(phone) == 10:
-            return '234' + phone
-        else:
-            return '234' + phone
-    
+        if phone.startswith("0"):
+            return "234" + phone[1:]
+        if len(phone) == 10:
+            return "234" + phone
+        # default fallback
+        return "234" + phone
+
     def health_check(self):
-        """Check if 9PSB service is accessible"""
         try:
             token = self.authenticate()
-            return {
-                'status': 'healthy',
-                'authenticated': bool(token),
-                'base_url': self.base_url,
-                'timestamp': datetime.now().isoformat()
-            }
+            return {"status": "healthy", "authenticated": bool(token), "base_url": self.base_url, "timestamp": datetime.now().isoformat()}
         except Exception as e:
-            return {
-                'status': 'unhealthy',
-                'error': str(e),
-                'base_url': self.base_url,
-                'timestamp': datetime.now().isoformat()
-            }
+            return {"status": "unhealthy", "error": str(e), "base_url": self.base_url, "timestamp": datetime.now().isoformat()}
 
-# ==========================================================
-# FUNCTIONAL INTERFACE (backward compatibility)
-# ==========================================================
 
-# Initialize service instance
+# Singleton instance for import
 enhanced_psb_service = Enhanced9PSBService()
 
-# Functional wrappers for backward compatibility
+
+# -------------------------
+# Backward-compatible functional wrappers
+# -------------------------
 def psb_authenticate():
-    """Authenticate with 9PSB and return token"""
     return enhanced_psb_service.authenticate()
 
+
 def psb_create_virtual_account_for_customer(customer_id):
-    """Create virtual account for customer (backward compatible)"""
+    if Customer is None:
+        raise Exception("Customer model not available")
     customer = Customer.objects.get(id=customer_id)
     result = enhanced_psb_service.create_virtual_account(
-        customer_name=f"{customer.first_name} {customer.last_name}".strip(),
-        customer_id=customer.id,
-        phone_number=customer.phone_no,
-        email=customer.email
+        {
+            "name": f"{customer.first_name} {customer.last_name}".strip(),
+            "customer_id": customer.id,
+            "phone": getattr(customer, "phone_no", None) or getattr(customer, "phone", None),
+            "email": customer.email
+        }
     )
-    
-    if not result['success']:
-        raise Exception(result['error'])
-    
+    if not result.get("success"):
+        raise Exception(result.get("error") or "Virtual account creation failed")
     return {
-        "account_number": result['virtual_account_number'],
-        "account_name": result['account_name'],
-        "bank_name": result['bank_name'],
-        "bank_code": result['bank_code']
+        "account_number": result.get("virtual_account_number"),
+        "account_name": result.get("account_name"),
+        "bank_name": result.get("bank_name"),
+        "bank_code": result.get("bank_code")
     }
 
+
 def psb_validate_account(account_number: str, bank_code: str):
-    """Validate account (backward compatible)"""
-    result = enhanced_psb_service.validate_account(account_number, bank_code)
-    return {"account_name": result["account_name"], "full_response": result["full_response"]}
+    res = enhanced_psb_service.validate_account(account_number, bank_code)
+    return {"account_name": res["account_name"], "full_response": res["full_response"]}
+
 
 def fetch_and_update_psb_banks():
-    """Fetch and update bank list (backward compatible)"""
     banks = enhanced_psb_service.update_bank_list()
     return f"✅ {len(banks)} banks updated successfully."
 
-def psb_fund_transfer(sender_name, sender_account, beneficiary_name, beneficiary_account, 
-                     bank_code, amount, description="Wallet Transfer"):
-    """Fund transfer (backward compatible)"""
-    return enhanced_psb_service.fund_transfer(
-        sender_name, sender_account, beneficiary_name, beneficiary_account,
-        bank_code, amount, description
-    )
+
+def psb_fund_transfer(sender_name, sender_account, beneficiary_name, beneficiary_account, bank_code, amount, description="Wallet Transfer"):
+    return enhanced_psb_service.fund_transfer(sender_name, sender_account, beneficiary_name, beneficiary_account, bank_code, amount, description)
+
 
 def psb_fund_transfer_status(reference, linking_reference=None, external_reference=None):
-    """Check transfer status (backward compatible)"""
     return enhanced_psb_service.check_transfer_status(reference, linking_reference, external_reference)

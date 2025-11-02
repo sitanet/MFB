@@ -1752,124 +1752,155 @@ from .services.enhanced_psb_service import enhanced_psb_service
 logger = logging.getLogger(__name__)
 
 class RegisterUserAPIView(APIView):
-    """Step 4: Register user with username and password + Create 9PSB Virtual Account - FIXED VERSION"""
+    """Step 3B: Register new user with 9PSB Virtual Account Integration"""
     permission_classes = [AllowAny]
 
     def post(self, request):
         try:
-            account_number = request.data.get('account_number')
-            username = request.data.get('username')
+            phone_number = request.data.get('phone_number')
+            first_name = request.data.get('first_name')
+            last_name = request.data.get('last_name')
+            email = request.data.get('email')
             password = request.data.get('password')
-            otp_token = request.data.get('otp_token')
+            verification_token = request.data.get('verification_token')
 
-            logger.info(f"[REGISTER] Request for account: {account_number}, username: {username}")
+            logger.info(f"[REGISTER] Request for phone: {phone_number}")
 
             # Validate required fields
-            if not username or not password or not otp_token:
+            if not all([phone_number, first_name, last_name, password, verification_token]):
                 return Response({
-                    'error': 'Username, password, and OTP token are required'
+                    'error': 'All fields are required: phone_number, first_name, last_name, password, verification_token'
                 }, status=status.HTTP_400_BAD_REQUEST)
 
-            # For demo purposes, skip token verification if not implemented
-            # In production, you'd verify the token here
-
-            # Check if username already exists
-            if User.objects.filter(username=username).exists():
-                return Response({
-                    'error': 'Username already exists. Please choose a different username.'
-                }, status=status.HTTP_400_BAD_REQUEST)
-
-            # Create user
-            user = User.objects.create_user(
-                username=username,
-                password=password,
-                email=f"{username}@financeflex.com",
-                first_name="Demo",
-                last_name="User"
-            )
-
-            logger.info(f"[REGISTER] User created: {username}")
-
-            # 9PSB VIRTUAL ACCOUNT CREATION - FIXED CALLING CONVENTION
-            virtual_account_created = False
-            virtual_account_number = None
-            virtual_account_error = None
+            normalized_phone = normalize_phone(phone_number)
             
-            try:
-                logger.info(f"[9PSB] Creating virtual account for user: {username}")
-                
-                # ENHANCED: Use individual keyword arguments with comprehensive service
-                va_result = enhanced_psb_service.create_virtual_account(
-                    customer_name=f"{user.first_name} {user.last_name}",
-                    customer_id=user.id,
-                    phone_number="08012345678",  # Demo phone number
-                    email=user.email
+            # Verify token
+            token_cache_key = f"verified_{normalized_phone}"
+            cached_token = cache.get(token_cache_key)
+            
+            if not cached_token or cached_token != verification_token:
+                return Response({
+                    'error': 'Invalid or expired verification token'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            # Check if user already exists
+            if User.objects.filter(username=normalized_phone).exists():
+                return Response({
+                    'error': 'User with this phone number already exists'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            # Create user with transaction
+            with transaction.atomic():
+                user = User.objects.create_user(
+                    username=normalized_phone,
+                    password=password,
+                    email=email or f"{normalized_phone}@financeflex.com",
+                    first_name=first_name,
+                    last_name=last_name
                 )
+
+                logger.info(f"[REGISTER] User created: {normalized_phone}")
+
+                # 9PSB VIRTUAL ACCOUNT CREATION - ENHANCED INTEGRATION
+                virtual_account_created = False
+                virtual_account_number = None
+                virtual_account_error = None
+                bank_name = None
+                bank_code = None
                 
-                logger.info(f"[9PSB] Virtual account creation result: {va_result}")
-                
-                if va_result['success']:
-                    virtual_account_number = va_result['virtual_account_number']
-                    virtual_account_created = True
+                try:
+                    logger.info(f"[9PSB] Creating virtual account for user: {normalized_phone}")
                     
-                    logger.info(f"[9PSB] Virtual account {virtual_account_number} created successfully")
+                    # ENHANCED: Use the robust 9PSB service with proper error handling
+                    va_result = enhanced_psb_service.create_virtual_account(
+                        customer_name=f"{first_name} {last_name}",
+                        customer_id=user.id,
+                        phone_number=normalized_phone,
+                        email=user.email
+                    )
+                    
+                    logger.info(f"[9PSB] Virtual account creation result: {va_result}")
+                    
+                    if va_result['success']:
+                        virtual_account_number = va_result['virtual_account_number']
+                        bank_name = va_result.get('bank_name', '9PSB')
+                        bank_code = va_result.get('bank_code', '120001')
+                        virtual_account_created = True
                         
-                else:
-                    virtual_account_error = va_result['error']
-                    logger.warning(f"[9PSB] Virtual account creation failed: {virtual_account_error}")
-                    
-            except Exception as e:
-                virtual_account_error = str(e)
-                logger.error(f"[9PSB] Virtual account creation exception: {e}")
+                        logger.info(f"[9PSB] Virtual account {virtual_account_number} created successfully")
+                            
+                    else:
+                        virtual_account_error = va_result['error']
+                        logger.warning(f"[9PSB] Virtual account creation failed: {virtual_account_error}")
+                        
+                except Exception as e:
+                    virtual_account_error = str(e)
+                    logger.error(f"[9PSB] Virtual account creation exception: {e}")
 
-            # Generate JWT tokens
-            refresh = RefreshToken.for_user(user)
-            access_token = refresh.access_token
+                # Generate JWT tokens
+                refresh = RefreshToken.for_user(user)
+                access_token = refresh.access_token
 
-            logger.info(f"[REGISTER] SUCCESS - User created: {username}")
+                # Clear verification token
+                cache.delete(token_cache_key)
 
-            # Prepare response
-            response_data = {
-                'success': True,
-                'message': 'User registered successfully',
-                'access_token': str(access_token),
-                'refresh_token': str(refresh),
-                'username': username,
-                'virtual_account_created': virtual_account_created
-            }
-            
-            # Include virtual account details if created
-            if virtual_account_created:
-                response_data['wallet_account'] = virtual_account_number
-                response_data['virtual_account_number'] = virtual_account_number
-            elif virtual_account_error:
-                response_data['virtual_account_error'] = virtual_account_error
-                response_data['warning'] = 'Registration successful but virtual account creation failed'
+                logger.info(f"[REGISTER] SUCCESS - User created: {normalized_phone}")
 
-            return Response(response_data, status=status.HTTP_201_CREATED)
+                # Prepare response
+                response_data = {
+                    'success': True,
+                    'message': 'User registered successfully',
+                    'access_token': str(access_token),
+                    'refresh_token': str(refresh),
+                    'user': {
+                        'id': user.id,
+                        'username': user.username,
+                        'first_name': user.first_name,
+                        'last_name': user.last_name,
+                        'email': user.email,
+                        'phone_number': normalized_phone
+                    },
+                    'virtual_account_created': virtual_account_created
+                }
+                
+                # Include virtual account details if created
+                if virtual_account_created:
+                    response_data['wallet_account'] = virtual_account_number
+                    response_data['virtual_account_number'] = virtual_account_number
+                    response_data['bank_name'] = bank_name
+                    response_data['bank_code'] = bank_code
+                    response_data['user']['wallet_account'] = virtual_account_number
+                    response_data['user']['bank_name'] = bank_name
+                elif virtual_account_error:
+                    response_data['virtual_account_error'] = virtual_account_error
+                    response_data['warning'] = 'Registration successful but virtual account creation failed'
+
+                return Response(response_data, status=status.HTTP_201_CREATED)
 
         except Exception as e:
             logger.error(f"[REGISTER] ERROR: {str(e)}")
             return Response({
                 'error': f'Registration failed: {str(e)}'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # Alternative implementation showing dictionary-based calling convention
 class RegisterUserAlternativeAPIView(APIView):
-    """Alternative register view showing dictionary-based parameter passing"""
+    """Alternative register view - backward compatibility"""
     permission_classes = [AllowAny]
 
     def post(self, request):
         try:
-            # Create user logic here...
+            username = request.data.get('username', 'demo_user')
+            password = request.data.get('password', 'demo_password')
+            
             user = User.objects.create_user(
-                username="demo_user",
-                password="demo_password",
+                username=username,
+                password=password,
                 first_name="Demo",
                 last_name="User"
             )
 
-            # FIXED: Alternative calling convention using dictionary parameter
+            # Dictionary-based virtual account creation
             customer_data = {
                 'name': f"{user.first_name} {user.last_name}",
                 'customer_id': user.id,
@@ -2497,7 +2528,6 @@ class DebugOTPStatusAPIView(APIView):
             'tokens': token_data,
             'current_time': timezone.now().isoformat()
         })
-
 
 
 
