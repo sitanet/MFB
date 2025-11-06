@@ -319,6 +319,33 @@
                     <div class="landscape-label">Contact Phone No</div>
                     <div class="landscape-value">{{ company.contact_phone_no }}</div>
                 </div>
+
+                 <div class="landscape-item">
+                    <div class="landscape-label">9PSB Float Account Number</div>
+                    <div class="landscape-value">{{ company.float_account_number }}</div>
+                </div>
+
+                <div class="landscape-item">
+                        <div class="landscape-label">Reconciliation Float GL Number</div>
+                        <div class="landscape-value">{{ company.float_gl_no|default:"—" }}</div>
+                    </div>
+
+                    <div class="landscape-item">
+                        <div class="landscape-label">Reconciliation Float Account Number (Internal Ledger)</div>
+                        <div class="landscape-value">{{ company.float_ac_no|default:"—" }}</div>
+                    </div>
+
+                    <div class="landscape-item">
+                        <div class="landscape-label">Mobile Teller GL Number</div>
+                        <div class="landscape-value">{{ company.mobile_teller_gl_no|default:"—" }}</div>
+                    </div>
+
+                    <div class="landscape-item">
+                        <div class="landscape-label">Mobile Teller Account Number (Internal Ledger)</div>
+                        <div class="landscape-value">{{ company.mobile_teller_ac_no|default:"—" }}</div>
+                    </div>
+
+
                 <div class="landscape-item">
                     <div class="landscape-label">Session Date</div>
                     <div class="landscape-value">{{ company.session_date|date:"M d, Y" }}</div>

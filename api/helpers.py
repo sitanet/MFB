@@ -93,3 +93,80 @@ def card_wallet_for_user(user):
     If you prefer a dedicated GL (e.g., '29000'), change it here.
     """
     return "20201", str(user.id).zfill(5)
+
+
+
+
+
+# Add these functions to your existing api/helpers.py file
+
+def normalize_phone(phone):
+    """Normalize phone number to Nigerian format"""
+    if not phone:
+        return None
+    
+    # Remove all non-digits
+    phone = ''.join(filter(str.isdigit, str(phone)))
+    
+    # Convert to Nigerian format (234...)
+    if phone.startswith('234'):
+        return phone
+    elif phone.startswith('0'):
+        return '234' + phone[1:]
+    elif len(phone) == 10:
+        return '234' + phone
+    else:
+        return phone
+
+
+def parse_account_number(account_number):
+    """Parse account number into GL and AC components"""
+    if not account_number:
+        raise ValueError("Account number is required")
+    
+    # Remove any non-digits
+    digits = ''.join(filter(str.isdigit, account_number))
+    
+    if len(digits) < 10:
+        raise ValueError("Account number must be at least 10 digits")
+    
+    if len(digits) >= 10:
+        gl_no = digits[:5]
+        ac_no = digits[5:]
+        return gl_no, ac_no
+    else:
+        raise ValueError("Invalid account number format")
+
+
+def safe_customer_lookup(gl_no, ac_no, **additional_filters):
+    """Safely lookup customer with additional filters"""
+    try:
+        from customers.models import Customer
+        filters = {
+            'gl_no': str(gl_no),
+            'ac_no': str(ac_no),
+            **additional_filters
+        }
+        return Customer.objects.get(**filters)
+    except:
+        return None
+
+
+def format_error_response(error_message, error_code=None):
+    """Format error response consistently"""
+    response = {'error': str(error_message)}
+    if error_code:
+        response['error_code'] = error_code
+    return response
+
+
+def format_success_response(data, message=None):
+    """Format success response consistently"""
+    response = {'success': True}
+    if message:
+        response['message'] = message
+    if isinstance(data, dict):
+        response.update(data)
+    else:
+        response['data'] = data
+    return response

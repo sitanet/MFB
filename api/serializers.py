@@ -9,6 +9,8 @@ from loans.models import Loans, LoanHist
 from transactions.models import Memtrans
 
 from .helpers import normalize_account
+from datetime import date
+from django.utils import timezone
 
 
 
@@ -341,7 +343,93 @@ class MemtransSerializer(serializers.ModelSerializer):
 
 
 
+from rest_framework import serializers
+from customers.models import Customer
+
+class WalletDetailsSerializer(serializers.ModelSerializer):
+    """
+    Dedicated serializer for wallet details
+    """
+    account_name = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Customer
+        fields = [
+            'wallet_account',  # 🔥 9PSB wallet account
+            'bank_name',       # 🔥 9PSB bank name  
+            'bank_code',       # Optional bank code
+            'account_name',    # Generated from first_name + last_name
+            'gl_no', 
+            'ac_no'
+        ]
+    
+    def get_account_name(self, obj):
+        """Generate account holder name"""
+        return f"{obj.first_name} {obj.last_name}".strip() or 'Account Holder'
 
 
 
+from rest_framework import serializers
+from customers.models import Customer
+from company.models import Company
+
+class CustomerDashboardSerializer(serializers.ModelSerializer):
+    """
+    Enhanced dashboard serializer that includes company float account details
+    """
+    full_name = serializers.SerializerMethodField()
+    float_account_number = serializers.SerializerMethodField()
+    wallet_account = serializers.SerializerMethodField()  # ✅ backward compatible alias
+
+    class Meta:
+        model = Customer
+        fields = [
+            'id',
+            'first_name',
+            'last_name',
+            'full_name',
+            'email',
+            'gl_no',
+            'ac_no',
+            'float_account_number',  # ✅ new field from company model
+            'wallet_account',        # ✅ optional backward compatibility
+            'bank_name',
+            'bank_code',
+            'balance',
+        ]
+
+    def get_full_name(self, obj):
+        return f"{obj.first_name or ''} {obj.last_name or ''}".strip()
+
+    def get_float_account_number(self, obj):
+        """
+        Return float_account_number from Company model (shared across system)
+        """
+        company = Company.objects.first()
+        return company.float_account_number if company else None
+
+    def get_wallet_account(self, obj):
+        """
+        For backward compatibility – same as float_account_number.
+        Remove this later when frontend migrates.
+        """
+        company = Company.objects.first()
+        return company.float_account_number if company else None
+
+
+
+
+
+class CustomerListSerializer(serializers.ModelSerializer):
+    """
+    Simplified serializer for customer lists
+    """
+    class Meta:
+        model = Customer
+        fields = [
+            'id', 'first_name', 'last_name', 'email',
+            'gl_no', 'ac_no', 
+            'wallet_account',  # 🔥 Include wallet data
+            'bank_name'        # 🔥 Include bank data
+        ]
 

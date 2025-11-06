@@ -25,15 +25,28 @@ class Role(models.Model):
         return self.name
 
 
+
+
 class UserManager(BaseUserManager):
     def create_user(
-        self, first_name, last_name, username, email, role, phone_number=None,
-        cashier_gl=None, cashier_ac=None, branch=None, password=None
+        self,
+        first_name,
+        last_name,
+        username,
+        email,
+        role,
+        phone_number=None,
+        cashier_gl=None,
+        cashier_ac=None,
+        branch=None,
+        gl_no=None,
+        ac_no=None,
+        password=None,
     ):
         if not email:
-            raise ValueError('User must have an email address')
+            raise ValueError("User must have an email address")
         if not username:
-            raise ValueError('User must have a username')
+            raise ValueError("User must have a username")
 
         user = self.model(
             email=self.normalize_email(email),
@@ -44,15 +57,17 @@ class UserManager(BaseUserManager):
             phone_number=phone_number,
             cashier_gl=cashier_gl,
             cashier_ac=cashier_ac,
-            branch=branch,  # Assign the branch to the user
+            branch=branch,
+            gl_no=gl_no,     # ✅ Added GL number
+            ac_no=ac_no,     # ✅ Added Account number
         )
         user.set_password(password)
         user.save(using=self._db)
         return user
 
     def create_superuser(self, first_name, last_name, username, email, password=None):
-        # Ensure default Company and Branch exist
-        default_company, created = Company.objects.get_or_create(
+        # ✅ Ensure default Company exists
+        default_company, _ = Company.objects.get_or_create(
             company_name="Default Company",
             defaults={
                 "contact_person": "Admin",
@@ -61,31 +76,34 @@ class UserManager(BaseUserManager):
                 "registration_date": now().date(),
                 "expiration_date": now().date().replace(year=now().year + 1),
                 "license_key": "DEFAULTLICENSEKEY",
-            }
+            },
         )
-        default_branch, created = Branch.objects.get_or_create(
+
+        # ✅ Ensure default Branch exists
+        default_branch, _ = Branch.objects.get_or_create(
             company=default_company,
-            
             defaults={
-                "branch_code":"MAIN",
+                "branch_code": "MAIN",
                 "branch_name": "Demo Branch",
                 "session_date": now().date(),
                 "system_date_date": now().date(),
                 "session_status": "Active",
-            }
+            },
         )
 
-        # Create the superuser
+        # ✅ Create superuser
         user = self.create_user(
             first_name=first_name,
             last_name=last_name,
             username=username,
             email=email,
             role=User.SYSTEM_ADMINISTRATOR,
-            branch=default_branch,  # Pass the default branch to the user
-            phone_number='+2348066311516',
+            branch=default_branch,
+            phone_number="+2348066311516",
             cashier_gl=None,
             cashier_ac=None,
+            gl_no="99999",  # ✅ Optional: assign default GL for admin
+            ac_no="00001",  # ✅ Optional: assign default AC for admin
             password=password,
         )
         user.is_admin = True
@@ -94,7 +112,6 @@ class UserManager(BaseUserManager):
         user.is_superadmin = True
         user.save(using=self._db)
         return user
-
 
 
 class User(AbstractBaseUser):
@@ -151,6 +168,20 @@ class User(AbstractBaseUser):
         blank=True,
         null=True,
         help_text="Securely hashed 4–6 digit transaction PIN"
+    )
+
+
+    gl_no = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True,
+        help_text="General Ledger number linked to this user (Customer or Teller)."
+    )
+    ac_no = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True,
+        help_text="Account number linked to this user (Customer or Teller)."
     )
 
 

@@ -19,7 +19,12 @@ from .views import (
     RegisterUserAPIView,
     SetupPINAPIView,
     ResendOTPAPIView,
-    DebugOTPStatusAPIView  
+    DebugOTPStatusAPIView,
+    get_bank_list,
+    verify_account,
+    # initiate_transfer,
+    # check_transfer_status,
+    # ninepsb_health_check
 )
 
 router = DefaultRouter()
@@ -90,6 +95,24 @@ urlpatterns = [
     path('auth/debug-otp-status/', DebugOTPStatusAPIView.as_view(), name='debug-otp-status'),
 
     
+
+
+    # Dashboard
+    path('dashboard/', views.dashboard_api_view, name='dashboard'),
+    
+    # Wallet endpoints
+    path('wallet/details/', views.WalletDetailsAPIView.as_view(), name='wallet-details'),
+    path('wallet/details-by-account/', views.wallet_details_by_account_api_view, name='wallet-details-by-account'),
+
+
+
+
+
+    path('ninepsb/banks/', views.get_bank_list, name='ninepsb-banks'),
+    path('ninepsb/verify-account/', views.verify_account, name='ninepsb-verify-account'),
+    path('ninepsb/transfer/', views.initiate_transfer, name='ninepsb-transfer'),
+    path('ninepsb/health/', views.ninepsb_health_check, name='ninepsb-health'),
+
     # Router (include at the end)
     path('', include(router.urls)),
 

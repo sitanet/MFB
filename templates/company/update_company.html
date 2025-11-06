@@ -3,57 +3,291 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Edit Company</title>
+    <title>Edit Company | FinanceFlex</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* Your CSS (unchanged) */
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        :root { --primary: #22c55e; --primary-dark: #16a34a; --secondary: #ff7f00; --secondary-dark: #e67300; --light: #f8fafc; --dark: #1e293b; --gray: #64748b; --light-gray: #e2e8f0; --success: #10b981; --danger: #ef4444; --border-radius: 8px; --box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); --transition: all 0.3s ease; }
-        body { background: linear-gradient(135deg, #f0fdf4 0%, #fff7ed 100%); color: var(--dark); line-height: 1.6; min-height: 100vh; }
-        .navbar { background: white; box-shadow: var(--box-shadow); padding: 0 2rem; position: sticky; top: 0; z-index: 100; border-bottom: 3px solid var(--primary); }
-        .nav-container { display: flex; justify-content: space-between; align-items: center; max-width: 1200px; margin: 0 auto; height: 70px; }
-        .logo { display: flex; align-items: center; gap: 12px; font-size: 1.5rem; font-weight: 700; color: var(--primary); text-decoration: none; }
+        /* ===== Theme & Globals ===== */
+        :root {
+            --primary: #22c55e; --primary-light: #dcfce7; --primary-dark: #16a34a;
+            --secondary: #ff7f00; --secondary-light: #fff7ed; --secondary-dark: #e67300;
+            --light: #f8fafc; --dark: #1e293b; --gray: #64748b; --light-gray: #e2e8f0;
+            --border-radius: 12px; --box-shadow: 0 6px 20px rgba(0,0,0,0.05);
+            --transition: all 0.3s ease;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #f0fdf4 0%, #fff7ed 100%);
+            color: var(--dark);
+            line-height: 1.5;
+            min-height: 100vh;
+            padding-bottom: 4rem;
+        }
+
+        h1, h2, h3 { font-weight: 700; }
+        .h1-gradient {
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text; background-clip: text;
+            color: transparent;
+        }
+
+        /* ===== Navigation ===== */
+        .navbar {
+            background: white;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            padding: 0 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-bottom: 3px solid var(--primary);
+        }
+        .nav-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+            height: 72px;
+        }
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--primary);
+            text-decoration: none;
+        }
         .logo i { font-size: 1.8rem; color: var(--secondary); }
-        .nav-links { display: flex; gap: 1.5rem; }
-        .nav-links a { text-decoration: none; color: var(--dark); font-weight: 600; padding: 8px 16px; border-radius: var(--border-radius); transition: var(--transition); position: relative; }
-        .nav-links a:hover, .nav-links a.active { color: var(--dark); font-weight: 700; }
-        .nav-links a::after { content: ''; position: absolute; bottom: 0; left: 0; width: 0; height: 3px; background: var(--secondary); transition: var(--transition); border-radius: 3px; }
-        .nav-links a:hover::after, .nav-links a.active::after { width: 100%; }
+
+        .nav-links {
+            display: flex;
+            gap: 1.25rem;
+        }
+        .nav-link {
+            text-decoration: none;
+            color: var(--gray);
+            font-weight: 600;
+            padding: 8px 16px;
+            border-radius: var(--border-radius);
+            position: relative;
+            transition: var(--transition);
+        }
+        .nav-link.active, .nav-link:hover {
+            color: var(--dark);
+        }
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: 4px;
+            left: 50%;
+            width: 0;
+            height: 3px;
+            background: var(--secondary);
+            border-radius: 2px;
+            transform: translateX(-50%);
+            transition: var(--transition);
+        }
+        .nav-link.active::after,
+        .nav-link:hover::after {
+            width: 80%;
+        }
+
         .nav-buttons { display: flex; gap: 1rem; }
-        .btn { padding: 6px 16px; border-radius: var(--border-radius); font-weight: 600; cursor: pointer; transition: var(--transition); border: none; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 8px; }
-        .btn-outline { background: transparent; border: 2px solid var(--primary); color: var(--primary); }
-        .btn-outline:hover { background: var(--primary); color: white; }
-        .btn-primary { background: var(--secondary); color: white; box-shadow: 0 4px 6px rgba(255,127,0,0.2); }
-        .btn-primary:hover { background: var(--secondary-dark); transform: translateY(-2px); }
-        .container { max-width: 1200px; margin: 2rem auto; padding: 0 1.5rem; }
-        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 2px solid var(--light-gray); }
-        .page-header h1 { font-size: 2rem; color: var(--dark); background: linear-gradient(90deg, var(--primary), var(--secondary)); -webkit-background-clip: text; background-clip: text; color: transparent; font-weight: 700; }
-        .page-header .btn { padding: 8px 16px; font-size: 0.95rem; }
-        .form-container { background: white; border-radius: var(--border-radius); padding: 1.5rem; box-shadow: var(--box-shadow); margin-bottom: 2rem; border-top: 4px solid var(--primary); position: relative; }
-        .form-group { margin-bottom: 1rem; }
-        .form-group label { display: block; margin-bottom: 0.3rem; font-weight: 600; color: var(--dark); display: flex; align-items: center; gap: 6px; font-size: 0.95rem; }
-        .form-group label::after { content: ''; display: inline-block; width: 8px; height: 8px; background: var(--secondary); border-radius: 50%; opacity: 0; }
-        .form-group.required label::after { opacity: 1; }
-        .form-control { width: 100%; padding: 8px 12px; border: 2px solid var(--light-gray); border-radius: var(--border-radius); font-size: 0.95rem; transition: var(--transition); }
-        .form-control:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(34,197,94,0.2); }
-        .form-row { display: flex; gap: 1.25rem; }
-        .form-row .form-group { flex: 1; }
-        .footer { text-align: center; padding: 1.5rem; color: var(--gray); font-size: 0.85rem; margin-top: 2rem; border-top: 1px solid var(--light-gray); }
+        .btn {
+            padding: 8px 20px;
+            border-radius: var(--border-radius);
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            border: none;
+            font-size: 0.95rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--primary);
+            color: var(--primary);
+        }
+        .btn-outline:hover {
+            background: var(--primary);
+            color: white;
+        }
+        .btn-primary {
+            background: var(--secondary);
+            color: white;
+            box-shadow: 0 4px 10px rgba(255,127,0,0.25);
+        }
+        .btn-primary:hover {
+            background: var(--secondary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 14px rgba(255,127,0,0.3);
+        }
+
+        /* ===== Layout ===== */
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1.5rem;
+        }
+
+        .page-header {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .page-header h1 {
+            font-size: 1.8rem;
+        }
+
+        /* ===== Form Container ===== */
+        .form-container {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 2rem;
+            box-shadow: var(--box-shadow);
+            margin-bottom: 2rem;
+            border-top: 4px solid var(--primary);
+        }
+
+        /* ===== Sections & Grid ===== */
+        .form-section {
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px dashed var(--light-gray);
+        }
+        .form-section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--dark);
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .section-title i {
+            color: var(--primary);
+            background: var(--primary-light);
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.25rem;
+        }
+
+        /* ===== Form Controls ===== */
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        .form-group label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 600;
+            color: var(--dark);
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+        .form-group.required label::after {
+            content: '*';
+            color: var(--danger);
+            font-weight: bold;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid var(--light-gray);
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+            transition: var(--transition);
+        }
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(34,197,94,0.15);
+        }
+        .form-control::placeholder {
+            color: var(--gray);
+            opacity: 0.7;
+        }
+
+        /* ===== Alerts ===== */
+        .alert {
+            background: #e8f7ee;
+            border-left: 4px solid #2ecc71;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            border-radius: var(--border-radius);
+            color: #27ae60;
+            font-weight: 500;
+            animation: fadeIn 0.4s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ===== Submit Button ===== */
+        .submit-btn {
+            width: 100%;
+            padding: 14px;
+            font-size: 1.05rem;
+            font-weight: 600;
+            margin-top: 1rem;
+        }
+
+        /* ===== Footer ===== */
+        .footer {
+            text-align: center;
+            padding: 1.5rem;
+            color: var(--gray);
+            font-size: 0.85rem;
+            margin-top: 2rem;
+            border-top: 1px solid var(--light-gray);
+        }
+
+        /* ===== Responsive ===== */
+        @media (max-width: 768px) {
+            .nav-container { flex-direction: column; height: auto; padding: 1rem 0; gap: 1rem; }
+            .nav-links { flex-wrap: wrap; justify-content: center; }
+            .page-header { flex-direction: column; text-align: center; }
+            .form-grid { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
     <!-- Navigation Bar -->
     <nav class="navbar">
         <div class="nav-container">
-            <a href="company-register.html" class="logo">
+            <a href="{% url 'company_list' %}" class="logo">
                 <i class="fas fa-leaf"></i>
                 <span>FinanceFlex</span>
             </a>
             <div class="nav-links">
-                <a href="company-register.html" class="nav-link">Company Registration</a>
-                <a href="branch-register.html" class="nav-link">Branch Management</a>
-                <a href="company-list.html" class="nav-link active">Company List</a>
-                <a href="branch-list.html" class="nav-link">Branch List</a>
+                <a href="{% url 'create_company' %}" class="nav-link">Company Registration</a>
+                <a href="{% url 'create_branch' %}" class="nav-link">Branch Management</a>
+                <a href="{% url 'company_list' %}" class="nav-link active">Company List</a>
+                <a href="{% url 'branch_list' %}" class="nav-link">Branch List</a>
             </div>
             <div class="nav-buttons">
                 <button class="btn btn-outline"><i class="fas fa-user"></i> Log In</button>
@@ -64,79 +298,148 @@
 
     <div class="container">
         <div class="page-header">
-            <h1>Edit Company</h1>
-            <a href="{% url 'company_list' %}" class="btn btn-outline"><i class="fas fa-building"></i> View Companies</a>
+            <h1 class="h1-gradient">Edit Company</h1>
+            <a href="{% url 'company_list' %}" class="btn btn-outline">
+                <i class="fas fa-building"></i> View Companies
+            </a>
         </div>
+
         <div class="form-container">
             <form method="POST" id="company-form">
                 {% csrf_token %}
 
                 {% if messages %}
-                    <div style="background:#e8f7ee; border-left:3px solid #2ecc71; padding:10px; margin-bottom:1.5rem; border-radius:6px; color:#27ae60; font-weight:500;">
+                    <div class="alert">
                         {% for message in messages %}
                             {{ message }}
                         {% endfor %}
                     </div>
                 {% endif %}
 
-                <div class="form-row">
-                    <div class="form-group required">
-                        <label for="company_name"><i class="fas fa-building mr-2"></i>Company Name</label>
-                        <input type="text" id="company_name" name="company_name" class="form-control" 
-                               value="{{ form.company_name.value|default_if_none:'' }}" required>
-                    </div>
-                    <div class="form-group required">
-                        <label for="contact_person"><i class="fas fa-user mr-2"></i>Contact Person</label>
-                        <input type="text" id="contact_person" name="contact_person" class="form-control"
-                               value="{{ form.contact_person.value|default_if_none:'' }}" required>
-                    </div>
-                    <div class="form-group required">
-                        <label for="office_address"><i class="fas fa-map-marker-alt mr-2"></i>Office Address</label>
-                        <input type="text" id="office_address" name="office_address" class="form-control"
-                               value="{{ form.office_address.value|default_if_none:'' }}" required>
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group required">
-                        <label for="contact_phone_no"><i class="fas fa-phone mr-2"></i>Contact Phone NO</label>
-                        <input type="text" id="contact_phone_no" name="contact_phone_no" class="form-control"
-                               value="{{ form.contact_phone_no.value|default_if_none:'' }}" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="session_date"><i class="fas fa-calendar-day mr-2"></i>Session Date</label>
-                        <input type="date" id="session_date" name="session_date" class="form-control"
-                               value="{{ company.session_date|date:'Y-m-d' }}">
+                <!-- 🔹 Section 1: Basic Information -->
+                <div class="form-section">
+                    <h2 class="section-title"><i class="fas fa-info-circle"></i> Basic Information</h2>
+                    <div class="form-grid">
+                        <div class="form-group required">
+                            <label for="company_name"><i class="fas fa-building"></i> Company Name</label>
+                            <input type="text" id="company_name" name="company_name" class="form-control"
+                                value="{{ form.company_name.value|default_if_none:'' }}" required>
+                        </div>
+                        <div class="form-group required">
+                            <label for="contact_person"><i class="fas fa-user"></i> Contact Person</label>
+                            <input type="text" id="contact_person" name="contact_person" class="form-control"
+                                value="{{ form.contact_person.value|default_if_none:'' }}" required>
+                        </div>
+                        <div class="form-group required">
+                            <label for="office_address"><i class="fas fa-map-marker-alt"></i> Office Address</label>
+                            <input type="text" id="office_address" name="office_address" class="form-control"
+                                value="{{ form.office_address.value|default_if_none:'' }}" required>
+                        </div>
                     </div>
                 </div>
 
-                <div class="form-row">
-                    <div class="form-group required">
-                        <label for="registration_date"><i class="fas fa-calendar-check mr-2"></i>Registration Date</label>
-                        <input type="date" id="registration_date" name="registration_date" class="form-control"
-                               value="{{ company.registration_date|date:'Y-m-d' }}" required>
-                    </div>
-                    <div class="form-group required">
-                        <label for="expiration_date"><i class="fas fa-calendar-times mr-2"></i>Expiration Date</label>
-                        <input type="date" id="expiration_date" name="expiration_date" class="form-control"
-                               value="{{ company.expiration_date|date:'Y-m-d' }}" required>
-                    </div>
-                    <div class="form-group required">
-                        <label for="license_key"><i class="fas fa-key mr-2"></i>License Key</label>
-                        <input type="text" id="license_key" name="license_key" class="form-control"
-                               value="{{ form.license_key.value|default_if_none:'' }}" required>
+                <!-- 🔹 Section 2: Contact & Accounts -->
+                <div class="form-section">
+                    <h2 class="section-title"><i class="fas fa-phone-volume"></i> Contact & Financial Details</h2>
+                    <div class="form-grid">
+                        <div class="form-group required">
+                            <label for="contact_phone_no"><i class="fas fa-phone"></i> Phone Number</label>
+                            <input type="tel" id="contact_phone_no" name="contact_phone_no" class="form-control"
+                                value="{{ form.contact_phone_no.value|default_if_none:'' }}" required>
+                        </div>
+                        <div class="form-group required">
+                            <label for="float_account_number"><i class="fas fa-university"></i> 9PSB Float Account</label>
+                            <input type="text" id="float_account_number" name="float_account_number" class="form-control"
+                                value="{{ form.float_account_number.value|default_if_none:'' }}"
+                                placeholder="e.g. 9PSB-123456789" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="session_date"><i class="fas fa-calendar-day"></i> Session Date</label>
+                            <input type="date" id="session_date" name="session_date" class="form-control"
+                                value="{{ company.session_date|date:'Y-m-d' }}">
+                        </div>
                     </div>
                 </div>
 
-                <button type="submit" class="btn btn-primary" style="width: 100%; padding: 10px; font-size: 1rem;">
-                    <i class="fas fa-save"></i> Update Company
+                <!-- 🔹 Section 3: Internal Ledger Accounts -->
+                <div class="form-section">
+                    <h2 class="section-title"><i class="fas fa-calculator"></i> Internal Ledger Accounts</h2>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="float_gl_no"><i class="fas fa-book"></i> Float GL Number</label>
+                            <input type="text" id="float_gl_no" name="float_gl_no" class="form-control"
+                                value="{{ form.float_gl_no.value|default_if_none:'' }}"
+                                placeholder="e.g. GL-1001">
+                        </div>
+                        <div class="form-group">
+                            <label for="float_ac_no"><i class="fas fa-list-ol"></i> Float Account (Ledger)</label>
+                            <input type="text" id="float_ac_no" name="float_ac_no" class="form-control"
+                                value="{{ form.float_ac_no.value|default_if_none:'' }}"
+                                placeholder="e.g. AC-2001">
+                        </div>
+                        <div class="form-group">
+                            <label for="mobile_teller_gl_no"><i class="fas fa-mobile-alt"></i> Mobile Teller GL</label>
+                            <input type="text" id="mobile_teller_gl_no" name="mobile_teller_gl_no" class="form-control"
+                                value="{{ form.mobile_teller_gl_no.value|default_if_none:'' }}"
+                                placeholder="e.g. GL-1002">
+                        </div>
+                        <div class="form-group">
+                            <label for="mobile_teller_ac_no"><i class="fas fa-list-ol"></i> Mobile Teller Account</label>
+                            <input type="text" id="mobile_teller_ac_no" name="mobile_teller_ac_no" class="form-control"
+                                value="{{ form.mobile_teller_ac_no.value|default_if_none:'' }}"
+                                placeholder="e.g. AC-2002">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 🔹 Section 4: Licensing & Dates -->
+                <div class="form-section">
+                    <h2 class="section-title"><i class="fas fa-file-contract"></i> Licensing & Validity</h2>
+                    <div class="form-grid">
+                        <div class="form-group required">
+                            <label for="registration_date"><i class="fas fa-calendar-check"></i> Registration Date</label>
+                            <input type="date" id="registration_date" name="registration_date" class="form-control"
+                                value="{{ company.registration_date|date:'Y-m-d' }}" required>
+                        </div>
+                        <div class="form-group required">
+                            <label for="expiration_date"><i class="fas fa-calendar-times"></i> Expiration Date</label>
+                            <input type="date" id="expiration_date" name="expiration_date" class="form-control"
+                                value="{{ company.expiration_date|date:'Y-m-d' }}" required>
+                        </div>
+                        <div class="form-group required">
+                            <label for="license_key"><i class="fas fa-key"></i> License Key</label>
+                            <input type="text" id="license_key" name="license_key" class="form-control"
+                                value="{{ form.license_key.value|default_if_none:'' }}"
+                                placeholder="Enter valid license key" required>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary submit-btn">
+                    <i class="fas fa-save"></i> Save Changes
                 </button>
             </form>
         </div>
     </div>
 
     <div class="footer">
-        <p>FinanceFlex Management System &copy; 2023 | Financial Solutions</p>
+        <p>FinanceFlex Management System &copy; 2025 | Empowering Financial Agility</p>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('company-form');
+            if (form) {
+                form.addEventListener('submit', function() {
+                    const btn = form.querySelector('.submit-btn');
+                    const originalText = btn.innerHTML;
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+                    btn.disabled = true;
+                    // Optional: re-enable after delay if no redirect (for SPA)
+                    // setTimeout(() => { btn.innerHTML = originalText; btn.disabled = false; }, 2000);
+                });
+            }
+        });
+    </script>
 </body>
 </html>

@@ -18,7 +18,39 @@ class Company(models.Model):
     license_key = models.CharField(max_length=50)
     session_status = models.CharField(max_length=10, null=True, blank=True)
     email = models.EmailField(max_length=255, unique=True, null=True, blank=True)
+    float_account_number = models.CharField(
+        max_length=20,
+        null=True,
+        blank=True,
+        help_text="The 9PSB wallet or float account number assigned to this company."
+    )
     last_notification_date = models.DateField(null=True, blank=True)
+
+    float_gl_no = models.CharField(
+        max_length=20,
+        null=True,
+        blank=True,
+        help_text="GL number linked to the company’s float account."
+    )
+    float_ac_no = models.CharField(
+        max_length=20,
+        null=True,
+        blank=True,
+        help_text="Internal ledger account number linked to the float account."
+    )
+
+    mobile_teller_gl_no = models.CharField(
+        max_length=20,
+        null=True,
+        blank=True,
+        help_text="GL number linked to the company’s Mobile Teller account."
+    )
+    mobile_teller_ac_no = models.CharField(
+            max_length=20,
+            null=True,
+            blank=True,
+            help_text="Internal ledger account number linked to the Mobile Teller account."
+        )
 
 
 
