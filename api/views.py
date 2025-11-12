@@ -173,138 +173,148 @@ from .serializers import MemtransSerializer
 from company.models import Company  # ✅ Import Company model
 
 
-class DashboardView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+# class DashboardView(APIView):
+#     permission_classes = [permissions.IsAuthenticated]
 
-    def get(self, request, *args, **kwargs):
-        print("🔥 DashboardView called - float_account_number fix is ACTIVE!")
+#     def get(self, request, *args, **kwargs):
+#         print("🔥 DashboardView called - float_account_number fix is ACTIVE!")
 
-        # ✅ 1️⃣ Get logged-in customer
-        customer = getattr(request.user, 'customer', None)
-        if not customer:
-            print("❌ No Customer profile linked to user")
-            return Response({"detail": "Customer profile not linked to user."}, status=404)
+#         # ✅ 1️⃣ Get logged-in customer
+#         customer = getattr(request.user, 'customer', None)
+#         if not customer:
+#             print("❌ No Customer profile linked to user")
+#             return Response({"detail": "Customer profile not linked to user."}, status=404)
 
-        # ✅ 2️⃣ Get linked company or fallback to first one
-        company = getattr(request.user, 'company', None)
-        if not company:
-            company = Company.objects.first()
+#         # ✅ 2️⃣ Get linked company or fallback to first one
+#         company = getattr(request.user, 'company', None)
+#         if not company:
+#             company = Company.objects.first()
 
-        if not company:
-            print("❌ No company found in system")
-            return Response(
-                {"detail": "Company profile not found in the system."},
-                status=404
-            )
+#         if not company:
+#             print("❌ No company found in system")
+#             return Response(
+#                 {"detail": "Company profile not found in the system."},
+#                 status=404
+#             )
 
-        print(f"✅ Using company: {company.company_name} ({company.id})")
+#         print(f"✅ Using company: {company.company_name} ({company.id})")
 
-        # ✅ 3️⃣ Extract key data
-        gl_no = (customer.gl_no or '').strip()
-        ac_no = (customer.ac_no or '').strip()
-        float_account_number = (company.float_account_number or '').strip()
-        bank_name = (customer.bank_name or '').strip()
-        bank_code = (customer.bank_code or '').strip()
+#         # ✅ 3️⃣ Extract key data
+#         gl_no = (customer.gl_no or '').strip()
+#         ac_no = (customer.ac_no or '').strip()
+#         float_account_number = (company.float_account_number or '').strip()
+#         bank_name = (customer.bank_name or '').strip()
+#         bank_code = (customer.bank_code or '').strip()
 
-        print(f"🏦 float_account_number from DB: {float_account_number or '❌ None'}")
+#         print(f"🏦 float_account_number from DB: {float_account_number or '❌ None'}")
 
-        # ✅ 4️⃣ If basic info missing
-        if not gl_no or not ac_no:
-            return Response({
-                "customer": {
-                    "id": customer.id,
-                    "first_name": customer.first_name or "",
-                    "last_name": customer.last_name or "",
-                    "full_name": f"{customer.first_name or ''} {customer.last_name or ''}".strip(),
-                    "email": customer.email or "",
-                    "gl_no": gl_no,
-                    "ac_no": ac_no,
-                    "float_account_number": float_account_number,
-                    "bank_name": bank_name,
-                    "bank_code": bank_code,
-                },
-                "balance": 0.0,
-                "accounts": [],
-                "transactions": [],
-            })
+#         # ✅ 4️⃣ If basic info missing
+#         if not gl_no or not ac_no:
+#             return Response({
+#                 "customer": {
+#                     "id": customer.id,
+#                     "first_name": customer.first_name or "",
+#                     "last_name": customer.last_name or "",
+#                     "full_name": f"{customer.first_name or ''} {customer.last_name or ''}".strip(),
+#                     "email": customer.email or "",
+#                     "gl_no": gl_no,
+#                     "ac_no": ac_no,
+#                     "float_account_number": float_account_number,
+#                     "bank_name": bank_name,
+#                     "bank_code": bank_code,
+#                 },
+#                 "balance": 0.0,
+#                 "accounts": [],
+#                 "transactions": [],
+#             })
 
-        # ✅ 5️⃣ Aggregate balances
-        per_accounts = (
-            Memtrans.objects
-            .filter(ac_no=ac_no)
-            .values('gl_no', 'ac_no')
-            .annotate(
-                balance=Coalesce(
-                    Sum('amount'),
-                    Value(0, output_field=DecimalField(max_digits=18, decimal_places=2))
-                )
-            )
-            .order_by('gl_no')
-        )
+#         # ✅ 5️⃣ Aggregate balances
+#         per_accounts = (
+#             Memtrans.objects
+#             .filter(ac_no=ac_no)
+#             .values('gl_no', 'ac_no')
+#             .annotate(
+#                 balance=Coalesce(
+#                     Sum('amount'),
+#                     Value(0, output_field=DecimalField(max_digits=18, decimal_places=2))
+#                 )
+#             )
+#             .order_by('gl_no')
+#         )
 
-        # ✅ 6️⃣ Primary account balance
-        primary_balance = Decimal('0')
-        for r in per_accounts:
-            if str(r['gl_no']).strip() == gl_no:
-                primary_balance = r['balance'] or Decimal('0')
-                break
+#         # ✅ 6️⃣ Primary account balance
+#         primary_balance = Decimal('0')
+#         for r in per_accounts:
+#             if str(r['gl_no']).strip() == gl_no:
+#                 primary_balance = r['balance'] or Decimal('0')
+#                 break
 
-        # ✅ 7️⃣ Get last 20 transactions
-        recent = (
-            Memtrans.objects
-            .filter(gl_no=gl_no, ac_no=ac_no)
-            .order_by('-sys_date')[:20]
-        )
-        data = MemtransSerializer(recent, many=True).data
+#         # ✅ 7️⃣ Get last 20 transactions
+#         recent = (
+#             Memtrans.objects
+#             .filter(gl_no=gl_no, ac_no=ac_no)
+#             .order_by('-sys_date')[:20]
+#         )
+#         data = MemtransSerializer(recent, many=True).data
 
-        # ✅ 8️⃣ Build account list
-        accounts_data = []
-        for r in per_accounts:
-            accounts_data.append({
-                "gl_no": r["gl_no"],
-                "ac_no": r["ac_no"],
-                "balance": float(r["balance"] or 0),
-                "available_balance": float(r["balance"] or 0),
-                "float_account_number": float_account_number,
-                "bank_name": bank_name,
-                "bank_code": bank_code,
-            })
+#         # ✅ 8️⃣ Build account list
+#         accounts_data = []
+#         for r in per_accounts:
+#             accounts_data.append({
+#                 "gl_no": r["gl_no"],
+#                 "ac_no": r["ac_no"],
+#                 "balance": float(r["balance"] or 0),
+#                 "available_balance": float(r["balance"] or 0),
+#                 "float_account_number": float_account_number,
+#                 "bank_name": bank_name,
+#                 "bank_code": bank_code,
+#             })
 
-        # ✅ 9️⃣ Final response
-        response_data = {
-            "customer": {
-                "id": customer.id,
-                "first_name": customer.first_name or "",
-                "last_name": customer.last_name or "",
-                "full_name": f"{customer.first_name or ''} {customer.last_name or ''}".strip(),
-                "email": customer.email or "",
-                "gl_no": gl_no,
-                "ac_no": ac_no,
-                "float_account_number": float_account_number,
-                "bank_name": bank_name,
-                "bank_code": bank_code,
-                "balance": float(primary_balance),
-            },
-            "primary_gl_no": gl_no,
-            "primary_ac_no": ac_no,
-            "primary_float_account_number": float_account_number,
-            "balance": float(primary_balance),
-            "accounts": accounts_data,
-            "transactions": data,
-        }
+#         # ✅ 9️⃣ Final response
+#         response_data = {
+#             "customer": {
+#                 "id": customer.id,
+#                 "first_name": customer.first_name or "",
+#                 "last_name": customer.last_name or "",
+#                 "full_name": f"{customer.first_name or ''} {customer.last_name or ''}".strip(),
+#                 "email": customer.email or "",
+#                 "gl_no": gl_no,
+#                 "ac_no": ac_no,
+#                 "float_account_number": float_account_number,
+#                 "bank_name": bank_name,
+#                 "bank_code": bank_code,
+#                 "balance": float(primary_balance),
+#             },
+#             "primary_gl_no": gl_no,
+#             "primary_ac_no": ac_no,
+#             "primary_float_account_number": float_account_number,
+#             "balance": float(primary_balance),
+#             "accounts": accounts_data,
+#             "transactions": data,
+#         }
 
-        print("✅ Dashboard response prepared successfully.")
-        print(f"🧾 Returning float_account_number: {float_account_number or '❌ None'}")
+#         print("✅ Dashboard response prepared successfully.")
+#         print(f"🧾 Returning float_account_number: {float_account_number or '❌ None'}")
 
-        return Response(response_data)
+#         return Response(response_data)
 
 
 # ---------------------------------------------------------------------------
 # FIXED: Transaction Views - Class-based with JWT Authentication
 # ---------------------------------------------------------------------------
 
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import permissions, status
+from django.core.paginator import Paginator
+from django.db.models import Q
+from datetime import datetime
+import logging
+
+logger = logging.getLogger(__name__)
+
 class TransactionsView(APIView):
-    """Get all transactions using customer gl_no and ac_no - SAME as balance calculation"""
+    """Get transactions using customer gl_no and ac_no with optional request parameters override"""
     permission_classes = [permissions.IsAuthenticated]
     
     def get(self, request):
@@ -312,23 +322,78 @@ class TransactionsView(APIView):
             customer = request.user.customer
             print(f"[DEBUG] TransactionsView called by user: {request.user.username}, customer_id={customer.id}")
             
-            # Use customer's primary gl_no and ac_no - SAME as DashboardView balance logic
-            customer_gl_no = (customer.gl_no or '').strip()
-            customer_ac_no = (customer.ac_no or '').strip()
+            # ✅ FIXED: Use request parameters if provided, otherwise fall back to customer session
+            request_gl_no = request.GET.get('gl_no', '').strip()
+            request_ac_no = request.GET.get('ac_no', '').strip()
             
-            if not customer_gl_no or not customer_ac_no:
-                print(f"[DEBUG] Customer {customer.id} missing gl_no or ac_no: gl_no='{customer_gl_no}', ac_no='{customer_ac_no}'")
+            # Priority: Request parameters (from dashboard) > Customer session data
+            filter_gl_no = request_gl_no if request_gl_no else (customer.gl_no or '').strip()
+            filter_ac_no = request_ac_no if request_ac_no else (customer.ac_no or '').strip()
+            
+            print(f"[DEBUG] Request parameters: gl_no='{request_gl_no}', ac_no='{request_ac_no}'")
+            print(f"[DEBUG] Customer session: gl_no='{customer.gl_no}', ac_no='{customer.ac_no}'")
+            print(f"[DEBUG] Using for filtering: gl_no='{filter_gl_no}', ac_no='{filter_ac_no}'")
+            
+            if not filter_gl_no or not filter_ac_no:
+                print(f"[DEBUG] Customer {customer.id} missing account info: gl_no='{filter_gl_no}', ac_no='{filter_ac_no}'")
                 return Response({'error': 'Customer account information incomplete'}, status=status.HTTP_400_BAD_REQUEST)
             
-            print(f"[DEBUG] Using customer account: gl_no='{customer_gl_no}', ac_no='{customer_ac_no}'")
+            # ✅ FIXED: Use the determined account parameters for filtering
+            transactions_query = Memtrans.objects.filter(
+                gl_no=filter_gl_no,  # Now uses dashboard gl_no when provided
+                ac_no=filter_ac_no   # Now uses dashboard ac_no when provided
+            )
             
-            # Filter by customer's gl_no and ac_no - EXACTLY like DashboardView balance calculation
-            transactions = Memtrans.objects.filter(
-                gl_no=customer_gl_no, 
-                ac_no=customer_ac_no
-            ).order_by('-sys_date')  # Use sys_date like in DashboardView
+            # Apply additional filters from request
+            start_date = request.GET.get('start_date')
+            end_date = request.GET.get('end_date')
+            min_amount = request.GET.get('min_amount')
+            max_amount = request.GET.get('max_amount')
+            trx_no = request.GET.get('trx_no')
             
-            print(f"[DEBUG] Found {transactions.count()} transactions for customer account {customer_gl_no}-{customer_ac_no}")
+            # Date range filter
+            if start_date:
+                try:
+                    start_date_obj = datetime.strptime(start_date, '%Y-%m-%d').date()
+                    transactions_query = transactions_query.filter(sys_date__gte=start_date_obj)
+                    print(f"[DEBUG] Applied start_date filter: {start_date}")
+                except ValueError:
+                    print(f"[DEBUG] Invalid start_date format: {start_date}")
+            
+            if end_date:
+                try:
+                    end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
+                    transactions_query = transactions_query.filter(sys_date__lte=end_date_obj)
+                    print(f"[DEBUG] Applied end_date filter: {end_date}")
+                except ValueError:
+                    print(f"[DEBUG] Invalid end_date format: {end_date}")
+            
+            # Amount range filters
+            if min_amount:
+                try:
+                    min_amt = float(min_amount)
+                    transactions_query = transactions_query.filter(amount__gte=min_amt)
+                    print(f"[DEBUG] Applied min_amount filter: {min_amt}")
+                except (ValueError, TypeError):
+                    print(f"[DEBUG] Invalid min_amount: {min_amount}")
+            
+            if max_amount:
+                try:
+                    max_amt = float(max_amount)
+                    transactions_query = transactions_query.filter(amount__lte=max_amt)
+                    print(f"[DEBUG] Applied max_amount filter: {max_amt}")
+                except (ValueError, TypeError):
+                    print(f"[DEBUG] Invalid max_amount: {max_amount}")
+            
+            # Transaction number filter
+            if trx_no:
+                transactions_query = transactions_query.filter(trx_no__icontains=trx_no)
+                print(f"[DEBUG] Applied transaction number filter: {trx_no}")
+            
+            # Order by transaction date (newest first)
+            transactions = transactions_query.order_by('-sys_date')
+            
+            print(f"[DEBUG] Found {transactions.count()} transactions for account {filter_gl_no}-{filter_ac_no}")
             
             # Pagination
             page = int(request.GET.get('page', 1))
@@ -338,9 +403,26 @@ class TransactionsView(APIView):
             
             print(f"[DEBUG] Pagination: page={page}, limit={limit}, total_pages={paginator.num_pages}")
             
-            serializer = MemtransSerializer(page_obj.object_list, many=True)
+            # Serialize transaction data
+            transactions_data = []
+            for transaction in page_obj.object_list:
+                transactions_data.append({
+                    'trx_no': transaction.trx_no or '',
+                    'id': transaction.trx_no or '',  # Flutter expects 'id' field
+                    'trx_type': transaction.trx_type or '',
+                    'type': transaction.trx_type or 'debit',  # Flutter expects 'type' field
+                    'code': transaction.code or transaction.trx_type or 'UNKNOWN',
+                    'amount': float(transaction.amount) if transaction.amount else 0.0,
+                    'sys_date': transaction.sys_date.isoformat() if transaction.sys_date else '',
+                    'ses_date': transaction.ses_date.isoformat() if transaction.ses_date else '',
+                    'date': transaction.sys_date.isoformat() if transaction.sys_date else '',  # Flutter expects 'date' field
+                    'description': transaction.description or '',
+                    'gl_no': transaction.gl_no or '',
+                    'ac_no': transaction.ac_no or '',
+                })
+            
             return Response({
-                'data': serializer.data,
+                'data': transactions_data,
                 'pagination': {
                     'page': page,
                     'total_pages': paginator.num_pages,
@@ -350,14 +432,15 @@ class TransactionsView(APIView):
                 }
             })
             
-        except Customer.DoesNotExist:
-            print("[DEBUG] Customer not found for user:", request.user.username)
-            return Response({'error': 'Customer not found'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             logger.error(f"Transactions error: {str(e)}")
-            print("[ERROR] Transactions error:", e)
+            print(f"[ERROR] Transactions error: {e}")
             return Response({'error': 'Failed to load transactions'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
+
+
+            
 from datetime import datetime
 from decimal import Decimal
 from django.db.models import Q
@@ -547,35 +630,67 @@ class RegularTransactionsView(APIView):
 # ---------------------------------------------------------------------------
 # Pre-login and activation
 # ---------------------------------------------------------------------------
+from django.contrib.auth import get_user_model
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status, permissions
 
 UserModel = get_user_model()
 
 def _find_user_by_username_or_email(value: str):
+    print(f"[DEBUG] Searching for user by: {value}")
     try:
-        return UserModel.objects.get(username=value)
+        user = UserModel.objects.get(username=value)
+        print(f"[DEBUG] Found user by username: {user.username}")
+        return user
     except UserModel.DoesNotExist:
+        print("[DEBUG] Not found by username, trying email lookup...")
         try:
-            return UserModel.objects.get(email__iexact=value)
+            user = UserModel.objects.get(email__iexact=value)
+            print(f"[DEBUG] Found user by email: {user.email}")
+            return user
         except UserModel.DoesNotExist:
+            print("[DEBUG] User not found by either username or email.")
             return None
+
 
 class PreLoginView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def post(self, request, *args, **kwargs):
+        print("\n========== [DEBUG] PreLoginView POST called ==========")
         username = (request.data.get('username') or '').strip()
         password = request.data.get('password') or ''
+        print(f"[DEBUG] Received username: '{username}'")
+        print(f"[DEBUG] Received password: {'*' * len(password)}")  # don't print raw password
+
         if not username or not password:
-            return Response({"detail": "username and password are required"}, status=status.HTTP_400_BAD_REQUEST)
+            print("[DEBUG] Missing username or password.")
+            return Response({"detail": "username and password are required"},
+                            status=status.HTTP_400_BAD_REQUEST)
 
         user = _find_user_by_username_or_email(username)
-        if not user or not user.check_password(password):
-            return Response({"detail": "Invalid credentials"}, status=status.HTTP_400_BAD_REQUEST)
+        if not user:
+            print("[DEBUG] No user found matching the provided username/email.")
+            return Response({"detail": "Invalid credentials"},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        print(f"[DEBUG] User found: {user.username} (verified={getattr(user, 'verified', False)})")
+
+        if not user.check_password(password):
+            print("[DEBUG] Password check failed for user:", user.username)
+            return Response({"detail": "Invalid credentials"},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        print("[DEBUG] Password check passed.")
 
         if getattr(user, "verified", False):
+            print("[DEBUG] User is verified. Allowing login.")
             return Response({"can_login": True}, status=status.HTTP_200_OK)
 
-        return Response({"activation_required": True, "username": user.username}, status=status.HTTP_202_ACCEPTED)
+        print("[DEBUG] User not verified. Activation required.")
+        return Response({"activation_required": True, "username": user.username},
+                        status=status.HTTP_202_ACCEPTED)
 
 class ActivateView(APIView):
     permission_classes = [permissions.AllowAny]
@@ -628,48 +743,87 @@ class ChangePasswordView(APIView):
 # ---------------------------------------------------------------------------
 # Transfer to FinanceFlex (signed amounts; double-entry)
 # ---------------------------------------------------------------------------
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import permissions
+from django.db import transaction
+from django.utils import timezone
+from decimal import Decimal
+from customers.models import Customer
+from transactions.models import Memtrans
+from .serializers import TransferToFinanceFlexSerializer
+from .helpers import (
+    _user_customer,
+    _balance,
+    _gen_trx_no,
+    normalize_account,
+)
+from decimal import Decimal
+from django.db import transaction
+from django.utils import timezone
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework import permissions
+
+from customers.models import Customer
+from transactions.models import Memtrans
+from .serializers import TransferToFinanceFlexSerializer
+from .helpers import normalize_account, _balance, _gen_trx_no
 
 class TransferToFinanceFlexView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     @transaction.atomic
     def post(self, request):
+        print("DEBUG: Incoming request data:", request.data)
+
+        # Validate request data
         ser = TransferToFinanceFlexSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
         data = ser.validated_data
+        print("DEBUG: Validated data:", data)
 
+        # Get logged-in user and their source account
         user = request.user
-        src_cust = _user_customer(request)
-        if not src_cust:
-            return Response({"detail": "Customer profile not found for user."}, status=404)
+        norm_from_gl = user.gl_no
+        norm_from_ac = user.ac_no
+        print(f"DEBUG: Source account derived from user - GL: {norm_from_gl}, AC: {norm_from_ac}")
 
-        from_gl = data["from_gl_no"]
-        from_ac = data["from_ac_no"]
+        # Extract destination and amount
         to_gl = data["to_gl_no"]
         to_ac = data["to_ac_no"]
         amount = data["amount"]
+        if isinstance(amount, str):
+            amount = Decimal(amount)
         narr = data.get("narration") or "FinanceFlex transfer"
+        print(f"DEBUG: Transfer details - Amount: {amount}, Narration: {narr}")
 
-        norm_from_gl, norm_from_ac = normalize_account(from_gl, from_ac)
+        # Normalize destination account
         norm_to_gl, norm_to_ac = normalize_account(to_gl, to_ac)
+        print(f"DEBUG: Destination account normalized - GL: {norm_to_gl}, AC: {norm_to_ac}")
 
-        if not _owns_source_account(src_cust, norm_from_gl, norm_from_ac):
-            return Response({"detail": "Source account not found for this user."}, status=404)
-
+        # Find destination customer
         dest_cust = Customer.objects.filter(gl_no=norm_to_gl, ac_no=norm_to_ac).first()
+        print("DEBUG: Destination customer:", dest_cust)
         if not dest_cust:
+            print("DEBUG: Destination customer not found")
             return Response({"detail": "Destination account not found."}, status=404)
 
+        # Check source balance
         cur_bal = _balance(norm_from_gl, norm_from_ac)
+        print(f"DEBUG: Current source balance: {cur_bal}")
         if cur_bal < amount:
+            print("DEBUG: Insufficient funds")
             return Response({"detail": f"Insufficient funds. Available: {cur_bal}, Requested: {amount}"}, status=400)
 
+        # Generate transaction metadata
         now = timezone.now()
         today = timezone.localdate()
         trx_no = _gen_trx_no()
+        print(f"DEBUG: Transaction number generated: {trx_no}")
 
-        # CR destination (+)
-        Memtrans.objects.create(
+        # Credit destination (+)
+        dest_trans = Memtrans.objects.create(
             branch=dest_cust.branch,
             cust_branch=dest_cust.branch,
             customer=dest_cust,
@@ -688,11 +842,13 @@ class TransferToFinanceFlexView(APIView):
             user=user,
             trx_type="TRANSFER",
         )
-        # DR source (-)
-        Memtrans.objects.create(
-            branch=src_cust.branch,
-            cust_branch=src_cust.branch,
-            customer=src_cust,
+        print("DEBUG: Destination transaction created:", dest_trans.id)
+
+        # Debit source (-)
+        src_trans = Memtrans.objects.create(
+            branch=user.branch,  # Assuming user has branch attribute
+            cust_branch=user.branch,
+            customer=user.customer,  # Assuming user has related customer
             gl_no=norm_from_gl,
             ac_no=norm_from_ac,
             trx_no=trx_no,
@@ -708,32 +864,54 @@ class TransferToFinanceFlexView(APIView):
             user=user,
             trx_type="TRANSFER",
         )
+        print("DEBUG: Source transaction created:", src_trans.id)
 
+        # Compute new balances
         new_src_bal = _balance(norm_from_gl, norm_from_ac)
         new_dst_bal = _balance(norm_to_gl, norm_to_ac)
+        print(f"DEBUG: New balances - Source: {new_src_bal}, Destination: {new_dst_bal}")
 
-        return Response(
-            {
-                "status": True,
-                "reference": trx_no,
-                "amount": str(amount),
-                "narration": narr,
-                "timestamp": now.isoformat(),
-                "from": {
-                    "gl_no": norm_from_gl,
-                    "ac_no": norm_from_ac,
-                    "customer_id": src_cust.id,
-                    "balance": str(new_src_bal),
-                },
-                "to": {
-                    "gl_no": norm_to_gl,
-                    "ac_no": norm_to_ac,
-                    "customer_id": dest_cust.id,
-                    "balance": str(new_dst_bal),
-                },
+        # Build response
+        response_data = {
+            "status": True,
+            "reference": trx_no,
+            "amount": str(amount),
+            "narration": narr,
+            "timestamp": now.isoformat(),
+            "from": {
+                "gl_no": norm_from_gl,
+                "ac_no": norm_from_ac,
+                "customer_id": user.customer.id,
+                "balance": str(new_src_bal),
             },
-            status=201,
-        )
+            "to": {
+                "gl_no": norm_to_gl,
+                "ac_no": norm_to_ac,
+                "customer_id": dest_cust.id,
+                "balance": str(new_dst_bal),
+            },
+        }
+
+        print("DEBUG: Response data:", response_data)
+        return Response(response_data, status=201)
+
+
+
+
+# 🧩 Improved ownership check helper
+def _owns_source_account(cust, gl_no, ac_no):
+    print("DEBUG _owns_source_account called")
+    print(f"DEBUG Expected (from request): gl_no={gl_no}, ac_no={ac_no}")
+    print(f"DEBUG Customer record: id={cust.id}, gl_no={cust.gl_no}, ac_no={cust.ac_no}, name={getattr(cust, 'full_name', cust)}")
+
+    # Normalize to avoid type or leading-zero mismatches
+    same_gl = str(cust.gl_no).lstrip("0") == str(gl_no).lstrip("0")
+    same_ac = str(cust.ac_no).lstrip("0") == str(ac_no).lstrip("0")
+
+    print(f"DEBUG Comparison: same_gl={same_gl}, same_ac={same_ac}")
+    owns = same_gl and same_ac
+    print(f"DEBUG Result: owns_source_account={owns}")
+    return owns
 
 # ---------------------------------------------------------------------------
 # Customer lookup (by 10-digit or gl/ac)
@@ -775,28 +953,112 @@ class CustomerLookupView(APIView):
 # ---------------------------------------------------------------------------
 # Beneficiaries (serializer colocated here per your snippet)
 # ---------------------------------------------------------------------------
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import permissions, status
+from django.db import IntegrityError  # ← MISSING IMPORT ADDED
+from .models import Beneficiary
+from .serializers import BeneficiarySerializer
 
-from rest_framework import serializers
+class BeneficiaryListCreateView(APIView):
+    """
+    List all beneficiaries or create a new beneficiary for the authenticated user.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get(self, request):
+        """GET /api/v1/beneficiaries/ - List beneficiaries."""
+        beneficiaries = Beneficiary.objects.filter(user=request.user).order_by('name')
+        serializer = BeneficiarySerializer(beneficiaries, many=True)
+        
+        return Response({
+            'success': True,
+            'count': len(serializer.data),
+            'results': serializer.data
+        })
+    
+    def post(self, request):
+        """POST /api/v1/beneficiaries/ - Create beneficiary."""
+        # 🔍 DEBUG: Log incoming data to see what Flutter is sending
+        print(f"[DEBUG] 📥 Incoming beneficiary data: {request.data}")
+        print(f"[DEBUG] 👤 User: {request.user.username}")
+        
+        serializer = BeneficiarySerializer(data=request.data, context={'request': request})
+        
+        print(f"[DEBUG] 🔍 Serializer is_valid: {serializer.is_valid()}")
+        if not serializer.is_valid():
+            print(f"[DEBUG] ❌ Serializer errors: {serializer.errors}")
+        
+        if serializer.is_valid():
+            try:
+                beneficiary = serializer.save()
+                print(f"[DEBUG] ✅ Beneficiary created: {beneficiary.name} ({beneficiary.account_number})")
+                return Response({
+                    'success': True,
+                    'message': 'Beneficiary saved successfully',
+                    'data': BeneficiarySerializer(beneficiary).data
+                }, status=status.HTTP_201_CREATED)
+            except IntegrityError:
+                return Response({
+                    'success': False,
+                    'message': 'This beneficiary already exists'
+                }, status=status.HTTP_400_BAD_REQUEST)
+        
+        return Response({
+            'success': False,
+            'message': 'Invalid data',
+            'errors': serializer.errors,
+            'received_data': request.data  # 🔍 Show what was received for debugging
+        }, status=status.HTTP_400_BAD_REQUEST)
 
-class BeneficiarySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Beneficiary
-        fields = [
-            'id',
-            'name',
-            'bank_name',
-            'account_number',
-            'phone_number',
-            'nickname',
-            'created_at',
-            'updated_at',
-        ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
-
-    def create(self, validated_data):
-        user = self.context['request'].user
-        return Beneficiary.objects.create(user=user, **validated_data)
-
+class BeneficiaryDetailView(APIView):
+    """
+    Retrieve, update or delete a beneficiary.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_object(self, pk, user):
+        try:
+            return Beneficiary.objects.get(pk=pk, user=user)
+        except Beneficiary.DoesNotExist:
+            return None
+    
+    def get(self, request, pk):
+        """GET /api/v1/beneficiaries/{id}/"""
+        beneficiary = self.get_object(pk, request.user)
+        if not beneficiary:
+            return Response({'success': False, 'message': 'Not found'}, 
+                          status=status.HTTP_404_NOT_FOUND)
+        
+        serializer = BeneficiarySerializer(beneficiary)
+        return Response({'success': True, 'data': serializer.data})
+    
+    def put(self, request, pk):
+        """PUT /api/v1/beneficiaries/{id}/"""
+        beneficiary = self.get_object(pk, request.user)
+        if not beneficiary:
+            return Response({'success': False, 'message': 'Not found'}, 
+                          status=status.HTTP_404_NOT_FOUND)
+        
+        serializer = BeneficiarySerializer(beneficiary, data=request.data, 
+                                         context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response({'success': True, 'data': serializer.data})
+        
+        return Response({'success': False, 'errors': serializer.errors}, 
+                      status=status.HTTP_400_BAD_REQUEST)
+    
+    def delete(self, request, pk):
+        """DELETE /api/v1/beneficiaries/{id}/"""
+        beneficiary = self.get_object(pk, request.user)
+        if not beneficiary:
+            return Response({'success': False, 'message': 'Not found'}, 
+                          status=status.HTTP_404_NOT_FOUND)
+        
+        beneficiary.delete()
+        return Response({'success': True, 'message': 'Deleted successfully'}, 
+                      status=status.HTTP_204_NO_CONTENT)
 # ---------------------------------------------------------------------------
 # PIN endpoints (server-managed)
 # ---------------------------------------------------------------------------
@@ -3193,3 +3455,1310 @@ def ninepsb_health_check(request):
             'base_url': 'Unknown',
             'authenticated': False
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+"""
+Complete Django Views for Wallet Creation with Account Number Replacement
+Integrated with existing gl_no/ac_no and float_account_number system
+Now includes gender fetch from DB and normalized mapping for 9PSB (0=Male, 1=Female)
+"""
+
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework import status, permissions
+from rest_framework.views import APIView
+from rest_framework.viewsets import ModelViewSet
+from django.contrib.auth.models import User
+from django.contrib.auth import authenticate
+from django.db.models import Q, Sum, Value, DecimalField
+from django.db.models.functions import Coalesce
+from django.db import transaction
+from django.conf import settings
+from django.utils import timezone
+from customers.models import Customer, Company
+from transactions.models import Memtrans
+from .serializers import MemtransSerializer
+import logging
+import requests
+import json
+import uuid
+from datetime import datetime, timedelta
+from decimal import Decimal
+import re
+
+logger = logging.getLogger(__name__)
+
+# ============================================================================
+# WALLET CREATION WITH ACCOUNT NUMBER REPLACEMENT - MAIN ENDPOINTS
+# ============================================================================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def wallet_creation_data(request):
+    """
+    Get customer data required for 9PSB wallet creation
+    Returns readonly form data for wallet creation with current account number
+    NOW INCLUDES: UI state for dynamic button (Create Wallet vs Add Money)
+    """
+    try:
+        # Find customer by matching gl_no and ac_no with request.user
+        customer = None
+        
+        # Method 1: Try to find customer by exact gl_no and ac_no match
+        if hasattr(request.user, 'gl_no') and hasattr(request.user, 'ac_no'):
+            if request.user.gl_no and request.user.ac_no:
+                customer = Customer.objects.filter(
+                    gl_no=request.user.gl_no,
+                    ac_no=request.user.ac_no
+                ).first()
+                logger.info(f"[WALLET_CREATION_DATA] Found customer by gl_no/ac_no match: {customer.id if customer else 'None'}")
+        
+        # Method 2: Fallback to user.customer if no match found and it exists
+        if not customer:
+            customer = getattr(request.user, 'customer', None)
+            if customer:
+                logger.info(f"[WALLET_CREATION_DATA] Using fallback customer: {customer.id}")
+
+        if not customer:
+            return Response({
+                'error': 'Customer profile not found for matching gl_no and ac_no'
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        # Get the CURRENT account number (what will be replaced)
+        current_account_number = None
+        
+        # Method 1: Check if User.username contains the account number
+        if hasattr(request.user, 'username') and request.user.username:
+            username = request.user.username.strip()
+            # If username looks like an account number (digits only, reasonable length)
+            if username.isdigit() and 8 <= len(username) <= 15:
+                current_account_number = username
+                logger.info(f"[WALLET_CREATION_DATA] Using username as current account: {username}")
+        
+        # Method 2: Try gl_no + ac_no combination
+        if not current_account_number:
+            if hasattr(customer, 'gl_no') and hasattr(customer, 'ac_no') and customer.gl_no and customer.ac_no:
+                current_account_number = f"{customer.gl_no}{customer.ac_no}"
+                logger.info(f"[WALLET_CREATION_DATA] Using computed account: {current_account_number}")
+            elif hasattr(request.user, 'gl_no') and hasattr(request.user, 'ac_no'):
+                if request.user.gl_no and request.user.ac_no:
+                    current_account_number = f"{request.user.gl_no}{request.user.ac_no}"
+                    logger.info(f"[WALLET_CREATION_DATA] Using user's computed account: {current_account_number}")
+
+        # Method 3: Check if there's already a wallet_account that could be the current account
+        if not current_account_number and hasattr(customer, 'wallet_account') and customer.wallet_account:
+            current_account_number = customer.wallet_account
+            logger.info(f"[WALLET_CREATION_DATA] Using existing wallet_account: {current_account_number}")
+
+        # Pull gender from DB and normalize
+        gender_raw = getattr(customer, 'gender', None) or getattr(customer, 'cust_sex', None)
+        gender_text = normalize_gender_text(gender_raw) if gender_raw else None
+        try:
+            gender_code = normalize_gender_code(gender_raw) if gender_raw is not None else None
+        except Exception:
+            gender_code = None
+
+        # Check wallet status for UI state
+        existing_wallet = getattr(customer, 'wallet_account', None)
+        has_wallet = bool(existing_wallet)
+
+        # Extract customer data using exact Customer model fields
+        data = {
+            'full_name': customer.get_full_name() if hasattr(customer, 'get_full_name') else f"{customer.first_name or ''} {customer.last_name or ''}".strip(),
+            'phone_number': getattr(customer, 'mobile', '') or getattr(customer, 'phone_no', '') or getattr(customer, 'phone', '') or '',
+            'email': getattr(customer, 'email', '') or '',
+            'date_of_birth': customer.dob.strftime('%Y-%m-%d') if hasattr(customer, 'dob') and customer.dob else '',
+            'address': getattr(customer, 'address', '') or '',
+            'state': getattr(customer, 'state', '') or '',
+            'nationality': getattr(customer, 'nationality', 'Nigerian'),
+            'bvn': getattr(customer, 'bvn', '') or '',
+            'account_number': current_account_number or '',
+            'has_existing_wallet': has_wallet,
+            'wallet_account': existing_wallet,
+            'current_wallet_account': existing_wallet,
+            'customer_gl_no': getattr(customer, 'gl_no', ''),
+            'customer_ac_no': getattr(customer, 'ac_no', ''),
+
+            # Gender fields
+            'gender': gender_text,
+            'gender_code': gender_code,
+            'cust_sex': gender_raw,
+
+            # UI CONTROL: Determines which button to show
+            'ui_state': {
+                'show_create_wallet_button': not has_wallet,
+                'show_add_money_button': has_wallet,
+                'button_text': 'Add Money' if has_wallet else 'Create Wallet',
+                'button_action': 'add_money' if has_wallet else 'create_wallet',
+                'wallet_ready_for_funding': has_wallet
+            },
+            
+            # Account details for copying (when Add Money is shown)
+            'funding_details': {
+                'account_name': customer.get_full_name() if hasattr(customer, 'get_full_name') else f"{customer.first_name or ''} {customer.last_name or ''}".strip(),
+                'account_number': existing_wallet if has_wallet else None,
+                'bank_name': getattr(customer, 'bank_name', '9PSB Microfinance Bank') if has_wallet else None,
+                'bank_code': getattr(customer, 'bank_code', '120001') if has_wallet else None,
+                'copy_ready': has_wallet
+            } if has_wallet else None
+        }
+
+        # Log the data for debugging
+        logger.info(
+            f"[WALLET_CREATION_DATA] Customer {customer.id} data: "
+            f"BVN={'Present' if data['bvn'] else 'Missing'}, "
+            f"Gender={data['gender']} (code={data['gender_code']} raw={data['cust_sex']}), "
+            f"Current_Account={current_account_number}, "
+            f"Has_Wallet={data['has_existing_wallet']}, "
+            f"Button={data['ui_state']['button_text']}, "
+            f"GL_NO={data['customer_gl_no']}, AC_NO={data['customer_ac_no']}, "
+            f"Name={data['full_name']}"
+        )
+        
+        return Response(data, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        logger.error(f"[WALLET_CREATION_DATA] Error: {str(e)}")
+        return Response({
+            'error': 'Failed to load wallet creation data'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def wallet_create(request):
+    """
+    Create 9PSB wallet account and INSERT the wallet account into the Customer model
+    Finds customer by matching gl_no and ac_no with request.user
+    Uses gender from DB if not provided, normalized to 0=Male, 1=Female for 9PSB
+    ALSO inserts wallet_account into Customer with gl_no='20111' and same ac_no
+    """
+    try:
+        # Find customer by matching gl_no and ac_no with request.user
+        customer = None
+        
+        # Method 1: Try to find customer by exact gl_no and ac_no match
+        if hasattr(request.user, 'gl_no') and hasattr(request.user, 'ac_no'):
+            if request.user.gl_no and request.user.ac_no:
+                customer = Customer.objects.filter(
+                    gl_no=request.user.gl_no,
+                    ac_no=request.user.ac_no
+                ).first()
+                logger.info(f"[WALLET_CREATE] Found customer by gl_no/ac_no match: {customer.id if customer else 'None'}")
+        
+        # Method 2: Fallback to user.customer if no match found and it exists
+        if not customer:
+            customer = getattr(request.user, 'customer', None)
+            if customer:
+                logger.info(f"[WALLET_CREATE] Using fallback customer: {customer.id}")
+
+        if not customer:
+            return Response({
+                'error': 'Customer profile not found for matching gl_no and ac_no',
+                'user_gl_no': getattr(request.user, 'gl_no', None),
+                'user_ac_no': getattr(request.user, 'ac_no', None)
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        # Store the old account number for reference
+        old_account_number = request.data.get('account_number', '')
+        
+        # Get wallet creation data from request
+        wallet_data = request.data
+        
+        # Validate required fields
+        required_fields = ['full_name', 'phone_number', 'email', 'bvn', 'account_number']
+        missing_fields = []
+        
+        for field in required_fields:
+            value = wallet_data.get(field, '').strip() if wallet_data.get(field) else ''
+            if not value or value == 'null' or value == 'Not provided':
+                missing_fields.append(field)
+        
+        if missing_fields:
+            return Response({
+                'error': f'Missing or invalid required fields: {", ".join(missing_fields)}',
+                'missing_fields': missing_fields
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Resolve/normalize gender (prefer request, fallback to DB)
+        gender_raw = wallet_data.get('gender')
+        if not gender_raw:
+            gender_raw = wallet_data.get('gender_text')
+        if not gender_raw and wallet_data.get('gender_code') is not None:
+            gender_raw = wallet_data.get('gender_code')
+
+        if gender_raw is None:
+            gender_raw = getattr(customer, 'gender', None) or getattr(customer, 'cust_sex', None)
+
+        try:
+            gender_code = normalize_gender_code(gender_raw)
+            gender_text = normalize_gender_text(gender_raw)
+        except ValueError as e:
+            return Response({
+                'error': f'Invalid gender value: {e}'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Check if customer already has a wallet account
+        if hasattr(customer, 'wallet_account') and customer.wallet_account and customer.wallet_account != old_account_number:
+            logger.info(f"[WALLET_CREATE] Customer {customer.id} already has different wallet: {customer.wallet_account}")
+            return Response({
+                'message': 'Different wallet account already exists for this customer',
+                'old_account_number': old_account_number,
+                'new_account_number': customer.wallet_account,
+                'bank_name': getattr(customer, 'bank_name', '9PSB'),
+                'bank_code': getattr(customer, 'bank_code', '120001'),
+                'already_exists': True,
+                'account_updated': False,
+                'customer_id': customer.id,
+                'customer_gl_no': getattr(customer, 'gl_no', ''),
+                'customer_ac_no': getattr(customer, 'ac_no', '')
+            }, status=status.HTTP_200_OK)
+
+        # Prepare 9PSB API request data
+        ninepsb_data = {
+            'customer_name': wallet_data['full_name'],
+            'customer_phone': wallet_data['phone_number'],
+            'customer_email': wallet_data['email'],
+            'customer_bvn': wallet_data['bvn'],
+            'customer_address': wallet_data.get('address', ''),
+            'date_of_birth': wallet_data.get('date_of_birth', ''),
+            'state_of_origin': wallet_data.get('state', ''),
+            'nationality': wallet_data.get('nationality', 'Nigerian'),
+            'reference_account': old_account_number,  # Original account number for reference
+            'customer_id': customer.id,
+            'gl_no': getattr(customer, 'gl_no', ''),
+            'ac_no': getattr(customer, 'ac_no', ''),
+            # Normalized gender for 9PSB
+            'customer_gender_code': gender_code,
+            'customer_gender': gender_text,
+        }
+
+        logger.info(
+            f"[WALLET_CREATE] Creating wallet for customer {customer.id} "
+            f"(gl_no: {ninepsb_data['gl_no']}, ac_no: {ninepsb_data['ac_no']}) "
+            f"to replace account {old_account_number} | gender={gender_text}({gender_code})"
+        )
+
+        # Use database transaction to ensure data consistency
+        with transaction.atomic():
+            # Call 9PSB API to create wallet using real API
+            ninepsb_response = create_ninepsb_wallet(ninepsb_data)
+
+            if ninepsb_response['success']:
+                new_wallet_account = ninepsb_response['wallet_account_number']
+                
+                # INSERT the wallet account into the primary Customer model
+                logger.info(f"[WALLET_CREATE] Inserting wallet_account {new_wallet_account} into Customer {customer.id} where gl_no={getattr(customer, 'gl_no', '')} and ac_no={getattr(customer, 'ac_no', '')}")
+                
+                # Store old values for logging
+                old_wallet_account = getattr(customer, 'wallet_account', None)
+                old_username = request.user.username
+                
+                # Update customer fields - INSERT the wallet account
+                customer.wallet_account = new_wallet_account
+                update_fields = ['wallet_account']
+
+                if hasattr(customer, 'bank_name'):
+                    customer.bank_name = ninepsb_response.get('bank_name', '9PSB Microfinance Bank')
+                    update_fields.append('bank_name')
+                if hasattr(customer, 'bank_code'):
+                    customer.bank_code = ninepsb_response.get('bank_code', '120001')
+                    update_fields.append('bank_code')
+
+                # Persist normalized gender if useful/available on model
+                try:
+                    if hasattr(customer, 'gender'):
+                        customer.gender = gender_text
+                        update_fields.append('gender')
+                    if hasattr(customer, 'cust_sex') and not getattr(customer, 'cust_sex', None):
+                        customer.cust_sex = 'M' if gender_code == 0 else 'F'
+                        update_fields.append('cust_sex')
+                except Exception:
+                    pass
+                
+                # IMPORTANT: Keep gl_no and ac_no unchanged as they are used for transactions
+                logger.info(f"[WALLET_CREATE] Preserving gl_no={getattr(customer, 'gl_no', '')} and ac_no={getattr(customer, 'ac_no', '')} for transaction compatibility")
+                
+                # Save the primary customer with updated wallet information
+                customer.save(update_fields=update_fields)
+
+                # ADDITIONAL: Also insert wallet_account into Customer with gl_no='20111' and same ac_no
+                current_ac_no = getattr(customer, 'ac_no', '')
+                secondary_customer_updated = False
+                secondary_customer_id = None
+                
+                if current_ac_no:
+                    try:
+                        secondary_customer = Customer.objects.filter(
+                            gl_no='20111',
+                            ac_no=current_ac_no
+                        ).first()
+                        
+                        if secondary_customer:
+                            logger.info(f"[WALLET_CREATE] Found secondary customer {secondary_customer.id} with gl_no=20111, ac_no={current_ac_no}")
+                            
+                            # Update the secondary customer with same wallet details
+                            secondary_customer.wallet_account = new_wallet_account
+                            secondary_update_fields = ['wallet_account']
+                            
+                            if hasattr(secondary_customer, 'bank_name'):
+                                secondary_customer.bank_name = ninepsb_response.get('bank_name', '9PSB Microfinance Bank')
+                                secondary_update_fields.append('bank_name')
+                            if hasattr(secondary_customer, 'bank_code'):
+                                secondary_customer.bank_code = ninepsb_response.get('bank_code', '120001')
+                                secondary_update_fields.append('bank_code')
+                            
+                            # Save the secondary customer
+                            secondary_customer.save(update_fields=secondary_update_fields)
+                            secondary_customer_updated = True
+                            secondary_customer_id = secondary_customer.id
+                            
+                            logger.info(f"[WALLET_CREATE] SUCCESS - Also updated secondary customer {secondary_customer.id} (gl_no=20111, ac_no={current_ac_no}) with wallet_account={new_wallet_account}")
+                        else:
+                            logger.warning(f"[WALLET_CREATE] No secondary customer found with gl_no=20111, ac_no={current_ac_no}")
+                    
+                    except Exception as secondary_error:
+                        logger.error(f"[WALLET_CREATE] Failed to update secondary customer (gl_no=20111, ac_no={current_ac_no}): {str(secondary_error)}")
+                        # Don't fail the main transaction for secondary customer update failure
+                
+                # Update the User.username if it was the account number
+                username_updated = False
+                if hasattr(request.user, 'username'):
+                    if request.user.username == old_account_number:
+                        request.user.username = new_wallet_account
+                        request.user.save()
+                        username_updated = True
+                        logger.info(f"[WALLET_CREATE] Updated username from {old_account_number} to {new_wallet_account}")
+
+                # Verify the primary save was successful
+                customer.refresh_from_db()
+                if customer.wallet_account != new_wallet_account:
+                    logger.error(f"[WALLET_CREATE] SAVE FAILED - Wallet not saved to customer {customer.id}")
+                    raise Exception("Failed to save new wallet account number to customer profile")
+
+                logger.info(
+                    f"[WALLET_CREATE] SUCCESS - Customer {customer.id} wallet_account inserted: "
+                    f"Old={old_wallet_account}, New={new_wallet_account}, "
+                    f"GL_NO={getattr(customer, 'gl_no', '')}, AC_NO={getattr(customer, 'ac_no', '')}, "
+                    f"Username_Updated={username_updated}, "
+                    f"Secondary_Customer_Updated={secondary_customer_updated} (ID={secondary_customer_id})"
+                )
+
+                # Verify that gl_no and ac_no match request.user
+                verification_status = {
+                    'customer_gl_no_matches': getattr(customer, 'gl_no', '') == getattr(request.user, 'gl_no', ''),
+                    'customer_ac_no_matches': getattr(customer, 'ac_no', '') == getattr(request.user, 'ac_no', ''),
+                    'wallet_inserted': customer.wallet_account == new_wallet_account,
+                    'secondary_customer_updated': secondary_customer_updated,
+                    'secondary_customer_id': secondary_customer_id
+                }
+
+                return Response({
+                    'message': 'Wallet created and inserted into Customer model successfully!',
+                    'old_account_number': old_account_number,
+                    'new_account_number': new_wallet_account,
+                    'wallet_account_number': new_wallet_account,  # For backwards compatibility
+                    'bank_name': getattr(customer, 'bank_name', '9PSB Microfinance Bank'),
+                    'bank_code': getattr(customer, 'bank_code', '120001'),
+                    'reference_number': ninepsb_response.get('reference_number'),
+                    'tracking_ref': ninepsb_response.get('tracking_ref'),
+                    'created_at': ninepsb_response.get('created_at'),
+                    'customer_id': customer.id,
+                    'customer_gl_no': getattr(customer, 'gl_no', ''),
+                    'customer_ac_no': getattr(customer, 'ac_no', ''),
+                    'account_updated': True,
+                    'username_updated': username_updated,
+                    'verification': verification_status,
+                    'api_version': ninepsb_response.get('api_version', '3.0'),
+                    # Echo normalized gender for confirmation
+                    'gender': gender_text,
+                    'gender_code': gender_code,
+                    # Secondary customer update info
+                    'secondary_updates': {
+                        'gl_20111_customer_updated': secondary_customer_updated,
+                        'gl_20111_customer_id': secondary_customer_id,
+                        'gl_20111_ac_no': current_ac_no if secondary_customer_updated else None
+                    }
+                }, status=status.HTTP_201_CREATED)
+
+            else:
+                # 9PSB API failed
+                error_message = ninepsb_response.get('message', 'Failed to create wallet with 9PSB')
+                logger.error(f"[WALLET_CREATE] 9PSB API failed for customer {customer.id}: {error_message}")
+                
+                return Response({
+                    'error': f'9PSB API Error: {error_message}',
+                    'details': ninepsb_response.get('details'),
+                    'ninepsb_response': ninepsb_response,
+                    'account_unchanged': True,
+                    'customer_id': customer.id,
+                    'retry_allowed': ninepsb_response.get('retry_allowed', False)
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+    except Exception as e:
+        logger.error(f"[WALLET_CREATE] Critical Error for customer {getattr(customer, 'id', 'unknown') if 'customer' in locals() else 'unknown'}: {str(e)}")
+        return Response({
+            'error': 'Failed to create wallet and insert into Customer model',
+            'details': str(e),
+            'account_unchanged': True
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+# ============================================================================
+# ENHANCED DASHBOARD VIEW - INTEGRATED WITH WALLET FUNCTIONALITY
+# ============================================================================
+
+class DashboardView(APIView):
+    """
+    Enhanced dashboard with strict wallet source:
+    - Use request.user.gl_no and request.user.ac_no to find the Customer row
+    - Take wallet_account from that matched Customer row only
+    - Use that same (gl_no, ac_no) as the primary account for balances/transactions
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        print("🔥 Enhanced DashboardView called - wallet integration ACTIVE!")
+
+        # 1) Ensure a customer is linked (for general info), but we will rely on user.gl_no/ac_no
+        customer = getattr(request.user, 'customer', None)
+        if not customer:
+            print("❌ No Customer profile linked to user")
+            return Response({"detail": "Customer profile not linked to user."}, status=404)
+
+        # 2) Company
+        company = getattr(request.user, 'company', None) or Company.objects.first()
+        if not company:
+            print("❌ No company found in system")
+            return Response({"detail": "Company profile not found in the system."}, status=404)
+        print(f"✅ Using company: {getattr(company, 'company_name', 'N/A')} ({company.id})")
+
+        # 3) PRIMARY gl/ac come from the USER model
+        user_gl_no = (getattr(request.user, 'gl_no', '') or '').strip()
+        user_ac_no = (getattr(request.user, 'ac_no', '') or '').strip()
+
+        # Fallback to attached customer only if user fields are empty
+        gl_no = user_gl_no or (customer.gl_no or '').strip()
+        ac_no = user_ac_no or (customer.ac_no or '').strip()
+
+        float_account_number = (getattr(company, 'float_account_number', '') or '').strip()
+
+        # 3b) STRONG SOURCE for wallet_account: Customer row that matches USER gl/ac
+        cust_row = (
+            Customer.objects
+            .filter(gl_no=gl_no, ac_no=ac_no)
+            .values('wallet_account', 'bank_name', 'bank_code', 'first_name', 'middle_name', 'last_name', 'label')
+            .first()
+        )
+
+        wallet_account_val = (cust_row or {}).get('wallet_account')  # None if no row or empty
+        wallet_account = (wallet_account_val or '').strip() or None
+        has_wallet = bool(wallet_account)
+        wallet_bank_name = "9PSB Microfinance Bank"
+
+        # Bank/name fields
+        bank_name = ((cust_row or {}).get('bank_name') or customer.bank_name or '').strip()
+        bank_code = ((cust_row or {}).get('bank_code') or customer.bank_code or '').strip()
+        if has_wallet:
+            bank_name = wallet_bank_name
+
+        fn = ((cust_row or {}).get('first_name') or customer.first_name or '').strip()
+        mn = ((cust_row or {}).get('middle_name') or getattr(customer, 'middle_name', '') or '').strip()
+        ln = ((cust_row or {}).get('last_name') or customer.last_name or '').strip()
+        label = ((cust_row or {}).get('label') or getattr(customer, 'label', '') or '').strip()
+        account_name = " ".join([p for p in [fn, mn, ln] if p]).strip() or label or (customer.email or '').strip()
+
+        print(f"🏦 float_account_number: {float_account_number or '❌ None'}")
+        print(f"👤 user.gl_no/ac_no: {gl_no}/{ac_no}")
+        print(f"💳 wallet_account (from Customer matching user gl/ac): {wallet_account or '❌ None'}")
+
+        # 4) If primary gl/ac missing, still return wallet-aware shell
+        if not gl_no or not ac_no:
+            return Response({
+                "customer": {
+                    "id": customer.id,
+                    "first_name": fn,
+                    "last_name": ln,
+                    "full_name": f"{fn} {ln}".strip(),
+                    "email": customer.email or "",
+                    "gl_no": gl_no,
+                    "ac_no": ac_no,
+                    "float_account_number": float_account_number,
+                    "bank_name": bank_name or "FinanceFlex",
+                    "bank_code": bank_code,
+                    "account_name": account_name,
+                    "wallet_account": wallet_account,
+                    "has_wallet": has_wallet,
+                    "primary_account": wallet_account if has_wallet else float_account_number,
+                    "account_type": "9PSB_WALLET" if has_wallet else "TRADITIONAL",
+                    "display_account": wallet_account or float_account_number,
+                    "wallet_created_at": getattr(customer, 'wallet_created_at', None),
+                },
+                "wallet_status": {
+                    "has_wallet": has_wallet,
+                    "wallet_account": wallet_account,
+                    "wallet_bank": wallet_bank_name if has_wallet else None,
+                    "integration_status": "wallet_active" if has_wallet else "traditional_account",
+                },
+                "customer_last_name": ln,
+                "balance": 0.0,
+                "accounts": [],
+                "transactions": [],
+                "primary_gl_no": gl_no,
+                "primary_ac_no": ac_no,
+                "primary_float_account_number": float_account_number,
+                "account_display": {
+                    "primary_display": wallet_account if has_wallet else float_account_number,
+                    "transaction_account": f"{gl_no}{ac_no}",
+                    "float_account": float_account_number,
+                    "wallet_account": wallet_account,
+                    "show_wallet_first": has_wallet,
+                    "integration_type": "hybrid_display",
+                },
+            })
+
+        # 5) Aggregate balances for THIS primary ac_no
+        per_accounts = (
+            Memtrans.objects
+            .filter(ac_no=ac_no)
+            .values('gl_no', 'ac_no')
+            .annotate(
+                balance=Coalesce(
+                    Sum('amount'),
+                    Value(0, output_field=DecimalField(max_digits=18, decimal_places=2))
+                )
+            )
+            .order_by('gl_no')
+        )
+
+        # 6) Primary balance for this primary gl_no
+        primary_balance: Decimal = Decimal('0')
+        for r in per_accounts:
+            if str(r['gl_no']).strip() == gl_no:
+                primary_balance = r['balance'] or Decimal('0')
+                break
+
+        # 7) Last 20 transactions for this gl/ac
+        recent_qs = (
+            Memtrans.objects
+            .filter(gl_no=gl_no, ac_no=ac_no)
+            .order_by('-sys_date')[:20]
+        )
+        transactions_data = MemtransSerializer(recent_qs, many=True).data
+
+        # 8) Accounts list; wallet adornments only for the primary account
+        accounts_data = []
+        for r in per_accounts:
+            r_gl = (str(r["gl_no"]).strip())
+            r_ac = (str(r["ac_no"]).strip())
+            r_bal = r["balance"] or Decimal('0')
+            is_primary = (r_gl == gl_no and r_ac == ac_no)
+            accounts_data.append({
+                "gl_no": r_gl,
+                "ac_no": r_ac,
+                "balance": float(r_bal),
+                "available_balance": float(r_bal),
+                "float_account_number": float_account_number,
+                "bank_name": (wallet_bank_name if (has_wallet and is_primary) else (bank_name or "FinanceFlex")),
+                "bank_code": bank_code,
+                "has_wallet": has_wallet if is_primary else False,
+                "wallet_account": wallet_account if is_primary else None,
+                "account_type": "wallet_integrated" if (has_wallet and is_primary) else "traditional",
+                "display_account": (wallet_account if (has_wallet and is_primary) else float_account_number),
+            })
+
+        # 9) Final payload
+        response_data = {
+            "customer": {
+                "id": customer.id,
+                "first_name": fn,
+                "last_name": ln,
+                "full_name": f"{fn} {ln}".strip(),
+                "email": customer.email or "",
+                "gl_no": gl_no,
+                "ac_no": ac_no,
+                "float_account_number": float_account_number,
+                "bank_name": bank_name or "FinanceFlex",
+                "bank_code": bank_code,
+                "balance": float(primary_balance),
+                "account_name": account_name,
+                "wallet_account": wallet_account,
+                "has_wallet": has_wallet,
+                "primary_account": wallet_account if has_wallet else float_account_number,
+                "account_type": "9PSB_WALLET" if has_wallet else "TRADITIONAL",
+                "display_account": wallet_account or float_account_number,
+                "wallet_created_at": getattr(customer, 'wallet_created_at', None),
+            },
+            "customer_last_name": ln,
+            "wallet_status": {
+                "has_wallet": has_wallet,
+                "wallet_account": wallet_account,
+                "wallet_bank": wallet_bank_name if has_wallet else None,
+                "wallet_bank_code": "120001" if has_wallet else None,
+                "integration_status": "wallet_active" if has_wallet else "traditional_account",
+                "transaction_compatibility": "preserved",
+                "gl_no_preserved": gl_no,
+                "ac_no_preserved": ac_no,
+                "data_completeness": calculate_data_completeness(customer) if 'calculate_data_completeness' in globals() else 100,
+            },
+            "primary_gl_no": gl_no,
+            "primary_ac_no": ac_no,
+            "primary_float_account_number": float_account_number,
+            "balance": float(primary_balance),
+            "accounts": accounts_data,
+            "transactions": transactions_data,
+            "account_display": {
+                "primary_display": wallet_account if has_wallet else float_account_number,
+                "transaction_account": f"{gl_no}{ac_no}",
+                "float_account": float_account_number,
+                "wallet_account": wallet_account,
+                "show_wallet_first": has_wallet,
+                "integration_type": "hybrid_display",
+            },
+        }
+
+        print("✅ Enhanced Dashboard response prepared successfully.")
+        print(f"🧾 Primary display account: {response_data['account_display']['primary_display']}")
+        print(f"📊 Transaction account (GL+AC): {gl_no}{ac_no}")
+        print(f"🔗 Wallet integration status: {'ACTIVE' if has_wallet else 'TRADITIONAL'}")
+        return Response(response_data, status=200)
+
+
+# ============================================================================
+# 9PSB API INTEGRATION
+# ============================================================================
+def create_ninepsb_wallet(data):
+    """
+    Call 9PSB API to create wallet account using the official 9PSB WAAS API.
+    
+    Based on 9PSB API Documentation Section 3: WALLET OPENING
+    URL: http://102.216.128.75:9090/waas/api/v1/open_wallet
+    
+    Args:
+        data: Dictionary containing customer information for wallet creation
+        
+    Returns:
+        Dictionary with success/failure status and wallet details or error information
+    """
+    try:
+        # Get 9PSB API configuration from Django settings
+        ninepsb_api_base = getattr(settings, 'NINEPSB_API_BASE', 'http://102.216.128.75:9090/waas/api/v1')
+        ninepsb_username = getattr(settings, 'NINEPSB_USERNAME', 'your-username')
+        ninepsb_password = getattr(settings, 'NINEPSB_PASSWORD', 'your-password')
+        ninepsb_client_id = getattr(settings, 'NINEPSB_CLIENT_ID', 'your-client-id')
+        ninepsb_client_secret = getattr(settings, 'NINEPSB_CLIENT_SECRET', 'your-client-secret')
+        ninepsb_timeout = getattr(settings, 'NINEPSB_API_TIMEOUT', 30)
+
+        logger.info(f"[9PSB_API] Starting wallet creation for customer: {data.get('customer_name')} (ID: {data.get('customer_id')})")
+
+        # Step 1: Authenticate with 9PSB to get access token
+        auth_url = f"{ninepsb_api_base}/authenticate"
+        auth_payload = {
+            'username': ninepsb_username,
+            'password': ninepsb_password,
+            'clientId': ninepsb_client_id,
+            'clientSecret': ninepsb_client_secret
+        }
+
+        logger.info(f"[9PSB_AUTH] Authenticating with 9PSB API")
+        auth_response = requests.post(
+            auth_url, 
+            json=auth_payload, 
+            headers={'Content-Type': 'application/json'},
+            timeout=ninepsb_timeout
+        )
+
+        if auth_response.status_code != 200:
+            logger.error(f"[9PSB_AUTH] Authentication failed: {auth_response.status_code}")
+            return {
+                'success': False,
+                'message': 'Failed to authenticate with 9PSB API',
+                'details': f'Authentication failed with status {auth_response.status_code}',
+                'retry_allowed': True
+            }
+
+        auth_data = auth_response.json()
+        access_token = auth_data.get('accessToken')
+        
+        if not access_token:
+            logger.error(f"[9PSB_AUTH] No access token received")
+            return {
+                'success': False,
+                'message': 'Failed to get access token from 9PSB',
+                'details': 'Authentication response missing accessToken',
+                'retry_allowed': True
+            }
+
+        logger.info(f"[9PSB_AUTH] Successfully authenticated with 9PSB")
+
+        # Step 2: Prepare wallet creation payload according to 9PSB API spec
+        wallet_url = f"{ninepsb_api_base}/open_wallet"
+        
+        # Generate unique transaction tracking reference
+        tracking_ref = f"FF_{uuid.uuid4().hex[:12].upper()}_{int(timezone.now().timestamp())}"
+        
+        # Parse date of birth from various formats to 9PSB format (dd/MM/yyyy)
+        date_of_birth = ""
+        if data.get('date_of_birth'):
+            try:
+                # Try to parse the date and convert to 9PSB format
+                if isinstance(data['date_of_birth'], str):
+                    # Handle different date formats
+                    for fmt in ('%Y-%m-%d', '%d/%m/%Y', '%m/%d/%Y', '%Y-%m-%d %H:%M:%S'):
+                        try:
+                            parsed_date = datetime.strptime(data['date_of_birth'], fmt)
+                            date_of_birth = parsed_date.strftime('%d/%m/%Y')
+                            break
+                        except ValueError:
+                            continue
+            except Exception as e:
+                logger.warning(f"[9PSB_API] Could not parse date of birth: {e}")
+
+        # Split customer name into lastName and otherNames
+        full_name = data.get('customer_name', '').strip()
+        name_parts = full_name.split() if full_name else []
+        last_name = name_parts[-1] if name_parts else 'Unknown'
+        other_names = ' '.join(name_parts[:-1]) if len(name_parts) > 1 else ''
+
+        # Parse gender (9PSB expects 0: Male, 1: Female)
+        gender = data.get('customer_gender_code')
+        if gender is None:
+            try:
+                gender = normalize_gender_code(data.get('customer_gender'))
+            except Exception:
+                gender = 0  # default to Male if unknown
+
+        # Create 9PSB API payload according to their specification
+        wallet_payload = {
+            'transactionTrackingRef': tracking_ref,
+            'lastName': last_name,
+            'otherNames': other_names,
+            'accountName': full_name,  # How account will be named
+            'phoneNo': data.get('customer_phone', ''),
+            'gender': gender,  # 0/1 must be preserved even if 0
+            'placeOfBirth': data.get('place_of_birth', ''),
+            'dateOfBirth': date_of_birth,
+            'address': data.get('customer_address', ''),
+            'nationalIdentityNo': '',  # NIN if available
+            'ninUserId': '',  # NIN User ID
+            'nextOfKinPhoneNo': '',
+            'nextOfKinName': '',
+            'referralPhoneNo': '',
+            'referralName': '',
+            'otherAccountInformationSource': f"FinanceFlex - Customer ID {data.get('customer_id')} - GL:{data.get('gl_no')} AC:{data.get('ac_no')} - Replacing {data.get('reference_account', '')}",
+            'email': data.get('customer_email', ''),
+            'customerImage': '',  # Base64 image if available
+            'customerSignature': '',  # Base64 signature if available
+            'bvn': data.get('customer_bvn', '')
+        }
+
+        # Remove empty fields but keep zeros (e.g., gender=0)
+        wallet_payload = {
+            k: v for k, v in wallet_payload.items()
+            if v is not None and (not isinstance(v, str) or v.strip() != '')
+        }
+
+        # Ensure required fields are present
+        required_fields = ['transactionTrackingRef', 'lastName', 'phoneNo', 'address']
+        missing_required = [field for field in required_fields if not wallet_payload.get(field)]
+        
+        if missing_required:
+            logger.error(f"[9PSB_API] Missing required fields: {missing_required}")
+            return {
+                'success': False,
+                'message': f'Missing required fields for 9PSB wallet creation: {", ".join(missing_required)}',
+                'details': 'Customer data incomplete for wallet creation',
+                'retry_allowed': False
+            }
+
+        # Step 3: Create wallet with 9PSB API
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': f'Bearer {access_token}',
+            'Accept': 'application/json',
+            'User-Agent': 'FinanceFlex-Mobile/1.0'
+        }
+
+        logger.info(f"[9PSB_API] Creating wallet with tracking ref: {tracking_ref}")
+        
+        wallet_response = requests.post(
+            wallet_url,
+            json=wallet_payload,
+            headers=headers,
+            timeout=ninepsb_timeout
+        )
+
+        logger.info(f"[9PSB_API] Wallet creation response status: {wallet_response.status_code}")
+
+        # Step 4: Process 9PSB response
+        if wallet_response.status_code in [200, 201]:
+            try:
+                result = wallet_response.json()
+                logger.info(f"[9PSB_API] Raw response: {result}")
+                
+                # 9PSB returns {message, status, statusCode, data}
+                api_status = result.get('status', '').upper()
+                api_message = result.get('message', '')
+                api_data = result.get('data', {})
+                
+                if api_status == 'SUCCESS':
+                    # Extract account details from response data
+                    wallet_account_number = None
+                    
+                    # Try to extract account number from various possible locations in response
+                    if isinstance(api_data, dict):
+                        wallet_account_number = (
+                            api_data.get('accountNumber') or 
+                            api_data.get('account_number') or
+                            api_data.get('walletAccountNumber') or
+                            api_data.get('wallet_account_number')
+                        )
+                    
+                    if not wallet_account_number:
+                        logger.error(f"[9PSB_API] No account number found in successful response")
+                        return {
+                            'success': False,
+                            'message': '9PSB wallet created but account number not found in response',
+                            'details': api_data,
+                            'retry_allowed': False
+                        }
+
+                    logger.info(f"[9PSB_API] Wallet created successfully: {wallet_account_number}")
+                    
+                    return {
+                        'success': True,
+                        'wallet_account_number': wallet_account_number,
+                        'bank_name': '9PSB Microfinance Bank',
+                        'bank_code': '120001',
+                        'reference_number': tracking_ref,
+                        'transaction_id': tracking_ref,
+                        'tracking_ref': tracking_ref,
+                        'created_at': timezone.now().isoformat(),
+                        'message': f'Wallet account {wallet_account_number} created successfully',
+                        'api_response': result,
+                        'api_version': '3.0',
+                        'customer_id': data.get('customer_id'),
+                        'gl_no': data.get('gl_no'),
+                        'ac_no': data.get('ac_no')
+                    }
+                
+                else:
+                    # 9PSB returned failure status
+                    logger.error(f"[9PSB_API] Wallet creation failed - Status: {api_status}, Message: {api_message}")
+                    
+                    return {
+                        'success': False,
+                        'message': f'9PSB wallet creation failed: {api_message}',
+                        'details': api_data,
+                        'api_response': result,
+                        'retry_allowed': api_status != 'FAILED'
+                    }
+                    
+            except json.JSONDecodeError as e:
+                logger.error(f"[9PSB_API] Invalid JSON response: {e}")
+                return {
+                    'success': False,
+                    'message': 'Invalid response format from 9PSB API',
+                    'details': wallet_response.text[:500],
+                    'retry_allowed': True
+                }
+        
+        else:
+            # HTTP error status
+            logger.error(f"[9PSB_API] HTTP error {wallet_response.status_code}: {wallet_response.text}")
+            
+            try:
+                error_data = wallet_response.json()
+            except:
+                error_data = {'message': wallet_response.text[:500]}
+            
+            return {
+                'success': False,
+                'message': f'9PSB API HTTP error: {wallet_response.status_code}',
+                'details': error_data,
+                'status_code': wallet_response.status_code,
+                'retry_allowed': wallet_response.status_code in [500, 502, 503, 504, 429]
+            }
+
+    except requests.exceptions.Timeout:
+        logger.error(f"[9PSB_API] Request timed out after {ninepsb_timeout} seconds")
+        return {
+            'success': False,
+            'message': '9PSB API request timed out - please try again',
+            'details': f'Request timed out after {ninepsb_timeout} seconds',
+            'retry_allowed': True
+        }
+        
+    except requests.exceptions.ConnectionError as e:
+        logger.error(f"[9PSB_API] Connection error: {str(e)}")
+        return {
+            'success': False,
+            'message': 'Unable to connect to 9PSB API',
+            'details': f'Network connection error: {str(e)}',
+            'retry_allowed': True
+        }
+        
+    except Exception as e:
+        logger.error(f"[9PSB_API] Unexpected error: {str(e)}")
+        return {
+            'success': False,
+            'message': 'Unexpected error occurred during 9PSB wallet creation',
+            'details': str(e),
+            'retry_allowed': False
+        }
+
+
+# ============================================================================
+# UTILITY FUNCTIONS
+# ============================================================================
+
+def normalize_gender_code(value):
+    """
+    Returns 0 for Male, 1 for Female. Accepts 'Male'/'M'/0 and 'Female'/'F'/1.
+    Raises ValueError if cannot normalize.
+    """
+    if value is None:
+        raise ValueError("gender is required")
+    s = str(value).strip().lower()
+    if s in ("0", "male", "m"):
+        return 0
+    if s in ("1", "female", "f"):
+        return 1
+    if s in ("true", "false"):
+        raise ValueError("invalid gender value")
+    raise ValueError(f"invalid gender value: {value}")
+
+
+def normalize_gender_text(value):
+    try:
+        code = normalize_gender_code(value)
+        return "Male" if code == 0 else "Female"
+    except Exception:
+        if value is None:
+            return None
+        raw = str(value).strip()
+        if not raw:
+            return None
+        lower = raw.lower()
+        if lower == 'm':
+            return 'Male'
+        if lower == 'f':
+            return 'Female'
+        return raw[:1].upper() + raw[1:].lower()
+
+
+def get_current_account_number(user, customer):
+    """
+    Determine the current account number for a customer using priority-based logic.
+    Enhanced to work with gl_no/ac_no system.
+    
+    Priority Order:
+    1. Existing wallet_account (if customer already has one)
+    2. Customer gl_no + ac_no (computed account for transactions)
+    3. Username (if it looks like an account number)
+    4. User gl_no + ac_no (fallback)
+    
+    Args:
+        user: Django User object
+        customer: Customer model instance
+        
+    Returns:
+        String account number or None if not found
+    """
+    # Priority 1: Existing wallet account
+    if hasattr(customer, 'wallet_account') and customer.wallet_account:
+        logger.debug(f"Using existing wallet_account: {customer.wallet_account}")
+        return customer.wallet_account
+    
+    # Priority 2: Customer gl_no + ac_no (most common for transaction system)
+    if hasattr(customer, 'gl_no') and hasattr(customer, 'ac_no'):
+        if customer.gl_no and customer.ac_no:
+            computed_account = f"{customer.gl_no}{customer.ac_no}"
+            logger.debug(f"Using customer computed account: {computed_account}")
+            return computed_account
+    
+    # Priority 3: Username if it looks like an account number
+    if user.username and user.username.isdigit() and 8 <= len(user.username) <= 15:
+        logger.debug(f"Using username as account: {user.username}")
+        return user.username
+    
+    # Priority 4: User gl_no + ac_no (fallback)
+    if hasattr(user, 'gl_no') and hasattr(user, 'ac_no'):
+        if user.gl_no and user.ac_no:
+            computed_account = f"{user.gl_no}{user.ac_no}"
+            logger.debug(f"Using user computed account: {computed_account}")
+            return computed_account
+    
+    logger.warning(f"No account number found for user {user.id}, customer {getattr(customer, 'id', 'None')}")
+    return None
+
+
+def get_customer_full_name(customer):
+    """Get customer's full name with fallbacks."""
+    if hasattr(customer, 'get_full_name') and callable(customer.get_full_name):
+        full_name = customer.get_full_name()
+        if full_name and full_name.strip():
+            return full_name.strip()
+    
+    # Fallback to first_name + last_name
+    first_name = getattr(customer, 'first_name', '') or ''
+    last_name = getattr(customer, 'last_name', '') or ''
+    full_name = f"{first_name} {last_name}".strip()
+    
+    if full_name:
+        return full_name
+    
+    # Final fallback to name field if exists
+    return getattr(customer, 'name', '') or ''
+
+
+def get_customer_phone(customer):
+    """Get customer's phone number with fallbacks."""
+    # Try multiple phone field names
+    phone_fields = ['mobile', 'phone_no', 'phone', 'phone_number']
+    
+    for field in phone_fields:
+        phone = getattr(customer, field, None)
+        if phone and str(phone).strip():
+            return str(phone).strip()
+    
+    return ''
+
+
+def get_customer_email(customer):
+    """Get customer's email with fallbacks."""
+    email = getattr(customer, 'email', '') or ''
+    return email.strip()
+
+
+def calculate_data_completeness(customer):
+    """Calculate percentage of required data completeness for wallet creation."""
+    required_fields = [
+        ('full_name', get_customer_full_name(customer)),
+        ('phone_number', get_customer_phone(customer)),
+        ('email', get_customer_email(customer)),
+        ('bvn', getattr(customer, 'bvn', '')),
+    ]
+    
+    completed = sum(1 for field, value in required_fields if value and str(value).strip())
+    total = len(required_fields)
+    
+    return int((completed / total) * 100)
+
+
+def validate_wallet_creation_data(wallet_data):
+    """
+    Validate customer data for wallet creation.
+    
+    Args:
+        wallet_data: Dictionary containing customer information
+        
+    Returns:
+        Dictionary with validation results
+    """
+    required_fields = ['full_name', 'phone_number', 'email', 'bvn', 'account_number']
+    missing_fields = []
+    
+    for field in required_fields:
+        value = wallet_data.get(field, '').strip() if wallet_data.get(field) else ''
+        if not value or value.lower() in ['null', 'none', 'not provided', '']:
+            missing_fields.append(field)
+    
+    # Additional validation rules
+    validation_errors = []
+    
+    # Validate email format if provided
+    email = wallet_data.get('email', '').strip()
+    if email and not re.match(r'^[^@]+@[^@]+\.[^@]+$', email):
+        validation_errors.append('Invalid email format')
+    
+    # Validate BVN format if provided
+    bvn = wallet_data.get('bvn', '').strip()
+    if bvn and (not bvn.isdigit() or len(bvn) != 11):
+        validation_errors.append('BVN must be 11 digits')
+    
+    # Validate phone number format if provided
+    phone = wallet_data.get('phone_number', '').strip()
+    if phone:
+        # Remove common prefixes and check length
+        clean_phone = re.sub(r'^(\+234|234|0)', '', phone)
+        if not clean_phone.isdigit() or len(clean_phone) not in [10, 11]:
+            validation_errors.append('Invalid phone number format')
+    
+    return {
+        'valid': len(missing_fields) == 0 and len(validation_errors) == 0,
+        'missing_fields': missing_fields,
+        'validation_errors': validation_errors
+    }
+
+
+# ============================================================================
+# DEBUG ENDPOINTS (Remove in production)
+# ============================================================================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def debug_account_number_status(request):
+    """
+    Debug endpoint to check customer account number status and resolution logic.
+    Enhanced to show gl_no/ac_no integration.
+    
+    WARNING: Remove this endpoint in production for security.
+    """
+    try:
+        customer = getattr(request.user, 'customer', None)
+        if not customer:
+            return Response({'error': 'Customer profile not found'}, status=404)
+
+        # Get company information
+        company = getattr(request.user, 'company', None) or Company.objects.first()
+        
+        # Resolve current account number using the same logic as production
+        current_account = get_current_account_number(request.user, customer)
+        
+        debug_data = {
+            'timestamp': timezone.now().isoformat(),
+            'user_id': request.user.id,
+            'customer_id': customer.id,
+            'resolved_account_number': current_account,
+            
+            'customer_fields': {
+                'wallet_account': getattr(customer, 'wallet_account', 'N/A'),
+                'bank_name': getattr(customer, 'bank_name', 'N/A'),
+                'bank_code': getattr(customer, 'bank_code', 'N/A'),
+                'gl_no': getattr(customer, 'gl_no', 'N/A'),
+                'ac_no': getattr(customer, 'ac_no', 'N/A'),
+                'computed_account': f"{getattr(customer, 'gl_no', '')}{getattr(customer, 'ac_no', '')}" if hasattr(customer, 'gl_no') and hasattr(customer, 'ac_no') else 'N/A',
+                'first_name': getattr(customer, 'first_name', 'N/A'),
+                'last_name': getattr(customer, 'last_name', 'N/A'),
+                'full_name_resolved': get_customer_full_name(customer),
+                'email': getattr(customer, 'email', 'N/A'),
+                'mobile': getattr(customer, 'mobile', 'N/A'),
+                'phone_no': getattr(customer, 'phone_no', 'N/A'),
+                'phone_resolved': get_customer_phone(customer),
+                'bvn': getattr(customer, 'bvn', 'N/A'),
+                'is_company': getattr(customer, 'is_company', False),
+            },
+            
+            'company_fields': {
+                'company_name': company.company_name if company else 'N/A',
+                'float_account_number': company.float_account_number if company else 'N/A',
+                'company_id': company.id if company else 'N/A',
+            },
+            
+            'user_fields': {
+                'username': request.user.username,
+                'first_name': request.user.first_name,
+                'last_name': request.user.last_name,
+                'email': request.user.email,
+                'gl_no': getattr(request.user, 'gl_no', 'N/A'),
+                'ac_no': getattr(request.user, 'ac_no', 'N/A'),
+                'computed_account': f"{getattr(request.user, 'gl_no', '')}{getattr(request.user, 'ac_no', '')}" if hasattr(request.user, 'gl_no') and hasattr(request.user, 'ac_no') else 'N/A',
+            },
+            
+            'account_resolution_analysis': {
+                'username_is_digits': request.user.username.isdigit() if request.user.username else False,
+                'username_length': len(request.user.username) if request.user.username else 0,
+                'username_valid_account': bool(request.user.username and request.user.username.isdigit() and 8 <= len(request.user.username) <= 15),
+                'primary_source': get_account_source_priority(request.user, customer),
+                'has_gl_ac_combo': bool(getattr(customer, 'gl_no', None) and getattr(customer, 'ac_no', None)),
+                'gl_ac_computed': f"{getattr(customer, 'gl_no', '')}{getattr(customer, 'ac_no', '')}" if hasattr(customer, 'gl_no') and hasattr(customer, 'ac_no') else None,
+            },
+            
+            'wallet_integration': {
+                'has_wallet_account': bool(getattr(customer, 'wallet_account', None)),
+                'wallet_account': getattr(customer, 'wallet_account', None),
+                'integration_strategy': 'wallet_separate_preserve_gl_ac',
+                'transaction_compatibility': 'preserved',
+                'data_completeness_percentage': calculate_data_completeness(customer),
+            },
+            
+            'validation_result': validate_wallet_creation_data({
+                'full_name': get_customer_full_name(customer),
+                'phone_number': get_customer_phone(customer),
+                'email': get_customer_email(customer),
+                'bvn': getattr(customer, 'bvn', ''),
+                'account_number': current_account or ''
+            }),
+            
+            'model_field_availability': {
+                'customer_has_wallet_account': hasattr(customer, 'wallet_account'),
+                'customer_has_bank_name': hasattr(customer, 'bank_name'),
+                'customer_has_bank_code': hasattr(customer, 'bank_code'),
+                'customer_has_gl_no': hasattr(customer, 'gl_no'),
+                'customer_has_ac_no': hasattr(customer, 'ac_no'),
+                'customer_has_get_full_name': hasattr(customer, 'get_full_name'),
+                'customer_has_is_company': hasattr(customer, 'is_company'),
+                'company_available': company is not None,
+            }
+        }
+        
+        return Response(debug_data, status=200)
+
+    except Exception as e:
+        logger.error(f"[DEBUG_ACCOUNT_STATUS] Error: {str(e)}")
+        return Response({'error': str(e), 'timestamp': timezone.now().isoformat()}, status=500)
+
+
+def get_account_source_priority(user, customer):
+    """Helper function for debug endpoint to show account resolution priority."""
+    if hasattr(customer, 'wallet_account') and customer.wallet_account:
+        return 'wallet_account'
+    elif hasattr(customer, 'gl_no') and hasattr(customer, 'ac_no') and customer.gl_no and customer.ac_no:
+        return 'customer_gl_ac'
+    elif user.username and user.username.isdigit() and 8 <= len(user.username) <= 15:
+        return 'username'
+    elif hasattr(user, 'gl_no') and hasattr(user, 'ac_no') and user.gl_no and user.ac_no:
+        return 'user_gl_ac'
+    else:
+        return 'none'
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def wallet_status_check(request):
+    """
+    Check the current wallet status for a customer with gl_no/ac_no integration.
+    """
+    try:
+        customer = getattr(request.user, 'customer', None)
+        if not customer:
+            return Response({'error': 'Customer profile not found'}, status=404)
+        
+        company = getattr(request.user, 'company', None) or Company.objects.first()
+        
+        # Get account information
+        gl_no = getattr(customer, 'gl_no', '') or ''
+        ac_no = getattr(customer, 'ac_no', '') or ''
+        wallet_account = getattr(customer, 'wallet_account', None)
+        float_account = company.float_account_number if company else ''
+        
+        wallet_data = {
+            'has_wallet': bool(wallet_account),
+            'wallet_account': wallet_account,
+            'bank_name': getattr(customer, 'bank_name', None),
+            'bank_code': getattr(customer, 'bank_code', None),
+            'current_account': get_current_account_number(request.user, customer),
+            'ready_for_creation': calculate_data_completeness(customer) >= 80,
+            'data_completeness': calculate_data_completeness(customer),
+            
+            # Integration details
+            'gl_no': gl_no,
+            'ac_no': ac_no,
+            'computed_account': f"{gl_no}{ac_no}" if gl_no and ac_no else '',
+            'float_account_number': float_account,
+            'integration_status': 'wallet_active' if wallet_account else 'traditional_account',
+            'transaction_compatibility': 'preserved',
+            
+            # Display preferences
+            'primary_display': wallet_account if wallet_account else float_account,
+            'transaction_account': f"{gl_no}{ac_no}" if gl_no and ac_no else '',
+        }
+        
+        return Response(wallet_data, status=200)
+        
+    except Exception as e:
+        logger.error(f"[WALLET_STATUS] Error for user {request.user.id}: {str(e)}")
+        return Response({'error': 'Failed to check wallet status'}, status=500)

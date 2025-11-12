@@ -38,13 +38,12 @@ class Notification(models.Model):
 
 
 
-
 from django.db import models
 from django.conf import settings
 
 class Beneficiary(models.Model):
     user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,   # ✅ Use this instead of User
+        settings.AUTH_USER_MODEL,   
         on_delete=models.CASCADE,
         related_name='beneficiaries',
         help_text="The user who owns this beneficiary."
@@ -61,15 +60,10 @@ class Beneficiary(models.Model):
         ordering = ['name']
         verbose_name = 'Beneficiary'
         verbose_name_plural = 'Beneficiaries'
-        unique_together = ('user', 'account_number')  # ✅ prevents duplicate beneficiary for same user
+        unique_together = ('user', 'account_number')  
 
     def __str__(self):
         return f"{self.name} ({self.account_number})"
-
-
-
-
-
 
 # OTP Storage Models for Signup Flow
 # Add these to your Django app's models.py or create a new app

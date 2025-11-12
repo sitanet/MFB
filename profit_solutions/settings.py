@@ -31,6 +31,15 @@ PSB_BASE_URL = os.getenv("PSB_BASE_URL", "https://baastest.9psb.com.ng/iva-api/v
 PSB_PUBLIC_KEY = os.getenv("PSB_PUBLIC_KEY", "").strip()
 PSB_PRIVATE_KEY = os.getenv("PSB_PRIVATE_KEY", "").strip()
 
+
+NINEPSB_API_BASE = os.getenv("NINEPSB_API_BASE", "http://102.216.128.75:9090/waas/api/v1").strip()
+NINEPSB_USERNAME = os.getenv("NINEPSB_USERNAME", "").strip()
+NINEPSB_PASSWORD = os.getenv("NINEPSB_PASSWORD", "").strip()
+NINEPSB_CLIENT_ID = os.getenv("NINEPSB_CLIENT_ID", "").strip()
+NINEPSB_CLIENT_SECRET = os.getenv("NINEPSB_CLIENT_SECRET", "").strip()
+NINEPSB_API_TIMEOUT = 30
+
+
 PSB_ENABLED = True
 PSB_CURRENCY = "NGN"
 PSB_COUNTRY = "NGA"

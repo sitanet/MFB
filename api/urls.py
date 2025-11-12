@@ -3,7 +3,7 @@ from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from . import views
 from .views import (
-    RoleViewSet, UserViewSet, UserProfileViewSet,
+    RoleViewSet, UserViewSet, UserProfileViewSet, 
     CompanyViewSet, BranchViewSet, AccountOfficerViewSet,
     CustomerViewSet, KYCDocumentViewSet,
     LoansViewSet, LoanHistViewSet,
@@ -12,8 +12,8 @@ from .views import (
     CardsPrimaryView, CardsPrimaryTransactionsView,
     CardsApplyView, CardsApproveView, CardsFundView, CardsRevealView, 
     CardsTransactionsView, CardsWithdrawView, 
-    # FIXED: Import the class-based transaction views
-    TransactionsView, LoanTransactionsView, RegularTransactionsView,         VerifyAccountAPIView,
+    TransactionsView, LoanTransactionsView, RegularTransactionsView,
+    VerifyAccountAPIView,
     SendOTPAPIView,
     VerifyOTPAPIView,
     RegisterUserAPIView,
@@ -22,9 +22,12 @@ from .views import (
     DebugOTPStatusAPIView,
     get_bank_list,
     verify_account,
-    # initiate_transfer,
-    # check_transfer_status,
-    # ninepsb_health_check
+    wallet_creation_data,
+    wallet_create,
+    debug_account_number_status,
+    BeneficiaryListCreateView, BeneficiaryDetailView
+
+  
 )
 
 router = DefaultRouter()
@@ -38,6 +41,7 @@ router.register(r'customers', CustomerViewSet, basename='customer')
 router.register(r'kyc-documents', KYCDocumentViewSet, basename='kycdocument')
 router.register(r'loans', LoansViewSet, basename='loan')
 router.register(r'loan-hist', LoanHistViewSet, basename='loanhist')
+# router.register(r'beneficiaries', BeneficiaryViewSet)
 
 urlpatterns = [
     # Browsable API auth
@@ -46,7 +50,15 @@ urlpatterns = [
     # App endpoints
     path('dashboard/', views.DashboardView.as_view(), name='dashboard'),
     
-    # FIXED: Transaction endpoints - Remove /api/v1/ prefix since it's already included at higher level
+    # Wallet endpoints - ACCOUNT NUMBER REPLACEMENT FLOW
+    path('wallet/creation-data/', views.wallet_creation_data, name='wallet-creation-data'),
+    path('wallet/create/', views.wallet_create, name='wallet-create'),
+    
+    # Debug endpoints (remove in production)
+    # path('debug/customer-data/', views.debug_customer_data, name='debug-customer-data'),
+    path('debug/account-number-status/', views.debug_account_number_status, name='debug-account-number'),
+    
+    # Transaction endpoints
     path('transactions/', TransactionsView.as_view(), name='get_transactions'),
     path('transactions/loan/', LoanTransactionsView.as_view(), name='get_loan_transactions'),
     path('transactions/regular/', RegularTransactionsView.as_view(), name='get_regular_transactions'),
@@ -78,24 +90,16 @@ urlpatterns = [
     path("cards/reveal/", CardsRevealView.as_view(), name="cards-reveal"),
     path("cards/transactions/", CardsTransactionsView.as_view(), name="cards-transactions"),
 
-
-
-
-
-
+    # Signup flow endpoints
     path('auth/verify-account/', VerifyAccountAPIView.as_view(), name='verify-account'),
     path('auth/send-otp/', SendOTPAPIView.as_view(), name='send-otp'),
     path('auth/verify-otp/', VerifyOTPAPIView.as_view(), name='verify-otp'),
-    path('auth/resend-otp/', ResendOTPAPIView.as_view(), name='resend-otp'),  # Add this
+    path('auth/resend-otp/', ResendOTPAPIView.as_view(), name='resend-otp'),
     path('auth/register/', RegisterUserAPIView.as_view(), name='register'),
     path('auth/setup-pin/', SetupPINAPIView.as_view(), name='setup-pin'),
 
-
-        # Debug endpoint (only works in DEBUG mode)
+    # Debug endpoint (only works in DEBUG mode)
     path('auth/debug-otp-status/', DebugOTPStatusAPIView.as_view(), name='debug-otp-status'),
-
-    
-
 
     # Dashboard
     path('dashboard/', views.dashboard_api_view, name='dashboard'),
@@ -104,20 +108,18 @@ urlpatterns = [
     path('wallet/details/', views.WalletDetailsAPIView.as_view(), name='wallet-details'),
     path('wallet/details-by-account/', views.wallet_details_by_account_api_view, name='wallet-details-by-account'),
 
-
-
-
-
+    # 9PSB endpoints
     path('ninepsb/banks/', views.get_bank_list, name='ninepsb-banks'),
     path('ninepsb/verify-account/', views.verify_account, name='ninepsb-verify-account'),
     path('ninepsb/transfer/', views.initiate_transfer, name='ninepsb-transfer'),
     path('ninepsb/health/', views.ninepsb_health_check, name='ninepsb-health'),
 
+
+
+        # Beneficiary endpoints
+    path('beneficiaries/', BeneficiaryListCreateView.as_view(), name='beneficiary-list-create'),
+    path('beneficiaries/<int:pk>/', BeneficiaryDetailView.as_view(), name='beneficiary-detail'),
+
     # Router (include at the end)
     path('', include(router.urls)),
-
-
-
-
-  
 ]

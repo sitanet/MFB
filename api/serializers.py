@@ -98,10 +98,10 @@ class LoanHistSerializer(serializers.ModelSerializer):
         model = LoanHist
         fields = '__all__'
 
-class MemtransSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Memtrans
-        fields = '__all__'
+# class MemtransSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = Memtrans
+#         fields = '__all__'
 
 
 
@@ -163,36 +163,112 @@ class TransferToFinanceFlexSerializer(serializers.Serializer):
         attrs["to_gl_no"] = to_gl
         attrs["to_ac_no"] = to_ac
         return attrs
-
-
-
 from rest_framework import serializers
 from .models import Beneficiary
 
 class BeneficiarySerializer(serializers.ModelSerializer):
+    # 🔧 FIXED: Make these fields writable for POST requests
+    # Accept Flutter field names for input, but map to Django model fields
+    account = serializers.CharField(write_only=True, required=False, help_text="Flutter-compatible field name")
+    bank = serializers.CharField(write_only=True, required=False, help_text="Flutter-compatible field name")
+    
+    # Also accept Django field names directly
+    account_number = serializers.CharField(required=False)
+    bank_name = serializers.CharField(required=False)
+    
     class Meta:
         model = Beneficiary
         fields = [
             'id',
             'name',
             'bank_name',
-            'account_number',
+            'account_number', 
             'phone_number',
             'nickname',
             'created_at',
             'updated_at',
+            # Flutter-compatible fields (write_only for input)
+            'account',  
+            'bank',     
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
+        extra_kwargs = {
+            'name': {'required': True},
+            # Make these optional since we'll handle them in validate()
+            'bank_name': {'required': False},
+            'account_number': {'required': False},
+        }
+
+    def validate(self, data):
+        """Handle field mapping and validation."""
+        print(f"[DEBUG] 🔍 Raw serializer data: {data}")
+        
+        # 🔧 FIELD MAPPING: Handle both Flutter and Django field names
+        
+        # Map 'account' to 'account_number' if provided
+        if 'account' in data and not data.get('account_number'):
+            data['account_number'] = data.pop('account')
+            print(f"[DEBUG] 🔄 Mapped 'account' to 'account_number': {data['account_number']}")
+        
+        # Map 'bank' to 'bank_name' if provided  
+        if 'bank' in data and not data.get('bank_name'):
+            data['bank_name'] = data.pop('bank')
+            print(f"[DEBUG] 🔄 Mapped 'bank' to 'bank_name': {data['bank_name']}")
+        
+        # Remove any remaining Flutter-only fields
+        data.pop('account', None)
+        data.pop('bank', None)
+        
+        # ✅ VALIDATION: Ensure required fields are present after mapping
+        if not data.get('account_number'):
+            raise serializers.ValidationError({
+                'account_number': 'Account number is required (provide as "account" or "account_number")'
+            })
+        
+        if not data.get('bank_name'):
+            raise serializers.ValidationError({
+                'bank_name': 'Bank name is required (provide as "bank" or "bank_name")'
+            })
+        
+        if not data.get('name'):
+            raise serializers.ValidationError({
+                'name': 'Name is required'
+            })
+        
+        # 🔧 VALIDATION: Account number format
+        account_number = data.get('account_number')
+        if account_number:
+            clean_account = ''.join(filter(str.isdigit, account_number))
+            if len(clean_account) < 8:
+                raise serializers.ValidationError({
+                    'account_number': 'Account number must be at least 8 digits'
+                })
+            data['account_number'] = clean_account
+        
+        # 🔧 VALIDATION: Unique beneficiary per user (for creates only)
+        if not self.instance:  # Creating new beneficiary
+            user = self.context['request'].user
+            if Beneficiary.objects.filter(user=user, account_number=data['account_number']).exists():
+                raise serializers.ValidationError({
+                    'account_number': 'This beneficiary already exists in your list'
+                })
+        
+        print(f"[DEBUG] ✅ Final validated data: {data}")
+        return data
 
     def create(self, validated_data):
-        # Automatically link to current user
+        """Create beneficiary with current user."""
         user = self.context['request'].user
+        print(f"[DEBUG] 💾 Creating beneficiary for user {user.username}: {validated_data}")
         return Beneficiary.objects.create(user=user, **validated_data)
 
-
-
-
-
+    def to_representation(self, instance):
+        """Customize output format for GET requests."""
+        data = super().to_representation(instance)
+        # Add Flutter-compatible fields for GET requests
+        data['account'] = instance.account_number
+        data['bank'] = instance.bank_name
+        return data
 
 # --- PIN serializers (append to file) ---
 import re
