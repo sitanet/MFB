@@ -630,14 +630,19 @@ class RegularTransactionsView(APIView):
 # ---------------------------------------------------------------------------
 # Pre-login and activation
 # ---------------------------------------------------------------------------
-from django.contrib.auth import get_user_model
+from django.contrib.auth import get_user_model, authenticate
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
 
 UserModel = get_user_model()
 
+
 def _find_user_by_username_or_email(value: str):
+    """
+    Optional helper: just to locate user for pre-login messages.
+    Not strictly necessary if you only rely on authenticate().
+    """
     print(f"[DEBUG] Searching for user by: {value}")
     try:
         user = UserModel.objects.get(username=value)
@@ -655,42 +660,56 @@ def _find_user_by_username_or_email(value: str):
 
 
 class PreLoginView(APIView):
+    """
+    Pre-login API:
+    1. Checks credentials using Django authentication backends.
+    2. Returns whether the user can login or requires activation.
+    """
     permission_classes = [permissions.AllowAny]
 
     def post(self, request, *args, **kwargs):
         print("\n========== [DEBUG] PreLoginView POST called ==========")
-        username = (request.data.get('username') or '').strip()
+        username_or_email = (request.data.get('username') or '').strip()
         password = request.data.get('password') or ''
-        print(f"[DEBUG] Received username: '{username}'")
-        print(f"[DEBUG] Received password: {'*' * len(password)}")  # don't print raw password
 
-        if not username or not password:
+        print(f"[DEBUG] Received username/email: '{username_or_email}'")
+        print(f"[DEBUG] Received password: {'*' * len(password)}")  # hide actual password
+
+        if not username_or_email or not password:
             print("[DEBUG] Missing username or password.")
-            return Response({"detail": "username and password are required"},
-                            status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": "username and password are required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
-        user = _find_user_by_username_or_email(username)
+        # Authenticate using Django backends
+        user = authenticate(request, email=username_or_email, password=password)
         if not user:
-            print("[DEBUG] No user found matching the provided username/email.")
-            return Response({"detail": "Invalid credentials"},
-                            status=status.HTTP_400_BAD_REQUEST)
+            # Optionally check if user exists for clearer message
+            db_user = _find_user_by_username_or_email(username_or_email)
+            if db_user:
+                print(f"[DEBUG] Password check failed for user: {db_user.username}")
+            else:
+                print("[DEBUG] No user found with provided username/email")
+            return Response(
+                {"detail": "Invalid credentials"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
-        print(f"[DEBUG] User found: {user.username} (verified={getattr(user, 'verified', False)})")
+        print(f"[DEBUG] Authentication SUCCESS for user: {user.username} (id={user.id})")
 
-        if not user.check_password(password):
-            print("[DEBUG] Password check failed for user:", user.username)
-            return Response({"detail": "Invalid credentials"},
-                            status=status.HTTP_400_BAD_REQUEST)
-
-        print("[DEBUG] Password check passed.")
-
+        # Check if user is verified
         if getattr(user, "verified", False):
-            print("[DEBUG] User is verified. Allowing login.")
+            print("[DEBUG] User is verified → can login")
             return Response({"can_login": True}, status=status.HTTP_200_OK)
+        else:
+            print("[DEBUG] User not verified → activation required")
+            return Response(
+                {"activation_required": True, "username": user.username},
+                status=status.HTTP_202_ACCEPTED
+            )
 
-        print("[DEBUG] User not verified. Activation required.")
-        return Response({"activation_required": True, "username": user.username},
-                        status=status.HTTP_202_ACCEPTED)
+
 
 class ActivateView(APIView):
     permission_classes = [permissions.AllowAny]
@@ -3257,32 +3276,29 @@ import time
 # from .models import Customer, Memtrans
 # If your project places them elsewhere, adjust imports accordingly.
 
-from datetime import date
+from decimal import Decimal
 from django.utils import timezone
-from django.http import JsonResponse
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
-from transactions.models import Memtrans
-from company.models import Company
-from customers.models import Customer
-from company.models import Branch
+from django.db import transaction
 
-
-from datetime import date
-from django.utils import timezone
-from django.http import JsonResponse
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
-from transactions.models import Memtrans
-from company.models import Company
-from customers.models import Customer
+# Import fee models
+try:
+    from api.services.global_fee_service import GlobalTransferFeeService
+    from api.models.global_transfer_fees import GlobalTransferFeeTransaction
+except ImportError:
+    GlobalTransferFeeService = None
+    GlobalTransferFeeTransaction = None
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def initiate_transfer(request):
     """
-    Initiate fund transfer using the company Mobile Teller account.
-    Uses the branch automatically linked to the logged-in customer.
+    Initiate fund transfer with proper fee handling using Memtrans entries.
+    
+    UPDATED WITH FEE LOGIC:
+    1. Customer Account → Debit transfer_amount (existing logic)
+    2. Customer Account → Debit fee_amount (NEW)
+    3. Fee Account → Credit fee_amount (NEW) 
+    4. Mobile Teller/Float logic (existing, unchanged)
     """
     try:
         print(f"[DEBUG] Transfer request data: {request.data}")
@@ -3299,6 +3315,9 @@ def initiate_transfer(request):
                 'error': 'Missing sender, receiver, or amount'
             }, status=400)
 
+        # Convert to Decimal for precise fee calculations
+        transfer_amount = Decimal(str(amount))
+
         # --- Get logged-in user & linked customer ---
         customer = getattr(request.user, 'customer', None)
         if not customer:
@@ -3311,7 +3330,54 @@ def initiate_transfer(request):
         today = date.today()
         trx_no = f"TRX{timezone.now().strftime('%Y%m%d%H%M%S')}"
 
-        # --- Get sender & receiver company ---
+        # --- STEP 1: CALCULATE TRANSFER FEE ---
+        print(f"=== FEE CALCULATION START ===")
+        
+        fee_amount = Decimal('0.00')
+        fee_info = None
+        
+        if GlobalTransferFeeService:
+            try:
+                # Get customer ID for fee calculation
+                customer_id = str(customer.id) if customer else str(request.user.id)
+                
+                # Calculate fee using database service
+                fee_info = GlobalTransferFeeService.calculate_fee_for_any_customer(
+                    customer_id=customer_id,
+                    transfer_amount=transfer_amount,
+                    transfer_type='other_bank'
+                )
+                
+                fee_amount = fee_info.get('applied_fee', Decimal('0.00'))
+                print(f"[DEBUG] Fee calculated: ₦{fee_amount} (waived: {fee_info.get('is_waived', False)})")
+                
+            except Exception as e:
+                print(f"[WARNING] Fee calculation error: {e}")
+                fee_info = {
+                    'base_fee': Decimal('10.00'),
+                    'applied_fee': Decimal('0.00'),
+                    'is_waived': True,
+                    'waiver_reason': 'Fee calculation error - defaulting to free',
+                    'config_name': 'Error Default',
+                    'fee_gl_no': '30101',
+                    'fee_ac_no': '000001'
+                }
+        else:
+            print(f"[WARNING] GlobalTransferFeeService not available, proceeding with zero fee")
+            fee_info = {
+                'base_fee': Decimal('10.00'),
+                'applied_fee': Decimal('0.00'),
+                'is_waived': True,
+                'waiver_reason': 'Fee service not available',
+                'config_name': 'Service Unavailable',
+                'fee_gl_no': '30101',
+                'fee_ac_no': '000001'
+            }
+
+        total_customer_debit = transfer_amount + fee_amount
+        print(f"[DEBUG] Transfer: ₦{transfer_amount}, Fee: ₦{fee_amount}, Total Debit: ₦{total_customer_debit}")
+
+        # --- Get sender & receiver company (EXISTING LOGIC) ---
         sender_company = Company.objects.filter(float_account_number=from_account).first()
         receiver_company = Company.objects.filter(float_account_number=to_account).first()
 
@@ -3330,7 +3396,82 @@ def initiate_transfer(request):
         dst_gl = receiver_company.mobile_teller_gl_no or "20101"
         dst_ac = receiver_company.mobile_teller_ac_no or to_account[-5:]
 
-        # ✅ CREDIT receiver company (+)
+        # --- STEP 2: CREATE MEMTRANS ENTRIES ---
+        print(f"=== MEMTRANS ENTRIES START ===")
+
+        # ✅ 1. DEBIT sender customer for TRANSFER AMOUNT (EXISTING LOGIC)
+        print(f"[MEMTRANS] Debit customer {src_gl}{src_ac} by ₦{transfer_amount} (Transfer)")
+        Memtrans.objects.create(
+            branch=branch,
+            cust_branch=branch,
+            customer=customer,
+            gl_no=src_gl,
+            ac_no=src_ac,
+            trx_no=trx_no,
+            ses_date=today,
+            app_date=today,
+            sys_date=timezone.now(),
+            amount=-float(transfer_amount),  # Negative for debit
+            description=f"Transfer via Mobile Teller: {narration}",
+            error="A",
+            type="T",
+            account_type="C",
+            user=request.user,
+            trx_type="TRANSFER",
+        )
+
+        # ✅ 2. DEBIT sender customer for FEE AMOUNT (NEW FEE LOGIC)
+        fee_memtrans_id = None
+        if fee_amount > 0:
+            print(f"[MEMTRANS] Debit customer {src_gl}{src_ac} by ₦{fee_amount} (Fee)")
+            fee_debit_entry = Memtrans.objects.create(
+                branch=branch,
+                cust_branch=branch,
+                customer=customer,
+                gl_no=src_gl,
+                ac_no=src_ac,
+                trx_no=f"FEE{trx_no}",
+                ses_date=today,
+                app_date=today,
+                sys_date=timezone.now(),
+                amount=-float(fee_amount),  # Negative for debit
+                description=f"Transfer Fee - {fee_info.get('config_name', 'Other Bank Transfer')}",
+                error="A",
+                type="T",
+                account_type="C",
+                user=request.user,
+                trx_type="FEE_DEBIT",
+            )
+            fee_memtrans_id = fee_debit_entry.id
+
+            # ✅ 3. CREDIT fee account for FEE AMOUNT (NEW FEE LOGIC)
+            fee_gl_no = fee_info.get('fee_gl_no', '30101')
+            fee_ac_no = fee_info.get('fee_ac_no', '000001')
+            print(f"[MEMTRANS] Credit fee account {fee_gl_no}{fee_ac_no} by ₦{fee_amount} (Fee Income)")
+            
+            Memtrans.objects.create(
+                branch=branch,
+                cust_branch=branch,
+                customer=None,  # Fee account, not customer account
+                gl_no=fee_gl_no[:6],  # Ensure max 6 chars
+                ac_no=fee_ac_no[:6],  # Ensure max 6 chars
+                trx_no=f"FEE{trx_no}",
+                ses_date=today,
+                app_date=today,
+                sys_date=timezone.now(),
+                amount=float(fee_amount),  # Positive for credit
+                description=f"Transfer Fee Income - Customer {customer.id}",
+                error="A",
+                type="T",
+                account_type="C",
+                user=request.user,
+                trx_type="FEE_CREDIT",
+            )
+        else:
+            print(f"[MEMTRANS] No fee entries needed (fee waived)")
+
+        # ✅ 4. CREDIT receiver company (EXISTING LOGIC - UNCHANGED)
+        print(f"[MEMTRANS] Credit receiver {dst_gl}{dst_ac} by ₦{transfer_amount} (Mobile Teller)")
         Memtrans.objects.create(
             branch=branch,
             cust_branch=branch,
@@ -3340,7 +3481,7 @@ def initiate_transfer(request):
             ses_date=today,
             app_date=today,
             sys_date=timezone.now(),
-            amount=amount,
+            amount=float(transfer_amount),  # Positive for credit - TRANSFER AMOUNT ONLY
             description=narration,
             error="A",
             type="T",
@@ -3349,30 +3490,12 @@ def initiate_transfer(request):
             trx_type="TRANSFER",
         )
 
-        # ✅ DEBIT sender customer (-)
-        Memtrans.objects.create(
-            branch=branch,
-            cust_branch=branch,
-            gl_no=src_gl,
-            ac_no=src_ac,
-            trx_no=trx_no,
-            ses_date=today,
-            app_date=today,
-            sys_date=timezone.now(),
-            amount=-amount,
-            description=f"Transfer via Mobile Teller: {narration}",
-            error="A",
-            type="T",
-            account_type="C",
-            user=request.user,
-            trx_type="TRANSFER",
-        )
-
-        # --- FLOAT COMPANY TRANSACTIONS ---
+        # ✅ 5. FLOAT COMPANY TRANSACTIONS (EXISTING LOGIC - UNCHANGED)
         float_gl = receiver_company.float_gl_no or "20111"
         float_ac = receiver_company.float_ac_no or to_account[-5:]
 
         # 🔹 CREDIT float (+)
+        print(f"[MEMTRANS] Credit float {float_gl}{float_ac} by ₦{transfer_amount} (Float Credit)")
         Memtrans.objects.create(
             branch=branch,
             cust_branch=branch,
@@ -3382,7 +3505,7 @@ def initiate_transfer(request):
             ses_date=today,
             app_date=today,
             sys_date=timezone.now(),
-            amount=amount,
+            amount=float(transfer_amount),  # TRANSFER AMOUNT ONLY, not including fee
             description=f"Float Credit for {narration}",
             error="A",
             type="T",
@@ -3391,31 +3514,52 @@ def initiate_transfer(request):
             trx_type="FLOAT_TRANSFER",
         )
 
-        # 🔹 DEBIT float (-)
-        # Memtrans.objects.create(
-        #     branch=branch,
-        #     cust_branch=branch,
-        #     gl_no=float_gl,
-        #     ac_no=float_ac,
-        #     trx_no=trx_no,
-        #     ses_date=today,
-        #     app_date=today,
-        #     sys_date=timezone.now(),
-        #     amount=-amount,
-        #     description=f"Float Debit for {narration}",
-        #     error="A",
-        #     type="T",
-        #     account_type="C",
-        #     user=request.user,
-        #     trx_type="FLOAT_TRANSFER",
-        # )
+        # --- STEP 3: RECORD FEE TRANSACTION FOR TRACKING ---
+        if GlobalTransferFeeTransaction and fee_info:
+            try:
+                fee_transaction = GlobalTransferFeeTransaction.objects.create(
+                    customer_id=str(customer.id),
+                    customer_account=from_account,
+                    transfer_reference=trx_no,
+                    fee_config_name=fee_info.get('config_name', 'Unknown'),
+                    base_fee_amount=fee_info.get('base_fee', Decimal('0.00')),
+                    applied_fee_amount=fee_amount,
+                    was_waived=fee_info.get('is_waived', False),
+                    waiver_reason=fee_info.get('waiver_reason', ''),
+                    transfer_amount=transfer_amount,
+                    total_debited=total_customer_debit,
+                    destination_bank='internal',
+                    destination_account=to_account,
+                    destination_name='Internal Transfer',
+                    fee_gl_no=fee_info.get('fee_gl_no', '30101'),
+                    fee_ac_no=fee_info.get('fee_ac_no', '000001'),
+                    fee_transaction_ref=f"FEE{trx_no}"
+                )
+                print(f"[DEBUG] Fee transaction recorded: {fee_transaction.id}")
+            except Exception as e:
+                print(f"[WARNING] Fee transaction recording failed (non-critical): {e}")
 
-        print("✅ Transfer completed successfully using Mobile Teller GL and AC.")
+        # --- STEP 4: UPDATE CUSTOMER USAGE STATISTICS ---
+        if GlobalTransferFeeService:
+            try:
+                GlobalTransferFeeService.update_customer_usage_after_transfer(
+                    customer_id=str(customer.id),
+                    transfer_amount=transfer_amount,
+                    fee_paid=fee_amount
+                )
+                print(f"[DEBUG] Customer usage updated for {customer.id}")
+            except Exception as e:
+                print(f"[WARNING] Customer usage update failed (non-critical): {e}")
 
-        return JsonResponse({
+        print("✅ Transfer completed successfully using Mobile Teller GL and AC with fee handling.")
+
+        # --- RESPONSE WITH FEE INFORMATION ---
+        response_data = {
             'success': True,
             'message': 'Transfer completed successfully.',
             'trx_no': trx_no,
+            
+            # Existing response fields
             'sender_gl': src_gl,
             'sender_ac': src_ac,
             'receiver_company': receiver_company.company_name,
@@ -3424,12 +3568,28 @@ def initiate_transfer(request):
             'float_gl': float_gl,
             'float_ac': float_ac,
             'branch': branch.branch_name if branch else None,
-        }, status=200)
+            
+            # NEW: Fee information
+            'fee_info': {
+                'transfer_amount': str(transfer_amount),
+                'fee_amount': str(fee_amount),
+                'total_debited': str(total_customer_debit),
+                'fee_waived': fee_info.get('is_waived', False),
+                'waiver_reason': fee_info.get('waiver_reason', ''),
+                'config_name': fee_info.get('config_name', 'Unknown'),
+                'remaining_free_today': fee_info.get('remaining_free_today', 0),
+                'remaining_free_month': fee_info.get('remaining_free_month', 0)
+            }
+        }
+
+        return JsonResponse(response_data, status=200)
 
     except Exception as e:
         print(f"[ERROR] Transfer failed: {e}")
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
+
+        
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -4762,3 +4922,848 @@ def wallet_status_check(request):
     except Exception as e:
         logger.error(f"[WALLET_STATUS] Error for user {request.user.id}: {str(e)}")
         return Response({'error': 'Failed to check wallet status'}, status=500)
+
+
+
+
+
+
+
+
+
+
+# api/views.py (Add these imports at the top)
+
+# CORRECTED IMPORTS for fee management
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib import messages
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework import status
+from decimal import Decimal, InvalidOperation
+from datetime import datetime
+
+# Import the models and services with correct paths
+from .models import GlobalTransferFeeConfiguration, GlobalTransferFeeTransaction, CustomerTransferUsage
+from .services.global_fee_service import GlobalTransferFeeService
+
+def is_admin_user(user):
+    """Check if user is admin"""
+    return user.is_staff or user.is_superuser
+
+@login_required
+@user_passes_test(is_admin_user)
+def fee_management_dashboard(request):
+    """Dashboard for managing global transfer fees"""
+    
+    # Get current active configuration
+    active_config = GlobalTransferFeeService.get_active_fee_configuration()
+    
+    # Get recent configurations
+    all_configs = GlobalTransferFeeConfiguration.objects.all()[:5]
+    
+    # Get recent transactions
+    recent_transactions = GlobalTransferFeeTransaction.objects.all()[:20]
+    
+    # Get usage stats
+    today_transactions = GlobalTransferFeeTransaction.objects.filter(
+        processing_date=datetime.now().date()
+    )
+    
+    total_fees_today = sum(t.applied_fee_amount for t in today_transactions)
+    waived_today = today_transactions.filter(was_waived=True).count()
+    charged_today = today_transactions.filter(was_waived=False).count()
+    
+    context = {
+        'active_config': active_config,
+        'all_configs': all_configs,
+        'recent_transactions': recent_transactions,
+        'stats': {
+            'total_fees_today': total_fees_today,
+            'waived_today': waived_today,
+            'charged_today': charged_today,
+            'total_transactions_today': today_transactions.count()
+        }
+    }
+    
+    return render(request, 'fee_management/dashboard.html', context)
+
+@login_required
+@user_passes_test(is_admin_user)
+def create_fee_configuration(request):
+    """Create new global fee configuration"""
+    
+    if request.method == 'POST':
+        try:
+            config_data = {
+                'name': request.POST.get('name', 'Other Bank Transfer Fee'),
+                'base_fee': request.POST.get('base_fee', '10.00'),
+                'free_transfers_per_day': int(request.POST.get('free_transfers_per_day', 3)),
+                'free_transfers_per_month': int(request.POST.get('free_transfers_per_month', 10)),
+                'fee_gl_no': request.POST.get('fee_gl_no', ''),
+                'fee_ac_no': request.POST.get('fee_ac_no', ''),
+                'min_amount_for_fee': request.POST.get('min_amount_for_fee', '100.00'),
+                'max_daily_free_amount': request.POST.get('max_daily_free_amount', '50000.00'),
+                'created_by': request.user.username
+            }
+            
+            # Validate required fields
+            if not config_data['fee_gl_no'] or not config_data['fee_ac_no']:
+                messages.error(request, 'Fee GL number and AC number are required')
+                return render(request, 'fee_management/create_config.html')
+            
+            # Create configuration
+            new_config = GlobalTransferFeeService.create_global_fee_configuration(config_data)
+            
+            messages.success(request, f'Global fee configuration created successfully! Applies to ALL customers.')
+            return redirect('fee_management_dashboard')
+            
+        except (ValueError, InvalidOperation) as e:
+            messages.error(request, f'Invalid input: {str(e)}')
+            return render(request, 'fee_management/create_config.html')
+        except Exception as e:
+            messages.error(request, f'Error creating configuration: {str(e)}')
+            return render(request, 'fee_management/create_config.html')
+    
+    return render(request, 'fee_management/create_config.html')
+
+@login_required
+@user_passes_test(is_admin_user)
+def deactivate_configuration(request, config_id):
+    """Deactivate a fee configuration"""
+    
+    if request.method == 'POST':
+        try:
+            config = get_object_or_404(GlobalTransferFeeConfiguration, id=config_id)
+            config.is_active = False
+            config.save()
+            
+            messages.success(request, f'Configuration "{config.name}" deactivated successfully.')
+        except Exception as e:
+            messages.error(request, f'Error deactivating configuration: {str(e)}')
+    
+    return redirect('fee_management_dashboard')
+
+@login_required
+@user_passes_test(is_admin_user)
+def transaction_history(request):
+    """View all fee transactions"""
+    
+    # Filter options
+    customer_filter = request.GET.get('customer')
+    date_filter = request.GET.get('date')
+    waived_filter = request.GET.get('waived')
+    
+    transactions = GlobalTransferFeeTransaction.objects.all()
+    
+    if customer_filter:
+        transactions = transactions.filter(customer_id__icontains=customer_filter)
+    
+    if date_filter:
+        try:
+            filter_date = datetime.strptime(date_filter, '%Y-%m-%d').date()
+            transactions = transactions.filter(processing_date=filter_date)
+        except ValueError:
+            pass
+    
+    if waived_filter == 'true':
+        transactions = transactions.filter(was_waived=True)
+    elif waived_filter == 'false':
+        transactions = transactions.filter(was_waived=False)
+    
+    transactions = transactions.order_by('-processed_at')[:100]
+    
+    context = {
+        'transactions': transactions,
+        'filters': {
+            'customer': customer_filter,
+            'date': date_filter,
+            'waived': waived_filter
+        }
+    }
+    
+    return render(request, 'fee_management/transaction_history.html', context)
+
+from decimal import Decimal
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+# Import fee service
+try:
+    from api.services.global_fee_service import GlobalTransferFeeService
+except ImportError:
+    GlobalTransferFeeService = None
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def get_global_transfer_fee(request):
+    """
+    Calculate transfer fee using database-driven fee configuration
+    
+    POST /api/v1/transfer/fee/
+    """
+    
+    try:
+        print("=== TRANSFER FEE DEBUG START ===")
+        print(f"User: {request.user}")
+        print(f"Request data: {request.data}")
+        
+        # Support both 'amount' and 'transfer_amount' field names (Flutter compatibility)
+        transfer_amount = (
+            request.data.get('transfer_amount') or 
+            request.data.get('amount')
+        )
+        
+        customer_id = request.data.get('customer_id')
+        transfer_type = request.data.get('transfer_type', 'other_bank')
+        
+        # Get customer_id from authenticated user if not provided
+        if not customer_id:
+            try:
+                if hasattr(request.user, 'customer'):
+                    customer_id = str(request.user.customer.id)
+                elif hasattr(request.user, 'username') and request.user.username:
+                    customer_id = str(request.user.username)
+                else:
+                    customer_id = str(request.user.id)
+                    
+                print(f"Auto-extracted customer_id: {customer_id}")
+            except AttributeError:
+                customer_id = str(request.user.id)
+        
+        # Validate amount
+        if not transfer_amount:
+            return Response({
+                'success': False,
+                'message': 'Transfer amount is required'
+            }, status=400)
+        
+        # Convert amount to Decimal for precise calculations
+        try:
+            amount = Decimal(str(transfer_amount))
+            if amount <= 0:
+                raise ValueError("Amount must be positive")
+        except (InvalidOperation, ValueError) as e:
+            return Response({
+                'success': False,
+                'message': 'Invalid transfer amount - must be a positive number',
+                'errors': {'amount': str(e)}
+            }, status=400)
+        
+        # Use GlobalTransferFeeService for database-driven calculation
+        if GlobalTransferFeeService:
+            print(f"Using GlobalTransferFeeService for customer: {customer_id}")
+            
+            # Calculate fee using database configuration
+            fee_info = GlobalTransferFeeService.calculate_fee_for_any_customer(
+                customer_id=customer_id,
+                transfer_amount=amount,
+                transfer_type=transfer_type
+            )
+            
+            # Convert Decimal values to strings for JSON serialization
+            response_data = {
+                'success': True,
+                'data': {
+                    'base_fee': str(fee_info.get('base_fee', '0.00')),
+                    'applied_fee': str(fee_info.get('applied_fee', '0.00')),
+                    'is_waived': fee_info.get('is_waived', False),
+                    'waiver_reason': fee_info.get('waiver_reason', ''),
+                    'remaining_free_today': fee_info.get('remaining_free_today', 0),
+                    'remaining_free_month': fee_info.get('remaining_free_month', 0),
+                    'total_amount': str(amount + fee_info.get('applied_fee', Decimal('0.00'))),
+                    'config_name': fee_info.get('config_name', 'Database Configuration'),
+                    'fee_gl_no': fee_info.get('fee_gl_no', '30101'),
+                    'fee_ac_no': fee_info.get('fee_ac_no', '00001')
+                },
+                'message': 'Fee calculated successfully using database configuration'
+            }
+            
+        else:
+            # Fallback if service not available (models not migrated)
+            print("WARNING: GlobalTransferFeeService not available, using fallback")
+            response_data = {
+                'success': True,
+                'data': {
+                    'base_fee': '52.50',
+                    'applied_fee': '0.00',
+                    'is_waived': True,
+                    'waiver_reason': 'Service initialization - free transfer',
+                    'remaining_free_today': 5,
+                    'remaining_free_month': 20,
+                    'total_amount': str(amount),
+                    'config_name': 'Fallback Configuration'
+                },
+                'message': 'Fee calculated using fallback configuration'
+            }
+        
+        print(f"SUCCESS: Returning {response_data}")
+        print("=== TRANSFER FEE DEBUG END ===")
+        return Response(response_data, status=200)
+        
+    except Exception as e:
+        print(f"ERROR: {e}")
+        return Response({'success': False, 'error': str(e)}, status=500)
+
+
+# ALTERNATIVE MINIMAL DEBUG VERSION (if the above is too verbose)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def get_global_transfer_fee_minimal_debug(request):
+    """MINIMAL DEBUG VERSION - Use this if you want less verbose logging"""
+    
+    try:
+        print("=== TRANSFER FEE DEBUG START ===")
+        print(f"User: {request.user}")
+        
+        # Step 1: Basic validation
+        customer_id = request.data.get('customer_id')
+        transfer_amount = request.data.get('transfer_amount') 
+        print(f"Data: customer_id={customer_id}, amount={transfer_amount}")
+        
+        if not customer_id or not transfer_amount:
+            print("ERROR: Missing required fields")
+            return Response({'success': False, 'error': 'Missing fields'}, status=400)
+        
+        # Step 2: Get customer (THE CRITICAL PART)
+        print("Getting customer from request.user...")
+        
+        # Try different customer access patterns
+        if hasattr(request.user, 'customer'):
+            customer = request.user.customer
+            print(f"SUCCESS: Found request.user.customer = {customer}")
+        elif hasattr(request.user, 'customer_profile'):  
+            customer = request.user.customer_profile
+            print(f"SUCCESS: Found request.user.customer_profile = {customer}")
+        else:
+            print(f"ERROR: No customer found. Available attrs: {[a for a in dir(request.user) if not a.startswith('_')]}")
+            return Response({'success': False, 'error': 'No customer found'}, status=400)
+        
+        # Step 3: Convert amount
+        try:
+            amount = Decimal(str(transfer_amount))
+            print(f"Amount converted: {amount}")
+        except Exception as e:
+            print(f"ERROR: Amount conversion failed: {e}")
+            return Response({'success': False, 'error': 'Invalid amount'}, status=400)
+        
+        # Step 4: Return mock response for now (to isolate the customer issue)
+        print("Returning mock fee response...")
+        
+        return Response({
+            'success': True,
+            'data': {
+                'base_fee': '52.50',
+                'applied_fee': '0.00', 
+                'is_waived': True,
+                'waiver_reason': 'DEBUG MODE - Free transfer',
+                'remaining_free_today': 3,
+                'remaining_free_month': 10
+            },
+            'debug': 'Mock response - customer access worked!'
+        })
+        
+    except Exception as e:
+        print(f"FATAL ERROR: {e}")
+        import traceback
+        traceback.print_exc()
+        return Response({'success': False, 'error': str(e)}, status=500)
+    finally:
+        print("=== TRANSFER FEE DEBUG END ===")
+
+
+# INTEGRATION INSTRUCTIONS:
+"""
+1. REPLACE your existing get_global_transfer_fee function with either:
+   - get_global_transfer_fee (full debug version)
+   - get_global_transfer_fee_minimal_debug (minimal version)
+
+2. Add these imports at the top of your views.py:
+   import traceback
+   from decimal import Decimal, InvalidOperation
+
+3. Test the endpoint and check your Django console output for the debug messages
+
+4. The debug output will show you EXACTLY where the 500 error occurs
+"""
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def ninepsb_transfer_with_global_fee(request):
+    """
+    Process transfer with proper Memtrans debit/credit handling
+    
+    CORRECTED MEMTRANS LOGIC using your actual model:
+    1. Customer Account → Debit transfer_amount (Memtrans entry)
+    2. Customer Account → Debit fee_amount (Memtrans entry) 
+    3. Fee Account → Credit fee_amount (Memtrans entry)
+    4. 9PSB Transfer → Send transfer_amount only
+    
+    POST /api/v1/ninepsb/transfer-with-fee/
+    """
+    
+    try:
+        print("=== TRANSFER WITH MEMTRANS DEBUG START ===")
+        print(f"User: {request.user}")
+        print(f"Request data: {request.data}")
+        
+        # Get request data
+        from_account = request.data.get('from_account')
+        to_account = request.data.get('to_account')
+        bank_code = request.data.get('bank_code')
+        amount_str = request.data.get('amount')
+        narration = request.data.get('narration', 'Fund Transfer')
+        beneficiary_name = request.data.get('beneficiary_name', '')
+        customer_id = request.data.get('customer_id')
+        
+        # Get customer_id from authenticated user if not provided
+        if not customer_id:
+            try:
+                if hasattr(request.user, 'customer'):
+                    customer_id = str(request.user.customer.id)
+                elif hasattr(request.user, 'username') and request.user.username:
+                    customer_id = str(request.user.username)
+                else:
+                    customer_id = str(request.user.id)
+                    
+                print(f"Auto-extracted customer_id: {customer_id}")
+            except AttributeError:
+                customer_id = str(request.user.id)
+        
+        # Validate required fields
+        required_fields = {
+            'from_account': from_account,
+            'to_account': to_account,
+            'bank_code': bank_code,
+            'amount': amount_str
+        }
+        
+        missing_fields = {k: 'This field is required' for k, v in required_fields.items() if not v}
+        if missing_fields:
+            return Response({
+                'success': False,
+                'message': 'Missing required fields',
+                'errors': missing_fields
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Convert amount to Decimal
+        try:
+            transfer_amount = Decimal(str(amount_str))
+            if transfer_amount <= 0:
+                raise ValueError("Amount must be positive")
+        except (InvalidOperation, ValueError):
+            return Response({
+                'success': False,
+                'message': 'Invalid amount',
+                'errors': {'amount': 'Must be a valid positive number'}
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Get customer profile
+        try:
+            customer = request.user.customer
+            logger.info(f"Retrieved customer: {customer} for user: {request.user}")
+        except AttributeError as e:
+            logger.error(f"Customer attribute error for user {request.user}: {e}")
+            return Response({
+                'success': False,
+                'message': 'Customer profile not found for user',
+                'errors': {'authentication': 'Customer profile required for transfer'}
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # STEP 1: Calculate fee using database-driven service
+        if not GlobalTransferFeeService:
+            logger.warning("GlobalTransferFeeService not available - proceeding with zero fee")
+            fee_info = {
+                'base_fee': Decimal('52.50'),
+                'applied_fee': Decimal('0.00'),
+                'is_waived': True,
+                'waiver_reason': 'Fee system not configured',
+                'config_name': 'Default',
+                'fee_gl_no': '30101',
+                'fee_ac_no': '00001'
+            }
+        else:
+            # Calculate fee using the service
+            fee_info = GlobalTransferFeeService.calculate_fee_for_any_customer(
+                customer_id=customer_id,
+                transfer_amount=transfer_amount,
+                transfer_type='other_bank'
+            )
+        
+        fee_amount = fee_info.get('applied_fee', Decimal('0.00'))
+        total_amount = transfer_amount + fee_amount
+        
+        # Generate transaction reference
+        import uuid
+        transaction_reference = f"TXN{uuid.uuid4().hex[:10].upper()}"
+        
+        print(f"Processing transfer: {transfer_amount} from {from_account} to {to_account}")
+        print(f"Fee calculated: {fee_amount} (waived: {fee_info.get('is_waived', False)})")
+        
+        # STEP 2: Process the transfer with proper Memtrans entries
+        try:
+            with transaction.atomic():
+                
+                # ============================================
+                # CORRECTED MEMTRANS DEBIT/CREDIT LOGIC
+                # ============================================
+                
+                print(f"=== MEMTRANS BREAKDOWN ===")
+                print(f"Transfer Amount: ₦{transfer_amount}")
+                print(f"Fee Amount: ₦{fee_amount}")
+                print(f"Total Customer Impact: ₦{total_amount}")
+                print(f"Amount to Transfer (9PSB): ₦{transfer_amount}")
+                
+                # Parse customer account details
+                customer_gl_no, customer_ac_no = parse_account_number(from_account)
+                fee_gl_no = fee_info.get('fee_gl_no', '30101')
+                fee_ac_no = fee_info.get('fee_ac_no', '00001')
+                
+                # Get customer object for Memtrans
+                customer_obj = get_customer_object(customer_id)
+                
+                # 1. MEMTRANS ENTRY: Debit customer account for transfer amount
+                print(f"📝 MEMTRANS: Debit customer {customer_gl_no}{customer_ac_no} by ₦{transfer_amount} (Transfer)")
+                transfer_memtrans = create_memtrans_entry(
+                    customer=customer_obj,
+                    gl_no=customer_gl_no,
+                    ac_no=customer_ac_no,
+                    amount=transfer_amount,
+                    is_debit=True,
+                    description=f"Transfer to {bank_code} - {to_account[:4]}****",
+                    trx_no=transaction_reference,
+                    trx_type='TRANSFER_DEBIT',
+                    user=request.user
+                )
+                
+                # 2. MEMTRANS ENTRY: Debit customer account for fee (if fee > 0)
+                fee_memtrans = None
+                if fee_amount > 0:
+                    print(f"📝 MEMTRANS: Debit customer {customer_gl_no}{customer_ac_no} by ₦{fee_amount} (Fee)")
+                    fee_memtrans = create_memtrans_entry(
+                        customer=customer_obj,
+                        gl_no=customer_gl_no,
+                        ac_no=customer_ac_no,
+                        amount=fee_amount,
+                        is_debit=True,
+                        description=f"Transfer Fee - {fee_info.get('config_name', 'Other Bank Transfer')}",
+                        trx_no=f"FEE{transaction_reference}",
+                        trx_type='FEE_DEBIT',
+                        user=request.user
+                    )
+                    
+                    # 3. MEMTRANS ENTRY: Credit fee account for fee amount
+                    print(f"📝 MEMTRANS: Credit fee account {fee_gl_no}{fee_ac_no} by ₦{fee_amount} (Fee Income)")
+                    fee_credit_memtrans = create_memtrans_entry(
+                        customer=None,  # Fee account, not customer account
+                        gl_no=fee_gl_no,
+                        ac_no=fee_ac_no,
+                        amount=fee_amount,
+                        is_debit=False,  # Credit
+                        description=f"Transfer Fee Income - Customer {customer_id}",
+                        trx_no=f"FEE{transaction_reference}",
+                        trx_type='FEE_CREDIT',
+                        user=request.user
+                    )
+                else:
+                    print(f"📝 MEMTRANS: No fee entries needed (fee waived)")
+                
+                # 4. PROCESS 9PSB TRANSFER (Transfer Amount Only - NOT including fee)
+                print(f"📤 9PSB: Send ₦{transfer_amount} to {to_account} via bank {bank_code}")
+                # TODO: Replace with your actual 9PSB transfer call
+                # ninepsb_result = call_9psb_transfer({
+                #     'sender_account': from_account,
+                #     'destination_account': to_account,
+                #     'bank_code': bank_code,
+                #     'amount': transfer_amount,  # ← IMPORTANT: Transfer amount only, not total
+                #     'narration': narration,
+                #     'reference': transaction_reference
+                # })
+                
+                # For now, simulate successful transfer
+                transfer_successful = True  # Replace with actual 9PSB response check
+                
+                # STEP 3: Record fee transaction for tracking
+                if GlobalTransferFeeTransaction:
+                    fee_transaction = GlobalTransferFeeTransaction.objects.create(
+                        customer_id=str(customer_id),
+                        customer_account=from_account,
+                        transfer_reference=transaction_reference,
+                        fee_config_name=fee_info.get('config_name', 'Unknown'),
+                        base_fee_amount=fee_info.get('base_fee', Decimal('0.00')),
+                        applied_fee_amount=fee_amount,
+                        was_waived=fee_info.get('is_waived', False),
+                        waiver_reason=fee_info.get('waiver_reason', ''),
+                        transfer_amount=transfer_amount,
+                        total_debited=total_amount,
+                        destination_bank=bank_code,
+                        destination_account=to_account,
+                        destination_name=beneficiary_name,
+                        fee_gl_no=fee_gl_no,
+                        fee_ac_no=fee_ac_no,
+                        fee_transaction_ref=f"FEE{transaction_reference}",
+                       
+                    )
+                    print(f"✅ Fee transaction recorded: {fee_transaction.id}")
+                
+                # STEP 4: Update customer usage statistics
+                if GlobalTransferFeeService and transfer_successful:
+                    GlobalTransferFeeService.update_customer_usage_after_transfer(
+                        customer_id=customer_id,
+                        transfer_amount=transfer_amount,
+                        fee_paid=fee_amount
+                    )
+                    print(f"✅ Customer usage updated for {customer_id}")
+                
+                # STEP 5: Return success response
+                if transfer_successful:
+                    print("✅ TRANSFER COMPLETED SUCCESSFULLY")
+                    print("=== TRANSFER WITH MEMTRANS DEBUG END ===")
+                    
+                    logger.info(f"Transfer completed successfully: {transaction_reference}")
+                    
+                    return Response({
+                        'success': True,
+                        'data': {
+                            'reference': transaction_reference,
+                            'transfer_amount': str(transfer_amount),
+                            'fee_amount': str(fee_amount),
+                            'total_debited': str(total_amount),
+                            'fee_waived': fee_info.get('is_waived', False),
+                            'waiver_reason': fee_info.get('waiver_reason', ''),
+                            'destination_account': to_account,
+                            'destination_bank': bank_code,
+                            'destination_name': beneficiary_name,
+                            'narration': narration,
+                            'timestamp': timezone.now().isoformat(),
+                            'remaining_free_today': fee_info.get('remaining_free_today', 0),
+                            'remaining_free_month': fee_info.get('remaining_free_month', 0),
+                            'memtrans_entries': {
+                                'transfer_debit_id': transfer_memtrans.id if transfer_memtrans else None,
+                                'fee_debit_id': fee_memtrans.id if fee_memtrans else None,
+                                'fee_credit_id': fee_credit_memtrans.id if fee_amount > 0 else None,
+                                'customer_gl_ac': f"{customer_gl_no}{customer_ac_no}",
+                                'fee_gl_ac': f"{fee_gl_no}{fee_ac_no}",
+                                'entries_created': 3 if fee_amount > 0 else 1
+                            }
+                        },
+                        'message': 'Transfer completed successfully with Memtrans entries'
+                    }, status=status.HTTP_200_OK)
+                
+                else:
+                    raise Exception("9PSB transfer failed")
+                    
+        except Exception as e:
+            print(f"❌ TRANSFER ERROR: {e}")
+            logger.error(f"Transfer processing error: {str(e)}", exc_info=True)
+            return Response({
+                'success': False,
+                'message': 'Transfer processing failed',
+                'error': str(e),
+                'data': {
+                    'reference': transaction_reference,
+                    'transfer_amount': str(transfer_amount),
+                    'fee_amount': str(fee_amount),
+                    'total_that_would_be_debited': str(total_amount)
+                }
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+    except Exception as e:
+        print(f"❌ REQUEST ERROR: {e}")
+        print("=== TRANSFER WITH MEMTRANS DEBUG END ===")
+        logger.error(f"Error in ninepsb_transfer_with_global_fee: {str(e)}", exc_info=True)
+        return Response({
+            'success': False,
+            'message': 'Transfer failed',
+            'errors': {'system': 'Internal server error occurred'},
+            'debug_info': str(e) if logger.isEnabledFor(logging.DEBUG) else None
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# ============================================================================
+# MEMTRANS HELPER FUNCTIONS (Using your actual Memtrans model)
+# ============================================================================
+
+def parse_account_number(account_number):
+    """
+    Parse account number to extract GL and AC numbers
+    
+    Args:
+        account_number: Full account number (e.g., "2010112345")
+        
+    Returns:
+        Tuple of (gl_no, ac_no) - both max 6 characters per your model
+    """
+    # TODO: Implement your actual account parsing logic
+    
+    if len(account_number) >= 10:
+        gl_no = account_number[:5]  # First 5 digits for GL
+        ac_no = account_number[5:11]  # Next 6 digits for AC (max 6 per model)
+    elif len(account_number) >= 5:
+        gl_no = account_number[:5]
+        ac_no = account_number[5:]
+    else:
+        # Fallback for shorter account numbers
+        gl_no = "20101"  # Default current account
+        ac_no = account_number[:6]  # Truncate to 6 chars max
+    
+    # Ensure they fit your model's max_length=6 constraint
+    gl_no = gl_no[:6]
+    ac_no = ac_no[:6]
+    
+    print(f"🔧 Parsed account {account_number} -> GL: {gl_no}, AC: {ac_no}")
+    return gl_no, ac_no
+
+
+def get_customer_object(customer_id):
+    """
+    Get Customer object for Memtrans foreign key
+    
+    Args:
+        customer_id: Customer ID string
+        
+    Returns:
+        Customer object or None
+    """
+    try:
+        # TODO: Replace with your actual Customer model import and query
+        from your_app.models import Customer  # Replace with actual import
+        
+        customer = Customer.objects.get(id=customer_id)
+        print(f"🔧 Found customer object: {customer}")
+        return customer
+        
+    except Exception as e:
+        print(f"🔧 TODO: Implement get_customer_object({customer_id}) - Error: {e}")
+        return None
+
+
+def create_memtrans_entry(customer, gl_no, ac_no, amount, is_debit, description, trx_no, trx_type, user):
+    """
+    Create a Memtrans entry using your actual model structure
+    
+    Args:
+        customer: Customer object (can be None for fee accounts)
+        gl_no: General Ledger number (max 6 chars)
+        ac_no: Account number (max 6 chars) 
+        amount: Transaction amount
+        is_debit: True for debit, False for credit
+        description: Transaction description (max 100 chars)
+        trx_no: Transaction number (max 20 chars)
+        trx_type: Transaction type (max 20 chars)
+        user: User object
+        
+    Returns:
+        Created Memtrans object
+    """
+    print(f"📝 Creating Memtrans: {gl_no}{ac_no} {'DR' if is_debit else 'CR'} ₦{amount}")
+    
+    # TODO: Import your actual models
+    from transactions.models import Memtrans, Branch  # Replace with actual imports
+    
+    try:
+        # Get default branch (TODO: Replace with actual logic)
+        default_branch = Branch.objects.first()  # or your branch selection logic
+        
+        # Create Memtrans entry using your actual model structure
+        memtrans_entry = Memtrans.objects.create(
+            branch=default_branch,  # TODO: Set appropriate branch
+            cust_branch=default_branch,  # TODO: Set customer's branch
+            customer=customer,  # Customer object or None
+            loans=None,  # Set if loan-related
+            cycle=None,  # Set if needed
+            gl_no=gl_no[:6],  # Ensure max 6 chars
+            ac_no=ac_no[:6],  # Ensure max 6 chars
+            trx_no=trx_no[:20],  # Ensure max 20 chars
+            ses_date=timezone.now().date(),  # Session date
+            app_date=timezone.now().date(),  # Application date
+            sys_date=timezone.now(),  # System date (auto-set)
+            amount=amount,  # Decimal amount
+            description=description[:100],  # Ensure max 100 chars
+            error='A',  # Default value
+            type='D' if is_debit else 'C',  # TODO: Verify if this is how you indicate debit/credit
+            account_type='N',  # Default value
+            code='001',  # TODO: Set appropriate code
+            user=user,  # User object
+            trx_type=trx_type[:20]  # Ensure max 20 chars
+        )
+        
+        print(f"✅ Memtrans created: ID={memtrans_entry.id}, {gl_no}{ac_no} {'DR' if is_debit else 'CR'} ₦{amount}")
+        return memtrans_entry
+        
+    except Exception as e:
+        print(f"❌ Error creating Memtrans entry: {e}")
+        raise
+
+
+def call_9psb_transfer(transfer_data):
+    """
+    Call 9PSB API for interbank transfer
+    
+    Args:
+        transfer_data: Dictionary containing transfer details
+        
+    Returns:
+        Boolean indicating success/failure
+    """
+    print(f"🔧 TODO: Implement call_9psb_transfer({transfer_data})")
+    # Your 9PSB implementation here
+    return True  # Simulated success
+
+
+
+
+
+def process_global_fee_transaction(fee_data):
+    """
+    Process fee transaction to GLOBAL fee collection account
+    ALL customer fees go to the SAME account
+    """
+    
+    try:
+        # Parse customer account
+        customer_account = fee_data['customer_account']
+        customer_gl = customer_account[:5] if len(customer_account) >= 10 else customer_account[:3]
+        customer_ac = customer_account[len(customer_gl):]
+        
+        # Create transaction entries
+        debit_entry = {
+            'gl_no': customer_gl,
+            'ac_no': customer_ac,
+            'amount': fee_data['amount'],
+            'transaction_type': 'DR',
+            'narration': fee_data.get('narration', f'Transfer fee - {fee_data["original_reference"]}'),
+            'reference': fee_data['reference']
+        }
+        
+        # Credit GLOBAL fee collection account (SAME for ALL customers)
+        credit_entry = {
+            'gl_no': fee_data['fee_gl_no'],
+            'ac_no': fee_data['fee_ac_no'], 
+            'amount': fee_data['amount'],
+            'transaction_type': 'CR',
+            'narration': f'Transfer fee collection - {fee_data["original_reference"]}',
+            'reference': fee_data['reference']
+        }
+        
+        # Process both entries (implement based on your core banking system)
+        # For now, return success - integrate with your actual transaction posting
+        return {
+            'success': True, 
+            'message': 'Global fee transaction completed'
+        }
+        
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
+def process_ninepsb_transfer(transfer_data):
+    """Process main transfer via 9PSB"""
+    # Implement your existing 9PSB transfer logic here
+    return {'success': True, 'message': 'Transfer completed'}

@@ -726,61 +726,103 @@ def _send_otp_background(user_id, otp, phone_number, email, branch):
         print(f"[DEBUG-BG] ⚠️ Background error: {e}")
 
 
-def login(request):
+import threading
+from random import randint
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.utils import timezone
+from django.contrib.auth import authenticate, login
+from django.contrib.auth import get_user_model
+import logging
+
+logger = logging.getLogger(__name__)
+User = get_user_model()
+
+# Assume you already have this function defined elsewhere
+# def _send_otp_background(user_id, otp, phone_number=None, email=None, branch=None):
+#     pass
+
+def login_view(request):
+    print("\n[DEBUG] ───────────────────────────────")
+    print("[DEBUG] Login request received")
+
     if request.user.is_authenticated:
-        print("[DEBUG] User already authenticated → redirect to myAccount")
-        logger.debug("User already authenticated; redirecting to myAccount")
+        print("[DEBUG] User already authenticated → redirecting to myAccount")
         return redirect('myAccount')
 
     if request.method == 'POST':
         email = request.POST.get('email', '').strip()
         password = request.POST.get('password')
 
-        print(f"[DEBUG] Login attempt for email: {email!r}")
-        logger.debug(f"Login attempt for email: {email!r}")
+        print(f"[DEBUG] POST data received → email='{email}', password_provided={bool(password)}")
 
         if not email or not password:
+            print("[DEBUG] Missing email or password → rendering login page")
             messages.error(request, "Email and password are required.")
-            print("[DEBUG] Missing email or password")
             return render(request, 'accounts/login.html')
 
         try:
+            # ✦ Check if email exists
+            print(f"[DEBUG] Checking if email '{email}' exists in database...")
+            try:
+                db_user = User.objects.get(email=email)
+                print(f"[DEBUG] Email found → user_id={db_user.id}")
+            except User.DoesNotExist:
+                print(f"[DEBUG] Email '{email}' does NOT exist → login denied")
+                messages.error(request, "No account was found with this email.")
+                return redirect('login')
+
+            # ✦ Try authentication
+            print("[DEBUG] Attempting authentication...")
             user = authenticate(request, email=email, password=password)
 
             if user is None:
-                messages.error(request, "Invalid email or password.")
-                print("[DEBUG] Authentication failed")
+                print("[DEBUG] Authentication FAILED → wrong password")
+                messages.error(request, "Incorrect password. Please try again.")
                 return redirect('login')
 
-            print(f"[DEBUG] Authenticated user ID: {user.id}")
-            logger.debug(f"Authenticated user id: {user.id}")
+            # ✦ Explicitly assign backend to handle multiple backends
+            user.backend = 'accounts.backends.EmailBackend'
+            login(request, user)
+            print(f"[DEBUG] Authentication SUCCESS → user_id={user.id}")
 
-            # Account verification checks
+            # ✦ Account verification check
+            print(f"[DEBUG] Checking if user {user.id} is verified...")
             if not getattr(user, "verified", False):
-                messages.error(request, "Your account is not verified. Please contact support.")
-                print(f"[DEBUG] User {user.id} not verified")
+                print(f"[DEBUG] User {user.id} NOT verified → stopping login")
+                messages.error(
+                    request,
+                    "Your account has not been verified. Please contact support."
+                )
                 return redirect('login')
 
-            if user.branch and user.branch.expire_date < timezone.now().date():
-                messages.error(request, "Your branch license has expired.")
-                print(f"[DEBUG] Branch license expired for branch id: {getattr(user.branch, 'id', None)}")
-                return redirect('login')
+            # ✦ Branch license check
+            print(f"[DEBUG] Checking branch license for user {user.id}...")
+            if user.branch:
+                print(f"[DEBUG] User branch found → branch_id={user.branch.id}, expire_date={user.branch.expire_date}")
+                if user.branch.expire_date < timezone.now().date():
+                    print(f"[DEBUG] Branch license EXPIRED for branch {user.branch.id}")
+                    messages.error(
+                        request,
+                        "Your branch license has expired. Contact your administrator."
+                    )
+                    return redirect('login')
+            else:
+                print("[DEBUG] User has NO branch assigned (OK)")
 
-            # Generate 6-digit OTP
+            # ✦ Generate OTP
             otp = randint(100000, 999999)
-            print(f"[DEBUG] Generated OTP: {otp}")
-            logger.debug(f"Generated OTP for user {user.id}")
+            print(f"[DEBUG] Generated OTP → {otp}")
 
-            # Store in session (for OTP verification step)
+            # ✦ Store OTP in session
             request.session['otp_data'] = {
                 'user_id': user.id,
                 'otp': otp,
                 'timestamp': timezone.now().isoformat()
             }
-            print("[DEBUG] OTP stored in session")
-            logger.debug("OTP stored in session for user %s", user.id)
+            print("[DEBUG] OTP stored in session:", request.session['otp_data'])
 
-            # Start background thread (using kwargs like before)
+            # ✦ Send OTP in background thread
             kwargs = {
                 'user_id': user.id,
                 'otp': otp,
@@ -788,24 +830,27 @@ def login(request):
                 'email': getattr(user, 'email', None),
                 'branch': getattr(user, 'branch', None)
             }
-            print(f"[DEBUG] Starting background thread with kwargs: {kwargs}")
+
+            print("[DEBUG] Starting background OTP thread with:", kwargs)
             thread = threading.Thread(target=_send_otp_background, kwargs=kwargs)
             thread.daemon = True
             thread.start()
-            print("[DEBUG] 🚀 Background OTP thread started (using kwargs)")
-            logger.debug("Background OTP thread started for user %s", user.id)
+            print("[DEBUG] 🚀 Background OTP thread started")
 
-            messages.success(request, "OTP sent! Check your email and phone.")
+            messages.success(request, "OTP sent! Please check your phone and email.")
+            print("[DEBUG] Redirecting user to verify_otp")
             return redirect('verify_otp')
 
         except Exception as e:
-            error_msg = str(e) or "An unexpected error occurred during login."
-            logger.exception(f"[ERROR] Login failed for {email}: {error_msg}")
-            print(f"[DEBUG] Login exception for {email}: {error_msg}")
-            messages.error(request, error_msg)
+            print("[DEBUG] EXCEPTION occurred during login:", str(e))
+            logger.exception(f"[ERROR] Login failed for {email}: {str(e)}")
+            messages.error(request, "A system error occurred. Please try again or contact support.")
             return redirect('login')
 
+    print("[DEBUG] GET request → rendering login page")
     return render(request, 'accounts/login.html')
+
+
 
 
 from django.shortcuts import render, redirect

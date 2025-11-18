@@ -25,10 +25,29 @@ from .views import (
     wallet_creation_data,
     wallet_create,
     debug_account_number_status,
-    BeneficiaryListCreateView, BeneficiaryDetailView
+    BeneficiaryListCreateView, BeneficiaryDetailView, 
 
   
 )
+
+
+
+
+from .account_officer_views import (
+    AccountOfficerRegisterView,
+    AccountOfficerLoginView,
+    AccountOfficerPINSetupView,
+    AccountOfficerPINVerifyView,
+    CustomerLookupView as AOCustomerLookupView,
+    DepositView,
+    WithdrawalView,
+    BalanceInquiryView,
+    LoansInquiryView,
+    DashboardStatsView,
+)
+
+# Import webhook views
+from api.webhooks.ninepsb_webhook import ninepsb_webhook_handler, ninepsb_webhook_health
 
 router = DefaultRouter()
 router.register(r'roles', RoleViewSet, basename='role')
@@ -120,6 +139,50 @@ urlpatterns = [
     path('beneficiaries/', BeneficiaryListCreateView.as_view(), name='beneficiary-list-create'),
     path('beneficiaries/<int:pk>/', BeneficiaryDetailView.as_view(), name='beneficiary-detail'),
 
+
+
+
+    path('admin/fee-management/', views.fee_management_dashboard, name='fee_management_dashboard'),
+    path('admin/fee-management/create/', views.create_fee_configuration, name='create_fee_configuration'),
+    path('admin/fee-management/deactivate/<int:config_id>/', views.deactivate_configuration, name='deactivate_configuration'),
+    path('admin/fee-management/transactions/', views.transaction_history, name='transaction_history'),
+    
+    # API Endpoints for Mobile App
+    path('transfer/fee/', views.get_global_transfer_fee, name='get_global_transfer_fee'),
+    path('ninepsb/transfer-with-fee/', views.ninepsb_transfer_with_global_fee, name='ninepsb_transfer_with_global_fee'),
+   
+   
+
+       # 9PSB Webhook URLs
+    path('webhooks/9psb/transaction-status/', ninepsb_webhook_handler, name='ninepsb_webhook'),
+    path('webhooks/9psb/health/', ninepsb_webhook_health, name='ninepsb_webhook_health'),
+   
+
+
+
+
+
+
+
+       # Account Officer Mobile App API Endpoints
+    path('ao/auth/register/', AccountOfficerRegisterView.as_view(), name='ao-register'),
+    path('ao/auth/login/', AccountOfficerLoginView.as_view(), name='ao-login'),
+    path('ao/auth/pin/setup/', AccountOfficerPINSetupView.as_view(), name='ao-pin-setup'),
+    path('ao/auth/pin/verify/', AccountOfficerPINVerifyView.as_view(), name='ao-pin-verify'),
+    
+    # Customer Management
+    path('ao/customers/lookup/', AOCustomerLookupView.as_view(), name='ao-customer-lookup'),
+    
+    # Transaction Operations
+    path('ao/transactions/deposit/', DepositView.as_view(), name='ao-deposit'),
+    path('ao/transactions/withdrawal/', WithdrawalView.as_view(), name='ao-withdrawal'),
+    path('ao/transactions/balance/', BalanceInquiryView.as_view(), name='ao-balance-inquiry'),
+    
+    # Loan Services
+    path('ao/loans/inquiry/', LoansInquiryView.as_view(), name='ao-loan-inquiry'),
+    
+    # Reports and Analytics
+    path('ao/dashboard/stats/', DashboardStatsView.as_view(), name='ao-dashboard-stats'),
     # Router (include at the end)
     path('', include(router.urls)),
 ]

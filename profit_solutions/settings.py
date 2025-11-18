@@ -40,6 +40,37 @@ NINEPSB_CLIENT_SECRET = os.getenv("NINEPSB_CLIENT_SECRET", "").strip()
 NINEPSB_API_TIMEOUT = 30
 
 
+
+SECURE_SSL_REDIRECT = False
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+NINEPSB_WEBHOOK_SECRET = os.environ.get('NINEPSB_WEBHOOK_SECRET', 'fallback-key')
+
+
+
+
+# SEND TO 9PSB THE FOLLOWING DETAILS:
+
+# Webhook URL: https://yourdomain.com/api/v1/webhooks/9psb/transaction-status/
+# HTTP Method: POST
+# Content-Type: application/json  
+# Webhook Secret: [your secure secret key]
+# Health Check: https://yourdomain.com/api/v1/webhooks/9psb/health/
+
+# Required payload format:
+# {
+#   "event_type": "transaction.completed|failed|pending",
+#   "transaction_reference": "9PSB_REFERENCE", 
+#   "external_reference": "YOUR_TRANSACTION_REFERENCE",
+#   "status": "successful|failed|pending",
+#   "status_code": "00|99|09",
+#   "message": "Status message"
+# }
+
+
+
+
+
 PSB_ENABLED = True
 PSB_CURRENCY = "NGN"
 PSB_COUNTRY = "NGA"
@@ -144,6 +175,17 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'profit_solutions.wsgi.application'
+
+
+
+
+
+
+
+AUTHENTICATION_BACKENDS = [
+    'accounts.backends.EmailBackend',  # MUST match your backend path exactly
+    # 'django.contrib.auth.backends.ModelBackend',  # optional fallback
+]
 
 
 

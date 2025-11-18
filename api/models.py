@@ -252,3 +252,208 @@ class RegistrationToken(models.Model):
             not self.is_used and 
             timezone.now() <= self.expires_at
         )
+
+
+
+
+
+
+
+
+
+
+
+
+# api/models.py (Add these models to your existing models.py file)
+
+from django.db import models
+from decimal import Decimal
+from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.exceptions import ValidationError
+
+class GlobalTransferFeeConfiguration(models.Model):
+    """
+    GLOBAL fee configuration that applies to ALL customers
+    Only ONE active configuration should exist at a time
+    """
+    
+    TRANSFER_TYPE_CHOICES = [
+        ('other_bank', 'Transfer to Other Bank'),
+        ('international', 'International Transfer'),
+    ]
+    
+    # Basic Configuration
+    name = models.CharField(max_length=100, default='Other Bank Transfer Fee')
+    transfer_type = models.CharField(max_length=20, choices=TRANSFER_TYPE_CHOICES, default='other_bank')
+    base_fee = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        default=Decimal('10.00'),
+        help_text="Base fee charged to ALL customers for other bank transfers"
+    )
+    
+    # Global Free Transfer Allowances (applies to ALL customers)
+    free_transfers_per_day = models.IntegerField(
+        default=3, 
+        help_text="Number of free transfers allowed per customer per day"
+    )
+    free_transfers_per_month = models.IntegerField(
+        default=10, 
+        help_text="Number of free transfers allowed per customer per month"
+    )
+    
+    # Fee Collection Account (WHERE FEES FROM ALL CUSTOMERS GO)
+    fee_gl_no = models.CharField(
+        max_length=10, 
+        help_text="GL number where ALL customer fees are credited"
+    )
+    fee_ac_no = models.CharField(
+        max_length=20, 
+        help_text="Account number where ALL customer fees are credited"
+    )
+    
+    # Global Fee Rules
+    min_amount_for_fee = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        default=Decimal('100.00'),
+        help_text="Minimum transfer amount to charge fee (applies to ALL customers)"
+    )
+    max_daily_free_amount = models.DecimalField(
+        max_digits=15, 
+        decimal_places=2, 
+        default=Decimal('50000.00'),
+        help_text="Maximum daily amount for free transfers per customer"
+    )
+    
+    # System Status
+    is_active = models.BooleanField(
+        default=True,
+        help_text="Only ONE configuration can be active at a time"
+    )
+    effective_date = models.DateTimeField(
+        auto_now_add=True,
+        help_text="When this configuration becomes effective"
+    )
+    created_by = models.CharField(max_length=100, default='Admin')
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'global_transfer_fee_configuration'
+        verbose_name = 'Global Transfer Fee Configuration'
+        verbose_name_plural = 'Global Transfer Fee Configurations'
+        ordering = ['-created_at']
+    
+    def clean(self):
+        """Ensure only one active configuration exists"""
+        if self.is_active:
+            # Check if another active config exists
+            existing_active = GlobalTransferFeeConfiguration.objects.filter(
+                is_active=True,
+                transfer_type=self.transfer_type
+            ).exclude(pk=self.pk)
+            
+            if existing_active.exists():
+                raise ValidationError(
+                    f"Another active {self.get_transfer_type_display()} "
+                    f"configuration already exists. Only one can be active at a time."
+                )
+    
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        status = "ACTIVE" if self.is_active else "INACTIVE"
+        return f"{self.name} - ₦{self.base_fee} [{status}]"
+
+class CustomerTransferUsage(models.Model):
+    """
+    Track individual customer usage for free transfer allowances
+    NOTE: Fee amounts are GLOBAL - this only tracks usage counts
+    """
+    
+    customer_id = models.CharField(max_length=50, db_index=True)
+    date = models.DateField(db_index=True)
+    month = models.CharField(max_length=7, db_index=True)  # Format: YYYY-MM
+    
+    # Daily usage counters (for free allowance tracking only)
+    daily_transfer_count = models.IntegerField(default=0)
+    daily_transfer_amount = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal('0.00'))
+    daily_fees_paid = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    
+    # Monthly usage counters (for free allowance tracking only)
+    monthly_transfer_count = models.IntegerField(default=0)
+    monthly_transfer_amount = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal('0.00'))
+    monthly_fees_paid = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'customer_transfer_usage'
+        unique_together = ['customer_id', 'date']
+        indexes = [
+            models.Index(fields=['customer_id', 'date']),
+            models.Index(fields=['customer_id', 'month']),
+        ]
+    
+    def __str__(self):
+        return f"Customer {self.customer_id} - {self.date} ({self.daily_transfer_count} transfers)"
+
+class GlobalTransferFeeTransaction(models.Model):
+    """
+    Audit log for ALL fee transactions across ALL customers
+    Records every fee charged or waived
+    """
+    
+    # Customer Information
+    customer_id = models.CharField(max_length=50, db_index=True)
+    customer_account = models.CharField(max_length=20)
+    transfer_reference = models.CharField(max_length=100, db_index=True)
+    
+    # Fee Configuration Used (snapshot)
+    fee_config_name = models.CharField(max_length=100)
+    base_fee_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    applied_fee_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    
+    # Waiver Information
+    was_waived = models.BooleanField(default=False)
+    waiver_reason = models.CharField(max_length=200, blank=True)
+    free_transfers_remaining_daily = models.IntegerField(default=0)
+    free_transfers_remaining_monthly = models.IntegerField(default=0)
+    
+    # Transfer Details
+    transfer_amount = models.DecimalField(max_digits=15, decimal_places=2)
+    total_debited = models.DecimalField(max_digits=15, decimal_places=2)
+    destination_bank = models.CharField(max_length=10)
+    destination_account = models.CharField(max_length=20)
+    destination_name = models.CharField(max_length=100, blank=True)
+    
+    # Accounting Entries (where money moved)
+    fee_gl_no = models.CharField(max_length=10)
+    fee_ac_no = models.CharField(max_length=20)
+    customer_gl_no = models.CharField(max_length=10)
+    customer_ac_no = models.CharField(max_length=20)
+    fee_transaction_ref = models.CharField(max_length=100, blank=True)
+    
+    # System Information
+    processed_at = models.DateTimeField(auto_now_add=True)
+    processing_date = models.DateField(auto_now_add=True)
+    
+    class Meta:
+        db_table = 'global_transfer_fee_transactions'
+        verbose_name = 'Transfer Fee Transaction (All Customers)'
+        verbose_name_plural = 'Transfer Fee Transactions (All Customers)'
+        indexes = [
+            models.Index(fields=['customer_id', 'processed_at']),
+            models.Index(fields=['transfer_reference']),
+            models.Index(fields=['processing_date']),
+            models.Index(fields=['was_waived']),
+        ]
+    
+    def __str__(self):
+        status = "WAIVED" if self.was_waived else f"₦{self.applied_fee_amount}"
+        return f"{self.customer_id} - {self.transfer_reference} - {status}"

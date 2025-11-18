@@ -1,0 +1,298 @@
+<!-- templates/fee_management/dashboard.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Global Transfer Fee Management</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+        .header {
+            background: linear-gradient(135deg, #28a745, #ff8c00);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            border-left: 4px solid #28a745;
+        }
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #28a745;
+        }
+        .current-config {
+            background: #e8f5e8;
+            border: 2px solid #28a745;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .config-inactive {
+            background: #ffebee;
+            border: 2px solid #f44336;
+        }
+        .btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            margin: 5px;
+        }
+        .btn:hover {
+            background: #1e7e34;
+        }
+        .btn-danger {
+            background: #dc3545;
+        }
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .table th, .table td {
+            border: 1px solid #dee2e6;
+            padding: 12px;
+            text-align: left;
+        }
+        .table th {
+            background: #f8f9fa;
+            font-weight: bold;
+        }
+        .badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+        .badge-success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .badge-danger {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .alert {
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .alert-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏦 Global Transfer Fee Management</h1>
+            <p>Manage transfer fees that apply to ALL customers</p>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number">₦{{ stats.total_fees_today|floatformat:2 }}</div>
+                <div>Total Fees Today</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ stats.total_transactions_today }}</div>
+                <div>Transactions Today</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ stats.charged_today }}</div>
+                <div>Fees Charged</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ stats.waived_today }}</div>
+                <div>Fees Waived</div>
+            </div>
+        </div>
+
+        <!-- Current Configuration -->
+        {% if active_config %}
+            <div class="current-config">
+                <h2>🟢 Current Active Configuration (Applies to ALL Customers)</h2>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                    <div><strong>Name:</strong> {{ active_config.name }}</div>
+                    <div><strong>Base Fee:</strong> ₦{{ active_config.base_fee }}</div>
+                    <div><strong>Free Per Day:</strong> {{ active_config.free_transfers_per_day }}</div>
+                    <div><strong>Free Per Month:</strong> {{ active_config.free_transfers_per_month }}</div>
+                    <div><strong>Fee GL:</strong> {{ active_config.fee_gl_no }}</div>
+                    <div><strong>Fee AC:</strong> {{ active_config.fee_ac_no }}</div>
+                    <div><strong>Min Amount:</strong> ₦{{ active_config.min_amount_for_fee }}</div>
+                    <div><strong>Created:</strong> {{ active_config.effective_date|date:"M d, Y H:i" }}</div>
+                </div>
+                <div style="margin-top: 15px;">
+                    <form method="post" action="{% url 'deactivate_configuration' active_config.id %}" style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure? This will deactivate fees for ALL customers.')">
+                            Deactivate Configuration
+                        </button>
+                    </form>
+                </div>
+            </div>
+        {% else %}
+            <div class="current-config config-inactive">
+                <h2>⚠️ No Active Fee Configuration</h2>
+                <div class="alert alert-warning">
+                    <strong>Warning:</strong> No fees are being charged to any customers. Create a configuration below.
+                </div>
+            </div>
+        {% endif %}
+
+        <!-- Action Buttons -->
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="{% url 'create_fee_configuration' %}" class="btn">
+                ➕ Create New Fee Configuration
+            </a>
+            <a href="{% url 'transaction_history' %}" class="btn">
+                📊 View Transaction History
+            </a>
+        </div>
+
+        <!-- Recent Configurations -->
+        <h3>📋 Recent Configurations</h3>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Base Fee</th>
+                    <th>Free/Day</th>
+                    <th>Free/Month</th>
+                    <th>Status</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for config in all_configs %}
+                <tr>
+                    <td>{{ config.name }}</td>
+                    <td>₦{{ config.base_fee }}</td>
+                    <td>{{ config.free_transfers_per_day }}</td>
+                    <td>{{ config.free_transfers_per_month }}</td>
+                    <td>
+                        {% if config.is_active %}
+                            <span class="badge badge-success">ACTIVE</span>
+                        {% else %}
+                            <span class="badge badge-danger">INACTIVE</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ config.effective_date|date:"M d, Y" }}</td>
+                    <td>
+                        {% if config.is_active %}
+                            <form method="post" action="{% url 'deactivate_configuration' config.id %}" style="display: inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-danger" style="padding: 4px 8px; font-size: 0.8em;">
+                                    Deactivate
+                                </button>
+                            </form>
+                        {% else %}
+                            <span style="color: #6c757d; font-size: 0.8em;">Inactive</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" style="text-align: center; color: #6c757d;">
+                        No configurations found. Create one above.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Recent Transactions Preview -->
+        <h3>📈 Recent Transactions (Last 20)</h3>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Customer</th>
+                    <th>Reference</th>
+                    <th>Amount</th>
+                    <th>Fee</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for txn in recent_transactions %}
+                <tr>
+                    <td>{{ txn.customer_id }}</td>
+                    <td>{{ txn.transfer_reference }}</td>
+                    <td>₦{{ txn.transfer_amount|floatformat:2 }}</td>
+                    <td>
+                        {% if txn.was_waived %}
+                            <span style="color: green;">FREE</span>
+                        {% else %}
+                            ₦{{ txn.applied_fee_amount|floatformat:2 }}
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if txn.was_waived %}
+                            <span class="badge badge-success">WAIVED</span>
+                        {% else %}
+                            <span class="badge badge-danger">CHARGED</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ txn.processed_at|date:"M d, H:i" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" style="text-align: center; color: #6c757d;">
+                        No transactions found.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div style="text-align: center; margin-top: 20px;">
+            <a href="{% url 'transaction_history' %}" class="btn">
+                View All Transactions →
+            </a>
+        </div>
+    </div>
+</body>
+</html>

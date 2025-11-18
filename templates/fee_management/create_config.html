@@ -1,0 +1,222 @@
+<!-- templates/fee_management/create_config.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Global Fee Configuration</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+        .header {
+            background: linear-gradient(135deg, #28a745, #ff8c00);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        .form-group input:focus, .form-group select:focus {
+            border-color: #28a745;
+            outline: none;
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            text-decoration: none;
+            display: inline-block;
+            margin: 10px 5px;
+        }
+        .btn:hover {
+            background: #1e7e34;
+        }
+        .btn-secondary {
+            background: #6c757d;
+        }
+        .btn-secondary:hover {
+            background: #545b62;
+        }
+        .alert {
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        .alert-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 2px solid #ffeaa7;
+        }
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 2px solid #bee5eb;
+        }
+        .help-text {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 5px;
+        }
+        .required {
+            color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🆕 Create Global Fee Configuration</h1>
+            <p>This configuration will apply to ALL customers</p>
+        </div>
+
+        <div class="alert alert-warning">
+            <strong>⚠️ Important:</strong> This configuration will apply to ALL customers. 
+            Creating a new configuration will automatically deactivate any existing one.
+        </div>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label for="name">Configuration Name <span class="required">*</span></label>
+                <input type="text" id="name" name="name" value="Other Bank Transfer Fee" required>
+                <div class="help-text">Give this configuration a descriptive name</div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="base_fee">Base Fee Amount (₦) <span class="required">*</span></label>
+                    <input type="number" id="base_fee" name="base_fee" step="0.01" min="0" value="10.00" required>
+                    <div class="help-text">Fee charged to ALL customers (before waivers)</div>
+                </div>
+                <div class="form-group">
+                    <label for="min_amount_for_fee">Minimum Amount for Fee (₦)</label>
+                    <input type="number" id="min_amount_for_fee" name="min_amount_for_fee" step="0.01" min="0" value="100.00">
+                    <div class="help-text">Transfers below this amount are free</div>
+                </div>
+            </div>
+
+            <div class="alert alert-info">
+                <strong>📊 Free Transfer Allowances:</strong> These limits apply to each individual customer
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="free_transfers_per_day">Free Transfers per Day</label>
+                    <input type="number" id="free_transfers_per_day" name="free_transfers_per_day" min="0" value="3">
+                    <div class="help-text">Number of free transfers each customer gets per day</div>
+                </div>
+                <div class="form-group">
+                    <label for="free_transfers_per_month">Free Transfers per Month</label>
+                    <input type="number" id="free_transfers_per_month" name="free_transfers_per_month" min="0" value="10">
+                    <div class="help-text">Number of free transfers each customer gets per month</div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="max_daily_free_amount">Maximum Daily Free Amount (₦)</label>
+                <input type="number" id="max_daily_free_amount" name="max_daily_free_amount" step="0.01" min="0" value="50000.00">
+                <div class="help-text">Maximum total amount per customer per day for free transfers</div>
+            </div>
+
+            <div class="alert alert-info">
+                <strong>🏦 Fee Collection Account:</strong> ALL customer fees will be credited to this account
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="fee_gl_no">Fee GL Number <span class="required">*</span></label>
+                    <input type="text" id="fee_gl_no" name="fee_gl_no" required>
+                    <div class="help-text">GL where ALL customer fees are credited</div>
+                </div>
+                <div class="form-group">
+                    <label for="fee_ac_no">Fee Account Number <span class="required">*</span></label>
+                    <input type="text" id="fee_ac_no" name="fee_ac_no" required>
+                    <div class="help-text">Account where ALL customer fees are credited</div>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 30px;">
+                <button type="submit" class="btn">
+                    ✅ Create Configuration (Apply to ALL Customers)
+                </button>
+                <a href="{% url 'fee_management_dashboard' %}" class="btn btn-secondary">
+                    ❌ Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        // Add some client-side validation
+        document.querySelector('form').addEventListener('submit', function(e) {
+            const baseFee = document.getElementById('base_fee').value;
+            const feeGl = document.getElementById('fee_gl_no').value;
+            const feeAc = document.getElementById('fee_ac_no').value;
+            
+            if (!feeGl || !feeAc) {
+                alert('Fee GL Number and Account Number are required!');
+                e.preventDefault();
+                return;
+            }
+            
+            if (parseFloat(baseFee) < 0) {
+                alert('Base fee cannot be negative!');
+                e.preventDefault();
+                return;
+            }
+            
+            if (!confirm('This configuration will apply to ALL customers. Are you sure?')) {
+                e.preventDefault();
+                return;
+            }
+        });
+    </script>
+</body>
+</html>

@@ -99,7 +99,7 @@
 
                     <form method="POST" enctype="multipart/form-data" action="{% url 'login' %}">
                         {% csrf_token %}
-                        <input class="form-control mt-5" type="email" name="email" placeholder="Enter Email Address" required>
+                        <input class="form-control mt-5" type="text" name="email" placeholder="Enter Email Address" required>
                         <input class="form-control mt-3" type="password" name="password" placeholder="Enter Password" required>
                         <button type="submit" class="btn w-100 btn-danger mt-4 shadow-sm">Login</button>
                     </form><br>
