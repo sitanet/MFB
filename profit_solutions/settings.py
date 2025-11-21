@@ -183,10 +183,90 @@ WSGI_APPLICATION = 'profit_solutions.wsgi.application'
 
 
 AUTHENTICATION_BACKENDS = [
-    'accounts.backends.EmailBackend',  # MUST match your backend path exactly
-    # 'django.contrib.auth.backends.ModelBackend',  # optional fallback
+    'accounts.backends.EmailBackend',
 ]
 
+
+
+
+
+
+# profit_solutions/settings.py - VAS configurations using your environment pattern
+
+import os
+
+# 🆕 VAS API Configuration - Using your os.getenv pattern
+VAS_API_BASE_URL = os.getenv("VAS_API_BASE_URL", "https://api.your-vas-provider.com").strip()
+VAS_API_KEY = os.getenv("VAS_API_KEY", "").strip()
+VAS_API_SECRET = os.getenv("VAS_API_SECRET", "").strip()
+
+# VAS Service Settings - Following your pattern
+VAS_DEFAULT_AIRTIME_CHARGE = float(os.getenv("VAS_DEFAULT_AIRTIME_CHARGE", "10.00").strip())
+VAS_DEFAULT_DATA_CHARGE_PERCENT = float(os.getenv("VAS_DEFAULT_DATA_CHARGE_PERCENT", "1.0").strip())
+VAS_DEFAULT_CASHBACK_PERCENT = float(os.getenv("VAS_DEFAULT_CASHBACK_PERCENT", "0.5").strip())
+VAS_MINIMUM_AIRTIME_AMOUNT = float(os.getenv("VAS_MINIMUM_AIRTIME_AMOUNT", "50.00").strip())
+VAS_MAXIMUM_AIRTIME_AMOUNT = float(os.getenv("VAS_MAXIMUM_AIRTIME_AMOUNT", "500000.00").strip())
+VAS_TRANSACTION_TIMEOUT = int(os.getenv("VAS_TRANSACTION_TIMEOUT", "300").strip())
+VAS_AUTO_REVERSAL_ENABLED = os.getenv("VAS_AUTO_REVERSAL_ENABLED", "True").strip().lower() == "true"
+VAS_ENABLE_EXTERNAL_API_CALLS = os.getenv("VAS_ENABLE_EXTERNAL_API_CALLS", "False").strip().lower() == "true"
+
+# VAS Settings Dictionary
+VAS_SETTINGS = {
+    'DEFAULT_AIRTIME_CHARGE': VAS_DEFAULT_AIRTIME_CHARGE,
+    'DEFAULT_DATA_CHARGE_PERCENT': VAS_DEFAULT_DATA_CHARGE_PERCENT,
+    'DEFAULT_CASHBACK_PERCENT': VAS_DEFAULT_CASHBACK_PERCENT,
+    'MINIMUM_AIRTIME_AMOUNT': VAS_MINIMUM_AIRTIME_AMOUNT,
+    'MAXIMUM_AIRTIME_AMOUNT': VAS_MAXIMUM_AIRTIME_AMOUNT,
+    'TRANSACTION_TIMEOUT': VAS_TRANSACTION_TIMEOUT,
+    'AUTO_REVERSAL_ENABLED': VAS_AUTO_REVERSAL_ENABLED,
+    'ENABLE_EXTERNAL_API_CALLS': VAS_ENABLE_EXTERNAL_API_CALLS,
+}
+
+# Add VAS logging to your existing LOGGING configuration
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'vas_file': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': 'logs/vas.log',
+            'formatter': 'verbose',
+        },
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+        },
+        # ... your existing handlers ...
+    },
+    'loggers': {
+        'api.vas_services': {
+            'handlers': ['vas_file', 'console'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'api.vas_views': {
+            'handlers': ['vas_file', 'console'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        # ... your existing loggers ...
+    },
+}
+
+# Create logs directory if it doesn't exist
+os.makedirs('logs', exist_ok=True)
 
 
 # settings.py

@@ -183,6 +183,7 @@ urlpatterns = [
     
     # Reports and Analytics
     path('ao/dashboard/stats/', DashboardStatsView.as_view(), name='ao-dashboard-stats'),
+    
     # Router (include at the end)
     path('', include(router.urls)),
 ]

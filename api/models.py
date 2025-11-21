@@ -457,3 +457,281 @@ class GlobalTransferFeeTransaction(models.Model):
     def __str__(self):
         status = "WAIVED" if self.was_waived else f"₦{self.applied_fee_amount}"
         return f"{self.customer_id} - {self.transfer_reference} - {status}"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Add these imports at the top of api/models.py
+from django.db import models
+from django.utils import timezone
+from decimal import Decimal
+import uuid
+
+# Add these VAS models to your existing api/models.py file
+
+class VASProvider(models.Model):
+    """VAS service providers (MTN, AIRTEL, GLO, etc.)"""
+    name = models.CharField(max_length=50, unique=True)
+    code = models.CharField(max_length=20, unique=True)
+    is_active = models.BooleanField(default=True)
+    api_endpoint = models.URLField(blank=True, null=True)
+    api_key = models.CharField(max_length=255, blank=True, null=True)
+    logo_url = models.URLField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'vas_providers'
+
+    def __str__(self):
+        return self.name
+
+
+class DataPlan(models.Model):
+    """Available data plans for each provider"""
+    PLAN_TYPES = [
+        ('HOT', 'Hot Deals'),
+        ('DAILY', 'Daily Plans'),
+        ('WEEKLY', 'Weekly Plans'),
+        ('MONTHLY', 'Monthly Plans'),
+        ('XTRAVALUE', 'XtraValue Plans'),
+    ]
+    
+    provider = models.ForeignKey(VASProvider, on_delete=models.CASCADE, related_name='data_plans')
+    plan_id = models.CharField(max_length=50)  # External API plan ID
+    name = models.CharField(max_length=100)  # e.g., "1GB"
+    description = models.TextField(blank=True)
+    validity = models.CharField(max_length=50)  # e.g., "30 Days"
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    plan_type = models.CharField(max_length=20, choices=PLAN_TYPES, default='MONTHLY')
+    is_hot_deal = models.BooleanField(default=False)
+    bonus_description = models.CharField(max_length=100, blank=True)  # e.g., "2GB+5mins"
+    cashback_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=0.00)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'vas_data_plans'
+        unique_together = ['provider', 'plan_id']
+
+    def __str__(self):
+        return f"{self.provider.name} - {self.name} ({self.validity})"
+
+    @property
+    def cashback_amount(self):
+        """Calculate cashback amount based on price"""
+        return (self.price * self.cashback_percentage) / 100
+
+
+class VASTransaction(models.Model):
+    """VAS transaction records"""
+    TRANSACTION_TYPES = [
+        ('AIRTIME', 'Airtime Top-up'),
+        ('DATA', 'Data Purchase'),
+        ('ELECTRICITY', 'Electricity Bill'),
+        ('CABLE_TV', 'Cable TV'),
+        ('INTERNET', 'Internet Bill'),
+        ('WATER', 'Water Bill'),
+        ('BETTING', 'Betting/Gaming'),
+        ('INSURANCE', 'Insurance Premium'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
+        ('PROCESSING', 'Processing'),
+        ('SUCCESS', 'Successful'),
+        ('FAILED', 'Failed'),
+        ('REVERSED', 'Reversed'),
+    ]
+
+    # Basic transaction info
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    transaction_reference = models.CharField(max_length=50, unique=True)
+    transaction_type = models.CharField(max_length=20, choices=TRANSACTION_TYPES)
+    
+    # Customer info
+    customer = models.ForeignKey('customers.Customer', on_delete=models.CASCADE, related_name='vas_transactions')
+    phone_number = models.CharField(max_length=20)
+    
+    # Provider info
+    provider = models.ForeignKey(VASProvider, on_delete=models.SET_NULL, null=True, blank=True)
+    network = models.CharField(max_length=20, blank=True)  # Detected network
+    
+    # Financial info
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    charges = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    total_amount = models.DecimalField(max_digits=12, decimal_places=2)
+    cashback_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    
+    # Transaction details
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    external_reference = models.CharField(max_length=100, blank=True)  # External API reference
+    data_plan = models.ForeignKey(DataPlan, on_delete=models.SET_NULL, null=True, blank=True)
+    data_bundle = models.CharField(max_length=50, blank=True)  # e.g., "1GB"
+    
+    # Metadata
+    api_response = models.JSONField(blank=True, null=True)  # Store full API response
+    error_message = models.TextField(blank=True)
+    debit_account = models.CharField(max_length=20, blank=True)  # Account debited
+    memtrans_reference = models.CharField(max_length=50, blank=True)  # Memtrans ref
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    completed_at = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        db_table = 'vas_transactions'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.transaction_type} - {self.phone_number} - ₦{self.amount}"
+
+    @property
+    def is_success(self):
+        return self.status == 'SUCCESS'
+
+    @property
+    def is_failed(self):
+        return self.status == 'FAILED'
+
+    @property
+    def is_pending(self):
+        return self.status in ['PENDING', 'PROCESSING']
+
+    def save(self, *args, **kwargs):
+        if not self.transaction_reference:
+            self.transaction_reference = self.generate_reference()
+        if not self.total_amount:
+            self.total_amount = self.amount + self.charges
+        super().save(*args, **kwargs)
+
+    def generate_reference(self):
+        """Generate unique transaction reference"""
+        prefix = self.transaction_type[:3].upper()
+        timestamp = timezone.now().strftime('%Y%m%d%H%M%S')
+        return f"{prefix}{timestamp}{str(uuid.uuid4())[:8].upper()}"
+
+
+class VASCharges(models.Model):
+    """VAS service charges configuration"""
+    transaction_type = models.CharField(max_length=20, choices=VASTransaction.TRANSACTION_TYPES, unique=True)
+    fixed_charge = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    percentage_charge = models.DecimalField(max_digits=5, decimal_places=2, default=0.00)
+    minimum_charge = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    maximum_charge = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    cashback_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=0.00)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'vas_charges'
+
+    def __str__(self):
+        return f"{self.get_transaction_type_display()} Charges"
+
+    def calculate_charge(self, amount):
+        """Calculate total charge for given amount"""
+        percentage_charge = (amount * self.percentage_charge) / 100
+        total_charge = self.fixed_charge + percentage_charge
+        
+        if self.minimum_charge > 0:
+            total_charge = max(total_charge, self.minimum_charge)
+        if self.maximum_charge > 0:
+            total_charge = min(total_charge, self.maximum_charge)
+            
+        return total_charge
+
+    def calculate_cashback(self, amount):
+        """Calculate cashback for given amount"""
+        return (amount * self.cashback_percentage) / 100
+
+
+class BillsCategory(models.Model):
+    """Bills payment categories"""
+    name = models.CharField(max_length=50, unique=True)
+    code = models.CharField(max_length=20, unique=True)
+    description = models.TextField(blank=True)
+    icon = models.CharField(max_length=50, blank=True)  # Icon name for frontend
+    is_active = models.BooleanField(default=True)
+    sort_order = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'vas_bills_categories'
+        ordering = ['sort_order', 'name']
+
+    def __str__(self):
+        return self.name
+
+
+class BillsBiller(models.Model):
+    """Bills payment service providers"""
+    category = models.ForeignKey(BillsCategory, on_delete=models.CASCADE, related_name='billers')
+    name = models.CharField(max_length=100)
+    code = models.CharField(max_length=50, unique=True)
+    description = models.TextField(blank=True)
+    logo_url = models.URLField(blank=True, null=True)
+    api_identifier = models.CharField(max_length=100, blank=True)  # External API ID
+    is_active = models.BooleanField(default=True)
+    minimum_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    maximum_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    charges = models.JSONField(blank=True, null=True)  # Flexible charge structure
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'vas_bills_billers'
+        ordering = ['name']
+
+    def __str__(self):
+        return f"{self.category.name} - {self.name}"
+
+
+class VASTokenCache(models.Model):
+    """Cache for external API tokens"""
+    provider = models.CharField(max_length=50, unique=True)
+    access_token = models.TextField()
+    refresh_token = models.TextField(blank=True)
+    expires_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'vas_token_cache'
+
+    def __str__(self):
+        return f"{self.provider} Token"
+
+    @property
+    def is_expired(self):
+        return timezone.now() >= self.expires_at
+
+    @property
+    def expires_soon(self):
+        """Check if token expires within 10 minutes"""
+        return timezone.now() >= (self.expires_at - timezone.timedelta(minutes=10))

@@ -35,6 +35,9 @@ urlpatterns = [
     # path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
         # end api
 
+
+    path('vas/', include('api.vas_urls')),
+
     path('accounts_admin/', include('accounts_admin.urls')),
     path('company/', include('company.urls')),
     path('accounts/', include('accounts.urls')),
