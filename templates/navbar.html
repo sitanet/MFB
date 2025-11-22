@@ -109,12 +109,19 @@
                             <i class="fas fa-chart-bar" style="color: blue;"></i><span>Reports</span>
                       </a>
                       <ul class="collapse list-unstyled" id="reports">
-                            <li><a href="{% url 'front_office_report' %}"><span>Front Office Report</span></a></li>
-                            <li><a href="{% url 'back_office_report' %}"><span>Back Office Report</span></a>
+                            <li><a href="{% url 'front_office_report' %}">><span>Front Office Report</span></a></li>
+                            <li><a href="{% url 'back_office_report' %}">><span>Back Office Report</span></a>
                             </li>
                             
-                            </li>
                       </ul>
+                </li>
+
+                <!-- CBN Returns - Standalone Navigation Item -->
+                <li>
+                  <a href="{% url 'cbn_returns' %}">
+                    <i class="fas fa-file-alt" style="color: #e74c3c;"></i> 
+                    <span>CBN Returns</span>
+                  </a>
                 </li>
 
                 <li>
@@ -157,6 +164,14 @@
                       </a>
                   
                 </li>
+
+                <!-- Add this as a standalone navigation item -->
+                        <li>
+                        <a href="{% url 'audit_trail:dashboard' %}">
+                        <i class="fas fa-shield-alt" style="color: #9b59b6;"></i> 
+                        <span>Audit Trail</span>
+                        </a>
+                        </li>
 
 
 

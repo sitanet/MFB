@@ -1,0 +1,1108 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block content %}
+<style>
+:root {
+    /* Orange & Green Theme - matching project colors */
+    --primary-orange: #f97316;
+    --primary-orange-dark: #ea580c;
+    --primary-green: #16a34a;
+    --primary-green-dark: #15803d;
+    --success: #22c55e;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --info: #3b82f6;
+    --light: #f8fafc;
+    --dark: #0f172a;
+    --gray-100: #f1f5f9;
+    --gray-200: #e2e8f0;
+    --gray-300: #cbd5e1;
+    --gray-400: #94a3b8;
+    --gray-500: #64748b;
+    --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --card-hover-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.list-container {
+    background: linear-gradient(135deg, #f0fdf4 0%, #fff7ed 100%);
+    min-height: 100vh;
+    padding: 1.5rem 0;
+}
+
+/* Header Section */
+.list-header {
+    background: linear-gradient(135deg, var(--primary-orange) 0%, var(--primary-green) 100%);
+    border-radius: 20px;
+    padding: 3rem 2rem;
+    margin-bottom: 2rem;
+    box-shadow: var(--card-shadow);
+    color: white;
+    position: relative;
+    overflow: hidden;
+}
+
+.list-header::before {
+    content: "";
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 70%);
+    transform: rotate(30deg);
+}
+
+.list-header h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    position: relative;
+    z-index: 2;
+}
+
+.list-header p {
+    font-size: 1.125rem;
+    opacity: 0.9;
+    position: relative;
+    z-index: 2;
+    margin-bottom: 0;
+}
+
+.list-header .header-icon {
+    position: absolute;
+    top: 2rem;
+    right: 2rem;
+    font-size: 4rem;
+    opacity: 0.2;
+    z-index: 1;
+}
+
+.results-counter {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 0.5rem 1rem;
+    border-radius: 50px;
+    font-weight: 600;
+    display: inline-block;
+    margin-top: 1rem;
+    position: relative;
+    z-index: 2;
+}
+
+/* Filter Section */
+.filter-card {
+    background: white;
+    border-radius: 20px;
+    box-shadow: var(--card-shadow);
+    margin-bottom: 2rem;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.filter-card:hover {
+    box-shadow: var(--card-hover-shadow);
+}
+
+.filter-header {
+    background: linear-gradient(135deg, var(--gray-100) 0%, white 100%);
+    padding: 1.5rem 2rem;
+    border-bottom: 3px solid transparent;
+    background-clip: padding-box;
+    position: relative;
+}
+
+.filter-header::before {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--primary-orange), var(--primary-green));
+}
+
+.filter-header h3 {
+    margin: 0;
+    color: var(--dark);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-size: 1.25rem;
+}
+
+.filter-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--primary-orange), var(--primary-green));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1rem;
+}
+
+.filter-body {
+    padding: 2rem;
+}
+
+/* Enhanced Form Controls */
+.filter-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.form-group-modern {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-label-modern {
+    font-weight: 600;
+    color: var(--dark);
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.form-control-modern {
+    padding: 0.875rem 1rem;
+    border: 2px solid var(--gray-200);
+    border-radius: 12px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    background: white;
+}
+
+.form-control-modern:focus {
+    outline: none;
+    border-color: var(--primary-orange);
+    box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.1);
+}
+
+.form-control-modern:hover {
+    border-color: var(--gray-300);
+}
+
+.search-input {
+    position: relative;
+}
+
+.search-input::before {
+    content: "\f002";
+    font-family: "Font Awesome 5 Free";
+    font-weight: 900;
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--gray-400);
+    z-index: 2;
+}
+
+.search-input input {
+    padding-left: 3rem;
+}
+
+/* Action Buttons */
+.filter-actions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.modern-btn {
+    padding: 1rem 2rem;
+    border: none;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.modern-btn::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
+}
+
+.modern-btn:hover::before {
+    left: 100%;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--primary-orange), var(--primary-orange-dark));
+    color: white;
+    box-shadow: 0 4px 15px rgba(249, 115, 22, 0.4);
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(249, 115, 22, 0.5);
+    color: white;
+    text-decoration: none;
+}
+
+.btn-secondary {
+    background: var(--gray-200);
+    color: var(--dark);
+    border: 2px solid var(--gray-300);
+}
+
+.btn-secondary:hover {
+    background: var(--gray-300);
+    transform: translateY(-1px);
+    color: var(--dark);
+    text-decoration: none;
+}
+
+.btn-success {
+    background: linear-gradient(135deg, var(--success), #16a34a);
+    color: white;
+    box-shadow: 0 4px 15px rgba(34, 197, 94, 0.4);
+}
+
+.btn-success:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(34, 197, 94, 0.5);
+    color: white;
+    text-decoration: none;
+}
+
+/* Table Section */
+.table-card {
+    background: white;
+    border-radius: 20px;
+    box-shadow: var(--card-shadow);
+    overflow: hidden;
+}
+
+.table-header {
+    background: linear-gradient(135deg, var(--gray-100) 0%, white 100%);
+    padding: 2rem;
+    border-bottom: 1px solid var(--gray-200);
+    position: relative;
+}
+
+.table-header::before {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--primary-orange), var(--primary-green));
+}
+
+.table-header h3 {
+    margin: 0;
+    color: var(--dark);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 1.5rem;
+}
+
+.table-header-left {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.table-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--primary-orange), var(--primary-green));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.25rem;
+}
+
+.table-counter {
+    background: var(--info);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 50px;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+/* Enhanced Table */
+.modern-table {
+    width: 100%;
+    margin: 0;
+    background: white;
+}
+
+.modern-table thead {
+    background: var(--light);
+}
+
+.modern-table thead th {
+    padding: 1.5rem 1rem;
+    font-weight: 600;
+    color: var(--gray-500);
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    border: none;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.modern-table tbody td {
+    padding: 1.25rem 1rem;
+    border-top: 1px solid var(--gray-100);
+    vertical-align: middle;
+    font-size: 0.875rem;
+}
+
+.modern-table tbody tr {
+    transition: all 0.2s ease;
+}
+
+.modern-table tbody tr:hover {
+    background: var(--light);
+    transform: scale(1.01);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Table Cell Styling */
+.timestamp-cell {
+    color: var(--info);
+    font-weight: 500;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 0.8rem;
+}
+
+.user-cell {
+    color: var(--dark);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.user-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary-orange), var(--primary-green));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.badge-modern {
+    padding: 0.4rem 0.8rem;
+    border-radius: 50px;
+    font-weight: 600;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+}
+
+.badge-primary { background: var(--info); color: white; }
+.badge-secondary { background: var(--gray-300); color: var(--dark); }
+.badge-success { background: var(--success); color: white; }
+.badge-danger { background: var(--danger); color: white; }
+.badge-warning { background: var(--warning); color: white; }
+.badge-light { background: var(--gray-100); color: var(--gray-500); border: 1px solid var(--gray-200); }
+
+.description-cell {
+    color: var(--gray-500);
+    max-width: 250px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ip-cell {
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    color: var(--gray-400);
+    font-size: 0.8rem;
+    background: var(--gray-100);
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+    display: inline-block;
+}
+
+.action-btn {
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    border: 2px solid var(--primary-orange);
+    color: var(--primary-orange);
+    background: white;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.action-btn:hover {
+    background: var(--primary-orange);
+    color: white;
+    text-decoration: none;
+    transform: translateY(-1px);
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--gray-400);
+}
+
+.empty-state-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.3;
+}
+
+.empty-state h3 {
+    color: var(--gray-500);
+    margin-bottom: 0.5rem;
+}
+
+/* Modern Pagination */
+.pagination-modern {
+    display: flex;
+    justify-content: center;
+    padding: 2rem;
+    gap: 0.5rem;
+}
+
+.pagination-modern .page-item {
+    margin: 0;
+}
+
+.pagination-modern .page-link {
+    padding: 0.75rem 1rem;
+    border: 2px solid var(--gray-200);
+    border-radius: 10px;
+    color: var(--gray-500);
+    background: white;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    margin: 0 0.25rem;
+}
+
+.pagination-modern .page-link:hover {
+    border-color: var(--primary-orange);
+    color: var(--primary-orange);
+    transform: translateY(-1px);
+}
+
+.pagination-modern .page-item.active .page-link {
+    background: linear-gradient(135deg, var(--primary-orange), var(--primary-green));
+    border-color: var(--primary-orange);
+    color: white;
+    box-shadow: 0 4px 15px rgba(249, 115, 22, 0.4);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .list-header {
+        padding: 2rem 1.5rem;
+        text-align: center;
+    }
+    
+    .list-header h1 {
+        font-size: 2rem;
+    }
+    
+    .list-header .header-icon {
+        display: none;
+    }
+    
+    .filter-body {
+        padding: 1.5rem;
+    }
+    
+    .filter-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .filter-actions {
+        justify-content: stretch;
+    }
+    
+    .modern-btn {
+        flex: 1;
+        justify-content: center;
+    }
+    
+    .modern-table {
+        font-size: 0.8rem;
+    }
+    
+    .modern-table thead th,
+    .modern-table tbody td {
+        padding: 0.75rem 0.5rem;
+    }
+    
+    .user-cell {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.25rem;
+    }
+}
+
+/* Animation Classes */
+.fade-in {
+    animation: fadeIn 0.6s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.slide-up {
+    animation: slideUp 0.6s ease-out;
+}
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Loading States */
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.loading::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 24px;
+    height: 24px;
+    margin: -12px 0 0 -12px;
+    border: 2px solid var(--primary-orange);
+    border-radius: 50%;
+    border-top-color: transparent;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+</style>
+
+<div class="list-container">
+    <div class="container-fluid">
+        
+        <!-- Header -->
+        <div class="list-header fade-in">
+            <div class="header-icon">
+                <i class="fas fa-list"></i>
+            </div>
+            <h1><i class="fas fa-history me-3"></i>Audit Trail Logs</h1>
+            <p>Browse, filter, and analyze comprehensive audit trail records for security monitoring and compliance tracking.</p>
+            <div class="results-counter">
+                <i class="fas fa-database me-2"></i>{{ page_obj.paginator.count|intcomma }} Total Records
+            </div>
+        </div>
+
+        <!-- Filters Section -->
+        <div class="filter-card slide-up">
+            <div class="filter-header">
+                <h3>
+                    <div class="filter-icon">
+                        <i class="fas fa-filter"></i>
+                    </div>
+                    Advanced Filters
+                </h3>
+            </div>
+            <div class="filter-body">
+                <form method="get" id="filterForm">
+                    <div class="filter-grid">
+                        <div class="form-group-modern">
+                            <label class="form-label-modern">
+                                <i class="fas fa-user me-2"></i>User
+                            </label>
+                            <select name="user" class="form-control-modern">
+                                <option value="">All Users</option>
+                                {% for user in users %}
+                                <option value="{{ user.id }}" {% if filters.user == user.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ user.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="form-group-modern">
+                            <label class="form-label-modern">
+                                <i class="fas fa-bolt me-2"></i>Action
+                            </label>
+                            <select name="action" class="form-control-modern">
+                                <option value="">All Actions</option>
+                                {% for action in actions %}
+                                <option value="{{ action.0 }}" {% if filters.action == action.0 %}selected{% endif %}>
+                                    {{ action.1 }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="form-group-modern">
+                            <label class="form-label-modern">
+                                <i class="fas fa-tags me-2"></i>Category
+                            </label>
+                            <select name="category" class="form-control-modern">
+                                <option value="">All Categories</option>
+                                {% for category in categories %}
+                                <option value="{{ category.0 }}" {% if filters.category == category.0 %}selected{% endif %}>
+                                    {{ category.1 }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="form-group-modern">
+                            <label class="form-label-modern">
+                                <i class="fas fa-calendar-alt me-2"></i>From Date
+                            </label>
+                            <input type="date" name="date_from" class="form-control-modern" value="{{ filters.date_from }}">
+                        </div>
+
+                        <div class="form-group-modern">
+                            <label class="form-label-modern">
+                                <i class="fas fa-calendar-check me-2"></i>To Date
+                            </label>
+                            <input type="date" name="date_to" class="form-control-modern" value="{{ filters.date_to }}">
+                        </div>
+
+                        <div class="form-group-modern">
+                            <label class="form-label-modern">
+                                <i class="fas fa-search me-2"></i>Search
+                            </label>
+                            <div class="search-input">
+                                <input type="text" name="search" class="form-control-modern" placeholder="Search descriptions, IPs, accounts..." value="{{ filters.search }}">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="filter-actions">
+                        <button type="submit" class="modern-btn btn-primary">
+                            <i class="fas fa-search me-2"></i>Apply Filters
+                        </button>
+                        <a href="{% url 'audit_trail:list' %}" class="modern-btn btn-secondary">
+                            <i class="fas fa-times me-2"></i>Clear Filters
+                        </a>
+                        <a href="{% url 'audit_trail:export_csv' %}?{{ request.GET.urlencode }}" class="modern-btn btn-success">
+                            <i class="fas fa-download me-2"></i>Export CSV
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Audit Trail Table -->
+        <div class="table-card slide-up" style="animation-delay: 0.2s;">
+            <div class="table-header">
+                <h3>
+                    <div class="table-header-left">
+                        <div class="table-icon">
+                            <i class="fas fa-table"></i>
+                        </div>
+                        Audit Entries
+                    </div>
+                    <div class="table-counter">
+                        {{ page_obj.paginator.count|intcomma }} records
+                    </div>
+                </h3>
+            </div>
+
+            {% if page_obj %}
+            <div class="table-responsive">
+                <table class="modern-table">
+                    <thead>
+                        <tr>
+                            <th><i class="fas fa-clock me-2"></i>Timestamp</th>
+                            <th><i class="fas fa-user me-2"></i>User</th>
+                            <th><i class="fas fa-bolt me-2"></i>Action</th>
+                            <th><i class="fas fa-tags me-2"></i>Category</th>
+                            <th><i class="fas fa-align-left me-2"></i>Description</th>
+                            <th><i class="fas fa-network-wired me-2"></i>IP Address</th>
+                            <th><i class="fas fa-check-circle me-2"></i>Status</th>
+                            <th><i class="fas fa-shield-alt me-2"></i>Compliance</th>
+                            <th><i class="fas fa-cogs me-2"></i>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for audit in page_obj %}
+                        <tr>
+                            <td>
+                                <div class="timestamp-cell">
+                                    {{ audit.timestamp|date:"M d" }}<br>
+                                    <small>{{ audit.timestamp|time:"H:i:s" }}</small>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="user-cell">
+                                    <div class="user-icon">
+                                        {{ audit.user_name_only|default:"S"|first|upper }}
+                                    </div>
+                                    <div>
+                                        {{ audit.user_name_only|default:"System" }}
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge-modern badge-primary">
+                                    {{ audit.get_action_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge-modern badge-secondary">
+                                    {{ audit.get_category_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="description-cell" title="{{ audit.description }}">
+                                    {{ audit.description|truncatechars:50 }}
+                                </div>
+                            </td>
+                            <td>
+                                <div class="ip-cell">
+                                    {{ audit.ip_address|default:"-" }}
+                                </div>
+                            </td>
+                            <td>
+                                {% if audit.success %}
+                                    <span class="badge-modern badge-success">
+                                        <i class="fas fa-check me-1"></i>Success
+                                    </span>
+                                {% else %}
+                                    <span class="badge-modern badge-danger">
+                                        <i class="fas fa-times me-1"></i>Failed
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if audit.compliance_level == 'CRITICAL' %}
+                                    <span class="badge-modern badge-danger">
+                                        <i class="fas fa-exclamation-triangle me-1"></i>Critical
+                                    </span>
+                                {% elif audit.compliance_level == 'HIGH' %}
+                                    <span class="badge-modern badge-warning">
+                                        <i class="fas fa-exclamation me-1"></i>High
+                                    </span>
+                                {% elif audit.compliance_level == 'MEDIUM' %}
+                                    <span class="badge-modern badge-primary">
+                                        <i class="fas fa-info me-1"></i>Medium
+                                    </span>
+                                {% else %}
+                                    <span class="badge-modern badge-light">
+                                        <i class="fas fa-minus me-1"></i>Low
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'audit_trail:detail' audit.id %}" class="action-btn">
+                                    <i class="fas fa-eye me-1"></i>View
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if page_obj.has_other_pages %}
+            <nav aria-label="Audit trail pagination" class="pagination-modern">
+                {% if page_obj.has_previous %}
+                    <div class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}&{{ request.GET.urlencode }}">
+                            <i class="fas fa-chevron-left me-1"></i>Previous
+                        </a>
+                    </div>
+                {% endif %}
+                
+                {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                        <div class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </div>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <div class="page-item">
+                            <a class="page-link" href="?page={{ num }}&{{ request.GET.urlencode }}">{{ num }}</a>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if page_obj.has_next %}
+                    <div class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}&{{ request.GET.urlencode }}">
+                            Next<i class="fas fa-chevron-right ms-1"></i>
+                        </a>
+                    </div>
+                {% endif %}
+            </nav>
+            {% endif %}
+            
+            {% else %}
+            <div class="empty-state">
+                <div class="empty-state-icon">
+                    <i class="fas fa-search"></i>
+                </div>
+                <h3>No Audit Entries Found</h3>
+                <p>No records match your current filter criteria. Try adjusting your filters or clearing them to see all entries.</p>
+                <a href="{% url 'audit_trail:list' %}" class="modern-btn btn-primary mt-3">
+                    <i class="fas fa-refresh me-2"></i>Clear Filters
+                </a>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="filter-card slide-up" style="animation-delay: 0.4s;">
+            <div class="filter-body">
+                <div class="filter-actions">
+                    <a href="{% url 'audit_trail:dashboard' %}" class="modern-btn btn-secondary">
+                        <i class="fas fa-chart-line me-2"></i>Dashboard
+                    </a>
+                    <a href="{% url 'audit_trail:statistics' %}" class="modern-btn btn-secondary">
+                        <i class="fas fa-chart-bar me-2"></i>Statistics
+                    </a>
+                    <a href="{% url 'audit_trail:configuration' %}" class="modern-btn btn-secondary">
+                        <i class="fas fa-cogs me-2"></i>Configuration
+                    </a>
+                    <a href="{% url 'audit_trail:alerts' %}" class="modern-btn btn-secondary">
+                        <i class="fas fa-bell me-2"></i>Alerts
+                    </a>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- JavaScript for Enhanced Interactions -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize form enhancements
+    initializeFormEnhancements();
+    
+    // Add table row click handlers
+    addTableInteractions();
+    
+    // Auto-submit form on filter changes (with debouncing)
+    addAutoFilter();
+    
+    // Add keyboard shortcuts
+    addKeyboardShortcuts();
+});
+
+function initializeFormEnhancements() {
+    // Add loading state to form submission
+    const form = document.getElementById('filterForm');
+    if (form) {
+        form.addEventListener('submit', function() {
+            showLoadingState();
+        });
+    }
+    
+    // Enhance date inputs
+    const dateInputs = document.querySelectorAll('input[type="date"]');
+    dateInputs.forEach(input => {
+        input.addEventListener('change', function() {
+            if (this.value) {
+                this.classList.add('has-value');
+            } else {
+                this.classList.remove('has-value');
+            }
+        });
+    });
+}
+
+function addTableInteractions() {
+    // Add click to view functionality
+    const tableRows = document.querySelectorAll('.modern-table tbody tr');
+    tableRows.forEach(row => {
+        row.addEventListener('click', function(e) {
+            // Don't trigger if clicking on action button
+            if (e.target.closest('.action-btn')) return;
+            
+            const viewLink = this.querySelector('.action-btn');
+            if (viewLink) {
+                window.location.href = viewLink.href;
+            }
+        });
+        
+        // Add hover effect hint
+        row.style.cursor = 'pointer';
+        row.title = 'Click to view details';
+    });
+}
+
+function addAutoFilter() {
+    let timeout;
+    const inputs = document.querySelectorAll('.form-control-modern');
+    
+    inputs.forEach(input => {
+        input.addEventListener('input', function() {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => {
+                if (this.type !== 'submit' && this.value.length > 2) {
+                    // Auto-submit for search inputs with more than 2 characters
+                    if (this.name === 'search') {
+                        document.getElementById('filterForm').submit();
+                    }
+                }
+            }, 1000);
+        });
+    });
+}
+
+function addKeyboardShortcuts() {
+    document.addEventListener('keydown', function(e) {
+        // Ctrl/Cmd + K to focus search
+        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+            e.preventDefault();
+            const searchInput = document.querySelector('input[name="search"]');
+            if (searchInput) {
+                searchInput.focus();
+                searchInput.select();
+            }
+        }
+        
+        // Escape to clear search
+        if (e.key === 'Escape') {
+            const searchInput = document.querySelector('input[name="search"]');
+            if (searchInput && searchInput === document.activeElement) {
+                searchInput.value = '';
+                searchInput.blur();
+            }
+        }
+    });
+}
+
+function showLoadingState() {
+    const submitBtn = document.querySelector('button[type="submit"]');
+    const tableCard = document.querySelector('.table-card');
+    
+    if (submitBtn) {
+        const originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Loading...';
+        submitBtn.disabled = true;
+        
+        // Re-enable after timeout
+        setTimeout(() => {
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+        }, 5000);
+    }
+    
+    if (tableCard) {
+        tableCard.classList.add('loading');
+        
+        setTimeout(() => {
+            tableCard.classList.remove('loading');
+        }, 5000);
+    }
+}
+
+// Add ripple effects to buttons
+document.querySelectorAll('.modern-btn').forEach(button => {
+    button.addEventListener('click', function(e) {
+        const rect = this.getBoundingClientRect();
+        const ripple = document.createElement('div');
+        const size = Math.max(rect.width, rect.height);
+        const x = e.clientX - rect.left - size / 2;
+        const y = e.clientY - rect.top - size / 2;
+        
+        ripple.style.cssText = `
+            position: absolute;
+            width: ${size}px;
+            height: ${size}px;
+            left: ${x}px;
+            top: ${y}px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            transform: scale(0);
+            animation: ripple 0.6s ease-out;
+            pointer-events: none;
+        `;
+        
+        this.appendChild(ripple);
+        
+        setTimeout(() => {
+            ripple.remove();
+        }, 600);
+    });
+});
+
+// Add ripple animation CSS
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes ripple {
+        to {
+            transform: scale(4);
+            opacity: 0;
+        }
+    }
+`;
+document.head.appendChild(style);
+
+// Show filter summary
+function updateFilterSummary() {
+    const form = document.getElementById('filterForm');
+    const formData = new FormData(form);
+    let activeFilters = 0;
+    
+    for (let [key, value] of formData.entries()) {
+        if (value && value.trim() !== '') {
+            activeFilters++;
+        }
+    }
+    
+    const counter = document.querySelector('.results-counter');
+    if (counter && activeFilters > 0) {
+        counter.innerHTML = `
+            <i class="fas fa-filter me-2"></i>${activeFilters} Filter${activeFilters > 1 ? 's' : ''} Active
+            <i class="fas fa-database ms-3 me-2"></i>{{ page_obj.paginator.count|intcomma }} Results
+        `;
+    }
+}
+
+// Call on page load
+updateFilterSummary();
+</script>
+
+{% endblock %}

@@ -21,6 +21,8 @@ import tempfile
 import os
 from django.contrib.auth.decorators import login_required, user_passes_test
 # import cairo
+from django.views import View
+
 
 def generate_pdf(request, id):
     customer = get_object_or_404(Loans, id=id)
@@ -397,6 +399,23 @@ from django.db.models import Q
 
 from django.db.models import F
 from django.db.models.functions import Now
+
+# Additional imports for export functionality
+import csv
+import io
+from datetime import datetime
+from django.http import HttpResponse
+from django.template.loader import render_to_string
+from django.template.loader import get_template
+from xhtml2pdf import pisa
+from django.http import HttpResponse
+
+from docx import Document
+from docx.shared import Inches
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+import pandas as pd
+import tempfile
+import os
 # ...
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
@@ -407,94 +426,99 @@ def generate_statement_view(request):
 
     if branch.session_status == 'Closed':
         return HttpResponse("You can not post any transaction. Session is closed.") 
-    else:
-        if request.method == 'POST':
-            form = StatementForm(request.POST)
-            if form.is_valid():
-                start_date = form.cleaned_data['start_date']
-                end_date = form.cleaned_data['end_date']
-                gl_no = form.cleaned_data['gl_no']
-                ac_no = form.cleaned_data['ac_no']
+    
+    # Handle export requests
+    export_format = request.GET.get('export')
+    if export_format and request.GET.get('start_date'):
+        return handle_statement_export(request, export_format)
+    
+    if request.method == 'POST':
+        form = StatementForm(request.POST)
+        if form.is_valid():
+            start_date = form.cleaned_data['start_date']
+            end_date = form.cleaned_data['end_date']
+            gl_no = form.cleaned_data['gl_no']
+            ac_no = form.cleaned_data['ac_no']
 
-                # Retrieve transactions within the specified date range
-                transactions = Memtrans.objects.filter(
-                    ses_date__range=[start_date, end_date],
-                    gl_no=gl_no,
-                    ac_no=ac_no
-                ).exclude(error='H').order_by('ses_date', 'trx_no').annotate(
-                    current_time=Now()
-                )
+            # Retrieve transactions within the specified date range
+            transactions = Memtrans.objects.filter(
+                ses_date__range=[start_date, end_date],
+                gl_no=gl_no,
+                ac_no=ac_no
+            ).exclude(error='H').order_by('ses_date', 'trx_no').annotate(
+                current_time=Now()
+            )
 
-                # Opening balance
-                opening_balance = Memtrans.objects.filter(
-                    ses_date__lt=start_date,
-                    gl_no=gl_no,
-                    ac_no=ac_no
-                ).exclude(error='H').aggregate(
-                    opening_balance=Sum('amount')
-                )['opening_balance'] or 0
+            # Opening balance
+            opening_balance = Memtrans.objects.filter(
+                ses_date__lt=start_date,
+                gl_no=gl_no,
+                ac_no=ac_no
+            ).exclude(error='H').aggregate(
+                opening_balance=Sum('amount')
+            )['opening_balance'] or 0
 
-                # Closing balance
-                closing_balance = Memtrans.objects.filter(
-                    ses_date__lte=end_date,
-                    gl_no=gl_no,
-                    ac_no=ac_no
-                ).exclude(error='H').aggregate(
-                    closing_balance=Sum('amount')
-                )['closing_balance'] or 0
+            # Closing balance
+            closing_balance = Memtrans.objects.filter(
+                ses_date__lte=end_date,
+                gl_no=gl_no,
+                ac_no=ac_no
+            ).exclude(error='H').aggregate(
+                closing_balance=Sum('amount')
+            )['closing_balance'] or 0
 
-                # Debit & Credit
-                debit_amount = transactions.filter(type='D').aggregate(
-                    debit_amount=Sum('amount')
-                )['debit_amount'] or 0
+            # Debit & Credit
+            debit_amount = transactions.filter(type='D').aggregate(
+                debit_amount=Sum('amount')
+            )['debit_amount'] or 0
 
-                credit_amount = transactions.filter(type='C').aggregate(
-                    credit_amount=Sum('amount')
-                )['credit_amount'] or 0
+            credit_amount = transactions.filter(type='C').aggregate(
+                credit_amount=Sum('amount')
+            )['credit_amount'] or 0
 
-                # Customer name
-                first_transaction = transactions.first()
-                full_name = (
-                    first_transaction.customer.get_full_name()
-                    if first_transaction and first_transaction.customer
-                    else ''
-                )
+            # Customer name
+            first_transaction = transactions.first()
+            full_name = (
+                first_transaction.customer.get_full_name()
+                if first_transaction and first_transaction.customer
+                else ''
+            )
 
-                # Statement details
-                statement_data = []
-                running_balance = opening_balance
-                for transaction in transactions:
-                    running_balance += transaction.amount if transaction.type == 'D' else -transaction.amount
-                    entry = {
-                        'date': transaction.ses_date,
-                        'trx_no': transaction.trx_no,
-                        'description': transaction.description,
-                        'debit': transaction.amount if transaction.type == 'D' else 0,
-                        'credit': transaction.amount if transaction.type == 'C' else 0,
-                        'running_balance': running_balance,
-                    }
-                    statement_data.append(entry)
-
-                context = {
-                    'start_date': start_date,
-                    'end_date': end_date,
-                    'gl_no': gl_no,
-                    'ac_no': ac_no,
-                    'opening_balance': opening_balance,
-                    'closing_balance': closing_balance,
-                    'debit_amount': debit_amount,
-                    'credit_amount': credit_amount,
-                    'statement_data': statement_data,
-                    'form': form,
-                    'full_name': full_name,
-                    'branch': branch,
-                    'company': branch.company,  # ✅ Branch must be linked to company
-                    'branch_date': branch_date,
+            # Statement details
+            statement_data = []
+            running_balance = opening_balance
+            for transaction in transactions:
+                running_balance += transaction.amount if transaction.type == 'D' else -transaction.amount
+                entry = {
+                    'date': transaction.ses_date,
+                    'trx_no': transaction.trx_no,
+                    'description': transaction.description,
+                    'debit': transaction.amount if transaction.type == 'D' else 0,
+                    'credit': transaction.amount if transaction.type == 'C' else 0,
+                    'running_balance': running_balance,
                 }
-                return render(request, 'reports/accounts/statement_of_account.html', context)
+                statement_data.append(entry)
 
-        else:
-            form = StatementForm()
+            context = {
+                'start_date': start_date,
+                'end_date': end_date,
+                'gl_no': gl_no,
+                'ac_no': ac_no,
+                'opening_balance': opening_balance,
+                'closing_balance': closing_balance,
+                'debit_amount': debit_amount,
+                'credit_amount': credit_amount,
+                'statement_data': statement_data,
+                'form': form,
+                'full_name': full_name,
+                'branch': branch,
+                'company': branch.company,  # ✅ Branch must be linked to company
+                'branch_date': branch_date,
+            }
+            return render(request, 'reports/accounts/statement_of_account.html', context)
+
+    else:
+        form = StatementForm()
 
     return render(request, 'reports/accounts/input_form.html', {
         'form': form,
@@ -502,7 +526,6 @@ def generate_statement_view(request):
         'company': branch.company,
         'branch_date': branch_date
     })
-
 
 from django.shortcuts import render
 from transactions.models import Memtrans, Account
@@ -5452,6 +5475,944 @@ def portfolio_at_risk_report_view(request):
 
 
 
+# Add these imports to your views.py
+import io
+from django.http import HttpResponse
+from django.template.loader import get_template
+from xhtml2pdf import pisa
+import pandas as pd
+from docx import Document
+from docx.shared import Inches
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+import csv
+from datetime import datetime
+
+class StatementView(View):
+    def get(self, request):
+        # Handle export requests
+        export_format = request.GET.get('export')
+        if export_format:
+            return self.handle_export(request, export_format)
+        
+        # Regular statement view logic here
+        context = {
+            'start_date': request.GET.get('start_date', ''),
+            'end_date': request.GET.get('end_date', ''),
+            'gl_no': request.GET.get('gl_no', ''),
+            'ac_no': request.GET.get('ac_no', ''),
+        }
+        return render(request, 'statement_of_account.html', context)
+    
+    def post(self, request):
+        # Handle statement generation
+        start_date = request.POST.get('start_date')
+        end_date = request.POST.get('end_date')
+        gl_no = request.POST.get('gl_no')
+        ac_no = request.POST.get('ac_no')
+        
+        # Your existing statement generation logic here
+        # ...
+        
+        context = {
+            'statement_data': statement_data,
+            'start_date': start_date,
+            'end_date': end_date,
+            'gl_no': gl_no,
+            'ac_no': ac_no,
+            'opening_balance': opening_balance,
+            'closing_balance': closing_balance,
+            'debit_amount': debit_amount,
+            'credit_amount': credit_amount,
+            # ... other context data
+        }
+        
+        return render(request, 'statement_of_account.html', context)
+    
+    def handle_export(self, request, format_type):
+        """Handle different export formats"""
+        # Get statement data
+        statement_data = self.get_statement_data(request)
+        
+        if format_type == 'pdf':
+            return self.export_pdf(request, statement_data)
+        elif format_type == 'word':
+            return self.export_word(request, statement_data)
+        elif format_type == 'excel':
+            return self.export_excel(request, statement_data)
+        elif format_type == 'csv':
+            return self.export_csv(request, statement_data)
+        else:
+            return HttpResponse('Invalid export format', status=400)
+    
+    def get_statement_data(self, request):
+        """Get statement data for export"""
+        start_date = request.GET.get('start_date')
+        end_date = request.GET.get('end_date')
+        gl_no = request.GET.get('gl_no')
+        ac_no = request.GET.get('ac_no')
+        
+        # Your logic to fetch statement data
+        # This should return the same data structure as your main view
+        
+        return {
+            'statement_data': statement_data,
+            'start_date': start_date,
+            'end_date': end_date,
+            'gl_no': gl_no,
+            'ac_no': ac_no,
+            'opening_balance': opening_balance,
+            'closing_balance': closing_balance,
+            'debit_amount': debit_amount,
+            'credit_amount': credit_amount,
+            'full_name': full_name,
+            'company': company,
+            'branch': branch,
+        }
+    
+    def export_pdf(self, request, data):
+        """Export statement as PDF"""
+        template_path = 'exports/statement_pdf.html'
+        context = data
+        
+        # Create a Django response object, and specify content_type as pdf
+        response = HttpResponse(content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="statement_{data["ac_no"]}_{datetime.now().strftime("%Y%m%d")}.pdf"'
+        
+        # Find the template and render it
+        template = get_template(template_path)
+        html = template.render(context)
+        
+        # Create PDF
+        pisa_status = pisa.CreatePDF(html, dest=response)
+        
+        # If error then show some funny view
+        if pisa_status.err:
+            return HttpResponse('We had some errors <pre>' + html + '</pre>')
+        return response
+    
+    def export_word(self, request, data):
+        """Export statement as Word document"""
+        # Create a document
+        doc = Document()
+        
+        # Add title
+        title = doc.add_heading('STATEMENT OF ACCOUNT', 0)
+        title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        
+        # Add subtitle
+        subtitle = doc.add_heading(f'{data["company"].company_name.upper()} | {data["branch"].branch_name.upper()}', level=1)
+        subtitle.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        
+        # Add client info
+        doc.add_paragraph(f'Client: {data["full_name"]}')
+        doc.add_paragraph(f'GL No: {data["gl_no"]} | AC No: {data["ac_no"]}')
+        doc.add_paragraph(f'Period: {data["start_date"]} to {data["end_date"]}')
+        doc.add_paragraph('')
+        
+        # Add table
+        table = doc.add_table(rows=1, cols=6)
+        table.style = 'Table Grid'
+        
+        # Add headers
+        headers = ['Date', 'Description', 'Trx No', 'Debit', 'Credit', 'Balance']
+        header_cells = table.rows[0].cells
+        for i, header in enumerate(headers):
+            header_cells[i].text = header
+            header_cells[i].paragraphs[0].runs[0].font.bold = True
+        
+        # Add opening balance
+        row_cells = table.add_row().cells
+        row_cells[0].text = data['start_date']
+        row_cells[1].text = 'Opening Balance'
+        row_cells[2].text = '-'
+        row_cells[3].text = '-'
+        row_cells[4].text = '-'
+        row_cells[5].text = f"₦{data['opening_balance']:,.2f}"
+        
+        # Add data rows
+        for entry in data['statement_data']:
+            row_cells = table.add_row().cells
+            row_cells[0].text = entry['date'].strftime('%b %d, %Y')
+            row_cells[1].text = entry['description']
+            row_cells[2].text = entry['trx_no']
+            row_cells[3].text = f"₦{entry['debit']:,.2f}" if entry['debit'] else '-'
+            row_cells[4].text = f"₦{entry['credit']:,.2f}" if entry['credit'] else '-'
+            row_cells[5].text = f"₦{entry['running_balance']:,.2f}"
+        
+        # Add totals row
+        row_cells = table.add_row().cells
+        row_cells[0].text = ''
+        row_cells[1].text = 'TOTALS'
+        row_cells[2].text = ''
+        row_cells[3].text = f"₦{data['debit_amount']:,.2f}"
+        row_cells[4].text = f"₦{data['credit_amount']:,.2f}"
+        row_cells[5].text = f"₦{data['closing_balance']:,.2f}"
+        
+        # Make totals row bold
+        for cell in row_cells:
+            for paragraph in cell.paragraphs:
+                for run in paragraph.runs:
+                    run.font.bold = True
+        
+        # Save to response
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+        response['Content-Disposition'] = f'attachment; filename="statement_{data["ac_no"]}_{datetime.now().strftime("%Y%m%d")}.docx"'
+        
+        doc.save(response)
+        return response
+    
+    def export_excel(self, request, data):
+        """Export statement as Excel file"""
+        # Create a Pandas DataFrame
+        statement_rows = []
+        
+        # Add opening balance
+        statement_rows.append({
+            'Date': data['start_date'],
+            'Description': 'Opening Balance',
+            'Trx No': '',
+            'Debit': '',
+            'Credit': '',
+            'Balance': data['opening_balance']
+        })
+        
+        # Add statement data
+        for entry in data['statement_data']:
+            statement_rows.append({
+                'Date': entry['date'].strftime('%Y-%m-%d'),
+                'Description': entry['description'],
+                'Trx No': entry['trx_no'],
+                'Debit': entry['debit'] if entry['debit'] else '',
+                'Credit': entry['credit'] if entry['credit'] else '',
+                'Balance': entry['running_balance']
+            })
+        
+        # Add totals row
+        statement_rows.append({
+            'Date': '',
+            'Description': 'TOTALS',
+            'Trx No': '',
+            'Debit': data['debit_amount'],
+            'Credit': data['credit_amount'],
+            'Balance': data['closing_balance']
+        })
+        
+        df = pd.DataFrame(statement_rows)
+        
+        # Create Excel file in memory
+        output = io.BytesIO()
+        
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            # Write main statement
+            df.to_excel(writer, sheet_name='Statement', index=False)
+            
+            # Write summary sheet
+            summary_data = {
+                'Item': ['Opening Balance', 'Total Debits', 'Total Credits', 'Closing Balance'],
+                'Amount': [data['opening_balance'], data['debit_amount'], 
+                          data['credit_amount'], data['closing_balance']]
+            }
+            summary_df = pd.DataFrame(summary_data)
+            summary_df.to_excel(writer, sheet_name='Summary', index=False)
+            
+            # Get workbook and worksheet objects
+            workbook = writer.book
+            worksheet = writer.sheets['Statement']
+            
+            # Format headers
+            header_format = workbook.add_format({
+                'bold': True,
+                'bg_color': '#366092',
+                'font_color': 'white',
+                'align': 'center'
+            })
+            
+            # Apply header format
+            for col_num, value in enumerate(df.columns.values):
+                worksheet.write(0, col_num, value, header_format)
+        
+        output.seek(0)
+        
+        response = HttpResponse(
+            output.getvalue(),
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = f'attachment; filename="statement_{data["ac_no"]}_{datetime.now().strftime("%Y%m%d")}.xlsx"'
+        
+        return response
+    
+    def export_csv(self, request, data):
+        """Export statement as CSV file"""
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="statement_{data["ac_no"]}_{datetime.now().strftime("%Y%m%d")}.csv"'
+        
+        writer = csv.writer(response)
+        
+        # Write header info
+        writer.writerow(['STATEMENT OF ACCOUNT'])
+        writer.writerow([f'{data["company"].company_name.upper()} | {data["branch"].branch_name.upper()}'])
+        writer.writerow([f'Client: {data["full_name"]}'])
+        writer.writerow([f'GL No: {data["gl_no"]} | AC No: {data["ac_no"]}'])
+        writer.writerow([f'Period: {data["start_date"]} to {data["end_date"]}'])
+        writer.writerow([])  # Empty row
+        
+        # Write table headers
+        writer.writerow(['Date', 'Description', 'Trx No', 'Debit', 'Credit', 'Balance'])
+        
+        # Write opening balance
+        writer.writerow([
+            data['start_date'],
+            'Opening Balance',
+            '',
+            '',
+            '',
+            f"{data['opening_balance']:,.2f}"
+        ])
+        
+        # Write statement data
+        for entry in data['statement_data']:
+            writer.writerow([
+                entry['date'].strftime('%Y-%m-%d'),
+                entry['description'],
+                entry['trx_no'],
+                f"{entry['debit']:,.2f}" if entry['debit'] else '',
+                f"{entry['credit']:,.2f}" if entry['credit'] else '',
+                f"{entry['running_balance']:,.2f}"
+            ])
+        
+        # Write totals
+        writer.writerow([
+            '',
+            'TOTALS',
+            '',
+            f"{data['debit_amount']:,.2f}",
+            f"{data['credit_amount']:,.2f}",
+            f"{data['closing_balance']:,.2f}"
+        ])
+        
+        return response
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+
+@login_required
+def cbn_returns(request):
+    """Display CBN Returns dashboard with all available forms"""
+    
+    cbn_forms = [
+        {
+            'code': 'MFBR_771',
+            'title': 'Summary of Non-Performing Loans (NPL) / Classified Loans & Advances',
+            'description': 'Central Bank of Nigeria',
+            'category': 'Loan Analysis'
+        },
+        {
+            'code': 'MMFBR_762',
+            'title': 'Sectoral Analysis of Loans & Advances',
+            'description': 'Central Bank of Nigeria',
+            'category': 'Loan Analysis'
+        },
+        {
+            'code': 'MMFBR_763',
+            'title': 'Loan Structure & Maturity Profile',
+            'description': 'Central Bank of Nigeria',
+            'category': 'Loan Analysis'
+        },
+        {
+            'code': 'MMFBR_764',
+            'title': 'Interest Rate Schedule (Loan interest rates by category)',
+            'description': 'Central Bank of Nigeria',
+            'category': 'Loan Analysis'
+        },
+        {
+            'code': 'MMFBR_811',
+            'title': 'Other Assets',
+            'description': 'Central Bank of Nigeria',
+            'category': 'Assets'
+        },
+        {
+            'code': 'MMFBR_141',
+            'title': 'Other Deposits',
+            'description': 'Central Bank of Nigeria',
+            'category': 'Deposits'
+        },
+        {
+            'code': 'MMFBR_201',
+            'title': 'Deposit Structure & Maturity Profile',
+            'description': 'Central Bank of Nigeria',
+            'category': 'Deposits'
+        },
+        {
+            'code': 'MMFBR_202',
+            'title': 'Insured Deposits',
+            'description': 'Central Bank of Nigeria',
+            'category': 'Deposits'
+        },
+        {
+            'code': 'MMFBR_212',
+            'title': 'Takings from Banks in Nigeria',
+            'description': 'Central Bank of Nigeria',
+            'category': 'Takings'
+        },
+        {
+            'code': 'MMFBR_322',
+            'title': 'Takings from Other Institutions',
+            'description': 'Central Bank of Nigeria',
+            'category': 'Takings'
+        },
+        {
+            'code': 'MMFBR_451',
+            'title': 'Re-Financing Facilities',
+            'description': 'Central Bank of Nigeria',
+            'category': 'Facilities'
+        },
+        {
+            'code': 'MMFBR_501',
+            'title': 'Other Liabilities',
+            'description': 'Central Bank of Nigeria',
+            'category': 'Liabilities'
+        },
+        {
+            'code': 'MMFBR_642',
+            'title': 'Borrowings from Foreign Agencies',
+            'description': 'Central Bank of Nigeria',
+            'category': 'Borrowings'
+        },
+        {
+            'code': 'MMFBR_651',
+            'title': 'Borrowings from Other Agencies',
+            'description': 'Central Bank of Nigeria',
+            'category': 'Borrowings'
+        },
+        {
+            'code': 'MMFBR_933',
+            'title': 'Deferred Grants and Donations',
+            'description': 'Central Bank of Nigeria',
+            'category': 'Capital'
+        },
+        {
+            'code': 'MMFBR_951',
+            'title': 'Other Reserves',
+            'description': 'Central Bank of Nigeria',
+            'category': 'Capital'
+        },
+        {
+            'code': 'MMFBR_996',
+            'title': 'Off-Balance Sheet Engagements',
+            'description': 'Central Bank of Nigeria',
+            'category': 'Off-Balance Sheet'
+        },
+        {
+            'code': 'MMFBR_980',
+            'title': 'Gap Analysis (Assets vs Liabilities, maturity mismatch)',
+            'description': 'Central Bank of Nigeria',
+            'category': 'Analysis'
+        },
+        {
+            'code': 'MMFBR_I',
+            'title': 'Anti-Money Laundering and KYC (Know-Your-Customer) Schedule',
+            'description': 'Central Bank of Nigeria',
+            'category': 'Compliance'
+        }
+    ]
+    
+    context = {
+        'cbn_forms': cbn_forms,
+        'total_forms': len(cbn_forms)
+    }
+    
+    return render(request, 'cbn_returns/cbn_returns.html', context)
+
+@login_required
+def cbn_return_detail(request, form_code):
+    """Handle specific CBN return form"""
+    
+    # Dictionary mapping form codes to their details
+    form_details = {
+        'MFBR_771': {
+            'title': 'Summary of Non-Performing Loans (NPL) / Classified Loans & Advances',
+            'description': 'Generate and submit NPL classification reports',
+            'fields': ['Loan Category', 'Outstanding Amount', 'NPL Amount', 'Provision Amount']
+        },
+        'MMFBR_762': {
+            'title': 'Sectoral Analysis of Loans & Advances',
+            'description': 'Analyze loans by economic sectors',
+            'fields': ['Sector', 'Amount Disbursed', 'Outstanding Balance', 'Interest Rate']
+        },
+        # Add more form details as needed
+    }
+    
+    form_info = form_details.get(form_code, {
+        'title': 'CBN Return Form',
+        'description': 'Central Bank of Nigeria regulatory return',
+        'fields': []
+    })
+    
+    context = {
+        'form_code': form_code,
+        'form_info': form_info
+    }
+    
+    return render(request, 'cbn_returns/cbn_return_detail.html', context)
+
+
+
+def handle_statement_export(request, export_format):
+    """Handle different export formats for statement"""
+    try:
+        # Get parameters from GET request
+        start_date = request.GET.get('start_date')
+        end_date = request.GET.get('end_date') 
+        gl_no = request.GET.get('gl_no')
+        ac_no = request.GET.get('ac_no')
+        
+        if not all([start_date, end_date, gl_no, ac_no]):
+            return HttpResponse('Missing required parameters', status=400)
+            
+        # Convert string dates to date objects
+        from datetime import datetime
+        start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+        
+        # Get statement data
+        statement_data = get_statement_data_for_export(request, start_date, end_date, gl_no, ac_no)
+        
+        if export_format == 'pdf':
+            return export_statement_pdf(statement_data)
+        elif export_format == 'word':
+            return export_statement_word(statement_data)
+        elif export_format == 'excel':
+            return export_statement_excel(statement_data)
+        elif export_format == 'csv':
+            return export_statement_csv(statement_data)
+        else:
+            return HttpResponse('Invalid export format', status=400)
+            
+    except Exception as e:
+        return HttpResponse(f'Export error: {str(e)}', status=500)
+
+def get_statement_data_for_export(request, start_date, end_date, gl_no, ac_no):
+    """Get statement data for export"""
+    from transactions.models import Memtrans
+    from customers.models import Customer
+    from django.db.models import Sum
+    
+    # Get branch info
+    branch = request.user.branch
+    
+    # Retrieve transactions within the specified date range
+    transactions = Memtrans.objects.filter(
+        ses_date__range=[start_date, end_date],
+        gl_no=gl_no,
+        ac_no=ac_no
+    ).exclude(error='H').order_by('ses_date', 'trx_no')
+    
+    # Opening balance
+    opening_balance = Memtrans.objects.filter(
+        ses_date__lt=start_date,
+        gl_no=gl_no,
+        ac_no=ac_no
+    ).exclude(error='H').aggregate(
+        opening_balance=Sum('amount')
+    )['opening_balance'] or 0
+    
+    # Closing balance  
+    closing_balance = Memtrans.objects.filter(
+        ses_date__lte=end_date,
+        gl_no=gl_no,
+        ac_no=ac_no
+    ).exclude(error='H').aggregate(
+        closing_balance=Sum('amount')
+    )['closing_balance'] or 0
+    
+    # Debit & Credit totals
+    debit_amount = abs(transactions.filter(type='D').aggregate(
+        debit_amount=Sum('amount')
+    )['debit_amount'] or 0)
+    
+    credit_amount = transactions.filter(type='C').aggregate(
+        credit_amount=Sum('amount')
+    )['credit_amount'] or 0
+    
+    # Get customer name
+    try:
+        customer = Customer.objects.filter(gl_no=gl_no, ac_no=ac_no).first()
+        full_name = customer.get_full_name() if customer else f'Account {ac_no}'
+    except:
+        full_name = f'Account {ac_no}'
+    
+    # Statement details
+    statement_data = []
+    running_balance = opening_balance
+    
+    for transaction in transactions:
+        if transaction.type == 'D':
+            debit = abs(transaction.amount)
+            credit = 0
+            running_balance += transaction.amount
+        else:
+            debit = 0  
+            credit = transaction.amount
+            running_balance += transaction.amount
+            
+        entry = {
+            'date': transaction.ses_date,
+            'trx_no': transaction.trx_no,
+            'description': transaction.description or '',
+            'debit': debit,
+            'credit': credit, 
+            'running_balance': running_balance,
+        }
+        statement_data.append(entry)
+    
+    return {
+        'start_date': start_date,
+        'end_date': end_date,
+        'gl_no': gl_no,
+        'ac_no': ac_no,
+        'opening_balance': opening_balance,
+        'closing_balance': closing_balance,
+        'debit_amount': debit_amount,
+        'credit_amount': credit_amount,
+        'statement_data': statement_data,
+        'full_name': full_name,
+        'branch': branch,
+        'company': branch.company,
+    }
+
+def export_statement_pdf(data):
+    """Export statement as PDF using WeasyPrint"""
+    # Create simple HTML content
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Statement of Account</title>
+        <style>
+            body {{ font-family: Arial, sans-serif; margin: 20px; }}
+            .header {{ text-align: center; margin-bottom: 30px; }}
+            .company-info {{ text-align: center; margin-bottom: 20px; }}
+            .account-info {{ margin-bottom: 20px; }}
+            table {{ width: 100%; border-collapse: collapse; margin-bottom: 20px; }}
+            th, td {{ border: 1px solid #ccc; padding: 8px; text-align: left; }}
+            th {{ background-color: #f5f5f5; font-weight: bold; }}
+            .amount {{ text-align: right; }}
+            .total-row {{ font-weight: bold; background-color: #f9f9f9; }}
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <h1>STATEMENT OF ACCOUNT</h1>
+            <div class="company-info">
+                <h2>{data['company'].company_name.upper()}</h2>
+                <p>{data['branch'].branch_name}</p>
+            </div>
+        </div>
+        
+        <div class="account-info">
+            <p><strong>Account Holder:</strong> {data['full_name']}</p>
+            <p><strong>Account Number:</strong> {data['ac_no']}</p>
+            <p><strong>GL Number:</strong> {data['gl_no']}</p>
+            <p><strong>Period:</strong> {data['start_date'].strftime('%B %d, %Y')} to {data['end_date'].strftime('%B %d, %Y')}</p>
+        </div>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Description</th>
+                    <th>Trx No</th>
+                    <th class="amount">Debit</th>
+                    <th class="amount">Credit</th>
+                    <th class="amount">Balance</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>{data['start_date'].strftime('%Y-%m-%d')}</td>
+                    <td>Opening Balance</td>
+                    <td>-</td>
+                    <td class="amount">-</td>
+                    <td class="amount">-</td>
+                    <td class="amount">₦{data['opening_balance']:,.2f}</td>
+                </tr>
+    """
+    
+    # Add transaction rows
+    for entry in data['statement_data']:
+        html_content += f"""
+                <tr>
+                    <td>{entry['date'].strftime('%Y-%m-%d')}</td>
+                    <td>{entry['description']}</td>
+                    <td>{entry['trx_no']}</td>
+                    <td class="amount">{f"₦{entry['debit']:,.2f}" if entry['debit'] else '-'}</td>
+                    <td class="amount">{f"₦{entry['credit']:,.2f}" if entry['credit'] else '-'}</td>
+                    <td class="amount">₦{entry['running_balance']:,.2f}</td>
+                </tr>
+        """
+    
+    # Add totals and close HTML
+    html_content += f"""
+                <tr class="total-row">
+                    <td colspan="3">TOTALS</td>
+                    <td class="amount">₦{data['debit_amount']:,.2f}</td>
+                    <td class="amount">₦{data['credit_amount']:,.2f}</td>
+                    <td class="amount">₦{data['closing_balance']:,.2f}</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <div style="margin-top: 30px; text-align: center; font-size: 12px; color: #666;">
+            <p>Generated on {datetime.now().strftime('%B %d, %Y at %I:%M %p')}</p>
+        </div>
+    </body>
+    </html>
+    """
+    
+    # Generate PDF
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="statement_{data["ac_no"]}_{datetime.now().strftime("%Y%m%d")}.pdf"'
+    
+    try:
+        # Use WeasyPrint to generate PDF
+        html_doc = weasyprint.HTML(string=html_content)
+        html_doc.write_pdf(response)
+    except Exception as e:
+        # Fallback - return HTML if PDF generation fails
+        response = HttpResponse(html_content, content_type='text/html')
+        
+    return response
+
+def export_statement_word(data):
+    """Export statement as Word document"""
+    # Create a document
+    doc = Document()
+    
+    # Add title
+    title = doc.add_heading('STATEMENT OF ACCOUNT', 0)
+    title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    
+    # Add company info
+    company_para = doc.add_paragraph()
+    company_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    company_run = company_para.add_run(f'{data["company"].company_name.upper()}\n{data["branch"].branch_name}')
+    company_run.bold = True
+    
+    doc.add_paragraph('')  # Space
+    
+    # Add account info
+    doc.add_paragraph(f'Account Holder: {data["full_name"]}')
+    doc.add_paragraph(f'Account Number: {data["ac_no"]}')
+    doc.add_paragraph(f'GL Number: {data["gl_no"]}')
+    doc.add_paragraph(f'Period: {data["start_date"].strftime("%B %d, %Y")} to {data["end_date"].strftime("%B %d, %Y")}')
+    
+    doc.add_paragraph('')  # Space
+    
+    # Add table
+    table = doc.add_table(rows=1, cols=6)
+    table.style = 'Table Grid'
+    
+    # Add headers
+    headers = ['Date', 'Description', 'Trx No', 'Debit', 'Credit', 'Balance']
+    header_cells = table.rows[0].cells
+    for i, header in enumerate(headers):
+        header_cells[i].text = header
+        header_cells[i].paragraphs[0].runs[0].font.bold = True
+    
+    # Add opening balance
+    row_cells = table.add_row().cells
+    row_cells[0].text = data['start_date'].strftime('%Y-%m-%d')
+    row_cells[1].text = 'Opening Balance'
+    row_cells[2].text = '-'
+    row_cells[3].text = '-'
+    row_cells[4].text = '-'
+    row_cells[5].text = f"₦{data['opening_balance']:,.2f}"
+    
+    # Add data rows
+    for entry in data['statement_data']:
+        row_cells = table.add_row().cells
+        row_cells[0].text = entry['date'].strftime('%Y-%m-%d')
+        row_cells[1].text = entry['description']
+        row_cells[2].text = entry['trx_no']
+        row_cells[3].text = f"₦{entry['debit']:,.2f}" if entry['debit'] else '-'
+        row_cells[4].text = f"₦{entry['credit']:,.2f}" if entry['credit'] else '-'
+        row_cells[5].text = f"₦{entry['running_balance']:,.2f}"
+    
+    # Add totals row
+    row_cells = table.add_row().cells
+    row_cells[0].text = ''
+    row_cells[1].text = 'TOTALS'
+    row_cells[2].text = ''
+    row_cells[3].text = f"₦{data['debit_amount']:,.2f}"
+    row_cells[4].text = f"₦{data['credit_amount']:,.2f}"
+    row_cells[5].text = f"₦{data['closing_balance']:,.2f}"
+    
+    # Make totals row bold
+    for cell in row_cells:
+        for paragraph in cell.paragraphs:
+            for run in paragraph.runs:
+                run.font.bold = True
+    
+    # Add generated timestamp
+    doc.add_paragraph('')
+    timestamp_para = doc.add_paragraph(f'Generated on {datetime.now().strftime("%B %d, %Y at %I:%M %p")}')
+    timestamp_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    
+    # Save to response
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+    response['Content-Disposition'] = f'attachment; filename="statement_{data["ac_no"]}_{datetime.now().strftime("%Y%m%d")}.docx"'
+    
+    doc.save(response)
+    return response
+
+def export_statement_excel(data):
+    """Export statement as Excel file"""
+    # Create a Pandas DataFrame
+    statement_rows = []
+    
+    # Add opening balance
+    statement_rows.append({
+        'Date': data['start_date'].strftime('%Y-%m-%d'),
+        'Description': 'Opening Balance',
+        'Trx No': '',
+        'Debit': '',
+        'Credit': '',
+        'Balance': data['opening_balance']
+    })
+    
+    # Add statement data
+    for entry in data['statement_data']:
+        statement_rows.append({
+            'Date': entry['date'].strftime('%Y-%m-%d'),
+            'Description': entry['description'],
+            'Trx No': entry['trx_no'],
+            'Debit': entry['debit'] if entry['debit'] else '',
+            'Credit': entry['credit'] if entry['credit'] else '',
+            'Balance': entry['running_balance']
+        })
+    
+    # Add totals row
+    statement_rows.append({
+        'Date': '',
+        'Description': 'TOTALS',
+        'Trx No': '',
+        'Debit': data['debit_amount'],
+        'Credit': data['credit_amount'],
+        'Balance': data['closing_balance']
+    })
+    
+    df = pd.DataFrame(statement_rows)
+    
+    # Create Excel file in memory
+    output = io.BytesIO()
+    
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        # Add header info to the first sheet
+        header_info = pd.DataFrame([
+            ['STATEMENT OF ACCOUNT', ''],
+            [f'{data["company"].company_name.upper()}', ''],
+            [f'{data["branch"].branch_name}', ''],
+            ['', ''],
+            ['Account Holder:', data['full_name']],
+            ['Account Number:', data['ac_no']],
+            ['GL Number:', data['gl_no']],
+            ['Period:', f'{data["start_date"].strftime("%B %d, %Y")} to {data["end_date"].strftime("%B %d, %Y")}'],
+            ['', '']
+        ])
+        
+        # Write header info first
+        header_info.to_excel(writer, sheet_name='Statement', index=False, header=False, startrow=0)
+        
+        # Write main statement starting after header
+        df.to_excel(writer, sheet_name='Statement', index=False, startrow=len(header_info) + 1)
+        
+        # Write summary sheet
+        summary_data = pd.DataFrame({
+            'Item': ['Opening Balance', 'Total Debits', 'Total Credits', 'Closing Balance'],
+            'Amount': [data['opening_balance'], data['debit_amount'], 
+                      data['credit_amount'], data['closing_balance']]
+        })
+        summary_data.to_excel(writer, sheet_name='Summary', index=False)
+    
+    output.seek(0)
+    
+    response = HttpResponse(
+        output.getvalue(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename="statement_{data["ac_no"]}_{datetime.now().strftime("%Y%m%d")}.xlsx"'
+    
+    return response
+
+def export_statement_csv(data):
+    """Export statement as CSV file"""
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="statement_{data["ac_no"]}_{datetime.now().strftime("%Y%m%d")}.csv"'
+    
+    writer = csv.writer(response)
+    
+    # Write header info
+    writer.writerow(['STATEMENT OF ACCOUNT'])
+    writer.writerow([f'{data["company"].company_name.upper()}'])
+    writer.writerow([f'{data["branch"].branch_name}'])
+    writer.writerow([])
+    writer.writerow(['Account Holder:', data['full_name']])
+    writer.writerow(['Account Number:', data['ac_no']])
+    writer.writerow(['GL Number:', data['gl_no']])
+    writer.writerow(['Period:', f'{data["start_date"].strftime("%B %d, %Y")} to {data["end_date"].strftime("%B %d, %Y")}'])
+    writer.writerow([])  # Empty row
+    
+    # Write table headers
+    writer.writerow(['Date', 'Description', 'Trx No', 'Debit', 'Credit', 'Balance'])
+    
+    # Write opening balance
+    writer.writerow([
+        data['start_date'].strftime('%Y-%m-%d'),
+        'Opening Balance',
+        '',
+        '',
+        '',
+        f"{data['opening_balance']:,.2f}"
+    ])
+    
+    # Write statement data
+    for entry in data['statement_data']:
+        writer.writerow([
+            entry['date'].strftime('%Y-%m-%d'),
+            entry['description'],
+            entry['trx_no'],
+            f"{entry['debit']:,.2f}" if entry['debit'] else '',
+            f"{entry['credit']:,.2f}" if entry['credit'] else '',
+            f"{entry['running_balance']:,.2f}"
+        ])
+    
+    # Write totals
+    writer.writerow([
+        '',
+        'TOTALS',
+        '',
+        f"{data['debit_amount']:,.2f}",
+        f"{data['credit_amount']:,.2f}",
+        f"{data['closing_balance']:,.2f}"
+    ])
+    
+    return response

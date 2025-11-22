@@ -1,0 +1,293 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container-fluid">
+  <div class="row">
+    <!-- Chart of Account will come here -->
+  </div>
+
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-md-12">
+        <div class="page_title">
+          <h2>CBN Returns</h2>
+        </div>
+      </div>
+
+      <!-- Filter Buttons -->
+      <div class="col-md-12 mb-4">
+        <div class="text-center">
+          <button class="btn btn-sm btn-outline-primary m-1 filter-btn active" data-filter="all">All Forms</button>
+          <button class="btn btn-sm btn-outline-primary m-1 filter-btn" data-filter="Loan Analysis">Loan Analysis</button>
+          <button class="btn btn-sm btn-outline-primary m-1 filter-btn" data-filter="Deposits">Deposits</button>
+          <button class="btn btn-sm btn-outline-primary m-1 filter-btn" data-filter="Assets">Assets</button>
+          <button class="btn btn-sm btn-outline-primary m-1 filter-btn" data-filter="Liabilities">Liabilities</button>
+          <button class="btn btn-sm btn-outline-primary m-1 filter-btn" data-filter="Compliance">Compliance</button>
+          <button class="btn btn-sm btn-outline-primary m-1 filter-btn" data-filter="Analysis">Analysis</button>
+        </div>
+      </div>
+
+      <!-- MFBR 771 -->
+      <div class="col-md-2 mb-3 cbn-form-card" data-category="Loan Analysis">
+        <div class="account_setting py-5 fs-1 bg-white shadow-lg rounded rounded-5">
+          <div class="couter_icon col-md-12">
+            <i class="couter_icon fa fa-chart-line" style="font-size: 16px; color: #f39c12;"></i>
+          </div>
+          <a href="#" class="text-center">
+            <h5 class="my-2" style="font-size: 13px;">MFBR 771<br>Summary of Non-Performing Loans (NPL) / Classified Loans & Advances</h5>
+          </a>
+        </div>
+      </div>
+
+      <!-- MMFBR 762 -->
+      <div class="col-md-2 mb-3 cbn-form-card" data-category="Loan Analysis">
+        <div class="account_setting py-5 fs-1 bg-white shadow-lg rounded rounded-5">
+          <div class="couter_icon col-md-12">
+            <i class="couter_icon fa fa-search-dollar" style="font-size: 16px; color: #27ae60;"></i>
+          </div>
+          <a href="#" class="text-center">
+            <h5 class="my-2" style="font-size: 13px;">MMFBR 762<br>Sectoral Analysis of Loans & Advances</h5>
+          </a>
+        </div>
+      </div>
+
+      <!-- MMFBR 763 -->
+      <div class="col-md-2 mb-3 cbn-form-card" data-category="Loan Analysis">
+        <div class="account_setting py-5 fs-1 bg-white shadow-lg rounded rounded-5">
+          <div class="couter_icon col-md-12">
+            <i class="couter_icon fa fa-calendar-times" style="font-size: 16px; color: #3498db;"></i>
+          </div>
+          <a href="#" class="text-center">
+            <h5 class="my-2" style="font-size: 13px;">MMFBR 763<br>Loan Structure & Maturity Profile</h5>
+          </a>
+        </div>
+      </div>
+
+      <!-- MMFBR 764 -->
+      <div class="col-md-2 mb-3 cbn-form-card" data-category="Loan Analysis">
+        <div class="account_setting py-5 fs-1 bg-white shadow-lg rounded rounded-5">
+          <div class="couter_icon col-md-12">
+            <i class="couter_icon fa fa-percentage" style="font-size: 16px; color: #e74c3c;"></i>
+          </div>
+          <a href="#" class="text-center">
+            <h5 class="my-2" style="font-size: 13px;">MMFBR 764<br>Interest Rate Schedule (Loan interest rates by category)</h5>
+          </a>
+        </div>
+      </div>
+
+      <!-- MMFBR 811 -->
+      <div class="col-md-2 mb-3 cbn-form-card" data-category="Assets">
+        <div class="account_setting py-5 fs-1 bg-white shadow-lg rounded rounded-5">
+          <div class="couter_icon col-md-12">
+            <i class="couter_icon fa fa-boxes" style="font-size: 16px; color: #8e44ad;"></i>
+          </div>
+          <a href="#" class="text-center">
+            <h5 class="my-2" style="font-size: 13px;">MMFBR 811<br>Other Assets</h5>
+          </a>
+        </div>
+      </div>
+
+      <!-- MMFBR 141 -->
+      <div class="col-md-2 mb-3 cbn-form-card" data-category="Deposits">
+        <div class="account_setting py-5 fs-1 bg-white shadow-lg rounded rounded-5">
+          <div class="couter_icon col-md-12">
+            <i class="couter_icon fa fa-piggy-bank" style="font-size: 16px; color: #f1c40f;"></i>
+          </div>
+          <a href="#" class="text-center">
+            <h5 class="my-2" style="font-size: 13px;">MMFBR 141<br>Other Deposits</h5>
+          </a>
+        </div>
+      </div>
+
+      <!-- MMFBR 201 -->
+      <div class="col-md-2 mb-3 cbn-form-card" data-category="Deposits">
+        <div class="account_setting py-5 fs-1 bg-white shadow-lg rounded rounded-5">
+          <div class="couter_icon col-md-12">
+            <i class="couter_icon fa fa-database" style="font-size: 16px; color: #1abc9c;"></i>
+          </div>
+          <a href="#" class="text-center">
+            <h5 class="my-2" style="font-size: 13px;">MMFBR 201<br>Deposit Structure & Maturity Profile</h5>
+          </a>
+        </div>
+      </div>
+
+      <!-- MMFBR 202 -->
+      <div class="col-md-2 mb-3 cbn-form-card" data-category="Deposits">
+        <div class="account_setting py-5 fs-1 bg-white shadow-lg rounded rounded-5">
+          <div class="couter_icon col-md-12">
+            <i class="couter_icon fa fa-shield-alt" style="font-size: 16px; color: #2ecc71;"></i>
+          </div>
+          <a href="#" class="text-center">
+            <h5 class="my-2" style="font-size: 13px;">MMFBR 202<br>Insured Deposits</h5>
+          </a>
+        </div>
+      </div>
+
+      <!-- MMFBR 212 -->
+      <div class="col-md-2 mb-3 cbn-form-card" data-category="Takings">
+        <div class="account_setting py-5 fs-1 bg-white shadow-lg rounded rounded-5">
+          <div class="couter_icon col-md-12">
+            <i class="couter_icon fa fa-building" style="font-size: 16px; color: #e67e22;"></i>
+          </div>
+          <a href="#" class="text-center">
+            <h5 class="my-2" style="font-size: 13px;">MMFBR 212<br>Takings from Banks in Nigeria</h5>
+          </a>
+        </div>
+      </div>
+
+      <!-- MMFBR 322 -->
+      <div class="col-md-2 mb-3 cbn-form-card" data-category="Takings">
+        <div class="account_setting py-5 fs-1 bg-white shadow-lg rounded rounded-5">
+          <div class="couter_icon col-md-12">
+            <i class="couter_icon fa fa-university" style="font-size: 16px; color: #d35400;"></i>
+          </div>
+          <a href="#" class="text-center">
+            <h5 class="my-2" style="font-size: 13px;">MMFBR 322<br>Takings from Other Institutions</h5>
+          </a>
+        </div>
+      </div>
+
+      <!-- MMFBR 451 -->
+      <div class="col-md-2 mb-3 cbn-form-card" data-category="Facilities">
+        <div class="account_setting py-5 fs-1 bg-white shadow-lg rounded rounded-5">
+          <div class="couter_icon col-md-12">
+            <i class="couter_icon fa fa-handshake" style="font-size: 16px; color: #16a085;"></i>
+          </div>
+          <a href="#" class="text-center">
+            <h5 class="my-2" style="font-size: 13px;">MMFBR 451<br>Re-Financing Facilities</h5>
+          </a>
+        </div>
+      </div>
+
+      <!-- MMFBR 501 -->
+      <div class="col-md-2 mb-3 cbn-form-card" data-category="Liabilities">
+        <div class="account_setting py-5 fs-1 bg-white shadow-lg rounded rounded-5">
+          <div class="couter_icon col-md-12">
+            <i class="couter_icon fa fa-minus-circle" style="font-size: 16px; color: #c0392b;"></i>
+          </div>
+          <a href="#" class="text-center">
+            <h5 class="my-2" style="font-size: 13px;">MMFBR 501<br>Other Liabilities</h5>
+          </a>
+        </div>
+      </div>
+
+      <!-- MMFBR 642 -->
+      <div class="col-md-2 mb-3 cbn-form-card" data-category="Borrowings">
+        <div class="account_setting py-5 fs-1 bg-white shadow-lg rounded rounded-5">
+          <div class="couter_icon col-md-12">
+            <i class="couter_icon fa fa-globe" style="font-size: 16px; color: #9b59b6;"></i>
+          </div>
+          <a href="#" class="text-center">
+            <h5 class="my-2" style="font-size: 13px;">MMFBR 642<br>Borrowings from Foreign Agencies</h5>
+          </a>
+        </div>
+      </div>
+
+      <!-- MMFBR 651 -->
+      <div class="col-md-2 mb-3 cbn-form-card" data-category="Borrowings">
+        <div class="account_setting py-5 fs-1 bg-white shadow-lg rounded rounded-5">
+          <div class="couter_icon col-md-12">
+            <i class="couter_icon fa fa-home" style="font-size: 16px; color: #34495e;"></i>
+          </div>
+          <a href="#" class="text-center">
+            <h5 class="my-2" style="font-size: 13px;">MMFBR 651<br>Borrowings from Other Agencies</h5>
+          </a>
+        </div>
+      </div>
+
+      <!-- MMFBR 933 -->
+      <div class="col-md-2 mb-3 cbn-form-card" data-category="Capital">
+        <div class="account_setting py-5 fs-1 bg-white shadow-lg rounded rounded-5">
+          <div class="couter_icon col-md-12">
+            <i class="couter_icon fa fa-gift" style="font-size: 16px; color: #e91e63;"></i>
+          </div>
+          <a href="#" class="text-center">
+            <h5 class="my-2" style="font-size: 13px;">MMFBR 933<br>Deferred Grants and Donations</h5>
+          </a>
+        </div>
+      </div>
+
+      <!-- MMFBR 951 -->
+      <div class="col-md-2 mb-3 cbn-form-card" data-category="Capital">
+        <div class="account_setting py-5 fs-1 bg-white shadow-lg rounded rounded-5">
+          <div class="couter_icon col-md-12">
+            <i class="couter_icon fa fa-archive" style="font-size: 16px; color: #ff5722;"></i>
+          </div>
+          <a href="#" class="text-center">
+            <h5 class="my-2" style="font-size: 13px;">MMFBR 951<br>Other Reserves</h5>
+          </a>
+        </div>
+      </div>
+
+      <!-- MMFBR 996 -->
+      <div class="col-md-2 mb-3 cbn-form-card" data-category="Off-Balance Sheet">
+        <div class="account_setting py-5 fs-1 bg-white shadow-lg rounded rounded-5">
+          <div class="couter_icon col-md-12">
+            <i class="couter_icon fa fa-balance-scale" style="font-size: 16px; color: #607d8b;"></i>
+          </div>
+          <a href="#" class="text-center">
+            <h5 class="my-2" style="font-size: 13px;">MMFBR 996<br>Off-Balance Sheet Engagements</h5>
+          </a>
+        </div>
+      </div>
+
+      <!-- MMFBR 980 -->
+      <div class="col-md-2 mb-3 cbn-form-card" data-category="Analysis">
+        <div class="account_setting py-5 fs-1 bg-white shadow-lg rounded rounded-5">
+          <div class="couter_icon col-md-12">
+            <i class="couter_icon fa fa-chart-bar" style="font-size: 16px; color: #795548;"></i>
+          </div>
+          <a href="#" class="text-center">
+            <h5 class="my-2" style="font-size: 13px;">MMFBR 980<br>Gap Analysis (Assets vs Liabilities, maturity mismatch)</h5>
+          </a>
+        </div>
+      </div>
+
+      <!-- MMFBR I -->
+      <div class="col-md-2 mb-3 cbn-form-card" data-category="Compliance">
+        <div class="account_setting py-5 fs-1 bg-white shadow-lg rounded rounded-5">
+          <div class="couter_icon col-md-12">
+            <i class="couter_icon fa fa-user-shield" style="font-size: 16px; color: #009688;"></i>
+          </div>
+          <a href="#" class="text-center">
+            <h5 class="my-2" style="font-size: 13px;">MMFBR I<br>Anti-Money Laundering and KYC (Know-Your-Customer) Schedule</h5>
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Filter functionality
+    const filterButtons = document.querySelectorAll('.filter-btn');
+    const formCards = document.querySelectorAll('.cbn-form-card');
+    
+    filterButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            // Update active button
+            filterButtons.forEach(btn => {
+                btn.classList.remove('btn-primary');
+                btn.classList.add('btn-outline-primary');
+            });
+            this.classList.remove('btn-outline-primary');
+            this.classList.add('btn-primary');
+            
+            const filterValue = this.getAttribute('data-filter');
+            
+            formCards.forEach(card => {
+                if (filterValue === 'all' || card.getAttribute('data-category') === filterValue) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        });
+    });
+});
+</script>
+
+{% endblock %}

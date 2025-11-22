@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ form_info.title }} - CBN Returns{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <!-- Breadcrumb -->
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'cbn_returns' %}">CBN Returns</a></li>
+                    <li class="breadcrumb-item active">{{ form_code }}</li>
+                </ol>
+            </nav>
+            
+            <!-- Form Header -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-file-alt me-2"></i>
+                        {{ form_code }}: {{ form_info.title }}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <p class="mb-0">{{ form_info.description }}</p>
+                </div>
+            </div>
+            
+            <!-- Form Content Area -->
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-tools fa-3x text-muted mb-3"></i>
+                    <h5>Form Implementation in Progress</h5>
+                    <p class="text-muted">The {{ form_code }} form interface is being developed.</p>
+                    <p class="text-muted">This will include data input, validation, and report generation capabilities.</p>
+                    
+                    <div class="mt-4">
+                        <a href="{% url 'cbn_returns' %}" class="btn btn-primary">
+                            <i class="fas fa-arrow-left me-2"></i>
+                            Back to CBN Returns
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

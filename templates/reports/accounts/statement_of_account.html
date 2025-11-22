@@ -3,326 +3,1016 @@
 {% load humanize %}
 
 {% block content %}
-{% include 'includes/alerts.html' %}
-
 <style>
-    :root {
-        --primary: #3498db;
-        --secondary: #2c3e50;
-        --success: #27ae60;
-        --danger: #e74c3c;
-        --light: #ecf0f1;
-        --dark: #34495e;
-        --gray: #95a5a6;
-    }
+:root {
+    /* Orange & Green Theme - matching project colors */
+    --primary-orange: #f97316;
+    --primary-orange-dark: #ea580c;
+    --primary-green: #16a34a;
+    --primary-green-dark: #15803d;
+    --success: #22c55e;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --info: #3b82f6;
+    --light: #f8fafc;
+    --dark: #0f172a;
+    --gray-100: #f1f5f9;
+    --gray-200: #e2e8f0;
+    --gray-300: #cbd5e1;
+    --gray-400: #94a3b8;
+    --gray-500: #64748b;
+    --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --card-hover-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
 
-    .report-container {
-        background: white;
-        border-radius: 10px;
-        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
-        overflow: hidden;
-    }
+.statement-container {
+    background: linear-gradient(135deg, #f0fdf4 0%, #fff7ed 100%);
+    min-height: 100vh;
+    padding: 1.5rem 0;
+}
 
-    .report-header {
-        background: linear-gradient(135deg, var(--primary), var(--secondary));
-        color: white;
+/* Header Section */
+.statement-header {
+    background: linear-gradient(135deg, var(--primary-orange) 0%, var(--primary-green) 100%);
+    border-radius: 20px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: var(--card-shadow);
+    color: white;
+    position: relative;
+    overflow: hidden;
+}
+
+.statement-header::before {
+    content: "";
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 70%);
+    transform: rotate(30deg);
+}
+
+.statement-header h2 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    position: relative;
+    z-index: 2;
+}
+
+.header-actions {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+/* Form Section */
+.form-card {
+    background: white;
+    border-radius: 20px;
+    box-shadow: var(--card-shadow);
+    margin-bottom: 2rem;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.form-card:hover {
+    box-shadow: var(--card-hover-shadow);
+}
+
+.form-header {
+    background: linear-gradient(135deg, var(--gray-100) 0%, white 100%);
+    padding: 1.5rem 2rem;
+    border-bottom: 3px solid transparent;
+    background-clip: padding-box;
+    position: relative;
+}
+
+.form-header::before {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--primary-orange), var(--primary-green));
+}
+
+.form-header h4 {
+    margin: 0;
+    color: var(--dark);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.form-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--primary-orange), var(--primary-green));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1rem;
+}
+
+.form-body {
+    padding: 2rem;
+}
+
+.modern-form-control {
+    padding: 0.875rem 1rem;
+    border: 2px solid var(--gray-200);
+    border-radius: 12px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    background: white;
+}
+
+.modern-form-control:focus {
+    outline: none;
+    border-color: var(--primary-orange);
+    box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.1);
+}
+
+.modern-label {
+    font-weight: 600;
+    color: var(--dark);
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+/* Export Buttons */
+.export-toolbar {
+    background: white;
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: var(--card-shadow);
+    margin-bottom: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.export-group {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.export-btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.export-btn::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    transition: left 0.5s;
+}
+
+.export-btn:hover::before {
+    left: 100%;
+}
+
+.btn-pdf { 
+    background: #dc2626; 
+    color: white; 
+    box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
+}
+.btn-pdf:hover { 
+    background: #b91c1c; 
+    transform: translateY(-2px); 
+    color: white; 
+    text-decoration: none;
+}
+
+.btn-word { 
+    background: #2563eb; 
+    color: white; 
+    box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
+}
+.btn-word:hover { 
+    background: #1d4ed8; 
+    transform: translateY(-2px); 
+    color: white; 
+    text-decoration: none;
+}
+
+.btn-excel { 
+    background: #16a34a; 
+    color: white; 
+    box-shadow: 0 4px 15px rgba(22, 163, 74, 0.3);
+}
+.btn-excel:hover { 
+    background: #15803d; 
+    transform: translateY(-2px); 
+    color: white; 
+    text-decoration: none;
+}
+
+.btn-csv { 
+    background: var(--warning); 
+    color: white; 
+    box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+}
+.btn-csv:hover { 
+    background: #d97706; 
+    transform: translateY(-2px); 
+    color: white; 
+    text-decoration: none;
+}
+
+.btn-print { 
+    background: var(--gray-500); 
+    color: white; 
+    box-shadow: 0 4px 15px rgba(100, 116, 139, 0.3);
+}
+.btn-print:hover { 
+    background: #475569; 
+    transform: translateY(-2px); 
+    color: white; 
+    text-decoration: none;
+}
+
+.btn-generate {
+    background: linear-gradient(135deg, var(--primary-orange), var(--primary-orange-dark));
+    color: white;
+    border: none;
+    padding: 1rem 2rem;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(249, 115, 22, 0.4);
+}
+
+.btn-generate:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(249, 115, 22, 0.5);
+}
+
+/* Statement Report */
+.report-card {
+    background: white;
+    border-radius: 20px;
+    box-shadow: var(--card-shadow);
+    overflow: hidden;
+    margin-bottom: 2rem;
+}
+
+.report-header {
+    background: linear-gradient(135deg, var(--primary-orange) 0%, var(--primary-green) 100%);
+    color: white;
+    padding: 2rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.report-header::before {
+    content: "";
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 70%);
+    transform: rotate(30deg);
+}
+
+.report-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    position: relative;
+    z-index: 2;
+    text-align: center;
+}
+
+.report-subtitle {
+    font-size: 1.125rem;
+    font-weight: 500;
+    opacity: 0.9;
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    margin-bottom: 1rem;
+}
+
+.client-info {
+    background: rgba(255, 255, 255, 0.15);
+    padding: 1rem 1.5rem;
+    border-radius: 12px;
+    position: relative;
+    z-index: 2;
+    backdrop-filter: blur(10px);
+}
+
+.report-meta {
+    background: var(--light);
+    padding: 2rem;
+    border-radius: 12px;
+    margin: 2rem;
+    border-left: 4px solid var(--primary-orange);
+}
+
+/* Enhanced Table */
+.statement-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.9rem;
+}
+
+.statement-table thead th {
+    background: linear-gradient(135deg, var(--dark) 0%, var(--gray-500) 100%);
+    color: white;
+    padding: 1rem;
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    border-bottom: 2px solid var(--primary-orange);
+}
+
+.statement-table tbody td {
+    padding: 1rem;
+    border-bottom: 1px solid var(--gray-200);
+    vertical-align: middle;
+}
+
+.statement-table tbody tr:hover {
+    background: var(--light);
+}
+
+.statement-table tbody tr:nth-child(even) {
+    background: rgba(249, 115, 22, 0.02);
+}
+
+.amount-cell {
+    font-family: 'Courier New', monospace;
+    text-align: right;
+    font-weight: 600;
+}
+
+.debit-amount { color: var(--danger); }
+.credit-amount { color: var(--success); }
+
+.total-row {
+    background: linear-gradient(135deg, var(--gray-100) 0%, var(--light) 100%);
+    font-weight: 700;
+}
+
+.total-row td {
+    border-top: 3px solid var(--primary-orange);
+    border-bottom: 3px solid var(--primary-orange);
+    padding: 1.25rem 1rem;
+}
+
+/* Summary Section */
+.summary-card {
+    background: white;
+    border-radius: 16px;
+    box-shadow: var(--card-shadow);
+    padding: 2rem;
+    border-left: 4px solid var(--primary-orange);
+}
+
+.summary-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--gray-100);
+}
+
+.summary-item:last-child {
+    border-bottom: none;
+    font-weight: 700;
+    font-size: 1.1rem;
+    padding-top: 1rem;
+    border-top: 2px solid var(--gray-200);
+}
+
+.summary-label {
+    color: var(--gray-500);
+    font-weight: 500;
+}
+
+.summary-value {
+    font-family: 'Courier New', monospace;
+    font-weight: 600;
+}
+
+/* Loading States */
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+    position: relative;
+}
+
+.loading::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 24px;
+    height: 24px;
+    margin: -12px 0 0 -12px;
+    border: 2px solid var(--primary-orange);
+    border-radius: 50%;
+    border-top-color: transparent;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Print Styles */
+@media print {
+    .no-print { display: none !important; }
+    .statement-container { background: white !important; }
+    .report-header { 
+        background: white !important; 
+        color: black !important; 
+        -webkit-print-color-adjust: exact;
+    }
+    .statement-table thead th { 
+        background: white !important; 
+        color: black !important; 
+        -webkit-print-color-adjust: exact;
+    }
+    body { 
+        font-size: 11pt; 
+        background: white !important;
+    }
+    .statement-table { font-size: 10pt; }
+    .export-toolbar, .form-card { display: none !important; }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .statement-header {
         padding: 1.5rem;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        text-align: center;
     }
-
-    .report-title {
-        font-weight: 600;
-        letter-spacing: 0.5px;
+    
+    .export-toolbar {
+        flex-direction: column;
+        text-align: center;
     }
-
-    .report-subtitle {
-        font-weight: 300;
-        opacity: 0.9;
+    
+    .export-group {
+        justify-content: center;
     }
-
-    .client-name {
-        background: rgba(255, 255, 255, 0.2);
-        display: inline-block;
-        padding: 0.5rem 1rem;
-        border-radius: 4px;
-        margin: 0.5rem 0;
-    }
-
-    .report-period {
-        background: var(--light);
-        padding: 1rem;
-        border-radius: 5px;
-        margin: 1.5rem 0;
-    }
-
-    .report-table {
-        width: 100%;
-        border-collapse: separate;
-        border-spacing: 0;
-        font-size: 0.9rem;
-    }
-
-    .report-table thead th {
-        background: var(--secondary);
-        color: white;
-        padding: 0.75rem 1rem;
-        font-weight: 500;
-        position: sticky;
-        top: 0;
-    }
-
-    .report-table tbody td {
-        padding: 0.75rem 1rem;
-        border-bottom: 1px solid #eee;
-        vertical-align: middle;
-    }
-
-    .report-table tbody tr:hover {
-        background: rgba(52, 152, 219, 0.05);
-    }
-
-    .text-success { color: var(--success); }
-    .text-danger { color: var(--danger); }
-
-    .total-row {
-        background: var(--light);
-        font-weight: 600;
-    }
-
-    .total-row td {
-        border-top: 2px solid var(--dark);
-        border-bottom: 2px solid var(--dark);
-    }
-
-    .form-container {
-        background: white;
-        border-radius: 10px;
-        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+    
+    .form-body {
         padding: 1.5rem;
-        margin-bottom: 1.5rem;
     }
+    
+    .statement-table {
+        font-size: 0.8rem;
+    }
+    
+    .statement-table thead th,
+    .statement-table tbody td {
+        padding: 0.75rem 0.5rem;
+    }
+    
+    .report-meta {
+        margin: 1rem;
+        padding: 1.5rem;
+    }
+}
 
-    .btn-print {
-        background: var(--secondary);
-        border: none;
-    }
+/* Animation Classes */
+.fade-in {
+    animation: fadeIn 0.6s ease-in;
+}
 
-    .btn-print:hover {
-        background: var(--dark);
-    }
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
 
-    .btn-generate {
-        background: var(--success);
-        border: none;
-        padding: 0.5rem 1.5rem;
-    }
+.slide-up {
+    animation: slideUp 0.6s ease-out;
+}
 
-    .amount {
-        font-family: 'Courier New', monospace;
-        text-align: right;
-    }
-
-    @media print {
-        .no-print { display: none !important; }
-        .report-header { background: white !important; color: black !important; }
-        .report-table thead th { background: white !important; color: black !important; }
-        body { font-size: 11pt; }
-        .report-table { font-size: 10pt; }
-    }
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+}
 </style>
 
-<div class="container-fluid">
-    <div class="row mb-4">
-        <div class="col-12 d-flex justify-content-between align-items-center">
-            <h2 class="mb-0">Statement of Account</h2>
-            <div class="no-print">
-                <button onclick="window.print()" class="btn btn-print text-white">
-                    <i class="fas fa-print mr-2"></i>Print
-                </button>
-            </div>
+<div class="statement-container">
+    <div class="container-fluid">
+        
+        <!-- Header -->
+        <div class="statement-header fade-in">
+            <h2><i class="fas fa-file-invoice-dollar me-3"></i>Statement of Account</h2>
+            <p class="mb-0">Generate comprehensive account statements with multiple export options</p>
         </div>
-    </div>
 
-    <div class="row mb-4 no-print">
-        <div class="col-12">
-            <div class="form-container">
-                <form method="post">
+        <!-- Form Section -->
+        <div class="form-card slide-up no-print">
+            <div class="form-header">
+                <h4>
+                    <div class="form-icon">
+                        <i class="fas fa-filter"></i>
+                    </div>
+                    Generate Statement
+                </h4>
+            </div>
+            <div class="form-body">
+                <form method="post" id="statementForm">
                     {% csrf_token %}
                     <div class="row g-3">
                         <div class="col-md-3">
-                            <label class="form-label">Start Date</label>
-                            <input type="date" class="form-control" name="start_date" 
+                            <label class="modern-label">
+                                <i class="fas fa-calendar-alt me-2"></i>Start Date
+                            </label>
+                            <input type="date" class="form-control modern-form-control" name="start_date" 
                                    value="{{ start_date|date:'Y-m-d' }}" required>
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label">End Date</label>
-                            <input type="date" class="form-control" name="end_date" 
+                            <label class="modern-label">
+                                <i class="fas fa-calendar-check me-2"></i>End Date
+                            </label>
+                            <input type="date" class="form-control modern-form-control" name="end_date" 
                                    value="{{ end_date|date:'Y-m-d' }}" required>
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label">GL Number</label>
-                            <input type="text" class="form-control" name="gl_no" 
-                                   value="{{ gl_no }}" required>
+                            <label class="modern-label">
+                                <i class="fas fa-hashtag me-2"></i>GL Number
+                            </label>
+                            <input type="text" class="form-control modern-form-control" name="gl_no" 
+                                   value="{{ gl_no }}" placeholder="Enter GL Number" required>
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label">Account Number</label>
-                            <input type="text" class="form-control" name="ac_no" 
-                                   value="{{ ac_no }}" required>
+                            <label class="modern-label">
+                                <i class="fas fa-university me-2"></i>Account Number
+                            </label>
+                            <input type="text" class="form-control modern-form-control" name="ac_no" 
+                                   value="{{ ac_no }}" placeholder="Enter Account Number" required>
                         </div>
                         <div class="col-12 text-end">
-                            <button type="submit" class="btn btn-generate text-white">
-                                <i class="fas fa-file-alt mr-2"></i>Generate Statement
+                            <button type="submit" class="btn-generate">
+                                <i class="fas fa-file-alt me-2"></i>Generate Statement
                             </button>
                         </div>
                     </div>
                 </form>
             </div>
         </div>
-    </div>
 
-    {% if statement_data %}
-    <div class="row">
-        <div class="col-12">
-            <div class="report-container">
-                <div class="report-header">
-                    <h3 class="report-title">STATEMENT OF ACCOUNT</h3>
-                    <h5 class="report-subtitle mb-0">
-                        {{ company.company_name|upper }} | {{ branch.branch_name|upper }}
-                    </h5>
-                    <div class="client-name">
-                        {{ full_name }}
+        {% if statement_data %}
+        <!-- Export Toolbar -->
+        <div class="export-toolbar no-print slide-up" style="animation-delay: 0.1s;">
+            <div>
+                <h5 class="mb-0">Export Options</h5>
+                <small class="text-muted">Choose your preferred format</small>
+            </div>
+            <div class="export-group">
+                <a href="?export=pdf&start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}&gl_no={{ gl_no }}&ac_no={{ ac_no }}" 
+                   class="export-btn btn-pdf">
+                    <i class="fas fa-file-pdf"></i>PDF
+                </a>
+                <a href="?export=word&start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}&gl_no={{ gl_no }}&ac_no={{ ac_no }}" 
+                   class="export-btn btn-word">
+                    <i class="fas fa-file-word"></i>Word
+                </a>
+                <a href="?export=excel&start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}&gl_no={{ gl_no }}&ac_no={{ ac_no }}" 
+                   class="export-btn btn-excel">
+                    <i class="fas fa-file-excel"></i>Excel
+                </a>
+                <a href="?export=csv&start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}&gl_no={{ gl_no }}&ac_no={{ ac_no }}" 
+                   class="export-btn btn-csv">
+                    <i class="fas fa-file-csv"></i>CSV
+                </a>
+                <button onclick="window.print()" class="export-btn btn-print">
+                    <i class="fas fa-print"></i>Print
+                </button>
+            </div>
+        </div>
+
+        <!-- Statement Report -->
+        <div class="report-card slide-up" style="animation-delay: 0.2s;">
+            <div class="report-header">
+                <h3 class="report-title">STATEMENT OF ACCOUNT</h3>
+                <h5 class="report-subtitle">
+                    {{ company.company_name|upper }} | {{ branch.branch_name|upper }}
+                </h5>
+                <div class="client-info">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <h5 class="mb-2"><i class="fas fa-user me-2"></i>{{ full_name }}</h5>
+                            <div><strong>GL No:</strong> {{ gl_no }} | <strong>AC No:</strong> {{ ac_no }}</div>
+                        </div>
+                        <div class="col-md-4 text-md-end">
+                            <div><strong>Branch:</strong> {{ branch.branch_name }}</div>
+                            <div><strong>Generated:</strong> {% now "M d, Y h:i A" %}</div>
+                        </div>
                     </div>
                 </div>
+            </div>
 
-                <div class="p-4">
-                    <div class="report-period">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <strong>Period:</strong> 
-                                {{ start_date|date:"F d, Y" }} to {{ end_date|date:"F d, Y" }}
+            <div class="report-meta">
+                <div class="row text-center">
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-calendar me-2 text-primary"></i>Statement Period</h6>
+                        <p class="mb-0"><strong>{{ start_date|date:"F d, Y" }} to {{ end_date|date:"F d, Y" }}</strong></p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-calculator me-2 text-success"></i>Transaction Summary</h6>
+                        <p class="mb-0"><strong>{{ statement_data|length }} Transactions</strong></p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-responsive p-3">
+                <table class="statement-table">
+                    <thead>
+                        <tr>
+                            <th><i class="fas fa-calendar-day me-2"></i>Date</th>
+                            <th><i class="fas fa-align-left me-2"></i>Description</th>
+                            <th><i class="fas fa-hashtag me-2"></i>Trx No</th>
+                            <th class="text-end"><i class="fas fa-minus-circle me-2"></i>Debit</th>
+                            <th class="text-end"><i class="fas fa-plus-circle me-2"></i>Credit</th>
+                            <th class="text-end"><i class="fas fa-balance-scale me-2"></i>Balance</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr style="background: rgba(22, 163, 74, 0.1);">
+                            <td><strong>{{ start_date|date:"M d, Y" }}</strong></td>
+                            <td><strong><i class="fas fa-flag me-2"></i>Opening Balance</strong></td>
+                            <td><span class="text-muted">-</span></td>
+                            <td class="amount-cell"><span class="text-muted">-</span></td>
+                            <td class="amount-cell"><span class="text-muted">-</span></td>
+                            <td class="amount-cell"><strong>₦{{ opening_balance|floatformat:2|intcomma }}</strong></td>
+                        </tr>
+                        {% for entry in statement_data %}
+                        <tr>
+                            <td>{{ entry.date|date:"M d, Y" }}</td>
+                            <td>
+                                <div>{{ entry.description }}</div>
+                                {% if entry.reference %}
+                                <small class="text-muted">Ref: {{ entry.reference }}</small>
+                                {% endif %}
+                            </td>
+                            <td><code>{{ entry.trx_no }}</code></td>
+                            <td class="amount-cell debit-amount">
+                                {% if entry.debit %}
+                                    ₦{{ entry.debit|floatformat:2|intcomma }}
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="amount-cell credit-amount">
+                                {% if entry.credit %}
+                                    ₦{{ entry.credit|floatformat:2|intcomma }}
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="amount-cell"><strong>₦{{ entry.running_balance|floatformat:2|intcomma }}</strong></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="total-row">
+                            <td colspan="3" class="text-end">
+                                <strong><i class="fas fa-calculator me-2"></i>TOTALS</strong>
+                            </td>
+                            <td class="amount-cell debit-amount">
+                                <strong>₦{{ debit_amount|floatformat:2|intcomma }}</strong>
+                            </td>
+                            <td class="amount-cell credit-amount">
+                                <strong>₦{{ credit_amount|floatformat:2|intcomma }}</strong>
+                            </td>
+                            <td class="amount-cell">
+                                <strong>₦{{ closing_balance|floatformat:2|intcomma }}</strong>
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+            <div class="p-4">
+                <div class="row">
+                    <div class="col-lg-6">
+                        <div class="summary-card">
+                            <h6 class="mb-3"><i class="fas fa-chart-bar me-2 text-primary"></i>Account Summary</h6>
+                            <div class="summary-item">
+                                <span class="summary-label">Opening Balance:</span>
+                                <span class="summary-value">₦{{ opening_balance|floatformat:2|intcomma }}</span>
                             </div>
-                            <div class="col-md-6 text-end">
-                                <strong>Generated:</strong> 
-                                {% now "F d, Y h:i A" %}
+                            <div class="summary-item">
+                                <span class="summary-label">Total Debits:</span>
+                                <span class="summary-value debit-amount">₦{{ debit_amount|floatformat:2|intcomma }}</span>
                             </div>
-                            <div class="col-md-6">
-                                <strong>GL No:</strong> {{ gl_no }} | <strong>AC No:</strong> {{ ac_no }}
+                            <div class="summary-item">
+                                <span class="summary-label">Total Credits:</span>
+                                <span class="summary-value credit-amount">₦{{ credit_amount|floatformat:2|intcomma }}</span>
                             </div>
-                            <div class="col-md-6 text-end">
-                                <strong>Branch:</strong> {{ branch.branch_name }}
+                            <div class="summary-item">
+                                <span class="summary-label">Net Movement:</span>
+                                <span class="summary-value">₦{{ credit_amount|add:debit_amount|floatformat:2|intcomma }}</span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="summary-label">Closing Balance:</span>
+                                <span class="summary-value">₦{{ closing_balance|floatformat:2|intcomma }}</span>
                             </div>
                         </div>
                     </div>
-
-                    <div class="table-responsive">
-                        <table class="report-table">
-                            <thead>
-                                <tr>
-                                    <th>Date</th>
-                                    <th>Description</th>
-                                    <th>Trx No</th>
-                                    <th class="text-end">Debit</th>
-                                    <th class="text-end">Credit</th>
-                                    <th class="text-end">Balance</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>{{ start_date|date:"M d, Y" }}</td>
-                                    <td>Opening Balance</td>
-                                    <td></td>
-                                    <td class="amount">-</td>
-                                    <td class="amount">-</td>
-                                    <td class="amount">{{ opening_balance|floatformat:2|intcomma }}</td>
-                                </tr>
-                                {% for entry in statement_data %}
-                                <tr>
-                                    <td>{{ entry.date|date:"M d, Y" }}</td>
-                                    <td>{{ entry.description }}</td>
-                                    <td>{{ entry.trx_no }}</td>
-                                    <td class="amount text-danger">{% if entry.debit %}{{ entry.debit|floatformat:2|intcomma }}{% else %}-{% endif %}</td>
-                                    <td class="amount text-success">{% if entry.credit %}{{ entry.credit|floatformat:2|intcomma }}{% else %}-{% endif %}</td>
-
-                                    <td class="amount">{{ entry.running_balance|floatformat:2|intcomma }}</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                            <tfoot>
-                                <tr class="total-row">
-                                    <td colspan="3" class="text-end fw-bold">TOTALS</td>
-                                      <td class="amount text-danger"></td>{{ debit_amount|floatformat:2|intcomma }}</td>
-                                   <td class="amount text-success"></td>{{ credit_amount|floatformat:2|intcomma }}   </td>
-                                   
-                                    <td class="amount">{{ closing_balance|floatformat:2|intcomma }}</td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
-
-                    <div class="mt-4">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="alert alert-light">
-                                    <h6>Summary</h6>
-                                    <div class="d-flex justify-content-between">
-                                        <span>Opening Balance:</span>
-                                        <strong>{{ opening_balance|floatformat:2|intcomma }}</strong>
-                                    </div>
-                                    <div class="d-flex justify-content-between">
-                                        <span>Total Debits:</span>
-                                       <strong class="text-danger"></strong>{{ debit_amount|floatformat:2|intcomma }}</strong>
-                                    </div>
-                                    <div class="d-flex justify-content-between">
-                                        <span>Total Credits:</span>
-                                         <strong class="text-success"></strong>{{ credit_amount|floatformat:2|intcomma }}  </strong>
-                                        
-                                    </div>
-                                    <div class="d-flex justify-content-between">
-                                        <span>Closing Balance:</span>
-                                        <strong>{{ closing_balance|floatformat:2|intcomma }}</strong>
-                                    </div>
-                                </div>
+                    <div class="col-lg-6">
+                        <div class="mt-4 mt-lg-0">
+                            <div class="alert alert-info">
+                                <h6><i class="fas fa-info-circle me-2"></i>Statement Notes</h6>
+                                <ul class="mb-0 small">
+                                    <li>Credit amounts represent deposits and positive transactions</li>
+                                    <li>Debit amounts represent withdrawals and charges</li>
+                                    <li>All amounts are in Nigerian Naira (₦)</li>
+                                    <li>Statement period: {{ start_date|date:"M d, Y" }} to {{ end_date|date:"M d, Y" }}</li>
+                                </ul>
                             </div>
-                            <div class="col-md-6 text-muted small text-end">
-                                <div class="mb-2">
-                                    <strong>Note:</strong> 
-                                    Credit amounts represent deposits/positive transactions. 
-                                    Debit amounts represent withdrawals/negative transactions.
-                                </div>
-                                <div>
-                                    Generated by: {{ request.user.get_full_name|default:request.user.username }}
-                                </div>
+                            <div class="text-muted small text-end">
+                                <div><strong>Generated by:</strong> {{ request.user.first_name|default:request.user.username }} {{ request.user.last_name }}</div>
+                                <div><strong>Date & Time:</strong> {% now "F d, Y h:i A" %}</div>
+                                <div><strong>System:</strong> FinanceFlex Banking System</div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+        {% endif %}
+
     </div>
-    {% endif %}
 </div>
 
+<!-- JavaScript for Enhanced Functionality -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Date validation
+    // Form validation
+    initializeFormValidation();
+    
+    // Export functionality
+    initializeExportFeatures();
+    
+    // Loading states
+    initializeLoadingStates();
+});
+
+function initializeFormValidation() {
     const startDate = document.querySelector('input[name="start_date"]');
     const endDate = document.querySelector('input[name="end_date"]');
+    const form = document.getElementById('statementForm');
     
     if (startDate && endDate) {
         startDate.addEventListener('change', function() {
             if (endDate.value && this.value > endDate.value) {
-                alert('Start date cannot be after end date');
+                showAlert('Start date cannot be after end date', 'warning');
                 this.value = '';
+                this.focus();
             }
         });
         
         endDate.addEventListener('change', function() {
             if (startDate.value && this.value < startDate.value) {
-                alert('End date cannot be before start date');
+                showAlert('End date cannot be before start date', 'warning');
                 this.value = '';
+                this.focus();
             }
         });
     }
+    
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const formData = new FormData(form);
+            const startDateVal = formData.get('start_date');
+            const endDateVal = formData.get('end_date');
+            const glNo = formData.get('gl_no');
+            const acNo = formData.get('ac_no');
+            
+            if (!startDateVal || !endDateVal || !glNo || !acNo) {
+                e.preventDefault();
+                showAlert('Please fill in all required fields', 'warning');
+                return;
+            }
+            
+            if (startDateVal > endDateVal) {
+                e.preventDefault();
+                showAlert('Start date cannot be after end date', 'warning');
+                return;
+            }
+            
+            // Show loading state
+            showLoadingState();
+        });
+    }
+}
+
+function initializeExportFeatures() {
+    const exportBtns = document.querySelectorAll('.export-btn');
+    
+    exportBtns.forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            if (this.href && this.href.includes('export=')) {
+                // Show export progress
+                showExportProgress(this.textContent.trim());
+            }
+        });
+    });
+}
+
+function initializeLoadingStates() {
+    // Add loading states to async operations
+    const asyncElements = document.querySelectorAll('[data-async]');
+    
+    asyncElements.forEach(element => {
+        element.addEventListener('click', function() {
+            this.classList.add('loading');
+            
+            setTimeout(() => {
+                this.classList.remove('loading');
+            }, 3000);
+        });
+    });
+}
+
+function showLoadingState() {
+    const submitBtn = document.querySelector('.btn-generate');
+    if (submitBtn) {
+        const originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Generating...';
+        submitBtn.disabled = true;
+        
+        setTimeout(() => {
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+        }, 10000);
+    }
+}
+
+function showExportProgress(format) {
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #16a34a;
+        color: white;
+        padding: 1rem 1.5rem;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        z-index: 9999;
+        transform: translateX(100%);
+        transition: transform 0.3s ease;
+        font-weight: 500;
+    `;
+    
+    toast.innerHTML = `<i class="fas fa-download me-2"></i>Preparing ${format} export...`;
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.style.transform = 'translateX(0)';
+    }, 10);
+    
+    setTimeout(() => {
+        toast.innerHTML = `<i class="fas fa-check me-2"></i>${format} export ready!`;
+        toast.style.background = '#22c55e';
+    }, 2000);
+    
+    setTimeout(() => {
+        toast.style.transform = 'translateX(100%)';
+        setTimeout(() => {
+            if (document.body.contains(toast)) {
+                document.body.removeChild(toast);
+            }
+        }, 300);
+    }, 5000);
+}
+
+function showAlert(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 1rem 1.5rem;
+        border-radius: 12px;
+        color: white;
+        font-weight: 500;
+        z-index: 9999;
+        transform: translateX(100%);
+        transition: transform 0.3s ease;
+        max-width: 400px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    `;
+    
+    const colors = {
+        success: '#22c55e',
+        warning: '#f59e0b',
+        info: '#3b82f6',
+        error: '#ef4444'
+    };
+    
+    const icons = {
+        success: 'check-circle',
+        warning: 'exclamation-triangle',
+        info: 'info-circle',
+        error: 'times-circle'
+    };
+    
+    toast.style.backgroundColor = colors[type];
+    toast.innerHTML = `<i class="fas fa-${icons[type]} me-2"></i>${message}`;
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.style.transform = 'translateX(0)';
+    }, 10);
+    
+    setTimeout(() => {
+        toast.style.transform = 'translateX(100%)';
+        setTimeout(() => {
+            if (document.body.contains(toast)) {
+                document.body.removeChild(toast);
+            }
+        }, 300);
+    }, 4000);
+}
+
+// Add ripple effects to buttons
+document.querySelectorAll('.export-btn, .btn-generate').forEach(button => {
+    button.addEventListener('click', function(e) {
+        const rect = this.getBoundingClientRect();
+        const ripple = document.createElement('div');
+        const size = Math.max(rect.width, rect.height);
+        const x = e.clientX - rect.left - size / 2;
+        const y = e.clientY - rect.top - size / 2;
+        
+        ripple.style.cssText = `
+            position: absolute;
+            width: ${size}px;
+            height: ${size}px;
+            left: ${x}px;
+            top: ${y}px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            transform: scale(0);
+            animation: ripple 0.6s ease-out;
+            pointer-events: none;
+        `;
+        
+        this.appendChild(ripple);
+        
+        setTimeout(() => {
+            ripple.remove();
+        }, 600);
+    });
 });
+
+// Add ripple animation CSS
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes ripple {
+        to {
+            transform: scale(4);
+            opacity: 0;
+        }
+    }
+`;
+document.head.appendChild(style);
 </script>
+
 {% endblock %}

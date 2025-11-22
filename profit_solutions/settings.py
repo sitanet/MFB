@@ -127,6 +127,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'ninepsb',
     'adverts',
+    'audit_trail',
    
 ]
 
@@ -141,6 +142,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     # 'audit_trail.middleware.AuditMiddleware',
     'corsheaders.middleware.CorsMiddleware',
+    'audit_trail.middleware.AuditMiddleware',
   
 
 ]

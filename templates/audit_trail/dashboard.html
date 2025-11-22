@@ -1,0 +1,785 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block content %}
+<style>
+:root {
+    /* Orange & Green Theme - matching project colors */
+    --primary-orange: #f97316;
+    --primary-orange-dark: #ea580c;
+    --primary-green: #16a34a;
+    --primary-green-dark: #15803d;
+    --success: #22c55e;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --info: #3b82f6;
+    --light: #f8fafc;
+    --dark: #0f172a;
+    --gray-100: #f1f5f9;
+    --gray-200: #e2e8f0;
+    --gray-300: #cbd5e1;
+    --gray-400: #94a3b8;
+    --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --card-hover-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.dashboard-container {
+    background: linear-gradient(135deg, #f0fdf4 0%, #fff7ed 100%);
+    min-height: 100vh;
+    padding: 1.5rem 0;
+}
+
+/* Header Section */
+.dashboard-header {
+    background: linear-gradient(135deg, var(--primary-orange) 0%, var(--primary-green) 100%);
+    border-radius: 20px;
+    padding: 3rem 2rem;
+    margin-bottom: 2rem;
+    box-shadow: var(--card-shadow);
+    color: white;
+    position: relative;
+    overflow: hidden;
+}
+
+.dashboard-header::before {
+    content: "";
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 70%);
+    transform: rotate(30deg);
+}
+
+.dashboard-header h1 {
+    font-size: 3rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    position: relative;
+    z-index: 2;
+}
+
+.dashboard-header p {
+    font-size: 1.125rem;
+    opacity: 0.9;
+    position: relative;
+    z-index: 2;
+    margin-bottom: 0;
+}
+
+.dashboard-header .header-icon {
+    position: absolute;
+    top: 2rem;
+    right: 2rem;
+    font-size: 4rem;
+    opacity: 0.2;
+    z-index: 1;
+}
+
+/* Statistics Cards */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: white;
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: var(--card-shadow);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--card-hover-shadow);
+}
+
+.stat-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--card-accent);
+    border-radius: 16px 16px 0 0;
+}
+
+.stat-card.card-blue { --card-accent: var(--info); }
+.stat-card.card-green { --card-accent: var(--success); }
+.stat-card.card-red { --card-accent: var(--danger); }
+.stat-card.card-orange { --card-accent: var(--warning); }
+.stat-card.card-purple { --card-accent: #8b5cf6; }
+.stat-card.card-teal { --card-accent: #14b8a6; }
+
+.stat-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+}
+
+.stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: white;
+    background: var(--card-accent);
+}
+
+.stat-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--dark);
+    margin-bottom: 0.5rem;
+    line-height: 1;
+}
+
+.stat-label {
+    color: var(--gray-400);
+    font-weight: 500;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Action Cards */
+.action-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 3rem;
+}
+
+.action-card {
+    background: white;
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: var(--card-shadow);
+    transition: all 0.3s ease;
+    text-decoration: none;
+    color: inherit;
+    position: relative;
+    overflow: hidden;
+}
+
+.action-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--card-hover-shadow);
+    text-decoration: none;
+    color: inherit;
+}
+
+.action-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--primary-orange), var(--primary-green));
+    border-radius: 16px 16px 0 0;
+}
+
+.action-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.action-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    color: white;
+    background: linear-gradient(135deg, var(--primary-orange), var(--primary-green));
+}
+
+.action-title {
+    font-weight: 600;
+    color: var(--dark);
+    margin: 0;
+    font-size: 1rem;
+}
+
+.action-description {
+    color: var(--gray-400);
+    font-size: 0.875rem;
+    margin: 0;
+    line-height: 1.4;
+}
+
+/* Recent Activities Table */
+.activities-section {
+    background: white;
+    border-radius: 20px;
+    box-shadow: var(--card-shadow);
+    overflow: hidden;
+}
+
+.activities-header {
+    background: linear-gradient(135deg, var(--gray-100) 0%, white 100%);
+    padding: 2rem;
+    border-bottom: 2px solid var(--gray-100);
+}
+
+.activities-header h2 {
+    margin: 0;
+    color: var(--dark);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.activities-header-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--primary-orange), var(--primary-green));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.25rem;
+}
+
+.activities-table {
+    padding: 0;
+}
+
+.modern-table {
+    width: 100%;
+    margin: 0;
+    background: white;
+}
+
+.modern-table thead {
+    background: var(--light);
+}
+
+.modern-table thead th {
+    padding: 1.25rem 1.5rem;
+    font-weight: 600;
+    color: var(--gray-400);
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    border: none;
+}
+
+.modern-table tbody td {
+    padding: 1.25rem 1.5rem;
+    border-top: 1px solid var(--gray-100);
+    vertical-align: middle;
+}
+
+.modern-table tbody tr {
+    transition: background-color 0.2s ease;
+}
+
+.modern-table tbody tr:hover {
+    background: var(--gray-100);
+}
+
+.timestamp-cell {
+    color: var(--info);
+    font-weight: 500;
+    font-size: 0.875rem;
+}
+
+.user-cell {
+    color: var(--dark);
+    font-weight: 500;
+}
+
+.badge-modern {
+    padding: 0.4rem 0.8rem;
+    border-radius: 50px;
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.badge-primary { background: var(--info); color: white; }
+.badge-secondary { background: var(--gray-300); color: var(--dark); }
+.badge-success { background: var(--success); color: white; }
+.badge-danger { background: var(--danger); color: white; }
+
+.description-cell {
+    color: var(--gray-400);
+    font-size: 0.875rem;
+    max-width: 300px;
+}
+
+.ip-cell {
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    color: var(--gray-400);
+    font-size: 0.8rem;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--gray-400);
+}
+
+.empty-state-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.3;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .dashboard-header {
+        padding: 2rem 1.5rem;
+        text-align: center;
+    }
+    
+    .dashboard-header h1 {
+        font-size: 2rem;
+    }
+    
+    .dashboard-header .header-icon {
+        display: none;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .stat-card {
+        padding: 1.5rem;
+    }
+    
+    .stat-value {
+        font-size: 2rem;
+    }
+    
+    .action-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .modern-table {
+        font-size: 0.875rem;
+    }
+    
+    .modern-table thead th,
+    .modern-table tbody td {
+        padding: 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .dashboard-container {
+        padding: 1rem 0;
+    }
+    
+    .activities-header {
+        padding: 1.5rem;
+    }
+    
+    .modern-table thead th,
+    .modern-table tbody td {
+        padding: 0.75rem 0.5rem;
+    }
+}
+
+/* Animation Classes */
+.fade-in {
+    animation: fadeIn 0.6s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.slide-up {
+    animation: slideUp 0.6s ease-out;
+}
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+</style>
+
+<div class="dashboard-container">
+    <div class="container-fluid">
+        
+        <!-- Header -->
+        <div class="dashboard-header fade-in">
+            <div class="header-icon">
+                <i class="fas fa-shield-alt"></i>
+            </div>
+            <h1><i class="fas fa-chart-line me-3"></i>Audit Trail Dashboard</h1>
+            <p>Monitor system activities, track user actions, and maintain comprehensive audit logs for compliance and security.</p>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="stats-grid slide-up">
+            <div class="stat-card card-blue">
+                <div class="stat-header">
+                    <div class="stat-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                </div>
+                <div class="stat-value">{{ stats.today_total|default:0|intcomma }}</div>
+                <div class="stat-label">Today's Activities</div>
+            </div>
+
+            <div class="stat-card card-green">
+                <div class="stat-header">
+                    <div class="stat-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                </div>
+                <div class="stat-value">{{ stats.today_users|default:0|intcomma }}</div>
+                <div class="stat-label">Active Users</div>
+            </div>
+
+            <div class="stat-card card-red">
+                <div class="stat-header">
+                    <div class="stat-icon">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                </div>
+                <div class="stat-value">{{ stats.today_failed|default:0|intcomma }}</div>
+                <div class="stat-label">Failed Attempts</div>
+            </div>
+
+            <div class="stat-card card-orange">
+                <div class="stat-header">
+                    <div class="stat-icon">
+                        <i class="fas fa-money-bill-wave"></i>
+                    </div>
+                </div>
+                <div class="stat-value">{{ stats.today_transactions|default:0|intcomma }}</div>
+                <div class="stat-label">Transactions</div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="action-grid slide-up" style="animation-delay: 0.2s;">
+            <a href="{% url 'audit_trail:list' %}" class="action-card">
+                <div class="action-header">
+                    <div class="action-icon">
+                        <i class="fas fa-list"></i>
+                    </div>
+                    <div>
+                        <h3 class="action-title">View All Audit Logs</h3>
+                        <p class="action-description">Browse and filter complete audit trail history</p>
+                    </div>
+                </div>
+            </a>
+
+            <a href="{% url 'audit_trail:statistics' %}" class="action-card">
+                <div class="action-header">
+                    <div class="action-icon">
+                        <i class="fas fa-chart-bar"></i>
+                    </div>
+                    <div>
+                        <h3 class="action-title">Statistics & Reports</h3>
+                        <p class="action-description">View detailed analytics and generate reports</p>
+                    </div>
+                </div>
+            </a>
+
+            <a href="{% url 'audit_trail:configuration' %}" class="action-card">
+                <div class="action-header">
+                    <div class="action-icon">
+                        <i class="fas fa-cogs"></i>
+                    </div>
+                    <div>
+                        <h3 class="action-title">Configuration</h3>
+                        <p class="action-description">Manage audit settings and preferences</p>
+                    </div>
+                </div>
+            </a>
+
+            <a href="{% url 'audit_trail:alerts' %}" class="action-card">
+                <div class="action-header">
+                    <div class="action-icon">
+                        <i class="fas fa-bell"></i>
+                    </div>
+                    <div>
+                        <h3 class="action-title">Security Alerts</h3>
+                        <p class="action-description">Monitor and respond to security alerts</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- Recent Activities Section -->
+        <div class="activities-section slide-up" style="animation-delay: 0.4s;">
+            <div class="activities-header">
+                <h2>
+                    <div class="activities-header-icon">
+                        <i class="fas fa-history"></i>
+                    </div>
+                    Recent Audit Activities
+                </h2>
+            </div>
+            <div class="activities-table">
+                {% if recent_audits %}
+                <table class="modern-table">
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>User</th>
+                            <th>Action</th>
+                            <th>Category</th>
+                            <th>Description</th>
+                            <th>IP Address</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for audit in recent_audits %}
+                        <tr>
+                            <td>
+                                <div class="timestamp-cell">
+                                    <i class="fas fa-clock me-2"></i>
+                                    {{ audit.timestamp|date:"M d, H:i" }}
+                                </div>
+                            </td>
+                            <td>
+                                <div class="user-cell">
+                                    <i class="fas fa-user me-2 text-muted"></i>
+                                    {{ audit.user_name_only|default:"System" }}
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge-modern badge-primary">
+                                    {{ audit.get_action_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge-modern badge-secondary">
+                                    {{ audit.get_category_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="description-cell">
+                                    {{ audit.description|truncatechars:60 }}
+                                </div>
+                            </td>
+                            <td>
+                                <div class="ip-cell">
+                                    {{ audit.ip_address|default:"-" }}
+                                </div>
+                            </td>
+                            <td>
+                                {% if audit.success %}
+                                    <span class="badge-modern badge-success">
+                                        <i class="fas fa-check me-1"></i>Success
+                                    </span>
+                                {% else %}
+                                    <span class="badge-modern badge-danger">
+                                        <i class="fas fa-times me-1"></i>Failed
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'audit_trail:detail' audit.id %}" 
+                                   class="btn btn-sm btn-outline-primary"
+                                   style="border-radius: 8px; font-size: 0.75rem;">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="empty-state">
+                    <div class="empty-state-icon">
+                        <i class="fas fa-clipboard-list"></i>
+                    </div>
+                    <h3>No Audit Entries Found</h3>
+                    <p>No audit activities have been recorded yet. Activities will appear here once users start interacting with the system.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Additional Statistics Row (if you want to add more) -->
+        {% if category_stats %}
+        <div class="mt-4">
+            <div class="activities-section slide-up" style="animation-delay: 0.6s;">
+                <div class="activities-header">
+                    <h2>
+                        <div class="activities-header-icon">
+                            <i class="fas fa-chart-pie"></i>
+                        </div>
+                        Activity Breakdown by Category
+                    </h2>
+                </div>
+                <div class="p-4">
+                    <div class="row">
+                        {% for category in category_stats %}
+                        <div class="col-md-3 mb-3">
+                            <div class="stat-card card-purple">
+                                <div class="stat-header">
+                                    <div class="stat-icon">
+                                        <i class="fas fa-tag"></i>
+                                    </div>
+                                </div>
+                                <div class="stat-value">{{ category.count|intcomma }}</div>
+                                <div class="stat-label">{{ category.category|default:"Unknown" }}</div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+</div>
+
+<!-- Auto-refresh functionality -->
+<script>
+// Auto-refresh dashboard every 5 minutes
+let refreshInterval;
+
+function startAutoRefresh() {
+    refreshInterval = setInterval(() => {
+        // Only refresh if the page is visible
+        if (!document.hidden) {
+            window.location.reload();
+        }
+    }, 300000); // 5 minutes
+}
+
+function stopAutoRefresh() {
+    if (refreshInterval) {
+        clearInterval(refreshInterval);
+    }
+}
+
+// Handle page visibility changes
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+        stopAutoRefresh();
+    } else {
+        startAutoRefresh();
+    }
+});
+
+// Start auto-refresh when page loads
+document.addEventListener('DOMContentLoaded', () => {
+    startAutoRefresh();
+    
+    // Add smooth scrolling to action cards
+    document.querySelectorAll('.action-card').forEach(card => {
+        card.addEventListener('click', (e) => {
+            // Add ripple effect
+            const ripple = document.createElement('div');
+            const rect = card.getBoundingClientRect();
+            const size = Math.max(rect.width, rect.height);
+            const x = e.clientX - rect.left - size / 2;
+            const y = e.clientY - rect.top - size / 2;
+            
+            ripple.style.cssText = `
+                position: absolute;
+                width: ${size}px;
+                height: ${size}px;
+                left: ${x}px;
+                top: ${y}px;
+                background: rgba(249, 115, 22, 0.3);
+                border-radius: 50%;
+                transform: scale(0);
+                animation: ripple 0.6s ease-out;
+                pointer-events: none;
+            `;
+            
+            card.appendChild(ripple);
+            
+            setTimeout(() => {
+                ripple.remove();
+            }, 600);
+        });
+    });
+});
+
+// Add ripple animation CSS
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes ripple {
+        to {
+            transform: scale(4);
+            opacity: 0;
+        }
+    }
+    
+    .action-card {
+        position: relative;
+        overflow: hidden;
+    }
+`;
+document.head.appendChild(style);
+
+// Add real-time updates notification
+function showUpdateNotification() {
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: var(--success);
+        color: white;
+        padding: 1rem 1.5rem;
+        border-radius: 12px;
+        box-shadow: var(--card-shadow);
+        z-index: 9999;
+        font-weight: 500;
+        transform: translateX(100%);
+        transition: transform 0.3s ease;
+    `;
+    notification.innerHTML = '<i class="fas fa-sync-alt me-2"></i>Dashboard updated with latest data';
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.style.transform = 'translateX(0)';
+    }, 10);
+    
+    setTimeout(() => {
+        notification.style.transform = 'translateX(100%)';
+        setTimeout(() => {
+            document.body.removeChild(notification);
+        }, 300);
+    }, 3000);
+}
+
+// Simulate real-time updates (you can replace this with actual WebSocket or polling)
+setInterval(() => {
+    if (Math.random() > 0.8) { // 20% chance every minute
+        showUpdateNotification();
+    }
+}, 60000);
+</script>
+
+{% endblock %}

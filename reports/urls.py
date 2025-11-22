@@ -64,5 +64,8 @@ urlpatterns = [
     path('portfolio_at_risk_report_view/', views.portfolio_at_risk_report_view, name='portfolio_at_risk_report_view'),
 
 
+    path('cbn-returns/', views.cbn_returns, name='cbn_returns'),
+    path('cbn-returns/<str:form_code>/', views.cbn_return_detail, name='cbn_return_detail'),
+
     
 ]

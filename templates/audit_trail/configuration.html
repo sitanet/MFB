@@ -1,0 +1,1056 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block content %}
+<style>
+:root {
+    /* Orange & Green Theme - matching project colors */
+    --primary-orange: #f97316;
+    --primary-orange-dark: #ea580c;
+    --primary-green: #16a34a;
+    --primary-green-dark: #15803d;
+    --success: #22c55e;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --info: #3b82f6;
+    --light: #f8fafc;
+    --dark: #0f172a;
+    --gray-100: #f1f5f9;
+    --gray-200: #e2e8f0;
+    --gray-300: #cbd5e1;
+    --gray-400: #94a3b8;
+    --gray-500: #64748b;
+    --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --card-hover-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.config-container {
+    background: linear-gradient(135deg, #f0fdf4 0%, #fff7ed 100%);
+    min-height: 100vh;
+    padding: 1.5rem 0;
+}
+
+/* Header Section */
+.config-header {
+    background: linear-gradient(135deg, var(--primary-orange) 0%, var(--primary-green) 100%);
+    border-radius: 20px;
+    padding: 3rem 2rem;
+    margin-bottom: 2rem;
+    box-shadow: var(--card-shadow);
+    color: white;
+    position: relative;
+    overflow: hidden;
+}
+
+.config-header::before {
+    content: "";
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 70%);
+    transform: rotate(30deg);
+}
+
+.config-header h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    position: relative;
+    z-index: 2;
+}
+
+.config-header p {
+    font-size: 1.125rem;
+    opacity: 0.9;
+    position: relative;
+    z-index: 2;
+    margin-bottom: 0;
+}
+
+.config-header .header-icon {
+    position: absolute;
+    top: 2rem;
+    right: 2rem;
+    font-size: 4rem;
+    opacity: 0.2;
+    z-index: 1;
+}
+
+/* Configuration Cards */
+.config-card {
+    background: white;
+    border-radius: 20px;
+    box-shadow: var(--card-shadow);
+    margin-bottom: 2rem;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.config-card:hover {
+    box-shadow: var(--card-hover-shadow);
+}
+
+.config-card-header {
+    background: linear-gradient(135deg, var(--gray-100) 0%, white 100%);
+    padding: 2rem;
+    border-bottom: 3px solid transparent;
+    background-clip: padding-box;
+    position: relative;
+}
+
+.config-card-header::before {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--primary-orange), var(--primary-green));
+}
+
+.config-card-header h3 {
+    margin: 0;
+    color: var(--dark);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-size: 1.5rem;
+}
+
+.config-card-body {
+    padding: 2rem;
+}
+
+.section-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    color: white;
+    background: linear-gradient(135deg, var(--section-color), var(--section-color-dark));
+}
+
+.tracking-section { --section-color: var(--info); --section-color-dark: #2563eb; }
+.retention-section { --section-color: var(--warning); --section-color-dark: var(--warning); }
+.alert-section { --section-color: var(--danger); --section-color-dark: #dc2626; }
+.security-section { --section-color: var(--success); --section-color-dark: var(--primary-green-dark); }
+
+/* Enhanced Form Controls */
+.modern-form-group {
+    margin-bottom: 2rem;
+}
+
+.modern-label {
+    font-weight: 600;
+    color: var(--dark);
+    margin-bottom: 0.75rem;
+    display: block;
+    font-size: 1rem;
+}
+
+.modern-input {
+    width: 100%;
+    padding: 1rem 1.25rem;
+    border: 2px solid var(--gray-200);
+    border-radius: 12px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    background: white;
+}
+
+.modern-input:focus {
+    outline: none;
+    border-color: var(--primary-orange);
+    box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.1);
+}
+
+.modern-input:invalid {
+    border-color: var(--danger);
+}
+
+.input-help {
+    font-size: 0.875rem;
+    color: var(--gray-400);
+    margin-top: 0.5rem;
+    display: block;
+}
+
+/* Custom Checkboxes */
+.checkbox-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.modern-checkbox {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.25rem;
+    background: var(--light);
+    border: 2px solid var(--gray-200);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.modern-checkbox:hover {
+    border-color: var(--primary-orange);
+    background: rgba(249, 115, 22, 0.05);
+}
+
+.modern-checkbox.checked {
+    border-color: var(--primary-orange);
+    background: rgba(249, 115, 22, 0.1);
+}
+
+.modern-checkbox input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.checkbox-icon {
+    width: 24px;
+    height: 24px;
+    border: 2px solid var(--gray-300);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    background: white;
+    flex-shrink: 0;
+}
+
+.modern-checkbox.checked .checkbox-icon {
+    background: var(--primary-orange);
+    border-color: var(--primary-orange);
+    color: white;
+}
+
+.checkbox-label {
+    font-weight: 500;
+    color: var(--dark);
+    margin: 0;
+    flex: 1;
+}
+
+.checkbox-description {
+    font-size: 0.875rem;
+    color: var(--gray-500);
+    margin-top: 0.25rem;
+}
+
+/* Action Buttons */
+.button-group {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-top: 2rem;
+}
+
+.modern-btn {
+    padding: 1rem 2rem;
+    border: none;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.modern-btn::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
+}
+
+.modern-btn:hover::before {
+    left: 100%;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--primary-orange), var(--primary-orange-dark));
+    color: white;
+    box-shadow: 0 4px 15px rgba(249, 115, 22, 0.4);
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(249, 115, 22, 0.5);
+    color: white;
+    text-decoration: none;
+}
+
+.btn-secondary {
+    background: var(--gray-200);
+    color: var(--dark);
+    border: 2px solid var(--gray-300);
+}
+
+.btn-secondary:hover {
+    background: var(--gray-300);
+    transform: translateY(-1px);
+    color: var(--dark);
+    text-decoration: none;
+}
+
+.btn-info {
+    background: linear-gradient(135deg, var(--info), #2563eb);
+    color: white;
+    box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+}
+
+.btn-info:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(59, 130, 246, 0.5);
+    color: white;
+    text-decoration: none;
+}
+
+/* Info Cards */
+.info-card {
+    background: white;
+    border-radius: 16px;
+    box-shadow: var(--card-shadow);
+    overflow: hidden;
+}
+
+.info-card-header {
+    background: linear-gradient(135deg, var(--gray-100) 0%, white 100%);
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.info-card-body {
+    padding: 1.5rem;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+}
+
+.info-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: var(--light);
+    border-radius: 12px;
+}
+
+.info-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: var(--primary-orange);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.125rem;
+}
+
+.info-content h4 {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--dark);
+}
+
+.info-content p {
+    margin: 0;
+    color: var(--gray-500);
+    font-size: 0.875rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .config-header {
+        padding: 2rem 1.5rem;
+        text-align: center;
+    }
+    
+    .config-header h1 {
+        font-size: 2rem;
+    }
+    
+    .config-header .header-icon {
+        display: none;
+    }
+    
+    .config-card-body {
+        padding: 1.5rem;
+    }
+    
+    .checkbox-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .button-group {
+        justify-content: stretch;
+    }
+    
+    .modern-btn {
+        flex: 1;
+        justify-content: center;
+    }
+}
+
+/* Animation Classes */
+.fade-in {
+    animation: fadeIn 0.6s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.slide-up {
+    animation: slideUp 0.6s ease-out;
+}
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Success Toast */
+.toast-success {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: var(--success);
+    color: white;
+    padding: 1rem 1.5rem;
+    border-radius: 12px;
+    box-shadow: var(--card-shadow);
+    z-index: 9999;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+}
+
+.toast-success.show {
+    transform: translateX(0);
+}
+</style>
+
+<div class="config-container">
+    <div class="container-fluid">
+        
+        <!-- Header -->
+        <div class="config-header fade-in">
+            <div class="header-icon">
+                <i class="fas fa-cogs"></i>
+            </div>
+            <h1><i class="fas fa-sliders-h me-3"></i>Audit Trail Configuration</h1>
+            <p>Configure audit trail settings, tracking preferences, and security parameters to meet your compliance requirements.</p>
+        </div>
+
+        <form method="post" id="configForm">
+            {% csrf_token %}
+            
+            <!-- Tracking Settings -->
+            <div class="config-card tracking-section slide-up">
+                <div class="config-card-header">
+                    <h3>
+                        <div class="section-icon">
+                            <i class="fas fa-eye"></i>
+                        </div>
+                        Activity Tracking
+                    </h3>
+                </div>
+                <div class="config-card-body">
+                    <p class="text-muted mb-4">Select which types of activities should be tracked and logged in the audit trail.</p>
+                    
+                    <div class="checkbox-grid">
+                        <label class="modern-checkbox" data-checkbox="track_authentication">
+                            <input type="checkbox" name="track_authentication" id="track_authentication" {% if config.track_authentication %}checked{% endif %}>
+                            <div class="checkbox-icon">
+                                <i class="fas fa-check" style="display: none;"></i>
+                            </div>
+                            <div>
+                                <div class="checkbox-label">Authentication Activities</div>
+                                <div class="checkbox-description">Login, logout, password changes</div>
+                            </div>
+                        </label>
+
+                        <label class="modern-checkbox" data-checkbox="track_customer_operations">
+                            <input type="checkbox" name="track_customer_operations" id="track_customer_operations" {% if config.track_customer_operations %}checked{% endif %}>
+                            <div class="checkbox-icon">
+                                <i class="fas fa-check" style="display: none;"></i>
+                            </div>
+                            <div>
+                                <div class="checkbox-label">Customer Operations</div>
+                                <div class="checkbox-description">Customer creation, updates, deletions</div>
+                            </div>
+                        </label>
+
+                        <label class="modern-checkbox" data-checkbox="track_account_operations">
+                            <input type="checkbox" name="track_account_operations" id="track_account_operations" {% if config.track_account_operations %}checked{% endif %}>
+                            <div class="checkbox-icon">
+                                <i class="fas fa-check" style="display: none;"></i>
+                            </div>
+                            <div>
+                                <div class="checkbox-label">Account Operations</div>
+                                <div class="checkbox-description">Account management and modifications</div>
+                            </div>
+                        </label>
+
+                        <label class="modern-checkbox" data-checkbox="track_transactions">
+                            <input type="checkbox" name="track_transactions" id="track_transactions" {% if config.track_transactions %}checked{% endif %}>
+                            <div class="checkbox-icon">
+                                <i class="fas fa-check" style="display: none;"></i>
+                            </div>
+                            <div>
+                                <div class="checkbox-label">Financial Transactions</div>
+                                <div class="checkbox-description">Deposits, withdrawals, transfers</div>
+                            </div>
+                        </label>
+
+                        <label class="modern-checkbox" data-checkbox="track_loans">
+                            <input type="checkbox" name="track_loans" id="track_loans" {% if config.track_loans %}checked{% endif %}>
+                            <div class="checkbox-icon">
+                                <i class="fas fa-check" style="display: none;"></i>
+                            </div>
+                            <div>
+                                <div class="checkbox-label">Loan Management</div>
+                                <div class="checkbox-description">Loan applications, approvals, payments</div>
+                            </div>
+                        </label>
+
+                        <label class="modern-checkbox" data-checkbox="track_reports">
+                            <input type="checkbox" name="track_reports" id="track_reports" {% if config.track_reports %}checked{% endif %}>
+                            <div class="checkbox-icon">
+                                <i class="fas fa-check" style="display: none;"></i>
+                            </div>
+                            <div>
+                                <div class="checkbox-label">Report Access</div>
+                                <div class="checkbox-description">Report generation and viewing</div>
+                            </div>
+                        </label>
+
+                        <label class="modern-checkbox" data-checkbox="track_admin_operations">
+                            <input type="checkbox" name="track_admin_operations" id="track_admin_operations" {% if config.track_admin_operations %}checked{% endif %}>
+                            <div class="checkbox-icon">
+                                <i class="fas fa-check" style="display: none;"></i>
+                            </div>
+                            <div>
+                                <div class="checkbox-label">Admin Operations</div>
+                                <div class="checkbox-description">User management, system configuration</div>
+                            </div>
+                        </label>
+
+                        <label class="modern-checkbox" data-checkbox="track_fixed_assets">
+                            <input type="checkbox" name="track_fixed_assets" id="track_fixed_assets" {% if config.track_fixed_assets %}checked{% endif %}>
+                            <div class="checkbox-icon">
+                                <i class="fas fa-check" style="display: none;"></i>
+                            </div>
+                            <div>
+                                <div class="checkbox-label">Fixed Assets</div>
+                                <div class="checkbox-description">Asset management operations</div>
+                            </div>
+                        </label>
+
+                        <label class="modern-checkbox" data-checkbox="track_cbn_returns">
+                            <input type="checkbox" name="track_cbn_returns" id="track_cbn_returns" {% if config.track_cbn_returns %}checked{% endif %}>
+                            <div class="checkbox-icon">
+                                <i class="fas fa-check" style="display: none;"></i>
+                            </div>
+                            <div>
+                                <div class="checkbox-label">CBN Returns</div>
+                                <div class="checkbox-description">Central Bank reporting activities</div>
+                            </div>
+                        </label>
+
+                        <label class="modern-checkbox" data-checkbox="track_view_actions">
+                            <input type="checkbox" name="track_view_actions" id="track_view_actions" {% if config.track_view_actions %}checked{% endif %}>
+                            <div class="checkbox-icon">
+                                <i class="fas fa-check" style="display: none;"></i>
+                            </div>
+                            <div>
+                                <div class="checkbox-label">View Actions</div>
+                                <div class="checkbox-description">Page views and data access (High volume)</div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Retention Settings -->
+            <div class="config-card retention-section slide-up" style="animation-delay: 0.1s;">
+                <div class="config-card-header">
+                    <h3>
+                        <div class="section-icon">
+                            <i class="fas fa-archive"></i>
+                        </div>
+                        Data Retention
+                    </h3>
+                </div>
+                <div class="config-card-body">
+                    <p class="text-muted mb-4">Configure how long audit data should be retained and cleanup policies.</p>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="modern-form-group">
+                                <label for="retention_days" class="modern-label">
+                                    <i class="fas fa-calendar-alt me-2"></i>Retention Period (Days)
+                                </label>
+                                <input type="number" 
+                                       class="modern-input" 
+                                       name="retention_days" 
+                                       id="retention_days" 
+                                       value="{{ config.retention_days }}" 
+                                       min="1" 
+                                       max="3650"
+                                       placeholder="Enter number of days">
+                                <span class="input-help">Default: 2555 days (7 years) for banking compliance requirements</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="modern-form-group">
+                                <label class="modern-label">
+                                    <i class="fas fa-robot me-2"></i>Automatic Cleanup
+                                </label>
+                                <label class="modern-checkbox" data-checkbox="auto_cleanup_enabled">
+                                    <input type="checkbox" name="auto_cleanup_enabled" id="auto_cleanup_enabled" {% if config.auto_cleanup_enabled %}checked{% endif %}>
+                                    <div class="checkbox-icon">
+                                        <i class="fas fa-check" style="display: none;"></i>
+                                    </div>
+                                    <div>
+                                        <div class="checkbox-label">Enable Automatic Cleanup</div>
+                                        <div class="checkbox-description">Automatically remove old audit records</div>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Alert Settings -->
+            <div class="config-card alert-section slide-up" style="animation-delay: 0.2s;">
+                <div class="config-card-header">
+                    <h3>
+                        <div class="section-icon">
+                            <i class="fas fa-bell"></i>
+                        </div>
+                        Alert Configuration
+                    </h3>
+                </div>
+                <div class="config-card-body">
+                    <p class="text-muted mb-4">Configure real-time alerts and notification thresholds for security monitoring.</p>
+                    
+                    <div class="checkbox-grid mb-4">
+                        <label class="modern-checkbox" data-checkbox="enable_real_time_alerts">
+                            <input type="checkbox" name="enable_real_time_alerts" id="enable_real_time_alerts" {% if config.enable_real_time_alerts %}checked{% endif %}>
+                            <div class="checkbox-icon">
+                                <i class="fas fa-check" style="display: none;"></i>
+                            </div>
+                            <div>
+                                <div class="checkbox-label">Real-time Alerts</div>
+                                <div class="checkbox-description">Enable immediate notifications</div>
+                            </div>
+                        </label>
+
+                        <label class="modern-checkbox" data-checkbox="alert_on_failed_logins">
+                            <input type="checkbox" name="alert_on_failed_logins" id="alert_on_failed_logins" {% if config.alert_on_failed_logins %}checked{% endif %}>
+                            <div class="checkbox-icon">
+                                <i class="fas fa-check" style="display: none;"></i>
+                            </div>
+                            <div>
+                                <div class="checkbox-label">Failed Login Alerts</div>
+                                <div class="checkbox-description">Alert on authentication failures</div>
+                            </div>
+                        </label>
+
+                        <label class="modern-checkbox" data-checkbox="alert_on_high_value_transactions">
+                            <input type="checkbox" name="alert_on_high_value_transactions" id="alert_on_high_value_transactions" {% if config.alert_on_high_value_transactions %}checked{% endif %}>
+                            <div class="checkbox-icon">
+                                <i class="fas fa-check" style="display: none;"></i>
+                            </div>
+                            <div>
+                                <div class="checkbox-label">High-Value Transaction Alerts</div>
+                                <div class="checkbox-description">Alert on large financial transactions</div>
+                            </div>
+                        </label>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="modern-form-group">
+                                <label for="high_value_threshold" class="modern-label">
+                                    <i class="fas fa-naira-sign me-2"></i>High-Value Threshold
+                                </label>
+                                <input type="number" 
+                                       step="0.01" 
+                                       class="modern-input" 
+                                       name="high_value_threshold" 
+                                       id="high_value_threshold" 
+                                       value="{{ config.high_value_threshold }}"
+                                       placeholder="Enter amount in Naira">
+                                <span class="input-help">Transactions above this amount will trigger alerts</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Security Settings -->
+            <div class="config-card security-section slide-up" style="animation-delay: 0.3s;">
+                <div class="config-card-header">
+                    <h3>
+                        <div class="section-icon">
+                            <i class="fas fa-shield-alt"></i>
+                        </div>
+                        Security & Privacy
+                    </h3>
+                </div>
+                <div class="config-card-body">
+                    <p class="text-muted mb-4">Configure security logging preferences and data protection settings.</p>
+                    
+                    <div class="checkbox-grid">
+                        <label class="modern-checkbox" data-checkbox="log_ip_addresses">
+                            <input type="checkbox" name="log_ip_addresses" id="log_ip_addresses" {% if config.log_ip_addresses %}checked{% endif %}>
+                            <div class="checkbox-icon">
+                                <i class="fas fa-check" style="display: none;"></i>
+                            </div>
+                            <div>
+                                <div class="checkbox-label">Log IP Addresses</div>
+                                <div class="checkbox-description">Record user IP addresses for tracking</div>
+                            </div>
+                        </label>
+
+                        <label class="modern-checkbox" data-checkbox="log_user_agents">
+                            <input type="checkbox" name="log_user_agents" id="log_user_agents" {% if config.log_user_agents %}checked{% endif %}>
+                            <div class="checkbox-icon">
+                                <i class="fas fa-check" style="display: none;"></i>
+                            </div>
+                            <div>
+                                <div class="checkbox-label">Log User Agents</div>
+                                <div class="checkbox-description">Record browser and device information</div>
+                            </div>
+                        </label>
+
+                        <label class="modern-checkbox" data-checkbox="encrypt_sensitive_data">
+                            <input type="checkbox" name="encrypt_sensitive_data" id="encrypt_sensitive_data" {% if config.encrypt_sensitive_data %}checked{% endif %}>
+                            <div class="checkbox-icon">
+                                <i class="fas fa-check" style="display: none;"></i>
+                            </div>
+                            <div>
+                                <div class="checkbox-label">Encrypt Sensitive Data</div>
+                                <div class="checkbox-description">Encrypt personal and financial information</div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="config-card slide-up" style="animation-delay: 0.4s;">
+                <div class="config-card-body">
+                    <div class="button-group">
+                        <button type="submit" class="modern-btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Save Configuration
+                        </button>
+                        <a href="{% url 'audit_trail:dashboard' %}" class="modern-btn btn-secondary">
+                            <i class="fas fa-times me-2"></i>Cancel
+                        </a>
+                        <a href="{% url 'audit_trail:list' %}" class="modern-btn btn-info">
+                            <i class="fas fa-list me-2"></i>View Audit Logs
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </form>
+
+        <!-- Current Configuration Info -->
+        <div class="info-card slide-up" style="animation-delay: 0.5s;">
+            <div class="info-card-header">
+                <h3>
+                    <i class="fas fa-info-circle me-3"></i>Current Configuration Summary
+                </h3>
+            </div>
+            <div class="info-card-body">
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="info-content">
+                            <h4>Last Updated</h4>
+                            <p>{{ config.updated_at|date:"M d, Y" }} at {{ config.updated_at|time:"H:i" }}</p>
+                        </div>
+                    </div>
+
+                    <div class="info-item">
+                        <div class="info-icon">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <div class="info-content">
+                            <h4>Updated By</h4>
+                            <p>{{ updated_by_display|default:"System" }}</p>
+                        </div>
+                    </div>
+
+                    <div class="info-item">
+                        <div class="info-icon">
+                            <i class="fas fa-calendar"></i>
+                        </div>
+                        <div class="info-content">
+                            <h4>Retention Period</h4>
+                            <p>{{ config.retention_days|default:2555 }} days</p>
+                        </div>
+                    </div>
+
+                    <div class="info-item">
+                        <div class="info-icon">
+                            <i class="fas fa-naira-sign"></i>
+                        </div>
+                        <div class="info-content">
+                            <h4>High-Value Threshold</h4>
+                            <p>₦{{ config.high_value_threshold|default:1000000|floatformat:2|intcomma }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- JavaScript for Enhanced Interactions -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize checkbox states
+    initializeCheckboxes();
+    
+    // Form submission handler
+    document.getElementById('configForm').addEventListener('submit', function(e) {
+        showLoadingState();
+    });
+    
+    // Add change listeners for real-time feedback
+    addChangeListeners();
+    
+    // Calculate and display years for retention period
+    calculateRetentionYears();
+});
+
+function initializeCheckboxes() {
+    document.querySelectorAll('.modern-checkbox').forEach(function(checkbox) {
+        const input = checkbox.querySelector('input[type="checkbox"]');
+        const icon = checkbox.querySelector('.checkbox-icon i');
+        
+        function updateCheckboxState() {
+            if (input.checked) {
+                checkbox.classList.add('checked');
+                icon.style.display = 'block';
+            } else {
+                checkbox.classList.remove('checked');
+                icon.style.display = 'none';
+            }
+        }
+        
+        updateCheckboxState();
+        
+        checkbox.addEventListener('click', function(e) {
+            if (e.target !== input) {
+                input.checked = !input.checked;
+                updateCheckboxState();
+                
+                // Trigger change event
+                input.dispatchEvent(new Event('change'));
+            }
+        });
+        
+        input.addEventListener('change', updateCheckboxState);
+    });
+}
+
+function addChangeListeners() {
+    // High-value threshold formatting
+    const thresholdInput = document.getElementById('high_value_threshold');
+    if (thresholdInput) {
+        thresholdInput.addEventListener('input', function() {
+            const value = parseFloat(this.value);
+            if (value && value >= 1000000) {
+                showToast('High threshold set - this will generate many alerts', 'warning');
+            }
+        });
+    }
+    
+    // Retention period validation
+    const retentionInput = document.getElementById('retention_days');
+    if (retentionInput) {
+        retentionInput.addEventListener('input', function() {
+            const value = parseInt(this.value);
+            calculateRetentionYears();
+            if (value && value < 365) {
+                showToast('Retention period less than 1 year may not meet compliance requirements', 'warning');
+            }
+        });
+    }
+    
+    // Track view actions warning
+    const viewActionsInput = document.getElementById('track_view_actions');
+    if (viewActionsInput) {
+        viewActionsInput.addEventListener('change', function() {
+            if (this.checked) {
+                showToast('View actions tracking enabled - this may generate high volume of logs', 'info');
+            }
+        });
+    }
+}
+
+function calculateRetentionYears() {
+    const retentionInput = document.getElementById('retention_days');
+    const retentionDisplay = document.querySelector('.info-content p');
+    
+    if (retentionInput && retentionDisplay) {
+        const days = parseInt(retentionInput.value) || 2555;
+        const years = (days / 365).toFixed(1);
+        
+        // Find the retention period info item and update it
+        const retentionInfo = Array.from(document.querySelectorAll('.info-content')).find(el => 
+            el.querySelector('h4').textContent === 'Retention Period'
+        );
+        
+        if (retentionInfo) {
+            retentionInfo.querySelector('p').textContent = `${days} days (${years} years)`;
+        }
+    }
+}
+
+function showLoadingState() {
+    const submitBtn = document.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving...';
+    submitBtn.disabled = true;
+    
+    // Re-enable after form submission (in case of validation errors)
+    setTimeout(() => {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    }, 3000);
+}
+
+function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `toast-${type}`;
+    toast.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 1rem 1.5rem;
+        border-radius: 12px;
+        color: white;
+        font-weight: 500;
+        z-index: 9999;
+        transform: translateX(100%);
+        transition: transform 0.3s ease;
+        max-width: 400px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    `;
+    
+    const colors = {
+        success: '#22c55e',
+        warning: '#f59e0b',
+        info: '#3b82f6',
+        error: '#ef4444'
+    };
+    
+    const icons = {
+        success: 'check-circle',
+        warning: 'exclamation-triangle',
+        info: 'info-circle',
+        error: 'times-circle'
+    };
+    
+    toast.style.backgroundColor = colors[type];
+    toast.innerHTML = `<i class="fas fa-${icons[type]} me-2"></i>${message}`;
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.style.transform = 'translateX(0)';
+    }, 10);
+    
+    setTimeout(() => {
+        toast.style.transform = 'translateX(100%)';
+        setTimeout(() => {
+            if (document.body.contains(toast)) {
+                document.body.removeChild(toast);
+            }
+        }, 300);
+    }, 4000);
+}
+
+// Add ripple effect to buttons
+document.querySelectorAll('.modern-btn').forEach(button => {
+    button.addEventListener('click', function(e) {
+        const rect = this.getBoundingClientRect();
+        const ripple = document.createElement('div');
+        const size = Math.max(rect.width, rect.height);
+        const x = e.clientX - rect.left - size / 2;
+        const y = e.clientY - rect.top - size / 2;
+        
+        ripple.style.cssText = `
+            position: absolute;
+            width: ${size}px;
+            height: ${size}px;
+            left: ${x}px;
+            top: ${y}px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            transform: scale(0);
+            animation: ripple 0.6s ease-out;
+            pointer-events: none;
+        `;
+        
+        this.appendChild(ripple);
+        
+        setTimeout(() => {
+            ripple.remove();
+        }, 600);
+    });
+});
+
+// Add ripple animation
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes ripple {
+        to {
+            transform: scale(4);
+            opacity: 0;
+        }
+    }
+`;
+document.head.appendChild(style);
+</script>
+
+{% endblock %}
