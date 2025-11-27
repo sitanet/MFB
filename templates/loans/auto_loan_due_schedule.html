@@ -1,0 +1,1208 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Auto Loan Due Schedule{% endblock %}
+
+{% block extra_css %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --primary-green: #059669;
+        --light-green: #10b981;
+        --dark-green: #047857;
+        --primary-orange: #ea580c;
+        --light-orange: #f97316;
+        --dark-orange: #c2410c;
+        --danger-red: #dc2626;
+        --warning-yellow: #d97706;
+        --text-dark: #111827;
+        --text-muted: #6b7280;
+        --bg-light: #f9fafb;
+        --border-light: #e5e7eb;
+        --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+        --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+        --radius-sm: 6px;
+        --radius-md: 8px;
+        --radius-lg: 12px;
+        --radius-xl: 16px;
+    }
+
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        font-feature-settings: "cv03", "cv04", "cv11";
+        background-color: var(--bg-light);
+        color: var(--text-dark);
+    }
+
+    .container-fluid {
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+
+    /* Enhanced Cards */
+    .card {
+        border: 1px solid var(--border-light);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-sm);
+        background: white;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        overflow: hidden;
+    }
+
+    .card:hover {
+        box-shadow: var(--shadow-md);
+        transform: translateY(-1px);
+    }
+
+    .card-body {
+        padding: 1.5rem;
+    }
+
+    /* Professional Header */
+    .page-header {
+        background: linear-gradient(135deg, var(--primary-green) 0%, var(--primary-orange) 100%);
+        color: white;
+        border-radius: var(--radius-xl);
+        padding: 3rem 2rem;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    }
+
+    .page-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 200px;
+        height: 200px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+        transform: translate(50px, -50px);
+    }
+
+    .page-header::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 150px;
+        height: 150px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 50%;
+        transform: translate(-50px, 50px);
+    }
+
+    .page-header h2 {
+        font-weight: 700;
+        font-size: 2rem;
+        margin: 0;
+        position: relative;
+        z-index: 2;
+        color: white;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    .page-header p {
+        font-weight: 500;
+        font-size: 1rem;
+        margin: 0.5rem 0 0 0;
+        position: relative;
+        z-index: 2;
+        color: rgba(255, 255, 255, 0.95);
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Enhanced Summary Cards with Better Text Visibility */
+    .summary-card {
+        background: linear-gradient(135deg, var(--primary-green) 0%, var(--primary-orange) 100%);
+        color: white;
+        border: none;
+        position: relative;
+        overflow: hidden;
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    }
+
+    .summary-card::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -50%;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.08);
+        border-radius: 50%;
+        transition: transform 0.3s ease;
+    }
+
+    .summary-card:hover::before {
+        transform: scale(1.2);
+    }
+
+    .summary-card .card-body {
+        position: relative;
+        z-index: 2;
+        color: white;
+    }
+
+    .summary-card h3,
+    .summary-card p,
+    .summary-card i {
+        color: white !important;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+        font-weight: 600;
+    }
+
+    .bg-success {
+        background: linear-gradient(135deg, var(--primary-green) 0%, var(--light-green) 100%) !important;
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    }
+
+    .bg-success h3,
+    .bg-success p,
+    .bg-success i {
+        color: white !important;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+        font-weight: 600;
+    }
+
+    .bg-warning {
+        background: linear-gradient(135deg, var(--primary-orange) 0%, var(--light-orange) 100%) !important;
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    }
+
+    .bg-warning h3,
+    .bg-warning p,
+    .bg-warning i {
+        color: white !important;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+        font-weight: 600;
+    }
+
+    .bg-danger {
+        background: linear-gradient(135deg, var(--danger-red) 0%, #ef4444 100%) !important;
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    }
+
+    .bg-danger h3,
+    .bg-danger p,
+    .bg-danger i {
+        color: white !important;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+        font-weight: 600;
+    }
+
+    .bg-info {
+        background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%) !important;
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    }
+
+    .bg-info h3,
+    .bg-info p,
+    .bg-info i {
+        color: white !important;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+        font-weight: 600;
+    }
+
+    /* Gradient card styling */
+    .gradient-card {
+        background: linear-gradient(135deg, var(--primary-green) 0%, var(--primary-orange) 100%);
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    }
+
+    .gradient-card h3,
+    .gradient-card p,
+    .gradient-card i {
+        color: white !important;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+        font-weight: 600;
+    }
+
+    /* Days Overdue Indicators */
+    .days-overdue {
+        font-weight: 600;
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: var(--radius-sm);
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        margin-top: 0.25rem;
+    }
+
+    .days-overdue.current {
+        background: rgba(16, 185, 129, 0.1);
+        color: var(--primary-green);
+        border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+
+    .days-overdue.overdue-minor {
+        background: rgba(217, 119, 6, 0.1);
+        color: var(--warning-yellow);
+        border: 1px solid rgba(217, 119, 6, 0.2);
+        animation: pulse-warning 2s infinite;
+    }
+
+    .days-overdue.overdue-moderate {
+        background: rgba(234, 88, 12, 0.1);
+        color: var(--primary-orange);
+        border: 1px solid rgba(234, 88, 12, 0.2);
+        animation: pulse-warning 1.5s infinite;
+    }
+
+    .days-overdue.overdue-severe {
+        background: rgba(220, 38, 38, 0.1);
+        color: var(--danger-red);
+        border: 1px solid rgba(220, 38, 38, 0.2);
+        animation: pulse-danger 1s infinite;
+    }
+
+    @keyframes pulse-warning {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.8; transform: scale(1.02); }
+    }
+
+    @keyframes pulse-danger {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.9; transform: scale(1.05); }
+    }
+
+    /* Professional Action Buttons */
+    .action-buttons {
+        position: sticky;
+        top: 20px;
+        z-index: 100;
+        background: white;
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-lg);
+        border: 1px solid var(--border-light);
+    }
+
+    .btn {
+        font-weight: 500;
+        font-size: 0.875rem;
+        padding: 0.75rem 1.5rem;
+        border-radius: var(--radius-md);
+        border: 1px solid transparent;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        text-decoration: none;
+        cursor: pointer;
+    }
+
+    .btn:focus {
+        box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1);
+        outline: none;
+    }
+
+    .btn-primary {
+        background: var(--primary-green);
+        border-color: var(--primary-green);
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: var(--dark-green);
+        border-color: var(--dark-green);
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-md);
+    }
+
+    .btn-outline-primary {
+        color: var(--primary-green);
+        border-color: var(--primary-green);
+        background: white;
+    }
+
+    .btn-outline-primary:hover {
+        background: var(--primary-green);
+        border-color: var(--primary-green);
+        color: white;
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-md);
+    }
+
+    .btn-warning {
+        background: var(--primary-orange);
+        border-color: var(--primary-orange);
+        color: white;
+    }
+
+    .btn-warning:hover {
+        background: var(--dark-orange);
+        border-color: var(--dark-orange);
+        color: white;
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-md);
+    }
+
+    .btn-success {
+        background: var(--primary-green);
+        border-color: var(--primary-green);
+        color: white;
+        font-weight: 600;
+    }
+
+    .btn-success:hover {
+        background: var(--dark-green);
+        border-color: var(--dark-green);
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-lg);
+    }
+
+    .btn-lg {
+        padding: 1rem 2rem;
+        font-size: 1rem;
+        font-weight: 600;
+    }
+
+    /* Professional Table */
+    .table-container {
+        background: white;
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        box-shadow: var(--shadow-sm);
+        border: 1px solid var(--border-light);
+    }
+
+    .table {
+        margin: 0;
+        font-size: 0.875rem;
+    }
+
+    .table thead th {
+        background: var(--text-dark);
+        color: white;
+        font-weight: 600;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border: none;
+        padding: 1rem 0.75rem;
+    }
+
+    .table tbody tr {
+        border-bottom: 1px solid var(--border-light);
+        transition: all 0.2s ease;
+    }
+
+    .table tbody tr:hover {
+        background-color: rgba(5, 150, 105, 0.02);
+        transform: scale(1.002);
+    }
+
+    .table tbody td {
+        padding: 1rem 0.75rem;
+        vertical-align: middle;
+        border-top: none;
+    }
+
+    /* Enhanced Status Indicators */
+    .badge {
+        font-size: 0.75rem;
+        font-weight: 500;
+        padding: 0.375rem 0.75rem;
+        border-radius: var(--radius-sm);
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .badge.bg-success {
+        background: var(--primary-green) !important;
+        color: white;
+    }
+
+    .badge.bg-warning {
+        background: var(--primary-orange) !important;
+        color: white;
+    }
+
+    .badge.bg-danger {
+        background: var(--danger-red) !important;
+        color: white;
+        animation: pulse-danger 2s infinite;
+    }
+
+    .badge.bg-info {
+        background: #0ea5e9 !important;
+        color: white;
+    }
+
+    /* Professional Amount Display */
+    .amount-display {
+        font-family: 'Inter', monospace;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .amount-large {
+        font-size: 1.1rem;
+        font-weight: 700;
+    }
+
+    .text-success {
+        color: var(--primary-green) !important;
+    }
+
+    .text-warning {
+        color: var(--primary-orange) !important;
+    }
+
+    .text-danger {
+        color: var(--danger-red) !important;
+    }
+
+    .text-muted {
+        color: var(--text-muted) !important;
+    }
+
+    /* Enhanced Form Controls */
+    .form-check-input {
+        width: 1.25rem;
+        height: 1.25rem;
+        border-radius: var(--radius-sm);
+        border: 2px solid var(--border-light);
+        transition: all 0.2s ease;
+    }
+
+    .form-check-input:checked {
+        background-color: var(--primary-green);
+        border-color: var(--primary-green);
+        box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1);
+    }
+
+    .form-check-input:focus {
+        box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1);
+        outline: none;
+    }
+
+    /* Row State Indicators */
+    .loan-row {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border-left: 3px solid transparent;
+    }
+
+    .loan-row.selected {
+        background-color: rgba(5, 150, 105, 0.03) !important;
+        border-left-color: var(--primary-green) !important;
+        box-shadow: inset 0 0 0 1px rgba(5, 150, 105, 0.1);
+    }
+
+    .loan-row.insufficient-funds {
+        background-color: rgba(234, 88, 12, 0.02) !important;
+        border-left-color: var(--primary-orange) !important;
+    }
+
+    .loan-row.overdue-severe {
+        background-color: rgba(220, 38, 38, 0.02) !important;
+        border-left-color: var(--danger-red) !important;
+    }
+
+    /* Professional Loading States */
+    .loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.9);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        backdrop-filter: blur(4px);
+    }
+
+    .spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid var(--border-light);
+        border-top-color: var(--primary-green);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
+    /* Enhanced Selection Feedback */
+    .selection-summary {
+        background: linear-gradient(135deg, rgba(5, 150, 105, 0.1) 0%, rgba(234, 88, 12, 0.1) 100%);
+        border: 1px solid rgba(5, 150, 105, 0.2);
+        border-radius: var(--radius-md);
+        padding: 1rem;
+        margin-bottom: 1rem;
+        display: none;
+    }
+
+    .selection-summary.active {
+        display: block;
+        animation: slideIn 0.3s ease;
+    }
+
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Customer Info Styling (without avatar) */
+    .customer-info {
+        padding: 0.5rem 0;
+    }
+
+    .customer-name {
+        font-weight: 600;
+        color: var(--text-dark);
+        font-size: 0.9rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .customer-phone {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .container-fluid {
+            padding: 0.5rem;
+        }
+
+        .page-header {
+            padding: 2rem 1rem;
+        }
+
+        .page-header h2 {
+            font-size: 1.5rem;
+        }
+
+        .btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            width: 100%;
+        }
+
+        .btn-group .btn {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .action-buttons .row {
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .action-buttons .col-md-8,
+        .action-buttons .col-md-4 {
+            width: 100%;
+            text-align: center;
+        }
+
+        .table-responsive {
+            font-size: 0.8rem;
+        }
+    }
+
+    /* Professional Icons */
+    .fas {
+        font-size: 0.875em;
+    }
+
+    .fa-2x {
+        font-size: 1.5em;
+    }
+
+    /* Enhanced Card Headers */
+    .card-header {
+        background: linear-gradient(135deg, rgba(5, 150, 105, 0.05) 0%, rgba(234, 88, 12, 0.05) 100%);
+        border-bottom: 1px solid var(--border-light);
+        padding: 1.25rem 1.5rem;
+        font-weight: 600;
+        color: var(--text-dark);
+    }
+
+    /* Professional Empty State */
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        color: var(--text-muted);
+    }
+
+    .empty-state .fa-inbox {
+        opacity: 0.3;
+    }
+
+    /* Micro-interactions */
+    .btn, .card, .form-check-input, .badge {
+        will-change: transform;
+    }
+
+    /* Focus States for Accessibility */
+    .btn:focus,
+    .form-check-input:focus,
+    .table tbody tr:focus {
+        outline: 2px solid var(--primary-green);
+        outline-offset: 2px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Professional Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="page-header">
+                <h2><i class="fas fa-calendar-check me-2"></i>Auto Loan Due Schedule</h2>
+                <p>Session Date: <strong>{{ company_date }}</strong> • Branch: <strong>{{ company.branch_name }}</strong></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Enhanced Summary Cards with Better Text Visibility -->
+    <div class="row mb-4 g-3">
+        <div class="col-lg-3 col-md-6">
+            <div class="card summary-card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-file-invoice-dollar fa-2x mb-3"></i>
+                    <h3 class="mb-1">{{ total_loans }}</h3>
+                    <p class="mb-0 fw-bold">Total Loans</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="card bg-success text-white h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-check-circle fa-2x mb-3"></i>
+                    <h3 class="mb-1">{{ payable_loans }}</h3>
+                    <p class="mb-0 fw-bold">Payable Loans</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="card bg-warning text-white h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
+                    <h3 class="mb-1">{{ overdue_loans }}</h3>
+                    <p class="mb-0 fw-bold">Overdue Loans</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="card bg-danger text-white h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-exclamation-circle fa-2x mb-3"></i>
+                    <h3 class="mb-1">{{ severe_overdue_loans }}</h3>
+                    <p class="mb-0 fw-bold">90+ Days Overdue</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Additional Summary Row -->
+    <div class="row mb-4 g-3">
+        <div class="col-lg-6">
+            <div class="card bg-info text-white h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-hand-pointer fa-2x mb-3"></i>
+                    <h3 class="mb-1" id="selected-count">0</h3>
+                    <p class="mb-0 fw-bold">Selected Loans</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card gradient-card text-white h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-money-bill-wave fa-2x mb-3"></i>
+                    <h3 class="mb-1 amount-display">₦{{ total_outstanding|floatformat:2|intcomma }}</h3>
+                    <p class="mb-0 fw-bold">Total Outstanding</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if loan_schedule_data %}
+    <!-- Selection Summary -->
+    <div id="selection-summary" class="selection-summary">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <strong>Selection Summary:</strong>
+                <span id="summary-count">0 loans</span> • 
+                <span id="summary-amount" class="text-success fw-bold">₦0.00</span>
+            </div>
+            <div class="badge bg-success" id="summary-badge" style="display: none;">
+                <i class="fas fa-check me-1"></i>Ready to Process
+            </div>
+        </div>
+    </div>
+
+    <form method="post" id="loan-repayment-form">
+        {% csrf_token %}
+        
+        <!-- Enhanced Action Buttons -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card action-buttons">
+                    <div class="card-body">
+                        <div class="row align-items-center g-3">
+                            <div class="col-lg-8">
+                                <div class="btn-group" role="group">
+                                    <button type="button" class="btn btn-outline-primary" id="select-all-btn">
+                                        <i class="fas fa-check-square"></i>Select All
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary" id="clear-all-btn">
+                                        <i class="fas fa-times"></i>Clear Selection
+                                    </button>
+                                    <button type="button" class="btn btn-warning" id="select-payable-btn">
+                                        <i class="fas fa-money-check-alt"></i>Select Payable Only
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-lg-4 text-end">
+                                <div class="d-flex justify-content-end align-items-center gap-3">
+                                    <div class="text-end">
+                                        <div class="small text-muted">Selected Amount</div>
+                                        <div class="amount-display amount-large text-success" id="selected-amount">₦0.00</div>
+                                    </div>
+                                    <button type="submit" class="btn btn-success btn-lg" id="process-btn" disabled>
+                                        <i class="fas fa-credit-card"></i>Process Loans
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Professional Loan Schedule Table -->
+        <div class="table-container">
+            <div class="card-header">
+                <h5 class="mb-0 d-flex align-items-center">
+                    <i class="fas fa-list me-2"></i>
+                    Loan Schedule Details
+                    <span class="badge bg-light text-dark ms-2">{{ total_loans }} loans</span>
+                    {% if overdue_loans > 0 %}
+                    <span class="badge bg-warning ms-2">{{ overdue_loans }} overdue</span>
+                    {% endif %}
+                </h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th class="text-center" style="width: 60px;">
+                                <input type="checkbox" class="form-check-input" id="master-checkbox">
+                            </th>
+                            <th><i class="fas fa-user me-1"></i>Customer</th>
+                            <th><i class="fas fa-file-invoice me-1"></i>Loan Details</th>
+                            <th><i class="fas fa-exclamation-triangle me-1"></i>Outstanding</th>
+                            <th><i class="fas fa-wallet me-1"></i>Available Balance</th>
+                            <th><i class="fas fa-flag me-1"></i>Status</th>
+                            <th><i class="fas fa-clock me-1"></i>Days Status</th>
+                            <th><i class="fas fa-user-tie me-1"></i>Officer</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in loan_schedule_data %}
+                        <tr class="loan-row {% if not item.can_pay %}insufficient-funds{% endif %} {% if item.overdue_status == 'overdue_severe' %}overdue-severe{% endif %}" 
+                            data-loan-id="{{ item.loan.id }}"
+                            data-amount="{{ item.total_outstanding }}"
+                            data-can-pay="{{ item.can_pay|yesno:'true,false' }}"
+                            data-days-overdue="{{ item.days_overdue }}">
+                            <td class="text-center">
+                                <input type="checkbox" 
+                                       class="form-check-input loan-checkbox" 
+                                       name="selected_loans" 
+                                       value="{{ item.loan.id }}"
+                                       {% if not item.can_pay %}disabled{% endif %}
+                                       aria-label="Select loan {{ item.loan.gl_no }}-{{ item.loan.ac_no }}">
+                            </td>
+                            <td>
+                                <div class="customer-info">
+                                    <div class="customer-name">{{ item.customer.first_name }} {{ item.customer.last_name }}</div>
+                                    <div class="customer-phone">
+                                        <i class="fas fa-phone fa-xs me-1"></i>{{ item.customer.phone_no|default:"No phone" }}
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div>
+                                    <div class="fw-semibold text-primary mb-1">{{ item.loan.gl_no }}-{{ item.loan.ac_no }}</div>
+                                    <div class="d-flex gap-2">
+                                        <span class="badge bg-light text-dark">Cycle {{ item.loan.cycle }}</span>
+                                        <span class="badge" style="background-color: var(--primary-orange); color: white;">{{ item.loan.interest_rate }}% APR</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="amount-display">
+                                    <div class="d-flex justify-content-between small mb-1">
+                                        <span class="text-muted">Principal:</span>
+                                        <span class="text-success">₦{{ item.outstanding_principal|floatformat:2|intcomma }}</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between small mb-1">
+                                        <span class="text-muted">Interest:</span>
+                                        <span class="text-warning">₦{{ item.outstanding_interest|floatformat:2|intcomma }}</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between fw-bold border-top pt-1">
+                                        <span>Total:</span>
+                                        <span class="text-danger">₦{{ item.total_outstanding|floatformat:2|intcomma }}</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="amount-display amount-large {% if item.customer_balance >= item.total_outstanding %}text-success{% else %}text-danger{% endif %}">
+                                    ₦{{ item.customer_balance|floatformat:2|intcomma }}
+                                </div>
+                                <div class="small">
+                                    {% if item.customer_balance >= item.total_outstanding %}
+                                        <span class="text-success"><i class="fas fa-check-circle fa-xs me-1"></i>Sufficient funds</span>
+                                    {% else %}
+                                        <span class="text-danger"><i class="fas fa-exclamation-circle fa-xs me-1"></i>Insufficient funds</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                {% if item.can_pay %}
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-check me-1"></i>Can Pay
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-warning">
+                                        <i class="fas fa-exclamation-triangle me-1"></i>Insufficient
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="days-overdue {{ item.overdue_status }}">
+                                    {% if item.days_overdue > 0 %}
+                                        <i class="fas fa-clock me-1"></i>
+                                        {{ item.days_overdue }} day{{ item.days_overdue|pluralize }} overdue
+                                    {% else %}
+                                        <i class="fas fa-check me-1"></i>
+                                        Current
+                                    {% endif %}
+                                </div>
+                                {% if item.next_due_date %}
+                                    <div class="small text-muted mt-1">
+                                        Next: {{ item.next_due_date|date:"M d, Y" }}
+                                    </div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="small">
+                                    <div class="fw-semibold">{{ item.loan_officer|default:"Unassigned" }}</div>
+                                    <div class="text-muted">{{ item.business_sector|default:"N/A" }}</div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </form>
+    
+    {% else %}
+    <div class="card">
+        <div class="card-body empty-state">
+            <i class="fas fa-inbox fa-4x text-muted mb-4"></i>
+            <h4 class="text-muted mb-3">No Outstanding Loans</h4>
+            <p class="text-muted mb-4">No loans with outstanding amounts found for the current session date.</p>
+            <div class="d-flex gap-3 justify-content-center">
+                <a href="{% url 'choose_loan_repayment' %}" class="btn btn-outline-primary">
+                    <i class="fas fa-list me-1"></i>View All Loans
+                </a>
+                <a href="{% url 'choose_to_disburse' %}" class="btn btn-warning">
+                    <i class="fas fa-hand-holding-usd me-1"></i>New Disbursement
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Loading Overlay -->
+<div id="loading-overlay" class="loading-overlay" style="display: none;">
+    <div class="text-center">
+        <div class="spinner"></div>
+        <div class="mt-3 fw-semibold">Processing loan repayments...</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Enhanced Variables
+    const masterCheckbox = document.getElementById('master-checkbox');
+    const loanCheckboxes = document.querySelectorAll('.loan-checkbox');
+    const selectAllBtn = document.getElementById('select-all-btn');
+    const clearAllBtn = document.getElementById('clear-all-btn');
+    const selectPayableBtn = document.getElementById('select-payable-btn');
+    const processBtn = document.getElementById('process-btn');
+    const selectedCountDisplay = document.getElementById('selected-count');
+    const selectedAmountDisplay = document.getElementById('selected-amount');
+    const selectionSummary = document.getElementById('selection-summary');
+    const summaryCount = document.getElementById('summary-count');
+    const summaryAmount = document.getElementById('summary-amount');
+    const summaryBadge = document.getElementById('summary-badge');
+    
+    // Enhanced Update Function
+    function updateSelectionInfo() {
+        const checkedBoxes = document.querySelectorAll('.loan-checkbox:checked');
+        const selectedCount = checkedBoxes.length;
+        let totalAmount = 0;
+        let totalOverdueDays = 0;
+        
+        // Update row states and calculate totals
+        checkedBoxes.forEach(checkbox => {
+            const row = checkbox.closest('tr');
+            const amount = parseFloat(row.dataset.amount) || 0;
+            const daysOverdue = parseInt(row.dataset.daysOverdue) || 0;
+            totalAmount += amount;
+            totalOverdueDays += daysOverdue;
+            row.classList.add('selected');
+        });
+        
+        // Remove selected state from unchecked rows
+        document.querySelectorAll('.loan-checkbox:not(:checked)').forEach(checkbox => {
+            checkbox.closest('tr').classList.remove('selected');
+        });
+        
+        // Update displays
+        const formattedAmount = `₦${totalAmount.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+        selectedCountDisplay.textContent = selectedCount;
+        selectedAmountDisplay.textContent = formattedAmount;
+        
+        // Update selection summary with overdue info
+        if (selectedCount > 0) {
+            const avgOverdueDays = Math.round(totalOverdueDays / selectedCount);
+            let summaryText = `${selectedCount} loan${selectedCount > 1 ? 's' : ''}`;
+            if (avgOverdueDays > 0) {
+                summaryText += ` (avg. ${avgOverdueDays} days overdue)`;
+            }
+            summaryCount.textContent = summaryText;
+            summaryAmount.textContent = formattedAmount;
+            summaryBadge.style.display = 'inline-flex';
+            selectionSummary.classList.add('active');
+        } else {
+            selectionSummary.classList.remove('active');
+            summaryBadge.style.display = 'none';
+        }
+        
+        // Update process button
+        processBtn.disabled = selectedCount === 0;
+        if (selectedCount > 0) {
+            processBtn.innerHTML = `<i class="fas fa-credit-card me-1"></i>Process ${selectedCount} Loan${selectedCount > 1 ? 's' : ''}`;
+            processBtn.classList.remove('btn-outline-success');
+            processBtn.classList.add('btn-success');
+        } else {
+            processBtn.innerHTML = `<i class="fas fa-credit-card me-1"></i>Process Loans`;
+            processBtn.classList.remove('btn-success');
+            processBtn.classList.add('btn-outline-success');
+        }
+        
+        // Update master checkbox
+        const enabledCheckboxes = document.querySelectorAll('.loan-checkbox:not(:disabled)');
+        const checkedEnabled = document.querySelectorAll('.loan-checkbox:not(:disabled):checked');
+        
+        if (checkedEnabled.length === 0) {
+            masterCheckbox.indeterminate = false;
+            masterCheckbox.checked = false;
+        } else if (checkedEnabled.length === enabledCheckboxes.length) {
+            masterCheckbox.indeterminate = false;
+            masterCheckbox.checked = true;
+        } else {
+            masterCheckbox.indeterminate = true;
+            masterCheckbox.checked = false;
+        }
+    }
+    
+    // Enhanced Event Listeners
+    masterCheckbox.addEventListener('change', function() {
+        const enabledCheckboxes = document.querySelectorAll('.loan-checkbox:not(:disabled)');
+        enabledCheckboxes.forEach(checkbox => {
+            checkbox.checked = this.checked;
+        });
+        updateSelectionInfo();
+        
+        // Visual feedback
+        if (this.checked) {
+            enabledCheckboxes.forEach(checkbox => {
+                checkbox.closest('tr').style.transform = 'scale(1.02)';
+                setTimeout(() => {
+                    checkbox.closest('tr').style.transform = '';
+                }, 200);
+            });
+        }
+    });
+    
+    loanCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            updateSelectionInfo();
+            
+            // Enhanced visual feedback
+            const row = this.closest('tr');
+            if (this.checked) {
+                row.style.transform = 'scale(1.02)';
+                setTimeout(() => {
+                    row.style.transform = '';
+                }, 200);
+            }
+        });
+    });
+    
+    // Enhanced Button Actions
+    selectAllBtn.addEventListener('click', function() {
+        const enabledCheckboxes = document.querySelectorAll('.loan-checkbox:not(:disabled)');
+        enabledCheckboxes.forEach(checkbox => {
+            checkbox.checked = true;
+        });
+        updateSelectionInfo();
+        
+        // Professional feedback
+        this.innerHTML = '<i class="fas fa-check me-1"></i>All Selected';
+        this.classList.remove('btn-outline-primary');
+        this.classList.add('btn-success');
+        setTimeout(() => {
+            this.innerHTML = '<i class="fas fa-check-square me-1"></i>Select All';
+            this.classList.remove('btn-success');
+            this.classList.add('btn-outline-primary');
+        }, 1500);
+    });
+    
+    clearAllBtn.addEventListener('click', function() {
+        loanCheckboxes.forEach(checkbox => {
+            checkbox.checked = false;
+        });
+        updateSelectionInfo();
+        
+        this.innerHTML = '<i class="fas fa-check me-1"></i>Cleared';
+        setTimeout(() => {
+            this.innerHTML = '<i class="fas fa-times me-1"></i>Clear Selection';
+        }, 1000);
+    });
+    
+    selectPayableBtn.addEventListener('click', function() {
+        loanCheckboxes.forEach(checkbox => {
+            const row = checkbox.closest('tr');
+            const canPay = row.dataset.canPay === 'true';
+            checkbox.checked = canPay && !checkbox.disabled;
+        });
+        updateSelectionInfo();
+        
+        const payableCount = document.querySelectorAll('.loan-checkbox:checked').length;
+        this.innerHTML = `<i class="fas fa-check me-1"></i>Selected ${payableCount}`;
+        setTimeout(() => {
+            this.innerHTML = '<i class="fas fa-money-check-alt me-1"></i>Select Payable Only';
+        }, 1500);
+    });
+    
+    // Enhanced Form Submission
+    document.getElementById('loan-repayment-form').addEventListener('submit', function(e) {
+        const selectedCount = document.querySelectorAll('.loan-checkbox:checked').length;
+        const totalAmount = selectedAmountDisplay.textContent;
+        
+        if (selectedCount === 0) {
+            e.preventDefault();
+            alert('Please select at least one loan to process.');
+            return;
+        }
+        
+        // Calculate overdue info for confirmation
+        let overdueInfo = '';
+        const selectedRows = document.querySelectorAll('.loan-checkbox:checked');
+        let overdueCount = 0;
+        selectedRows.forEach(checkbox => {
+            const daysOverdue = parseInt(checkbox.closest('tr').dataset.daysOverdue) || 0;
+            if (daysOverdue > 0) overdueCount++;
+        });
+        
+        if (overdueCount > 0) {
+            overdueInfo = `\n🚨 ${overdueCount} overdue loan${overdueCount > 1 ? 's' : ''} included`;
+        }
+        
+        const confirmMessage = `🏦 LOAN REPAYMENT CONFIRMATION\n\n` +
+                             `📊 Selected Loans: ${selectedCount}\n` +
+                             `💰 Total Amount: ${totalAmount}${overdueInfo}\n` +
+                             `📅 Session Date: {{ company_date }}\n\n` +
+                             `⚠️ This action will:\n` +
+                             `• Process automatic loan repayments\n` +
+                             `• Update customer account balances\n` +
+                             `• Create accounting journal entries\n` +
+                             `• Update loan schedules\n` +
+                             `• Clear overdue status for paid loans\n\n` +
+                             `❗ This action cannot be undone.\n\n` +
+                             `Continue with processing?`;
+        
+        if (!confirm(confirmMessage)) {
+            e.preventDefault();
+        } else {
+            // Show loading state
+            document.getElementById('loading-overlay').style.display = 'flex';
+            processBtn.disabled = true;
+            processBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Processing...';
+        }
+    });
+    
+    // Enhanced Hover Effects with Overdue Indication
+    document.querySelectorAll('.loan-row').forEach(row => {
+        const daysOverdue = parseInt(row.dataset.daysOverdue) || 0;
+        
+        row.addEventListener('mouseenter', function() {
+            if (!this.classList.contains('selected')) {
+                this.style.transform = 'translateX(5px)';
+                
+                // Add overdue glow effect
+                if (daysOverdue > 0) {
+                    this.style.boxShadow = '0 4px 12px rgba(220, 38, 38, 0.15)';
+                }
+            }
+        });
+        
+        row.addEventListener('mouseleave', function() {
+            if (!this.classList.contains('selected')) {
+                this.style.transform = '';
+                this.style.boxShadow = '';
+            }
+        });
+    });
+    
+    // Professional Loading Animation
+    const cards = document.querySelectorAll('.card');
+    cards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(30px)';
+        setTimeout(() => {
+            card.style.transition = 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, index * 100);
+    });
+    
+    // Initial update
+    updateSelectionInfo();
+});
+</script>
+{% endblock %}

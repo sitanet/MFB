@@ -2232,3 +2232,409 @@ def simple_loan_disbursement(request, id):
 
 
 
+
+
+
+
+
+
+@login_required(login_url='login')
+@user_passes_test(check_role_admin)
+def auto_loan_due_schedule(request):
+    """
+    Auto-generated loan due and repayment schedule with batch processing
+    Enhanced with days overdue calculation
+    """
+    from datetime import datetime, date
+    from decimal import Decimal
+    from django.db.models import Sum, Max, Q
+    from django.contrib import messages
+    from django.db import transaction
+    
+    # Get current user's branch and company
+    user = request.user
+    user_branch = user.branch
+    company = get_object_or_404(Branch, id=user.branch_id)
+    company_date = company.session_date
+    
+    if company.session_status == 'Closed':
+        return HttpResponse("You cannot process transactions. Session is closed.")
+    
+    # Get all active loans that are disbursed
+    active_loans = Loans.objects.filter(
+        disb_status='T',  # Disbursed
+        approval_status='T',  # Approved
+        branch=user_branch
+    ).select_related('customer', 'loan_officer', 'business_sector')
+    
+    loan_schedule_data = []
+    
+    for loan in active_loans:
+        # Calculate outstanding amounts
+        disbursement_date = loan.disbursement_date
+        if not disbursement_date:
+            continue
+            
+        # Get total principal and interest due up to session date
+        total_principal_due = LoanHist.objects.filter(
+            gl_no=loan.gl_no,
+            ac_no=loan.ac_no,
+            cycle=loan.cycle,
+            trx_date__gte=disbursement_date,
+            trx_date__lte=company_date,
+            trx_type='LD'  # Loan disbursement schedule
+        ).aggregate(total=Sum('principal'))['total'] or Decimal('0.00')
+        
+        total_interest_due = LoanHist.objects.filter(
+            gl_no=loan.gl_no,
+            ac_no=loan.ac_no,
+            cycle=loan.cycle,
+            trx_date__gte=disbursement_date,
+            trx_date__lte=company_date,
+            trx_type='LD'
+        ).aggregate(total=Sum('interest'))['total'] or Decimal('0.00')
+        
+        # Get total payments made
+        total_principal_paid = LoanHist.objects.filter(
+            gl_no=loan.gl_no,
+            ac_no=loan.ac_no,
+            cycle=loan.cycle,
+            trx_type='LP'  # Loan payment
+        ).aggregate(total=Sum('principal'))['total'] or Decimal('0.00')
+        
+        total_interest_paid = LoanHist.objects.filter(
+            gl_no=loan.gl_no,
+            ac_no=loan.ac_no,
+            cycle=loan.cycle,
+            trx_type='LP'
+        ).aggregate(total=Sum('interest'))['total'] or Decimal('0.00')
+        
+        # Calculate outstanding amounts
+        outstanding_principal = abs(total_principal_due) - abs(total_principal_paid)
+        outstanding_interest = abs(total_interest_due) - abs(total_interest_paid)
+        
+        # Get customer balance
+        customer_balance = Memtrans.objects.filter(
+            gl_no=loan.cust_gl_no,
+            ac_no=loan.customer.ac_no,
+            error='A'
+        ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        
+        # Get next due date and calculate days overdue
+        next_due_payment = LoanHist.objects.filter(
+            gl_no=loan.gl_no,
+            ac_no=loan.ac_no,
+            cycle=loan.cycle,
+            trx_date__gte=company_date,
+            trx_type='LD'
+        ).order_by('trx_date').first()
+        
+        # Calculate days overdue
+        days_overdue = 0
+        overdue_status = 'current'
+        first_overdue_payment = LoanHist.objects.filter(
+            gl_no=loan.gl_no,
+            ac_no=loan.ac_no,
+            cycle=loan.cycle,
+            trx_date__lt=company_date,
+            trx_type='LD'
+        ).order_by('trx_date').first()
+        
+        if first_overdue_payment:
+            # Check if there are any unpaid installments before today
+            unpaid_installments = LoanHist.objects.filter(
+                gl_no=loan.gl_no,
+                ac_no=loan.ac_no,
+                cycle=loan.cycle,
+                trx_date__lte=company_date,
+                trx_type='LD'
+            ).count()
+            
+            paid_installments = LoanHist.objects.filter(
+                gl_no=loan.gl_no,
+                ac_no=loan.ac_no,
+                cycle=loan.cycle,
+                trx_type='LP'
+            ).count()
+            
+            if unpaid_installments > paid_installments:
+                # Find the earliest unpaid due date
+                earliest_unpaid = LoanHist.objects.filter(
+                    gl_no=loan.gl_no,
+                    ac_no=loan.ac_no,
+                    cycle=loan.cycle,
+                    trx_date__lte=company_date,
+                    trx_type='LD'
+                ).order_by('trx_date')[paid_installments:paid_installments+1].first()
+                
+                if earliest_unpaid:
+                    days_overdue = (company_date - earliest_unpaid.trx_date).days
+                    if days_overdue > 0:
+                        if days_overdue <= 30:
+                            overdue_status = 'overdue_minor'  # 1-30 days
+                        elif days_overdue <= 90:
+                            overdue_status = 'overdue_moderate'  # 31-90 days
+                        else:
+                            overdue_status = 'overdue_severe'  # 90+ days
+        
+        # Only include loans with outstanding amounts
+        if outstanding_principal > 0 or outstanding_interest > 0:
+            loan_data = {
+                'loan': loan,
+                'customer': loan.customer,
+                'outstanding_principal': outstanding_principal,
+                'outstanding_interest': outstanding_interest,
+                'total_outstanding': outstanding_principal + outstanding_interest,
+                'customer_balance': customer_balance,
+                'next_due_date': next_due_payment.trx_date if next_due_payment else None,
+                'days_overdue': days_overdue,
+                'overdue_status': overdue_status,
+                'can_pay': customer_balance >= (outstanding_principal + outstanding_interest),
+                'loan_officer': loan.loan_officer.user if loan.loan_officer else 'N/A',
+                'business_sector': loan.business_sector.sector_name if loan.business_sector else 'N/A'
+            }
+            loan_schedule_data.append(loan_data)
+    
+    # Handle form submission for batch processing (same as before...)
+    if request.method == 'POST':
+        selected_loan_ids = request.POST.getlist('selected_loans')
+        
+        if not selected_loan_ids:
+            messages.error(request, 'No loans selected for processing.')
+            return redirect('auto_loan_due_schedule')
+        
+        processed_count = 0
+        total_amount_processed = Decimal('0.00')
+        errors = []
+        
+        with transaction.atomic():
+            for loan_id in selected_loan_ids:
+                try:
+                    loan = Loans.objects.get(id=loan_id, branch=user_branch)
+                    account = Account.objects.get(gl_no=loan.gl_no)
+                    customer = loan.customer
+                    
+                    # Find the corresponding loan data
+                    loan_info = next((item for item in loan_schedule_data if item['loan'].id == int(loan_id)), None)
+                    if not loan_info:
+                        continue
+                    
+                    outstanding_principal = loan_info['outstanding_principal']
+                    outstanding_interest = loan_info['outstanding_interest']
+                    
+                    # Check if customer has sufficient balance
+                    if loan_info['customer_balance'] < (outstanding_principal + outstanding_interest):
+                        errors.append(f"Insufficient balance for {customer.first_name} {customer.last_name}")
+                        continue
+                    
+                    # Generate unique transaction number
+                    unique_id = generate_loan_repayment_id()
+                    
+                    # Process repayment transactions (same processing logic as before...)
+                    if account.int_to_recev_gl_dr and account.int_to_recev_ac_dr and account.unearned_int_inc_gl and account.unearned_int_inc_ac:
+                        
+                        # Principal repayment transactions
+                        if outstanding_principal > 0:
+                            # Debit customer account (reduce customer balance)
+                            Memtrans.objects.create(
+                                branch=user_branch,
+                                cust_branch=loan.branch,
+                                customer=customer,
+                                gl_no=loan.cust_gl_no,
+                                ac_no=customer.ac_no,
+                                cycle=loan.cycle,
+                                amount=-outstanding_principal,
+                                description=f'Auto Loan Repayment - Principal - {customer.first_name} {customer.last_name}',
+                                type='D',
+                                account_type='C',
+                                ses_date=company_date,
+                                app_date=company_date,
+                                sys_date=timezone.now(),
+                                trx_no=unique_id,
+                                code='LP',
+                                user=request.user,
+                                error='A'
+                            )
+                            
+                            # Credit loan account (reduce loan balance)
+                            Memtrans.objects.create(
+                                branch=user_branch,
+                                cust_branch=loan.branch,
+                                customer=customer,
+                                gl_no=loan.gl_no,
+                                ac_no=loan.ac_no,
+                                cycle=loan.cycle,
+                                amount=outstanding_principal,
+                                description=f'Auto Principal Repayment - {customer.first_name} {customer.last_name}',
+                                error='A',
+                                type='C',
+                                account_type='L',
+                                ses_date=company_date,
+                                app_date=company_date,
+                                sys_date=timezone.now(),
+                                trx_no=unique_id,
+                                code='LP',
+                                user=request.user
+                            )
+                        
+                        # Interest repayment transactions (same as before...)
+                        if outstanding_interest > 0:
+                            # Debit customer account for interest
+                            Memtrans.objects.create(
+                                branch=user_branch,
+                                cust_branch=loan.branch,
+                                customer=customer,
+                                gl_no=loan.cust_gl_no,
+                                ac_no=customer.ac_no,
+                                cycle=loan.cycle,
+                                amount=-outstanding_interest,
+                                description=f'Auto Loan Interest Payment - {customer.first_name} {customer.last_name}',
+                                type='D',
+                                account_type='C',
+                                ses_date=company_date,
+                                app_date=company_date,
+                                sys_date=timezone.now(),
+                                trx_no=unique_id,
+                                code='LP',
+                                user=request.user,
+                                error='A'
+                            )
+                            
+                            # Credit interest income account
+                            Memtrans.objects.create(
+                                branch=user_branch,
+                                cust_branch=loan.branch,
+                                customer=customer,
+                                gl_no=account.interest_gl,
+                                ac_no=account.interest_ac,
+                                cycle=loan.cycle,
+                                amount=outstanding_interest,
+                                description=f'Auto Interest Income - {customer.first_name} {customer.last_name}',
+                                error='A',
+                                type='C',
+                                account_type='I',
+                                ses_date=company_date,
+                                app_date=company_date,
+                                sys_date=timezone.now(),
+                                trx_no=unique_id,
+                                code='LP',
+                                user=request.user
+                            )
+                            
+                            # Interest accounting entries (same as before...)
+                            Memtrans.objects.create(
+                                branch=user_branch,
+                                cust_branch=loan.branch,
+                                customer=customer,
+                                gl_no=account.int_to_recev_gl_dr,
+                                ac_no=account.int_to_recev_ac_dr,
+                                cycle=loan.cycle,
+                                amount=-outstanding_interest,
+                                description=f'Auto Interest Receivable Adjustment - {customer.first_name} {customer.last_name}',
+                                type='D',
+                                account_type='I',
+                                ses_date=company_date,
+                                app_date=company_date,
+                                sys_date=timezone.now(),
+                                trx_no=unique_id,
+                                code='LP',
+                                user=request.user
+                            )
+                            
+                            Memtrans.objects.create(
+                                branch=user_branch,
+                                cust_branch=loan.branch,
+                                customer=customer,
+                                gl_no=account.unearned_int_inc_gl,
+                                ac_no=account.unearned_int_inc_ac,
+                                cycle=loan.cycle,
+                                amount=outstanding_interest,
+                                description=f'Auto Unearned Interest Adjustment - {customer.first_name} {customer.last_name}',
+                                type='C',
+                                account_type='I',
+                                ses_date=company_date,
+                                app_date=company_date,
+                                sys_date=timezone.now(),
+                                trx_no=unique_id,
+                                code='LP',
+                                user=request.user
+                            )
+                        
+                        # Create loan history entry
+                        lp_count = LoanHist.objects.filter(
+                            gl_no=loan.gl_no,
+                            ac_no=loan.ac_no,
+                            cycle=loan.cycle,
+                            trx_type='LP'
+                        ).count()
+                        
+                        LoanHist.objects.create(
+                            branch=loan.branch,
+                            gl_no=loan.gl_no,
+                            ac_no=loan.ac_no,
+                            cycle=loan.cycle,
+                            period=str(lp_count + 1),
+                            trx_date=company_date,
+                            trx_type='LP',
+                            trx_naration='Auto Loan Repayment',
+                            principal=-outstanding_principal,
+                            interest=-outstanding_interest,
+                            penalty=Decimal('0.00'),
+                            trx_no=unique_id
+                        )
+                        
+                        # Update loan totals
+                        total_interest = LoanHist.objects.filter(
+                            gl_no=loan.gl_no,
+                            ac_no=loan.ac_no,
+                            cycle=loan.cycle
+                        ).aggregate(total=Sum('interest'))['total'] or Decimal('0.00')
+                        
+                        total_principal = LoanHist.objects.filter(
+                            gl_no=loan.gl_no,
+                            ac_no=loan.ac_no,
+                            cycle=loan.cycle
+                        ).aggregate(total=Sum('principal'))['total'] or Decimal('0.00')
+                        
+                        loan.total_loan = total_principal + total_interest
+                        loan.total_interest = total_interest
+                        loan.save()
+                        
+                        processed_count += 1
+                        total_amount_processed += outstanding_principal + outstanding_interest
+                        
+                except Exception as e:
+                    errors.append(f"Error processing loan {loan_id}: {str(e)}")
+                    continue
+        
+        # Show results
+        if processed_count > 0:
+            messages.success(
+                request,
+                f'Successfully processed {processed_count} loan(s). Total amount: ₦{total_amount_processed:,.2f}'
+            )
+        
+        if errors:
+            for error in errors[:5]:  # Show first 5 errors
+                messages.error(request, error)
+            if len(errors) > 5:
+                messages.error(request, f'... and {len(errors) - 5} more errors.')
+        
+        return redirect('auto_loan_due_schedule')
+    
+    # Enhanced context with overdue statistics
+    overdue_loans = len([item for item in loan_schedule_data if item['days_overdue'] > 0])
+    severe_overdue = len([item for item in loan_schedule_data if item['overdue_status'] == 'overdue_severe'])
+    
+    context = {
+        'loan_schedule_data': loan_schedule_data,
+        'company': company,
+        'company_date': company_date,
+        'total_loans': len(loan_schedule_data),
+        'total_outstanding': sum(item['total_outstanding'] for item in loan_schedule_data),
+        'payable_loans': len([item for item in loan_schedule_data if item['can_pay']]),
+        'overdue_loans': overdue_loans,
+        'severe_overdue_loans': severe_overdue,
+    }
+    
+    return render(request, 'loans/auto_loan_due_schedule.html', context)

@@ -46,6 +46,8 @@ urlpatterns = [
     path('choose_simple_disburse/', views.choose_simple_disburse, name='choose_simple_disburse'),
     path('simple_loan_disbursement/<int:id>/', views.simple_loan_disbursement, name='simple_loan_disbursement'),
     
+
+    path('auto-loan-due-schedule/', views.auto_loan_due_schedule, name='auto_loan_due_schedule'),
    
 ]
     
