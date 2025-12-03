@@ -223,7 +223,7 @@ class VirtualCard(models.Model):
 
 
 
-from accounts.models import User
+
 
 
 class KYCDocument(models.Model):
@@ -239,7 +239,7 @@ class KYCDocument(models.Model):
     file = models.FileField(upload_to='kyc_documents/')
     uploaded_at = models.DateTimeField(auto_now_add=True)
     verified = models.BooleanField(default=False)
-    verified_by = models.ForeignKey('accounts.User', on_delete=models.SET_NULL, null=True, blank=True)
+    verified_by = models.CharField(max_length=100, null=True, blank=True, help_text="Username of verifying user")
     notes = models.TextField(blank=True, null=True)
 
     def __str__(self):

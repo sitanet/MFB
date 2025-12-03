@@ -64,7 +64,7 @@ class UserManager(BaseUserManager):
             phone_number=phone_number,
             cashier_gl=cashier_gl,
             cashier_ac=cashier_ac,
-            branch_id=branch_id,  # Store branch ID as string
+            branch=branch,  # Store branch ID as string
             gl_no=gl_no,
             ac_no=ac_no,
         )
@@ -126,7 +126,7 @@ class UserManager(BaseUserManager):
             username=username,
             email=email,
             role=User.SYSTEM_ADMINISTRATOR,
-            branch_id=str(default_branch.id),  # Store branch ID as string
+            branch=default_branch,  # Store branch ID as string
             phone_number="+2348066311516",
             cashier_gl=None,
             cashier_ac=None,
@@ -189,11 +189,9 @@ class User(AbstractBaseUser):
     role = models.PositiveSmallIntegerField(choices=ROLE_CHOICE, blank=True, null=True)
     
     # Branch reference - CHANGED: Now stores branch ID instead of ForeignKey
-    branch_id = models.CharField(
-        max_length=10,
-        help_text="Branch ID from vendor database - REQUIRED for all users"
-    )
-    
+    # Branch reference - COMPULSORY for all users
+    branch = models.CharField(max_length=20, help_text="Vendor DB Branch ID")
+
     # Authentication and security fields
     otp_code = models.CharField(max_length=6, blank=True, null=True)
     last_otp_sent = models.DateTimeField(blank=True, null=True)
@@ -202,7 +200,13 @@ class User(AbstractBaseUser):
     activation_code = models.CharField(max_length=20, blank=True, null=True, unique=True)
     
     # Customer relationship
-    customer = models.ForeignKey('customers.Customer', on_delete=models.CASCADE, null=True, blank=True)
+    # Make sure this line around line 163 looks like this:
+    customer = models.ForeignKey(
+        'customers.Customer', 
+        on_delete=models.CASCADE, 
+        null=True, 
+        blank=True  # This makes it optional initially
+    )
 
     # Transaction PIN (securely hashed)
     transaction_pin = models.CharField(
@@ -365,7 +369,7 @@ class UserProfile(models.Model):
 
 class UserActivityLog(models.Model):
     """User activity tracking - Stored in CLIENT database"""
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, blank=True, null=True)
     ip_address = models.GenericIPAddressField()
     function_used = models.CharField(max_length=255)
     date_time = models.DateTimeField(auto_now_add=True)

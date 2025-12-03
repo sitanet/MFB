@@ -353,14 +353,14 @@ DATABASES = {
     
     # VENDOR DATABASE - Contains only Company and Branch models
     # This is controlled by the software vendor
-    'vendor_db': {
-        'ENGINE': os.environ.get('VENDOR_DB_ENGINE', 'django.db.backends.postgresql'),
-        'NAME': os.environ.get('VENDOR_DB_NAME', f"{os.environ.get('DB_NAME', 'mfb')}_vendor"),
-        'USER': os.environ.get('VENDOR_DB_USER', os.environ.get('DB_USER')),
-        'PASSWORD': os.environ.get('VENDOR_DB_PASSWORD', os.environ.get('DB_PASSWORD')),
-        'HOST': os.environ.get('VENDOR_DB_HOST', os.environ.get('DB_HOST', 'localhost')),
-        'PORT': os.environ.get('VENDOR_DB_PORT', os.environ.get('DB_PORT', '5432')),
-    }
+    # 'vendor_db': {
+    #     'ENGINE': os.environ.get('VENDOR_DB_ENGINE', 'django.db.backends.postgresql'),
+    #     'NAME': os.environ.get('VENDOR_DB_NAME', f"{os.environ.get('DB_NAME', 'mfb')}_vendor"),
+    #     'USER': os.environ.get('VENDOR_DB_USER', os.environ.get('DB_USER')),
+    #     'PASSWORD': os.environ.get('VENDOR_DB_PASSWORD', os.environ.get('DB_PASSWORD')),
+    #     'HOST': os.environ.get('VENDOR_DB_HOST', os.environ.get('DB_HOST', 'localhost')),
+    #     'PORT': os.environ.get('VENDOR_DB_PORT', os.environ.get('DB_PORT', '5432')),
+    # }
 }
 
 # Database routing configuration
