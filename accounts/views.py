@@ -1,87 +1,170 @@
-from datetime import datetime
-from django.contrib.auth.tokens import default_token_generator
-from django.core.mail import message
-from django.http.response import HttpResponse
-from django.shortcuts import get_object_or_404, redirect, render
-from django.utils.http import urlsafe_base64_decode
+"""
+User Views for Multi-Database Architecture
 
-from accounts.utils import detectUser, send_verification_email
-from accounts_admin.models import Account
-from customers.models import Customer
+This module contains views for user management.
+Branch models are imported from company.models (vendor database).
+Users are stored in client database but reference branches by ID.
+"""
 
-from django.urls import reverse
-
-
-from .forms import UserForm, UserProfileForm, UserProfilePictureForm, EdituserForm
-from .models import Role, User, UserProfile
-from django.contrib import messages, auth
-# from .utils import detectUser, send_verification_email
-from django.contrib.auth.decorators import login_required, user_passes_test
-
-from django.core.exceptions import PermissionDenied
-# from vendor.models import Vendor
-# from django.template.defaultfilters import slugify
-# from orders.models import Order
 import datetime
+import threading
+import random
+import logging
+from random import randint
 
-from company.models import Company, Branch
-
-
-
-from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
-from django.utils.encoding import force_bytes, force_str
 from django.contrib.auth.tokens import default_token_generator
+from django.core.mail import message, EmailMultiAlternatives, send_mail
+from django.http.response import HttpResponse, JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
+from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
+from django.utils.encoding import force_bytes, force_str
+from django.urls import reverse
+from django.contrib import messages, auth
+from django.contrib.auth import authenticate, login as auth_login, get_user_model
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.core.exceptions import PermissionDenied
+from django.utils import timezone
+from django.template.loader import render_to_string
+from django.conf import settings
+from django.core.cache import cache
+from django.db.models import Sum, Count
+from decimal import Decimal
 
-# Create your views here.
+# Import models from correct locations for multi-database architecture
+from company.models import Company, Branch  # Vendor database
+from .forms import UserForm, UserProfileForm, UserProfilePictureForm, EdituserForm
+from .models import Role, User, UserProfile  # Client database
+from accounts_admin.models import Account, Category  # Client database
+from customers.models import Customer  # Client database
+from transactions.models import Memtrans  # Client database
+from loans.models import Loans  # Client database
 
-# Restrict the vendor from accessing the customer page
+# Import utilities
+from accounts.utils import detectUser, send_verification_email
+from .utils import send_sms
+
+logger = logging.getLogger(__name__)
+User = get_user_model()
+
+
+# ==================== HELPER FUNCTIONS ====================
+
+def get_branch_from_vendor_db(branch_id):
+    """Helper function to get branch from vendor database"""
+    if not branch_id:
+        return None
+    try:
+        return Branch.objects.using('vendor_db').get(id=branch_id)
+    except Branch.DoesNotExist:
+        return None
+
+
+def get_all_branches_from_vendor_db():
+    """Helper function to get all branches from vendor database"""
+    return Branch.objects.using('vendor_db').all()
+
+
+def get_company_from_vendor_db(company_id):
+    """Helper function to get company from vendor database"""
+    if not company_id:
+        return None
+    try:
+        return Company.objects.using('vendor_db').get(id=company_id)
+    except Company.DoesNotExist:
+        return None
+
+
+def get_user_branches_from_vendor_db(user):
+    """Get branches accessible to user based on their company"""
+    if not user.branch_id:
+        return get_all_branches_from_vendor_db()
+    
+    user_branch = get_branch_from_vendor_db(user.branch_id)
+    if user_branch and user_branch.company:
+        return Branch.objects.using('vendor_db').filter(company=user_branch.company)
+    
+    return get_all_branches_from_vendor_db()
+
+
+# ==================== ROLE CHECKING FUNCTIONS ====================
+
 def check_role_admin(user):
+    """Check if user has admin role"""
     if user.role == 1:
         return True
     else:
         raise PermissionDenied
 
 
-# Restrict the customer from accessing the vendor page
 def check_role_coordinator(user):
+    """Check if user has coordinator role"""
     if user.role == 2:
         return True
     else:
         raise PermissionDenied
-    
+
+
 def check_role_team_member(user):
+    """Check if user has team member role"""
     if user.role == 3:
         return True
     else:
         raise PermissionDenied
 
+
+def check_role_customer(user):
+    """Check if user has customer role"""
+    if user.role == 13:
+        return True
+    else:
+        return False
+
+
+def check_role_vendor(user):
+    """Check if user has vendor role"""
+    if user.role == 2:
+        return True
+    else:
+        return False
+
+
+# ==================== USER REGISTRATION VIEWS ====================
+
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
-def registeruser(request):
-    # ✅ Branch filtering logic
-    if request.user.branch:
-        allowed_branches = Branch.objects.filter(id=request.user.branch.id)
-    else:
-        allowed_branches = Branch.objects.all()
+def registerUser(request):
+    """Register a new user with multi-database support"""
+    # Get allowed branches based on user's company
+    allowed_branches = get_user_branches_from_vendor_db(request.user)
 
     if request.method == 'POST':
-        form = UserForm(request.POST, request.FILES)  # ✅ include files
-        form.fields['branch'].queryset = allowed_branches  # ✅ restrict queryset
+        form = UserForm(request.POST, request.FILES)
+        # Set queryset to use vendor database
+        form.fields['branch'].queryset = allowed_branches
 
         if form.is_valid():
             user = form.save(commit=False)
+            
+            # Get selected branch from form
+            branch = form.cleaned_data.get('branch')
+            if branch:
+                user.branch_id = str(branch.id)
+            elif allowed_branches.count() == 1:
+                # Auto-assign if only one branch available
+                user.branch_id = str(allowed_branches.first().id)
 
-            # If branch not selected but user only has 1 branch → auto-assign it
-            if not form.cleaned_data.get('branch') and allowed_branches.count() == 1:
-                user.branch = allowed_branches.first()
-
-            # Cashier fields already optional in form, so just set them
+            # Set optional cashier fields
             user.cashier_gl = form.cleaned_data.get('cashier_gl') or None
             user.cashier_ac = form.cleaned_data.get('cashier_ac') or None
 
-            user.save()  # ✅ password & activation_code already handled in form.save()
-            messages.success(request, 'You have successfully registered the user!')
-            return redirect('display_all_user')
+            user.save()
+            
+            # Get branch name for success message
+            user_branch = get_branch_from_vendor_db(user.branch_id)
+            branch_name = user_branch.branch_name if user_branch else "Unknown Branch"
+            
+            messages.success(request, f'User {user.username} registered successfully in {branch_name}!')
+            return redirect('users')
         else:
             messages.error(request, 'There were errors in the form.')
             print(form.errors)
@@ -97,44 +180,15 @@ def registeruser(request):
         'form': form,
         'branches': allowed_branches,
     }
-    return render(request, 'accounts/registeruser.html', context)
+    return render(request, 'accounts/registerUser.html', context)
 
 
-
-
-from django.shortcuts import render, redirect
-from django.contrib import messages
-from django.core.mail import EmailMessage
-from django.urls import reverse
-from django.utils.http import urlsafe_base64_encode
-from django.utils.encoding import force_bytes
-from django.contrib.auth.tokens import default_token_generator
-from django.template.loader import render_to_string
-from django.conf import settings
-from accounts.forms import UserForm
-import logging
-
-logger = logging.getLogger(__name__)
-
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib import messages
-from .models import Branch
-from .forms import UserForm  # adjust to your form name
-import random
-from django.core.mail import EmailMultiAlternatives
-from django.conf import settings
-from django.shortcuts import render, redirect
-from django.contrib import messages
-from django.utils import timezone
-from .forms import UserForm
-from company.models import Branch
-from django.contrib.auth import get_user_model
-from .utils import send_sms   # ✅ Import Termii SMS util
-
-User = get_user_model()
+# Alias for compatibility
+registeruser = registerUser
 
 
 def register(request):
+    """Public user registration with OTP verification"""
     print("🔍 Entered register view")
 
     if User.objects.exists():
@@ -149,20 +203,31 @@ def register(request):
         if form.is_valid():
             print("✅ Form is valid")
             user = form.save(commit=False)
-            user.branch = form.cleaned_data['branch']
+            
+            # Handle branch assignment
+            branch = form.cleaned_data.get('branch')
+            if branch:
+                user.branch_id = str(branch.id)
+            
             user.set_password(form.cleaned_data["password"])
 
+            # Generate OTP
             otp_code = str(random.randint(100000, 999999))
             user.otp_code = otp_code
             user.last_otp_sent = timezone.now()
             user.save()
+            
             print(f"👤 User created: {user.username}, email: {user.email}, OTP: {otp_code}")
 
-            # ✅ Send Email
+            # Send Email OTP
             try:
                 subject = "Your OTP Code"
                 from_email = settings.DEFAULT_FROM_EMAIL
                 recipient_list = [user.email]
+
+                # Get company name for email
+                user_branch = get_branch_from_vendor_db(user.branch_id)
+                company_name = user_branch.company.company_name if user_branch and user_branch.company else "FinanceFlex"
 
                 text_content = f"""
 Hi {user.first_name},
@@ -186,7 +251,7 @@ Thank you!
                        style="display:inline-block; padding:10px 20px; background:#28a745; color:#fff; text-decoration:none;">
                        Verify Account
                     </a>
-                    <p>Thank you,<br>{user.branch.company_name}</p>
+                    <p>Thank you,<br>{company_name}</p>
                 </body>
                 </html>
                 """
@@ -199,7 +264,7 @@ Thank you!
                 print(f"❌ Email sending failed: {e}")
                 messages.warning(request, "User created, but failed to send OTP email.")
 
-            # ✅ Send SMS
+            # Send SMS OTP
             try:
                 if user.phone_number:
                     sms_message = f"Hi {user.first_name}, your OTP is {otp_code}. Verify at: http://127.0.0.1:8000/accounts/user_verify_otp/"
@@ -226,7 +291,57 @@ Thank you!
     return render(request, "accounts/public_reg.html", {"form": form})
 
 
+def registerusermasterintelligent(request):
+    """Master intelligent user registration"""
+    companies = Company.objects.using('vendor_db').all()
+    
+    if request.method == 'POST':
+        form = UserForm(request.POST)
+        if form.is_valid():
+            first_name = form.cleaned_data['first_name']
+            last_name = form.cleaned_data['last_name']
+            username = form.cleaned_data['username']
+            email = form.cleaned_data['email']
+            password = form.cleaned_data['password']
+            phone_number = form.cleaned_data['phone_number']
+            role = form.cleaned_data['role']
+            branch = form.cleaned_data['branch']
+            cashier_gl = form.cleaned_data['cashier_gl']
+            cashier_ac = form.cleaned_data['cashier_ac']
+
+            user = User.objects.create_user(
+                first_name=first_name,
+                last_name=last_name,
+                username=username,
+                email=email,
+                role=role,
+                phone_number=phone_number,
+                branch_id=str(branch.id),
+                cashier_gl=cashier_gl,
+                cashier_ac=cashier_ac,
+                password=password
+            )
+            
+            user.save()
+            messages.success(request, 'You have successfully registered User')
+            return redirect('users')
+        else:
+            print('invalid form')
+            print(form.errors)
+    else:
+        form = UserForm()
+        
+    context = {
+        'form': form,
+        'companies': companies,
+    }
+    return render(request, 'accounts/registerusermasterintelligent.html', context)
+
+
+# ==================== OTP VERIFICATION VIEWS ====================
+
 def user_verify_otp(request):
+    """Verify OTP for user registration"""
     print("🔍 Entered user_verify_otp view")
 
     user = User.objects.first()
@@ -235,6 +350,7 @@ def user_verify_otp(request):
         messages.error(request, "No registered user found. Please register first.")
         return redirect("register")
 
+    # Calculate resend availability
     can_resend = False
     countdown_seconds = 30
     if user.last_otp_sent:
@@ -267,6 +383,7 @@ def user_verify_otp(request):
 
 
 def user_resend_otp(request):
+    """Resend OTP for user verification"""
     print("🔍 Entered user_resend_otp view")
 
     try:
@@ -282,7 +399,11 @@ def user_resend_otp(request):
         user.save()
         print(f"🆕 New OTP for {user.email}: {otp_code}")
 
-        # ✅ Send Email
+        # Get branch and company info for email
+        user_branch = get_branch_from_vendor_db(user.branch_id)
+        company_name = user_branch.company.company_name if user_branch and user_branch.company else "FinanceFlex"
+
+        # Send Email
         try:
             subject = "Your New OTP Code"
             from_email = settings.DEFAULT_FROM_EMAIL
@@ -295,7 +416,7 @@ def user_resend_otp(request):
                 <p>Your new OTP is <strong>{otp_code}</strong></p>
                 <a href="http://127.0.0.1:8000/accounts/user_verify_otp/"
                    style="padding:10px 20px; background:#28a745; color:#fff; text-decoration:none;">Verify Account</a>
-                <p>Thank you,<br>{user.branch.company_name}</p>
+                <p>Thank you,<br>{company_name}</p>
             </body></html>
             """
 
@@ -307,7 +428,7 @@ def user_resend_otp(request):
             print(f"❌ Failed to resend OTP email: {e}")
             messages.warning(request, "OTP email could not be sent.")
 
-        # ✅ Send SMS
+        # Send SMS
         try:
             if user.phone_number:
                 sms_message = f"Hi {user.first_name}, your new OTP is {otp_code}. Verify at: http://127.0.0.1:8000/accounts/user_verify_otp/"
@@ -331,81 +452,357 @@ def user_resend_otp(request):
     return redirect("user_verify_otp")
 
 
+# Alias for URL compatibility
+resend_otp = user_resend_otp
 
 
+# ==================== AUTHENTICATION VIEWS ====================
 
-def registerusermasterintelligent(request):
-     branch = Company.objects.all()
-     
-     if request.method == 'POST':
-        form = UserForm(request.POST)
-        if form.is_valid():
-          
-            first_name = form.cleaned_data['first_name']
-            last_name = form.cleaned_data['last_name']
-            username = form.cleaned_data['username']
-            email = form.cleaned_data['email']
-          
-            password = form.cleaned_data['password']
-            phone_number = form.cleaned_data['phone_number']
-            role = form.cleaned_data['role']
-            branch = form.cleaned_data['branch']
-            cashier_gl = form.cleaned_data['cashier_gl']
-            cashier_ac = form.cleaned_data['cashier_ac']
+def _send_otp_background(user_id, otp, phone_number, email, branch):
+    """Send OTP via SMS and Email in background thread"""
+    print(f"[DEBUG-BG] 🚀 Background OTP delivery started for user {user_id}")
+    print(f"[DEBUG-BG] Phone: {phone_number}, Email: {email}, OTP: {otp}")
+    
+    try:
+        # Send SMS
+        if phone_number:
+            try:
+                sms_message = f"Your OTP code is: {otp}"
+                if send_sms(phone_number, sms_message, branch=branch):
+                    print(f"[SMS] ✅ OTP sent to {phone_number}")
+                else:
+                    print(f"[SMS] ⚠️ Failed to send OTP to {phone_number}")
+            except Exception as sms_exc:
+                print(f"[DEBUG-BG][SMS] Exception: {sms_exc}")
 
-            user = User.objects.create_user(first_name=first_name, last_name=last_name, username=username, email=email, role=role, phone_number=phone_number, branch=branch, cashier_gl=cashier_gl,cashier_ac=cashier_ac, password=password)
+        # Send Email
+        if email:
+            try:
+                company_name = getattr(branch, "company_name", "Support Team") if branch else "Support Team"
+                subject = "Your OTP Code"
+                text_content = f"Hi,\n\nYour OTP code is: {otp}\n\nPlease verify your account."
+                html_content = f"""
+                <html>
+                <body>
+                    <p>Hi,</p>
+                    <p>Your OTP code is: <strong>{otp}</strong></p>
+                    <p>Verify your account <a href='http://127.0.0.1:8000/accounts/verify_otp/'>here</a>.</p>
+                    <p>Thank you,<br>{company_name}</p>
+                </body>
+                </html>
+                """
+
+                msg = EmailMultiAlternatives(subject, text_content, settings.DEFAULT_FROM_EMAIL, [email])
+                msg.attach_alternative(html_content, "text/html")
+                msg.send()
+                print(f"[EMAIL] ✅ OTP sent to {email}")
+            except Exception as email_exc:
+                print(f"[DEBUG-BG][EMAIL] Exception: {email_exc}")
+
+        print("[DEBUG-BG] ✅ Background OTP delivery completed")
+    except Exception as e:
+        print(f"[DEBUG-BG] ⚠️ Background error: {e}")
+
+
+def login(request):
+    """Login view with OTP verification"""
+    print("\n[DEBUG] ───────────────────────────────")
+    print("[DEBUG] Login request received")
+
+    if request.user.is_authenticated:
+        print("[DEBUG] User already authenticated → redirecting to myAccount")
+        return redirect('myAccount')
+
+    if request.method == 'POST':
+        email = request.POST.get('email', '').strip()
+        password = request.POST.get('password')
+
+        print(f"[DEBUG] POST data received → email='{email}', password_provided={bool(password)}")
+
+        if not email or not password:
+            print("[DEBUG] Missing email or password")
+            messages.error(request, "Email and password are required.")
+            return render(request, 'accounts/login.html')
+
+        try:
+            # Check if email exists
+            try:
+                db_user = User.objects.get(email=email)
+                print(f"[DEBUG] Email found → user_id={db_user.id}")
+            except User.DoesNotExist:
+                print(f"[DEBUG] Email '{email}' does NOT exist")
+                messages.error(request, "No account was found with this email.")
+                return redirect('login')
+
+            # Try authentication
+            user = authenticate(request, email=email, password=password)
+            if user is None:
+                print("[DEBUG] Authentication FAILED")
+                messages.error(request, "Incorrect password. Please try again.")
+                return redirect('login')
+
+            user.backend = 'accounts.backends.EmailBackend'
+            auth.login(request, user)
+            print(f"[DEBUG] Authentication SUCCESS → user_id={user.id}")
+
+            # Account verification check
+            if not getattr(user, "verified", False):
+                print(f"[DEBUG] User {user.id} NOT verified")
+                messages.error(request, "Your account has not been verified. Please contact support.")
+                return redirect('login')
+
+            # Branch license check
+            user_branch = get_branch_from_vendor_db(user.branch_id)
+            if user_branch and user_branch.expire_date < timezone.now().date():
+                print(f"[DEBUG] Branch license EXPIRED for branch {user_branch.id}")
+                messages.error(request, "Your branch license has expired. Contact your administrator.")
+                return redirect('login')
+
+            # Generate OTP
+            otp = randint(100000, 999999)
+            print(f"[DEBUG] Generated OTP → {otp}")
+
+            # Store OTP in session
+            request.session['otp_data'] = {
+                'user_id': user.id,
+                'otp': otp,
+                'timestamp': timezone.now().isoformat()
+            }
+
+            # Send OTP in background
+            kwargs = {
+                'user_id': user.id,
+                'otp': otp,
+                'phone_number': getattr(user, 'phone_number', None),
+                'email': getattr(user, 'email', None),
+                'branch': user_branch
+            }
+
+            print("[DEBUG] Starting background OTP thread")
+            thread = threading.Thread(target=_send_otp_background, kwargs=kwargs)
+            thread.daemon = True
+            thread.start()
+
+            messages.success(request, "OTP sent! Please check your phone and email.")
+            return redirect('verify_otp')
+
+        except Exception as e:
+            print(f"[DEBUG] EXCEPTION: {str(e)}")
+            logger.exception(f"Login failed for {email}: {str(e)}")
+            messages.error(request, "A system error occurred. Please try again.")
+            return redirect('login')
+
+    return render(request, 'accounts/login.html')
+
+
+# Alias for compatibility
+login_view = login
+
+
+def verify_otp(request):
+    """Verify OTP after login"""
+    # Ensure session data is present
+    if 'otp_data' not in request.session:
+        messages.error(request, "OTP session expired. Please log in again.")
+        return redirect('login')
+
+    otp_data = request.session['otp_data']
+    user_id = otp_data.get('user_id')
+    session_otp = otp_data.get('otp')
+
+    # Fetch user
+    try:
+        user = User.objects.get(pk=user_id)
+    except User.DoesNotExist:
+        messages.error(request, "User not found.")
+        return redirect('login')
+
+    if request.method == 'POST':
+        entered_otp = request.POST.get('otp')
+        action = request.POST.get('action')
+
+        # Handle OTP resend
+        if action == "resend":
+            new_otp = randint(100000, 999999)
+            request.session['otp_data']['otp'] = new_otp
+            cache.set(f'otp_{user_id}', new_otp, timeout=300)
+
+            # Send SMS
+            if getattr(user, "phone_number", None):
+                message_text = f"Your OTP code is {new_otp}. It will expire in 5 minutes."
+                send_sms(user.phone_number, message_text)
+
+            messages.success(request, "A new OTP has been sent to your phone.")
+            return redirect('verify_otp')
+
+        # Check cache and session OTP
+        cache_otp = cache.get(f'otp_{user_id}')
+        
+        # Validate OTP
+        if entered_otp and (str(entered_otp) == str(session_otp) or str(entered_otp) == str(cache_otp)):
+            auth.login(request, user)
             
-            user.save()
-            messages.success(request, 'You have successfull register User')
-
-            # Send verification email
-            # mail_subject = 'Please activate your account'
-            # email_template = 'accounts/email/accounts_verification_email.html'
-            # send_verification_email(request, user, mail_subject, email_template)
-            # messages.success(request, 'Your account has been registered sucessfully!')
-            return redirect('display_all_user')
+            # Cleanup
+            cache.delete(f'otp_{user_id}')
+            request.session.pop('otp_data', None)
+            
+            messages.success(request, "Logged in successfully!")
+            return redirect('myAccount')
         else:
-            print('invalid form')
-            print(form.errors)
-     else:
-        form = UserForm()
-     context = {
-        'form': form,
-        'branch': branch,
-    }
-     return render(request, 'accounts/registerusermasterintelligent.html', context)
+            messages.error(request, "Invalid OTP.")
+
+    return render(request, 'accounts/verify_otp.html', {"user": user})
 
 
+def logout(request):
+    """User logout"""
+    auth.logout(request)
+    return redirect('login')
+
+
+# ==================== ACCOUNT MANAGEMENT VIEWS ====================
 
 @login_required(login_url='login')
 def myAccount(request):
+    """User account redirect based on role"""
     user = request.user
     redirectUrl = detectUser(user)
     return redirect(redirectUrl)
 
-# @login_required(login_url='login')
-# def dashboard(request):
 
-#     return render(request, 'accounts/dashboard.html')
+@login_required(login_url='login')
+def profile(request):
+    """User profile management"""
+    if request.method == 'POST':
+        form = UserProfilePictureForm(request.POST, request.FILES, instance=request.user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Profile picture updated successfully.')
+            return redirect('profile')
+    else:
+        form = UserProfilePictureForm(instance=request.user)
+    
+    # Get user's branch information
+    user_branch = get_branch_from_vendor_db(request.user.branch_id)
+    
+    context = {
+        'form': form,
+        'user_branch': user_branch,
+    }
+    return render(request, 'accounts/profile.html', context)
 
-from django.shortcuts import render
-from django.db.models import Sum, Count
-from django.utils import timezone
-from transactions.models import Memtrans
-from loans.models import Loans
-from customers.models import Customer
-from company.models import Branch
-from accounts_admin.models import Category
-from decimal import Decimal
+
+# ==================== USER MANAGEMENT VIEWS ====================
+
+@login_required(login_url='login')
+@user_passes_test(check_role_admin)
+def users(request):
+    """Display all users for admin with branch information"""
+    # Get user's branch and company information
+    user_branch = get_branch_from_vendor_db(request.user.branch_id)
+    
+    if user_branch and user_branch.company:
+        # Filter users by same company
+        company_branches = Branch.objects.using('vendor_db').filter(company=user_branch.company)
+        branch_ids = [str(branch.id) for branch in company_branches]
+        users_list = User.objects.filter(branch_id__in=branch_ids)
+    else:
+        # Admin can see all users
+        users_list = User.objects.all()
+
+    # Add branch information to each user
+    users_with_branch_info = []
+    for user in users_list:
+        branch = get_branch_from_vendor_db(user.branch_id)
+        user.branch_display = branch.branch_name if branch else "No Branch"
+        user.company_display = branch.company.company_name if branch and branch.company else "No Company"
+        users_with_branch_info.append(user)
+
+    context = {
+        'users': users_with_branch_info,
+    }
+    return render(request, 'accounts/users.html', context)
 
 
+# Alias for compatibility
+display_all_user = users
+
+
+@login_required(login_url='login')
+@user_passes_test(check_role_admin)
+def editUser(request, pk=None):
+    """Edit user with multi-database branch support"""
+    user = get_object_or_404(User, pk=pk)
+    
+    # Get allowed branches based on current user's company
+    user_branch = get_branch_from_vendor_db(request.user.branch_id)
+    if user_branch and user_branch.company:
+        allowed_branches = Branch.objects.using('vendor_db').filter(company=user_branch.company)
+    else:
+        allowed_branches = get_all_branches_from_vendor_db()
+    
+    # Get customers for the form
+    customers = Customer.objects.filter(gl_no__startswith='1')
+ 
+    if request.method == 'POST':
+        form = EdituserForm(request.POST, request.FILES, instance=user)
+        form.fields['branch'].queryset = allowed_branches
+        
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'User {user.username} updated successfully!')
+            return redirect('users')
+    else:
+        form = EdituserForm(instance=user)
+        form.fields['branch'].queryset = allowed_branches
+
+    context = {
+        'form': form,
+        'user': user,
+        'branches': allowed_branches,
+        'customers': customers,
+    }
+    return render(request, 'accounts/editUser.html', context)
+
+
+# Alias for compatibility
+edit_user = editUser
+
+
+@login_required(login_url='login')
+@user_passes_test(check_role_admin)
+def deleteUser(request, pk=None):
+    """Delete a user"""
+    user = get_object_or_404(User, pk=pk)
+    user.delete()
+    messages.success(request, 'User deleted successfully!')
+    return redirect('users')
+
+
+# Alias for compatibility
+def delete_user(request, id):
+    """Delete user by ID (compatibility function)"""
+    user = User.objects.get(id=id)
+    user.delete()
+    messages.success(request, 'User deleted successfully!')
+    return redirect('users')
+
+
+# ==================== DASHBOARD VIEW ====================
+
+@login_required(login_url='login')
 def dashboard(request):
-    # --- Date Setup ---
+    """Dashboard with statistics and branch information"""
+    # Date setup
     today = timezone.now()
     current_month = today.month
     current_year = today.year
 
-    # --- Current Month Deposits ---
+    # Get user's branch and company information
+    user_branch = get_branch_from_vendor_db(request.user.branch_id)
+    user_company = user_branch.company if user_branch else None
+
+    # Current Month Deposits
     current_month_deposits = (
         Memtrans.objects.filter(
             ses_date__month=current_month,
@@ -415,7 +812,7 @@ def dashboard(request):
         ).aggregate(total=Sum('amount'))['total'] or 0
     )
 
-    # --- Current Month Loans (disbursed only) ---
+    # Current Month Loans (disbursed only)
     current_month_loans = (
         Loans.objects.filter(
             appli_date__month=current_month,
@@ -424,7 +821,7 @@ def dashboard(request):
         ).aggregate(total=Sum('loan_amount'))['total'] or 0
     )
 
-    # --- Accumulated Deposits (YTD) ---
+    # Accumulated Deposits (YTD)
     total_deposits = (
         Memtrans.objects.filter(
             ses_date__year=current_year,
@@ -433,7 +830,7 @@ def dashboard(request):
         ).aggregate(total=Sum('amount'))['total'] or 0
     )
 
-    # --- Accumulated Loans (YTD, disbursed only) ---
+    # Accumulated Loans (YTD)
     total_loans = (
         Loans.objects.filter(
             disb_status='T',
@@ -443,7 +840,7 @@ def dashboard(request):
 
     total_customers = Customer.objects.count()
 
-    # --- NPL Ratio ---
+    # NPL Ratio
     npl_ratio = 0
     if Loans.objects.exists():
         total_loans_count = Loans.objects.count()
@@ -453,7 +850,7 @@ def dashboard(request):
             if total_loans_count > 0 else 0
         )
 
-    # --- Deposit vs Loan Monthly Trend (₦ Billion) ---
+    # Monthly trends
     months = [
         "Jan", "Feb", "Mar", "Apr", "May", "Jun",
         "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
@@ -482,39 +879,47 @@ def dashboard(request):
         deposits_trend.append(float(deposits) / 1_000_000_000)
         loans_trend.append(float(loans) / 1_000_000_000)
 
-    # --- Customer Segmentation ---
+    # Customer Segmentation
     segmentation = {}
     for cat in Category.objects.all():
         segmentation[cat.category_name] = Customer.objects.filter(cust_cat=cat).count()
 
-    # --- Branch Performance ---
+    # Branch Performance
     branch_data = []
-    for branch in Branch.objects.all():
-        cust_count = Customer.objects.filter(branch=branch).count()
-
+    all_branches = get_all_branches_from_vendor_db()
+    
+    for branch in all_branches:
+        # Count customers and loans for this branch
+        cust_count = Customer.objects.filter(branch_id=str(branch.id)).count()
+        
         branch_deposits = (
             Memtrans.objects.filter(
-                branch=branch,
+                cust_branch__in=Customer.objects.filter(branch_id=str(branch.id)).values_list('id', flat=True),
                 amount__gt=0,
                 account_type='C'
             ).aggregate(total=Sum('amount'))['total'] or 0
         )
 
         branch_loans = (
-            Loans.objects.filter(branch=branch, disb_status='T')
-            .aggregate(total=Sum('loan_amount'))['total'] or 0
+            Loans.objects.filter(
+                customer__branch_id=str(branch.id),
+                disb_status='T'
+            ).aggregate(total=Sum('loan_amount'))['total'] or 0
         )
 
         profit = Decimal(branch_loans) * Decimal('0.05')
-
-        npl = Loans.objects.filter(branch=branch, approval_status='Defaulted').count()
-        total_loans_branch = Loans.objects.filter(branch=branch).count()
+        
+        npl = Loans.objects.filter(
+            customer__branch_id=str(branch.id),
+            approval_status='Defaulted'
+        ).count()
+        total_loans_branch = Loans.objects.filter(customer__branch_id=str(branch.id)).count()
         npl_ratio_branch = (
             round((npl / total_loans_branch) * 100, 2)
             if total_loans_branch > 0 else 0
         )
 
-        # --- Branch Status (Dynamic) ---
+        # Branch Status
         if npl_ratio_branch < 5 and branch_deposits > 0:
             status = "Excellent"
         elif npl_ratio_branch < 10:
@@ -526,7 +931,7 @@ def dashboard(request):
 
         branch_data.append({
             "name": branch.branch_name,
-            "location": branch.branch_code,
+            "location": branch.address,
             "customers": cust_count,
             "deposits": branch_deposits,
             "loans": branch_loans,
@@ -535,8 +940,11 @@ def dashboard(request):
             "status": status,
         })
 
-    # --- Context ---
     context = {
+        # User information
+        'user_branch': user_branch,
+        'user_company': user_company,
+        
         # Current Month
         "current_month_deposits": current_month_deposits,
         "current_month_loans": current_month_loans,
@@ -558,604 +966,53 @@ def dashboard(request):
     return render(request, 'accounts/dashboard.html', context)
 
 
-
+# ==================== PASSWORD MANAGEMENT ====================
 
 @login_required(login_url='login')
-@user_passes_test(check_role_admin)
 def change_password(request):
+    """Change password view"""
+    if request.method == 'POST':
+        current_password = request.POST.get('current_password')
+        new_password = request.POST.get('new_password')
+        confirm_password = request.POST.get('confirm_password')
+        
+        user = request.user
+        
+        if not user.check_password(current_password):
+            messages.error(request, 'Current password is incorrect.')
+            return redirect('change_password')
+        
+        if new_password != confirm_password:
+            messages.error(request, 'New passwords do not match.')
+            return redirect('change_password')
+        
+        if len(new_password) < 8:
+            messages.error(request, 'Password must be at least 8 characters long.')
+            return redirect('change_password')
+        
+        user.set_password(new_password)
+        user.save()
+        
+        # Re-authenticate the user
+        user = auth.authenticate(username=user.username, password=new_password)
+        if user:
+            auth.login(request, user)
+        
+        messages.success(request, 'Password changed successfully.')
+        return redirect('myAccount')
+    
     return render(request, 'accounts/change_password.html')
 
-@login_required(login_url='login')
-@user_passes_test(check_role_admin)
-def user_admin(request):
-    return render(request, 'accounts/user_admin.html')
-@login_required(login_url='login')
-@user_passes_test(check_role_admin)
-def display_all_user(request):
-    # Assuming request.user is linked to a Branch instance via a ForeignKey
-    branch = request.user.branch  # Get the branch associated with the logged-in user
-    company_name = branch.company_name  # Extract the company name
-
-    # Filter users whose branch's company_name matches the current user's company_name
-    users = User.objects.filter(branch__company_name=company_name)
-
-    return render(request, 'accounts/display_all_user.html', {'users': users})
-
-
-
-@login_required(login_url='login')
-@user_passes_test(check_role_admin)
-def edit_user(request, id):
-    userrole = User.objects.get(id=id)
-    branch = Branch.objects.filter(company__company_name=request.user.branch.company.company_name)
-
-    customer = Customer.objects.filter(gl_no__startswith='1')
- 
-    if request.method == 'POST':
-        form = EdituserForm(request.POST, request.FILES, instance=userrole)
-        if form.is_valid():
-            form.save()
-            return redirect('display_all_user')  # Redirect to a user list view
-    else:
-        form = EdituserForm(instance=userrole)
-
-    return render(request, 'accounts/update_user.html', {'form': form,'branch':branch,'customer':customer})
-
-# def login(request):
-#     if request.user.is_authenticated:
-#         messages.warning(request, 'You are already logged in!')
-#         return redirect('myAccount')
-#     elif request.method == 'POST':
-#         email = request.POST['email']
-#         password = request.POST['password']
-
-#         user = auth.authenticate(email=email, password=password)
-
-#         if user is not None:
-#             auth.login(request, user)
-#             # messages.success(request, 'You are now logged in.')
-#             return redirect('myAccount')
-#         else:
-#             # messages.error(request, 'Invalid login credentials')
-#             return redirect('login')
-#     return render(request, 'accounts/login.html')
-
-
-import threading
-from random import randint
-from django.utils import timezone
-from django.shortcuts import render, redirect
-from django.contrib import messages
-from django.contrib.auth import authenticate
-from django.core.mail import EmailMultiAlternatives
-from django.conf import settings
-import logging
-
-# adjust this import path to where your utils.py actually lives
-from .utils import send_sms
-
-logger = logging.getLogger(__name__)
-
-
-def _send_otp_background(user_id, otp, phone_number, email, branch):
-    """
-    Send OTP via SMS (Termii) and Email in a background thread.
-    Accepts exactly: user_id, otp, phone_number, email, branch.
-    Debug prints are included to follow background execution in console.
-    """
-    print(f"[DEBUG-BG] called _send_otp_background(user_id={user_id!r}, otp={otp!r}, "
-          f"phone_number={phone_number!r}, email={email!r}, branch={getattr(branch, 'id', None)!r})")
-    logger.debug(f"[BG] start sending otp for user {user_id}")
-
-    # --- Input validation & sanitization ---
-    if not isinstance(otp, int) or not (100000 <= otp <= 999999):
-        logger.error(f"[OTP] Invalid OTP for user {user_id}: {otp}")
-        print(f"[DEBUG-BG] ❌ Invalid OTP: {otp!r}")
-        return
-
-    if phone_number is not None and not isinstance(phone_number, str):
-        phone_number = str(phone_number)
-
-    if email:
-        if not isinstance(email, str) or '@' not in email:
-            logger.error(f"[EMAIL] Invalid email for user {user_id}: {email!r}")
-            print(f"[DEBUG-BG] ❌ Invalid email: {email!r}")
-            email = None
-
-    print(f"[DEBUG-BG] 🚀 Sending OTP {otp} | Phone: {phone_number!r} | Email: {email!r}")
-
-    try:
-        # --- SMS via send_sms helper ---
-        if phone_number:
-            try:
-                print(f"[DEBUG-BG][SMS] Attempting to send SMS to {phone_number}")
-                sms_message = f"Your OTP code is: {otp}"
-                sms_ok = False
-                if send_sms:
-                    sms_ok = send_sms(phone_number, sms_message, branch=branch)
-                else:
-                    print("[DEBUG-BG][SMS] send_sms helper not available (import issue)")
-
-                if sms_ok:
-                    print(f"[SMS] ✅ OTP sent to {phone_number}")
-                    logger.info(f"[SMS] OTP sent to {phone_number} for user {user_id}")
-                else:
-                    print(f"[SMS] ⚠️ Failed to send OTP to {phone_number}")
-                    logger.warning(f"[SMS] Failed to send OTP to {phone_number} for user {user_id}")
-
-            except Exception as sms_exc:
-                logger.exception(f"[SMS-ERROR] Error sending SMS for user {user_id}: {sms_exc}")
-                print(f"[DEBUG-BG][SMS] Exception while sending SMS: {sms_exc}")
-
-        # --- Email ---
-        if email:
-            try:
-                print(f"[DEBUG-BG][EMAIL] Preparing email to {email}")
-                subject = "Your OTP Code"
-                from_email = settings.DEFAULT_FROM_EMAIL
-                recipient_list = [email]
-
-                company_name = getattr(branch, "company_name", "Support Team")
-                text_content = f"Hi,\n\nYour OTP code is: {otp}\n\nPlease verify your account."
-                html_content = f"""
-                <html>
-                <body>
-                    <p>Hi,</p>
-                    <p>Your OTP code is: <strong>{otp}</strong></p>
-                    <p>Verify your account <a href='http://127.0.0.1:8000/accounts/verify_otp/'>here</a>.</p>
-                    <p>Thank you,<br>{company_name}</p>
-                </body>
-                </html>
-                """
-
-                msg = EmailMultiAlternatives(subject, text_content, from_email, recipient_list)
-                msg.attach_alternative(html_content, "text/html")
-                msg.send()
-                print(f"[EMAIL] ✅ OTP sent to {email}")
-                logger.info(f"[EMAIL] OTP sent to {email} for user {user_id}")
-
-            except Exception as email_exc:
-                logger.exception(f"[EMAIL-ERROR] Failed sending OTP email to {email} for user {user_id}: {email_exc}")
-                print(f"[DEBUG-BG][EMAIL] Exception while sending email: {email_exc}")
-
-        print("[DEBUG-BG] ✅ Background OTP delivery completed")
-        logger.debug(f"[BG] completed sending otp for user {user_id}")
-
-    except Exception as e:
-        logger.exception(f"[ERROR-BG] OTP delivery failed for user {user_id}: {e}")
-        print(f"[DEBUG-BG] ⚠️ Background error: {e}")
-
-
-import threading
-from random import randint
-from django.shortcuts import render, redirect
-from django.contrib import messages
-from django.utils import timezone
-from django.contrib.auth import authenticate, login
-from django.contrib.auth import get_user_model
-import logging
-
-logger = logging.getLogger(__name__)
-User = get_user_model()
-
-# Assume you already have this function defined elsewhere
-# def _send_otp_background(user_id, otp, phone_number=None, email=None, branch=None):
-#     pass
-
-def login_view(request):
-    print("\n[DEBUG] ───────────────────────────────")
-    print("[DEBUG] Login request received")
-
-    if request.user.is_authenticated:
-        print("[DEBUG] User already authenticated → redirecting to myAccount")
-        return redirect('myAccount')
-
-    if request.method == 'POST':
-        email = request.POST.get('email', '').strip()
-        password = request.POST.get('password')
-
-        print(f"[DEBUG] POST data received → email='{email}', password_provided={bool(password)}")
-
-        if not email or not password:
-            print("[DEBUG] Missing email or password → rendering login page")
-            messages.error(request, "Email and password are required.")
-            return render(request, 'accounts/login.html')
-
-        try:
-            # ✦ Check if email exists
-            print(f"[DEBUG] Checking if email '{email}' exists in database...")
-            try:
-                db_user = User.objects.get(email=email)
-                print(f"[DEBUG] Email found → user_id={db_user.id}")
-            except User.DoesNotExist:
-                print(f"[DEBUG] Email '{email}' does NOT exist → login denied")
-                messages.error(request, "No account was found with this email.")
-                return redirect('login')
-
-            # ✦ Try authentication
-            print("[DEBUG] Attempting authentication...")
-            user = authenticate(request, email=email, password=password)
-
-            if user is None:
-                print("[DEBUG] Authentication FAILED → wrong password")
-                messages.error(request, "Incorrect password. Please try again.")
-                return redirect('login')
-
-            # ✦ Explicitly assign backend to handle multiple backends
-            user.backend = 'accounts.backends.EmailBackend'
-            login(request, user)
-            print(f"[DEBUG] Authentication SUCCESS → user_id={user.id}")
-
-            # ✦ Account verification check
-            print(f"[DEBUG] Checking if user {user.id} is verified...")
-            if not getattr(user, "verified", False):
-                print(f"[DEBUG] User {user.id} NOT verified → stopping login")
-                messages.error(
-                    request,
-                    "Your account has not been verified. Please contact support."
-                )
-                return redirect('login')
-
-            # ✦ Branch license check
-            print(f"[DEBUG] Checking branch license for user {user.id}...")
-            if user.branch:
-                print(f"[DEBUG] User branch found → branch_id={user.branch.id}, expire_date={user.branch.expire_date}")
-                if user.branch.expire_date < timezone.now().date():
-                    print(f"[DEBUG] Branch license EXPIRED for branch {user.branch.id}")
-                    messages.error(
-                        request,
-                        "Your branch license has expired. Contact your administrator."
-                    )
-                    return redirect('login')
-            else:
-                print("[DEBUG] User has NO branch assigned (OK)")
-
-            # ✦ Generate OTP
-            otp = randint(100000, 999999)
-            print(f"[DEBUG] Generated OTP → {otp}")
-
-            # ✦ Store OTP in session
-            request.session['otp_data'] = {
-                'user_id': user.id,
-                'otp': otp,
-                'timestamp': timezone.now().isoformat()
-            }
-            print("[DEBUG] OTP stored in session:", request.session['otp_data'])
-
-            # ✦ Send OTP in background thread
-            kwargs = {
-                'user_id': user.id,
-                'otp': otp,
-                'phone_number': getattr(user, 'phone_number', None),
-                'email': getattr(user, 'email', None),
-                'branch': getattr(user, 'branch', None)
-            }
-
-            print("[DEBUG] Starting background OTP thread with:", kwargs)
-            thread = threading.Thread(target=_send_otp_background, kwargs=kwargs)
-            thread.daemon = True
-            thread.start()
-            print("[DEBUG] 🚀 Background OTP thread started")
-
-            messages.success(request, "OTP sent! Please check your phone and email.")
-            print("[DEBUG] Redirecting user to verify_otp")
-            return redirect('verify_otp')
-
-        except Exception as e:
-            print("[DEBUG] EXCEPTION occurred during login:", str(e))
-            logger.exception(f"[ERROR] Login failed for {email}: {str(e)}")
-            messages.error(request, "A system error occurred. Please try again or contact support.")
-            return redirect('login')
-
-    print("[DEBUG] GET request → rendering login page")
-    return render(request, 'accounts/login.html')
-
-
-
-
-from django.shortcuts import render, redirect
-from django.contrib import messages
-from django.contrib.auth import login as auth_login
-from django.core.cache import cache
-from django.utils import timezone
-import logging
-from .models import User  # Adjust to your actual User model
-from .utils import send_sms  # 👈 import your SMS util
-
-logger = logging.getLogger(__name__)
-
-
-def verify_otp(request):
-    # ✅ Step 1: Ensure session data is present
-    if 'otp_data' not in request.session:
-        messages.error(request, "OTP session expired. Please log in again.")
-        return redirect('login')
-
-    otp_data = request.session['otp_data']
-    user_id = otp_data.get('user_id')
-    session_otp = otp_data.get('otp')
-    otp_timestamp = otp_data.get('timestamp')  # Optional for expiry check
-
-    # ✅ Fetch user
-    try:
-        user = User.objects.get(pk=user_id)
-    except User.DoesNotExist:
-        messages.error(request, "User not found.")
-        return redirect('login')
-
-    if request.method == 'POST':
-        entered_otp = request.POST.get('otp')
-        action = request.POST.get('action')  # e.g. "verify" or "resend"
-
-        # ✅ Handle OTP resend
-        if action == "resend":
-            from random import randint
-            new_otp = randint(100000, 999999)
-
-            # Store in session + cache
-            request.session['otp_data']['otp'] = new_otp
-            cache.set(f'otp_{user_id}', new_otp, timeout=300)  # 5 min expiry
-
-            # Send SMS
-            if getattr(user, "phone_number", None):
-                message = f"Your OTP code is {new_otp}. It will expire in 5 minutes."
-                logger.debug(f"[OTP-RESEND] Sending new OTP {new_otp} to {user.phone_number}")
-                send_sms(user.phone_number, message)
-
-            messages.success(request, "A new OTP has been sent to your phone.")
-            return redirect('verify_otp')
-
-        # ✅ Step 2: Check cache
-        cache_otp = cache.get(f'otp_{user_id}')
-        logger.debug(
-            f"Verifying OTP for user {user_id}: "
-            f"Cache={cache_otp}, Session={session_otp}, Entered={entered_otp}"
-        )
-
-        # ✅ Step 3: Validate OTP
-        if entered_otp and (str(entered_otp) == str(session_otp) or str(entered_otp) == str(cache_otp)):
-            auth_login(request, user)
-
-            # ✅ Step 4: Cleanup
-            cache.delete(f'otp_{user_id}')
-            request.session.pop('otp_data', None)
-
-            messages.success(request, "Logged in successfully!")
-            return redirect('myAccount')
-
-        else:
-            messages.error(request, "Invalid OTP.")
-
-    return render(request, 'accounts/verify_otp.html', {"user": user})
-
-
-
-# views.py
-import logging
-from django.shortcuts import redirect
-from django.contrib import messages
-from django.core.mail import send_mail
-from django.utils import timezone
-from .models import User  # Make sure this is your actual User model
-
-logger = logging.getLogger(__name__)
-
-# views.py
-
-
-import threading
-from django.core.mail import send_mail
-from django.conf import settings
-from django.contrib import messages
-from django.shortcuts import redirect
-from .models import User
-import logging
-
-logger = logging.getLogger(__name__)
-
-# Background task function WITH debug prints
-import threading
-from django.core.mail import send_mail
-from django.conf import settings
-from django.contrib import messages
-from django.shortcuts import redirect
-from .models import User
-import logging
-
-logger = logging.getLogger(__name__)
-
-# Background task function WITH debug prints
-# def _send_otp_background(phone_number, email, otp, branch, request):
-    # """Send OTP in background thread"""
-    # print(f"[DEBUG-BG] 🚀 Background OTP delivery started")
-    # print(f"[DEBUG-BG] Phone: {phone_number}, Email: {email}, OTP: {otp}")
-    
-    # sent_any = False
-    
-    # # Send SMS if phone exists
-    # if phone_number:
-    #     print(f"[DEBUG-BG] 📱 Processing SMS for: {phone_number}")
-    #     try:
-    #         # Format phone number
-    #         if not phone_number.startswith('+'):
-    #             formatted_phone = f"+{phone_number.lstrip('+')}"
-    #         else:
-    #             formatted_phone = phone_number
-                
-    #         print(f"[DEBUG-BG] 📱 Formatted phone: {formatted_phone}")
-            
-    #         sms_success = _send_otp_sms(formatted_phone, f"Your FinanceFlex OTP is {otp}", branch)
-    #         print(f"[DEBUG-BG] 📱 SMS result: {'✅ Success' if sms_success else '❌ Failed'}")
-            
-    #         if sms_success:
-    #             # Note: messages in background threads may not work reliably
-    #             sent_any = True
-    #         else:
-    #             logger.warning(f"Background SMS failed for {formatted_phone}")
-    #     except Exception as e:
-    #         print(f"[DEBUG-BG] 📱 SMS exception: {str(e)}")
-    #         logger.error(f"Background SMS error: {e}")
-    # else:
-    #     print("[DEBUG-BG] 📱 No phone number provided")
-
-    # # Send Email if email exists
-    # if email:
-    #     print(f"[DEBUG-BG] 📧 Processing email for: {email}")
-    #     try:
-    #         send_mail(
-    #             subject="FinanceFlex: Your OTP Code",
-    #             message=f"Your one-time password is: {otp}\n\nValid for 5 minutes.",
-    #             from_email=settings.DEFAULT_FROM_EMAIL,
-    #             recipient_list=[email],
-    #             fail_silently=False,
-    #         )
-    #         print("[DEBUG-BG] 📧 Email sent successfully")
-    #         sent_any = True
-    #     except Exception as e:
-    #         print(f"[DEBUG-BG] 📧 Email exception: {str(e)}")
-    #         logger.error(f"Background email error: {e}")
-    # else:
-    #     print("[DEBUG-BG] 📧 No email provided")
-
-    # print(f"[DEBUG-BG] ✅ Background delivery completed. Sent: {sent_any}")
-
-def resend_otp(request):
-    print("[DEBUG] === RESEND OTP REQUEST STARTED ===")
-    
-    if request.method != "POST":
-        print("[DEBUG] ❌ Non-POST request received")
-        return redirect("verify_otp")
-
-    otp_data = request.session.get('otp_data')
-    if not otp_data:
-        print("[DEBUG] ❌ otp_data not found in session")
-        messages.error(request, "Session expired. Please log in again.")
-        return redirect('login')
-
-    print(f"[DEBUG] ✅ Found otp_data: {otp_data}")
-    
-    user_id = otp_data.get('user_id')
-    if not user_id:
-        print("[DEBUG] ❌ user_id missing in otp_data")
-        messages.error(request, "User info missing. Please log in again.")
-        return redirect('login')
-
-    try:
-        user = User.objects.get(pk=user_id)
-        phone_number = getattr(user, 'phone_number', None)
-        email = user.email
-        print(f"[DEBUG] 👤 User found: {user.email} | Phone: {phone_number}")
-
-        # Generate new OTP
-        new_otp = str(randint(100000, 999999))
-        otp_data['otp'] = new_otp
-        request.session['otp_data'] = otp_data
-        print(f"[DEBUG] 🔑 New OTP generated: {new_otp}")
-
-        # ✅ START BACKGROUND TASK
-        print("[DEBUG] 🚀 Starting background delivery thread...")
-        thread = threading.Thread(
-            target=_send_otp_background,
-            args=(phone_number, email, new_otp, user.branch, request)
-        )
-        thread.daemon = True
-        thread.start()
-        print("[DEBUG] ✅ Background thread started successfully")
-
-        messages.success(request, "OTP delivery initiated! Check your phone and email shortly.")
-        
-    except User.DoesNotExist:
-        print(f"[DEBUG] ❌ User with ID {user_id} does not exist")
-        messages.error(request, "Account not found. Please log in again.")
-        return redirect('login')
-    except Exception as e:
-        print(f"[DEBUG] 🚨 Unexpected error: {str(e)}")
-        logger.error(f"Resend OTP error: {str(e)}")
-        messages.error(request, "Failed to initiate OTP resend.")
-
-    print("[DEBUG] === RESEND OTP REQUEST COMPLETED ===")
-    return redirect("verify_otp")
-
-
-
-def logout(request):
-    auth.logout(request)
-    # messages.info(request, 'You are logged in.')
-    return redirect('login')
-
-
-
-
-
-
-@login_required(login_url='login')
-@user_passes_test(check_role_admin)
-def profile(request):
-    if request.method == 'POST':
-        form = UserProfilePictureForm(request.POST, request.FILES, instance=request.user)
-    
-        if form.is_valid():
-            form.save()
-            messages.info(request, 'Updated.')
-            return redirect('profile')  # Redirect to the user's profile page
-    else:
-        form = UserProfilePictureForm(instance=request.user)
-    return render(request, 'accounts/profile.html', {'form': form})
-
-
-
-
-# def profile(request):
-#     if request.method == 'POST':
-#         form = UserProfilePictureForm(request.POST, request.FILES)
-    
-#         if form.is_valid():
-#             user_profile = UserProfile.objects.get(user=request.user)
-#             form = UserProfilePictureForm(request.POST, request.FILES, instance=user_profile)
-#             form.save()
-#             messages.info(request, 'Updated.')
-#             return redirect('profile')  # Redirect to the user's profile page
-#     else:
-        
-#         user_profile = UserProfile.objects.get(user=request.user)
-#         form = UserProfilePictureForm(instance=user_profile)
-
-#     return render(request, 'accounts/profile.html', {'form': form})
-from django.contrib.auth import get_user_model
-from django.shortcuts import redirect
-from django.contrib import messages
-from django.utils.http import urlsafe_base64_decode
-from django.utils.encoding import force_str
-from django.contrib.auth.tokens import default_token_generator
-from django.contrib.auth import login as auth_login
-
-def activate(request, uidb64, token):
-    try:
-        uid = urlsafe_base64_decode(uidb64).decode()
-        user = get_user_model().objects.get(pk=uid)
-    except (TypeError, ValueError, OverflowError, get_user_model().DoesNotExist):
-        user = None
-
-    if user is not None and default_token_generator.check_token(user, token):
-        # Log them in but DON'T verify yet
-        user.verified = True
-        auth_login(request, user)
-        
-        # Always redirect to create branch (even if they have one)
-        messages.info(request, 'Please create a branch to complete your registration.')
-        return redirect('create_branch')
-    else:
-        messages.error(request, 'The activation link is invalid or has expired.')
-        return redirect('login')
 
 def forgot_password(request):
+    """Forgot password view"""
     if request.method == 'POST':
         email = request.POST['email']
 
         if User.objects.filter(email=email).exists():
             user = User.objects.get(email__exact=email)
-
-            # send reset password email
+            
+            # Send reset password email
             mail_subject = 'Reset Your Password'
             email_template = 'accounts/email/reset_password_email.html'
             send_verification_email(request, user, mail_subject, email_template)
@@ -1165,12 +1022,12 @@ def forgot_password(request):
         else:
             messages.error(request, 'Account does not exist')
             return redirect('forgot_password')
+    
     return render(request, 'accounts/forgot_password.html')
 
 
-
 def reset_password_validate(request, uidb64, token):
-    # validate the user by decoding the token and user pk
+    """Validate password reset token"""
     try:
         uid = urlsafe_base64_decode(uidb64).decode()
         user = User._default_manager.get(pk=uid)
@@ -1186,8 +1043,8 @@ def reset_password_validate(request, uidb64, token):
         return redirect('myAccount')
 
 
-
 def reset_password(request):
+    """Reset password view"""
     if request.method == 'POST':
         password = request.POST['password']
         confirm_password = request.POST['confirm_password']
@@ -1203,26 +1060,213 @@ def reset_password(request):
         else:
             messages.error(request, 'Password do not match!')
             return redirect('reset_password')
+    
     return render(request, 'accounts/reset_password.html')
 
 
-def change_password(request):
-   
-    return render(request, 'accounts/change_password.html')
+# ==================== ACCOUNT ACTIVATION ====================
 
-def delete_user(request, id):
-    user = User.objects.get(id=id)
+def activate(request, uidb64, token):
+    """Activate user account"""
+    try:
+        uid = urlsafe_base64_decode(uidb64).decode()
+        user = get_user_model().objects.get(pk=uid)
+    except (TypeError, ValueError, OverflowError, get_user_model().DoesNotExist):
+        user = None
 
-    user.delete()
-    return redirect('display_all_user')  # Redirect to the user list page after deletion
+    if user is not None and default_token_generator.check_token(user, token):
+        user.verified = True
+        user.save()
+        auth.login(request, user)
+        
+        messages.success(request, 'Account activated successfully!')
+        return redirect('dashboard')
+    else:
+        messages.error(request, 'The activation link is invalid or has expired.')
+        return redirect('login')
 
-    # return render(request, 'delete_user.html', {'user': user})
 
+# ==================== UTILITY VIEWS ====================
 
+@login_required(login_url='login')
+@user_passes_test(check_role_admin)
+def user_admin(request):
+    """User admin view"""
+    return render(request, 'accounts/user_admin.html')
 
-
-
-from django.shortcuts import render
 
 def contact_support(request):
-    return render(request, 'contact_support.html')  # Create this template
+    """Contact support view"""
+    return render(request, 'contact_support.html')
+
+
+def forbidden(request):
+    """403 Forbidden page"""
+    return render(request, 'accounts/403.html')
+
+
+# ==================== BRANCH MANAGEMENT VIEWS ====================
+
+@login_required(login_url='login')
+@user_passes_test(check_role_admin)
+def branches_view(request):
+    """View all branches from vendor database"""
+    branches = get_all_branches_from_vendor_db()
+    
+    # Add user count for each branch
+    branches_with_stats = []
+    for branch in branches:
+        user_count = User.objects.filter(branch_id=str(branch.id)).count()
+        customer_count = Customer.objects.filter(branch_id=str(branch.id)).count()
+        
+        branch.user_count = user_count
+        branch.customer_count = customer_count
+        branches_with_stats.append(branch)
+    
+    context = {
+        'branches': branches_with_stats,
+    }
+    return render(request, 'accounts/branches.html', context)
+
+
+# ==================== TRANSACTION PIN MANAGEMENT ====================
+
+@login_required(login_url='login')
+def set_transaction_pin(request):
+    """Set or update user transaction PIN"""
+    if request.method == 'POST':
+        current_pin = request.POST.get('current_pin')
+        new_pin = request.POST.get('new_pin')
+        confirm_pin = request.POST.get('confirm_pin')
+        
+        user = request.user
+        
+        # Validate current PIN if user has one
+        if user.transaction_pin:
+            if not current_pin:
+                messages.error(request, 'Current PIN is required.')
+                return redirect('myAccount')
+            if not user.check_transaction_pin(current_pin):
+                messages.error(request, 'Current PIN is incorrect.')
+                return redirect('myAccount')
+        
+        # Validate new PIN
+        if not new_pin or not new_pin.isdigit():
+            messages.error(request, 'PIN must contain only numbers.')
+            return redirect('myAccount')
+        
+        if len(new_pin) < 4 or len(new_pin) > 6:
+            messages.error(request, 'PIN must be between 4 and 6 digits.')
+            return redirect('myAccount')
+        
+        if new_pin != confirm_pin:
+            messages.error(request, 'PIN confirmation does not match.')
+            return redirect('myAccount')
+        
+        # Set new PIN
+        user.set_transaction_pin(new_pin)
+        user.save()
+        
+        messages.success(request, 'Transaction PIN updated successfully.')
+        return redirect('myAccount')
+    
+    return redirect('myAccount')
+
+
+# ==================== USER SEARCH FUNCTIONALITY ====================
+
+@login_required(login_url='login')
+@user_passes_test(check_role_admin)
+def search_users(request):
+    """Search users with branch information"""
+    query = request.GET.get('q', '')
+    users_list = []
+    
+    if query:
+        users = User.objects.filter(
+            username__icontains=query
+        ) | User.objects.filter(
+            first_name__icontains=query
+        ) | User.objects.filter(
+            last_name__icontains=query
+        ) | User.objects.filter(
+            email__icontains=query
+        )
+        
+        # Add branch information
+        for user in users:
+            branch = get_branch_from_vendor_db(user.branch_id)
+            user.branch_display = branch.branch_name if branch else "No Branch"
+            user.company_display = branch.company.company_name if branch and branch.company else "No Company"
+            users_list.append(user)
+    
+    context = {
+        'users': users_list,
+        'query': query,
+    }
+    return render(request, 'accounts/search_users.html', context)
+
+
+# ==================== API ENDPOINTS ====================
+
+@login_required(login_url='login')
+def user_profile_ajax(request, user_id):
+    """AJAX endpoint for user profile information"""
+    try:
+        user = User.objects.get(id=user_id)
+        branch = get_branch_from_vendor_db(user.branch_id)
+        company = branch.company if branch else None
+        
+        data = {
+            'success': True,
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'email': user.email,
+                'phone_number': user.phone_number,
+                'role': user.get_role(),
+                'branch_name': branch.branch_name if branch else None,
+                'company_name': company.company_name if company else None,
+                'is_active': user.is_active,
+                'date_joined': user.date_joined.strftime('%Y-%m-%d %H:%M:%S'),
+            }
+        }
+        return JsonResponse(data)
+    except User.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'User not found'})
+
+
+@login_required(login_url='login')
+@user_passes_test(check_role_admin)
+def branch_users_ajax(request, branch_id):
+    """AJAX endpoint for getting users by branch"""
+    try:
+        branch = get_branch_from_vendor_db(branch_id)
+        if not branch:
+            return JsonResponse({'success': False, 'error': 'Branch not found'})
+        
+        users = User.objects.filter(branch_id=str(branch_id))
+        users_data = []
+        
+        for user in users:
+            users_data.append({
+                'id': user.id,
+                'username': user.username,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'email': user.email,
+                'role': user.get_role(),
+                'is_active': user.is_active,
+            })
+        
+        data = {
+            'success': True,
+            'branch_name': branch.branch_name,
+            'users': users_data,
+            'count': len(users_data)
+        }
+        return JsonResponse(data)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})

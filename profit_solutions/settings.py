@@ -299,16 +299,16 @@ os.makedirs('logs', exist_ok=True)
 # LOCAL DATABASE
 import os
 
-DATABASES = {
-    'default': {
-        'ENGINE': os.environ.get('DB_ENGINE', 'django.db.backends.postgresql'),
-        'NAME': os.environ.get('DB_NAME'),
-        'USER': os.environ.get('DB_USER'),
-        'PASSWORD': os.environ.get('DB_PASSWORD'),
-        'HOST': os.environ.get('DB_HOST', 'localhost'),
-        'PORT': os.environ.get('DB_PORT', '5432'),
-    }
-}
+# DATABASES = {
+#     'default': {
+#         'ENGINE': os.environ.get('DB_ENGINE', 'django.db.backends.postgresql'),
+#         'NAME': os.environ.get('DB_NAME'),
+#         'USER': os.environ.get('DB_USER'),
+#         'PASSWORD': os.environ.get('DB_PASSWORD'),
+#         'HOST': os.environ.get('DB_HOST', 'localhost'),
+#         'PORT': os.environ.get('DB_PORT', '5432'),
+#     }
+# }
 
 
 # PRODUCTION DATABASE
@@ -323,6 +323,48 @@ DATABASES = {
 #     }
 # }
 
+
+
+
+
+
+
+# Add this to your existing settings.py
+# Find the DATABASES section and replace it with this:
+
+"""
+Multi-Database Configuration
+
+default: Client-controlled database (all existing data except Company/Branch)
+vendor_db: Vendor-controlled database (only Company and Branch models)
+"""
+
+DATABASES = {
+    # CLIENT DATABASE - Contains all application data except Company/Branch
+    # This is the existing database with all your current data
+    'default': {
+        'ENGINE': os.environ.get('DB_ENGINE', 'django.db.backends.postgresql'),
+        'NAME': os.environ.get('DB_NAME'),
+        'USER': os.environ.get('DB_USER'),
+        'PASSWORD': os.environ.get('DB_PASSWORD'),
+        'HOST': os.environ.get('DB_HOST', 'localhost'),
+        'PORT': os.environ.get('DB_PORT', '5432'),
+    },
+    
+    # VENDOR DATABASE - Contains only Company and Branch models
+    # This is controlled by the software vendor
+    'vendor_db': {
+        'ENGINE': os.environ.get('VENDOR_DB_ENGINE', 'django.db.backends.postgresql'),
+        'NAME': os.environ.get('VENDOR_DB_NAME', f"{os.environ.get('DB_NAME', 'mfb')}_vendor"),
+        'USER': os.environ.get('VENDOR_DB_USER', os.environ.get('DB_USER')),
+        'PASSWORD': os.environ.get('VENDOR_DB_PASSWORD', os.environ.get('DB_PASSWORD')),
+        'HOST': os.environ.get('VENDOR_DB_HOST', os.environ.get('DB_HOST', 'localhost')),
+        'PORT': os.environ.get('VENDOR_DB_PORT', os.environ.get('DB_PORT', '5432')),
+    }
+}
+
+# Database routing configuration
+DATABASE_ROUTERS = ['profit_solutions.routers.DatabaseRouter']
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators

@@ -421,7 +421,7 @@ import os
 @user_passes_test(check_role_admin)
 def generate_statement_view(request):
     # ✅ Always use the logged-in user's branch
-    branch = request.user.branch  
+    branch = Branch.objects.using('vendor_db').get(id=request.user.branch_id)
     branch_date = branch.session_date.strftime('%Y-%m-%d') if branch.session_date else ''
 
     if branch.session_status == 'Closed':
