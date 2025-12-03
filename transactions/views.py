@@ -63,9 +63,15 @@ from django.http import HttpResponse, Http404
 @user_passes_test(check_role_admin)
 
 def deposit(request, id):
-    # Get user and branch - user_branch is already a Branch instance
+    # Get user and branch - FIXED: use get_branch() method
     user = request.user
-    user_branch = user.branch  # This is a Branch instance
+    user_branch = user.get_branch()  # ✅ This gets the Branch instance
+    
+    # ✅ Add error handling for missing branch
+    if not user_branch:
+        messages.error(request, 'No valid branch assigned to user')
+        return HttpResponse("No valid branch assigned to user", status=400)
+    
     customer = get_object_or_404(Customer, id=id)
     formatted_balance = '{:,.2f}'.format(customer.balance)
     data = Memtrans.objects.filter(branch=user_branch).order_by('-id').first()
@@ -74,7 +80,7 @@ def deposit(request, id):
     cashier_gl_value = request.user.cashier_gl
     cashier_customer = get_object_or_404(Customer, gl_no=cashier_gl_value)
     
-    # Get company info - already a Branch instance
+    # Get company info - this line was already correct
     company = get_object_or_404(Branch, id=user.branch_id)
     company_date = company.session_date.strftime('%Y-%m-%d') if company.session_date else ''
     customer_branch = customer.branch  # This should be a Branch instance
@@ -255,8 +261,9 @@ def deposit(request, id):
             branch=user_branch  # Branch instance
         ).order_by('-id').first(),
     })
+
     
-    
+     
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
 
@@ -849,7 +856,7 @@ def choose_deposit(request):
     data = Memtrans.objects.all().order_by('-id').first()
 
     # Get user's branch directly from user model
-    user_branch = request.user.branch  
+    user_branch = request.user.get_branch()  # ✅ Use the helper method we added
 
     if user_branch:
         # Filter customers for this branch

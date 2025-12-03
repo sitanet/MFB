@@ -191,8 +191,7 @@ class User(AbstractBaseUser):
     # Branch reference - CHANGED: Now stores branch ID instead of ForeignKey
     branch_id = models.CharField(
         max_length=10,
-      
-        help_text="Branch ID from vendor database"
+        help_text="Branch ID from vendor database - REQUIRED for all users"
     )
     
     # Authentication and security fields

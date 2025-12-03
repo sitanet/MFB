@@ -18,12 +18,34 @@ def soon_to_expire(request):
         if cached_message is not None:
             return {'soon_expire_message': cached_message}
 
-        branch = getattr(request.user, 'branch', None)
-        if branch is None:
-            logger.warning(f"User {request.user} has no branch assigned")
+        # ✅ FIXED: Use branch_id instead of branch
+        branch_id = getattr(request.user, 'branch_id', None)
+        
+        if not branch_id:
+            logger.warning(f"User {request.user.username} has no branch_id assigned")
             soon_expire_message = "No branch assigned to user"
             return {'soon_expire_message': soon_expire_message}
 
+        # ✅ Get branch object using branch_id
+        try:
+            if isinstance(branch_id, str):
+                branch_id_int = int(branch_id)
+            else:
+                branch_id_int = branch_id
+                
+            branch = Branch.objects.get(id=branch_id_int)
+            
+        except ValueError:
+            logger.error(f"User {request.user.username} has invalid branch_id format: '{branch_id}'")
+            soon_expire_message = "Invalid branch ID format - contact administrator"
+            return {'soon_expire_message': soon_expire_message}
+            
+        except Branch.DoesNotExist:
+            logger.error(f"User {request.user.username} branch_id '{branch_id}' does not exist")
+            soon_expire_message = f"Branch ID '{branch_id}' does not exist - contact administrator"
+            return {'soon_expire_message': soon_expire_message}
+
+        # Continue with expiration check
         expiration_date = branch.expire_date
         today = timezone.now().date()
 
@@ -39,7 +61,7 @@ def soon_to_expire(request):
         cache.set(cache_key, soon_expire_message, 3600)
 
     except Exception as e:
-        logger.exception("Unexpected error in soon_to_expire:")
+        logger.exception(f"Unexpected error in soon_to_expire for user {request.user.username}:")
         soon_expire_message = "System error occurred"
 
     return {'soon_expire_message': soon_expire_message}
