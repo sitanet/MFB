@@ -1,0 +1,241 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row column_title">
+        <div class="col-md-12">
+            <div class="page_title d-flex justify-content-between align-items-center">
+                <h2><i class="fas fa-file-alt"></i> Customer Documents</h2>
+                <a href="{% url 'customers' %}" class="btn btn-outline-secondary">
+                    <i class="fa fa-arrow-left mr-2"></i> Back to Customers
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="container-fluid">
+        <!-- Compact Statistics Row -->
+        <div class="row mb-3">
+            <div class="col-md-3">
+                <div class="info-box">
+                    <span class="info-box-icon bg-primary"><i class="fas fa-file-alt"></i></span>
+                    <div class="info-box-content">
+                        <span class="info-box-text">Total Documents</span>
+                        <span class="info-box-number">{{ total_documents }}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="info-box">
+                    <span class="info-box-icon bg-success"><i class="fas fa-users"></i></span>
+                    <div class="info-box-content">
+                        <span class="info-box-text">Customers with Docs</span>
+                        <span class="info-box-number">{{ total_customers_with_docs }}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <!-- Compact Search Form -->
+                <div class="search-box">
+                    <form method="GET" class="row g-2">
+                        <div class="col-md-4">
+                            <input type="text" class="form-control form-control-sm" name="search_customer" 
+                                   value="{{ search_customer }}" placeholder="Search customer...">
+                        </div>
+                        <div class="col-md-3">
+                            <select class="form-control form-control-sm" name="search_document_type">
+                                <option value="">All Types</option>
+                                {% for doc_type in document_types %}
+                                <option value="{{ doc_type }}" {% if doc_type == search_document_type %}selected{% endif %}>
+                                    {{ doc_type|upper }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <input type="date" class="form-control form-control-sm" name="date_from" value="{{ date_from }}">
+                        </div>
+                        <div class="col-md-2">
+                            <div class="btn-group btn-group-sm">
+                                <button type="submit" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                                <a href="{% url 'customer_documents_list' %}" class="btn btn-secondary btn-sm">
+                                    <i class="fas fa-times"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Compact Documents Table -->
+        {% if documents %}
+        <div class="table-responsive">
+            <table class="table table-sm table-striped table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th width="20%">Customer</th>
+                        <th width="10%">Account</th>
+                        <th width="25%">Document</th>
+                        <th width="8%">Type</th>
+                        <th width="8%">Size</th>
+                        <th width="15%">Uploaded</th>
+                        <th width="14%">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for document in documents %}
+                    <tr>
+                        <td>
+                            <div class="customer-info">
+                                <strong>{{ document.customer.first_name }} {{ document.customer.last_name }}</strong>
+                                <small class="d-block text-muted">{{ document.customer.email|truncatechars:25 }}</small>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge bg-info text-dark">{{ document.customer.ac_no }}</span>
+                        </td>
+                        <td>
+                            <div class="document-info">
+                                <i class="fas fa-file fa-fw text-primary"></i>
+                                <span title="{{ document.filename }}">{{ document.filename|truncatechars:30 }}</span>
+                                {% if document.description %}
+                                <small class="d-block text-muted">{{ document.description|truncatechars:40 }}</small>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td><span class="badge bg-secondary">{{ document.file_type|upper }}</span></td>
+                        <td><small>{{ document.get_file_size_display }}</small></td>
+                        <td>
+                            <small>
+                                {{ document.uploaded_at|date:"M d, Y" }}<br>
+                                <span class="text-muted">{{ document.uploaded_at|timesince }} ago</span>
+                            </small>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'download_document' document.id %}" class="btn btn-outline-primary btn-sm" title="Download">
+                                    <i class="fas fa-download"></i>
+                                </a>
+                                <a href="{% url 'customer_documents_by_customer' document.customer.id %}" class="btn btn-outline-info btn-sm" title="All Customer Docs">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{% url 'customer_detail' document.customer.pk %}" class="btn btn-outline-success btn-sm" title="Customer Profile">
+                                    <i class="fas fa-user"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+            <i class="fas fa-folder-open fa-2x text-muted mb-2"></i>
+            <h5 class="text-muted">No documents found</h5>
+            <p class="text-muted">No customer documents match your search criteria.</p>
+            <a href="{% url 'customers' %}" class="btn btn-primary btn-sm">
+                <i class="fas fa-plus"></i> Add New Customer
+            </a>
+        </div>
+        {% endif %}
+
+        <!-- Results Summary -->
+        {% if documents %}
+        <div class="row mt-2">
+            <div class="col-md-12">
+                <small class="text-muted">
+                    Showing {{ documents.count }} document{{ documents.count|pluralize }} 
+                    {% if search_customer or search_document_type or date_from or date_to %}
+                        (filtered from {{ total_documents }} total)
+                    {% endif %}
+                </small>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.info-box {
+    display: block;
+    min-height: 70px;
+    background: #fff;
+    width: 100%;
+    box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+    border-radius: 2px;
+    margin-bottom: 15px;
+    border: 1px solid #eee;
+}
+
+.info-box-icon {
+    border-top-left-radius: 2px;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    border-bottom-left-radius: 2px;
+    display: block;
+    float: left;
+    height: 70px;
+    width: 70px;
+    text-align: center;
+    font-size: 24px;
+    line-height: 70px;
+    background: rgba(0,0,0,0.2);
+    color: #fff;
+}
+
+.info-box-content {
+    padding: 5px 10px;
+    margin-left: 70px;
+}
+
+.info-box-text {
+    font-size: 12px;
+    text-transform: uppercase;
+    font-weight: bold;
+}
+
+.info-box-number {
+    font-size: 24px;
+    font-weight: bold;
+    color: #333;
+}
+
+.search-box {
+    background: #f8f9fa;
+    padding: 10px;
+    border-radius: 4px;
+    border: 1px solid #dee2e6;
+}
+
+.customer-info, .document-info {
+    line-height: 1.2;
+}
+
+.table-sm td {
+    padding: 8px;
+    vertical-align: middle;
+}
+
+.btn-group-sm .btn {
+    padding: 2px 6px;
+    font-size: 11px;
+}
+
+@media (max-width: 768px) {
+    .info-box {
+        margin-bottom: 10px;
+    }
+    .search-box {
+        margin-top: 10px;
+    }
+    .table-responsive {
+        font-size: 12px;
+    }
+}
+</style>
+{% endblock %}

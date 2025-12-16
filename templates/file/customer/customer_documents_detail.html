@@ -1,0 +1,163 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row column_title">
+        <div class="col-md-12">
+            <div class="page_title d-flex justify-content-between align-items-center">
+                <h2><i class="fas fa-user-circle"></i> {{ customer.first_name }} {{ customer.last_name }} - Documents</h2>
+                <div>
+                    <a href="{% url 'customer_documents_list' %}" class="btn btn-outline-secondary btn-sm me-2">
+                        <i class="fa fa-arrow-left"></i> Back
+                    </a>
+                    <a href="{% url 'customer_detail' customer.pk %}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-user"></i> Profile
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container-fluid">
+        <!-- Compact Customer Info -->
+        <div class="row mb-3">
+            <div class="col-md-8">
+                <div class="customer-summary">
+                    <h5>{{ customer.first_name }} {{ customer.last_name }} 
+                        <span class="badge bg-info">{{ customer.gl_no }}{{ customer.ac_no }}</span>
+                    </h5>
+                    <p class="mb-1">
+                        <i class="fas fa-envelope fa-fw"></i> {{ customer.email }} | 
+                        <i class="fas fa-phone fa-fw"></i> {{ customer.phone_no }} | 
+                        <i class="fas fa-calendar fa-fw"></i> Reg: {{ customer.reg_date|date:"M d, Y" }}
+                    </p>
+                </div>
+            </div>
+            <div class="col-md-4 text-end">
+                <div class="document-count">
+                    <span class="display-4 text-primary">{{ total_documents }}</span>
+                    <small class="d-block text-muted">Documents</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Compact Documents Grid -->
+        {% if documents %}
+        <div class="documents-grid">
+            <div class="row g-3">
+                {% for document in documents %}
+                <div class="col-md-4 col-lg-3">
+                    <div class="document-card">
+                        <div class="document-header">
+                            <i class="fas fa-file fa-fw text-primary"></i>
+                            <span class="document-title" title="{{ document.filename }}">
+                                {{ document.filename|truncatechars:25 }}
+                            </span>
+                            <span class="document-type">{{ document.file_type|upper }}</span>
+                        </div>
+                        
+                        {% if document.description %}
+                        <div class="document-desc">{{ document.description|truncatechars:50 }}</div>
+                        {% endif %}
+                        
+                        <div class="document-meta">
+                            <small class="text-muted">
+                                {{ document.uploaded_at|date:"M d, Y" }} • {{ document.get_file_size_display }}
+                            </small>
+                        </div>
+                        
+                        <div class="document-actions">
+                            <a href="{% url 'download_document' document.id %}" class="btn btn-primary btn-sm">
+                                <i class="fas fa-download"></i> Download
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+            <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
+            <h4 class="text-muted">No documents uploaded</h4>
+            <p class="text-muted">This customer hasn't uploaded any additional documents yet.</p>
+            <a href="{% url 'edit_customer' customer.id %}" class="btn btn-primary">
+                <i class="fas fa-edit"></i> Edit Customer
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.customer-summary {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 6px;
+    border-left: 4px solid #007bff;
+}
+
+.document-count {
+    text-align: center;
+    padding: 10px;
+}
+
+.documents-grid {
+    margin-top: 20px;
+}
+
+.document-card {
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 12px;
+    height: 140px;
+    position: relative;
+    transition: box-shadow 0.2s;
+}
+
+.document-card:hover {
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.document-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.document-title {
+    flex: 1;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.document-type {
+    background: #6c757d;
+    color: white;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 10px;
+}
+
+.document-desc {
+    font-size: 12px;
+    color: #6c757d;
+    margin-bottom: 8px;
+    height: 20px;
+    overflow: hidden;
+}
+
+.document-meta {
+    margin-bottom: 10px;
+}
+
+.document-actions {
+    position: absolute;
+    bottom: 12px;
+    right: 12px;
+}
+</style>
+{% endblock %}
