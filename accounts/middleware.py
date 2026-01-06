@@ -20,7 +20,7 @@ class AutoLogoutMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
         # Session timeout in seconds (5 minutes = 300 seconds)
-        self.timeout = getattr(settings, 'AUTO_LOGOUT_TIMEOUT', 300)
+        self.timeout = getattr(settings, 'AUTO_LOGOUT_TIMEOUT', 1200)
         
     def __call__(self, request):
         # Skip middleware for unauthenticated users and specific paths

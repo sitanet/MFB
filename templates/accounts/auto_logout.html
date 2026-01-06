@@ -1,0 +1,44 @@
+{% extends 'base.html' %} {# or whatever your main layout is #}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Automatic Logout Settings</h2>
+
+    {% if messages %}
+        <div>
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <form method="post" class="form-inline">
+        {% csrf_token %}
+        <div class="form-group mb-2">
+            <label for="minutes" class="mr-2">
+                Logout after (minutes):
+            </label>
+            <input
+                type="number"
+                min="1"
+                class="form-control"
+                id="minutes"
+                name="minutes"
+                value="{{ current_timeout }}"
+                required
+            >
+        </div>
+        <button type="submit" class="btn btn-primary mb-2 ml-2">
+            Save
+        </button>
+    </form>
+
+    <p class="mt-3">
+        Current setting:
+        <strong>{{ current_timeout }}</strong>
+        minute(s) of inactivity before you are logged out.
+    </p>
+</div>
+{% endblock %}

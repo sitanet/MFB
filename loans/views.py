@@ -378,143 +378,164 @@ def reverse_loan_approval(request, id):
 
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
+@login_required(login_url='login')
+@user_passes_test(check_role_admin)
 def loan_disbursement_reversal(request, id):
+
     customer = get_object_or_404(Loans, id=id)
     account = get_object_or_404(Account, gl_no=customer.gl_no)
-
-    # Access the related Customer instance
     customers = customer.customer
-    cust_data = Account.objects.filter(gl_no__startswith='20').exclude(gl_no='20100').exclude(
-        gl_no='20200').exclude(gl_no='20000')
-    gl_no = Account.objects.all().values_list('gl_no', flat=True).filter(gl_no__startswith='200')
 
-    ac_no_list = Memtrans.objects.filter(ac_no=customer.ac_no).values_list('ac_no', flat=True).distinct()
+    cust_data = Account.objects.filter(
+        gl_no__startswith='20'
+    ).exclude(gl_no__in=['20100', '20200', '20000'])
+
+    gl_no = Account.objects.filter(
+        gl_no__startswith='200'
+    ).values_list('gl_no', flat=True)
+
+    ac_no_list = Memtrans.objects.filter(
+        ac_no=customer.ac_no
+    ).values_list('ac_no', flat=True).distinct()
+
     cust_branch = Company.objects.all()
-    amounts = Memtrans.objects.filter(ac_no=customer.ac_no, gl_no__startswith='2').values('gl_no').annotate(total_amount=Sum('amount')).order_by('-total_amount')
     officer = Account_Officer.objects.all()
-    
+
+    amounts = Memtrans.objects.filter(
+        ac_no=customer.ac_no,
+        gl_no__startswith='2'
+    ).values('gl_no').annotate(
+        total_amount=Sum('amount')
+    ).order_by('-total_amount')
+
     user = User.objects.get(id=request.user.id)
-    branch_id = user.branch_id
-    company = get_object_or_404(Company, id=branch_id)
-    company_date = company.session_date.strftime('%Y-%m-%d') if company.session_date else ''
-    
-    
+    company = get_object_or_404(Company, id=user.branch_id)
+
+    # ✅ KEEP DATE AS DATE
+    company_date = company.session_date if company.session_date else None
+
     if company.session_status == 'Closed':
-        
-        return HttpResponse("You can not post any transaction. Session is closed.") 
+        return HttpResponse("You can not post any transaction. Session is closed.")
+
+    if request.method == 'POST':
+        form = MemtransForm(request.POST, request.FILES, instance=customer)
+
+        if form.is_valid():
+            with transaction.atomic():
+
+                if not all([
+                    account.int_to_recev_gl_dr,
+                    account.int_to_recev_ac_dr,
+                    account.unearned_int_inc_gl,
+                    account.unearned_int_inc_ac
+                ]):
+                    messages.warning(
+                        request,
+                        'Please Define all Required Loan Before Disbursement.'
+                    )
+                    return redirect('choose_to_disburse')
+
+                # ===============================
+                # LOAN DISBURSEMENT
+                # ===============================
+                debit_transaction = Memtrans.objects.create(
+                    branch=customer.branch,
+                    gl_no=customer.gl_no,
+                    ac_no=customer.ac_no,
+                    amount=-customer.loan_amount,
+                    description='Loan Disbursement - Debit',
+                    type='D',
+                    ses_date=company_date
+                )
+
+                debit_transaction.trx_no = generate_loan_disbursement_id()
+                debit_transaction.save()
+
+                credit_transaction = Memtrans.objects.create(
+                    branch=form.cleaned_data['branch'],
+                    gl_no=form.cleaned_data['gl_no_cashier'],
+                    ac_no=form.cleaned_data['ac_no_cashier'],
+                    amount=customer.loan_amount,
+                    description='Loan Disbursement - Credit',
+                    error='A',
+                    type='C',
+                    ses_date=form.cleaned_data['ses_date']
+                )
+
+                credit_transaction.trx_no = debit_transaction.trx_no
+                credit_transaction.save()
+
+                # ===============================
+                # LOAN SCHEDULE
+                # ===============================
+                loan_schedule = customer.calculate_loan_schedule()
+                customer.disb_status = 'T'
+                customer.disbursement_date = form.cleaned_data['ses_date']
+                customer.save()
+
+                for payment in loan_schedule:
+                    LoanHist.objects.create(
+                        branch=customer.branch,
+                        gl_no=customer.gl_no,
+                        ac_no=customer.ac_no,
+                        cycle=customer.cycle,
+                        period=payment['period'],
+                        trx_date=payment['payment_date'],
+                        trx_type='LD',
+                        principal=payment['principal_payment'],
+                        interest=payment['interest_payment'],
+                        penalty=0,
+                        trx_no=debit_transaction.trx_no
+                    )
+
+                total_interest = LoanHist.objects.filter(
+                    gl_no=customers.gl_no,
+                    ac_no=customers.ac_no,
+                    cycle=customer.cycle
+                ).aggregate(
+                    total_interest=Sum('interest')
+                )['total_interest'] or 0
+
+                customer.total_interest = total_interest
+                customer.total_loan = customer.loan_amount + total_interest
+                customer.save()
+
+                # ===============================
+                # INTEREST POSTINGS
+                # ===============================
+                int_debit = Memtrans.objects.create(
+                    branch=customer.branch,
+                    gl_no=account.int_to_recev_gl_dr,
+                    ac_no=account.int_to_recev_ac_dr,
+                    amount=-customer.total_interest,
+                    description='Interest on Loan - Debit',
+                    type='L',
+                    ses_date=company_date
+                )
+
+                int_debit.trx_no = generate_loan_disbursement_id()
+                int_debit.save()
+
+                int_credit = Memtrans.objects.create(
+                    branch=form.cleaned_data['branch'],
+                    gl_no=account.unearned_int_inc_gl,
+                    ac_no=account.unearned_int_inc_ac,
+                    amount=customer.total_interest,
+                    description='Interest on Loan - Credit',
+                    type='L',
+                    ses_date=company_date
+                )
+
+                int_credit.trx_no = int_debit.trx_no
+                int_credit.save()
+
+                messages.success(request, 'Loan Disbursed successfully!')
+                return redirect('choose_to_disburse')
+
     else:
-        if request.method == 'POST':
-            form = MemtransForm(request.POST, request.FILES, instance=customer)
-            if form.is_valid():
-                with transaction.atomic():
-                    if account.int_to_recev_gl_dr is not None and account.int_to_recev_ac_dr is not None and account.unearned_int_inc_gl is not None and account.unearned_int_inc_ac is not None:
-                        debit_transaction = Memtrans(
-                            branch=customer.branch,
-                            gl_no=customer.gl_no,
-                            ac_no=customer.ac_no,
-                            amount=-customer.loan_amount,
-                            description='Loan Disbursement - Debit',
-                            type='D',
-                            ses_date=company_date,
-                        )
-                        debit_transaction.save()
+        form = LoansModifyForm(instance=customer, initial={'gl_no': customer.gl_no})
 
-                        unique_id = generate_loan_disbursement_id()
-                        debit_transaction.trx_no = unique_id
-                        debit_transaction.save()
-
-                        credit_transaction = Memtrans(
-                            branch=form.cleaned_data['branch'],
-                            gl_no=form.cleaned_data['gl_no_cashier'],
-                            ac_no=form.cleaned_data['ac_no_cashier'],
-                            amount=customer.loan_amount,
-                            description='Loan Disbursement - Credit',
-                            error='A',
-                            type='C',
-                            ses_date=form.cleaned_data['ses_date']
-                        )
-                        credit_transaction.save()
-
-                        credit_transaction.trx_no = debit_transaction.trx_no
-                        credit_transaction.save()
-
-                        #interest receive and unearned income
-                    
-
-                        # Calculate loan schedule
-                        loan_schedule = customer.calculate_loan_schedule()
-                        customer.disb_status = 'T'
-                        customer.disbursement_date = form.cleaned_data['ses_date']
-                        customer.save()
-
-                        # Insert loan schedule into loanhist
-                        for payment in loan_schedule:
-                            loanhist_entry = LoanHist(
-                                branch=customer.branch,
-                                gl_no=customer.gl_no,
-                                ac_no=customer.ac_no,
-                                cycle=customer.cycle,
-                                period=payment['period'],
-                                trx_date=payment['payment_date'],
-                                trx_type='LD',
-                                principal=payment['principal_payment'],
-                                interest=payment['interest_payment'],
-                                penalty=0
-                            )
-                            loanhist_entry.save()
-
-                            loanhist_entry.trx_no = debit_transaction.trx_no
-                            loanhist_entry.save()
-
-                            # Sum the interest from LoanHist
-                            total_interest = LoanHist.objects.filter(gl_no=customers.gl_no, ac_no=customers.ac_no, cycle=customer.cycle).aggregate(total_interest=Sum('interest'))['total_interest']
-                            total_interest = total_interest or 0  # Set to 0 if no interest records found
-
-                            # Update loan_balance in Loans model
-                            customer.total_loan = customer.loan_amount + total_interest
-                            customer.total_interest = total_interest
-                            customer.save()
-                    
-                        debit_transaction = Memtrans(
-                            branch=customer.branch,
-                            gl_no=account.int_to_recev_gl_dr,
-                            ac_no=account.int_to_recev_ac_dr,
-                            amount=-customer.total_interest,
-                            description='Interest on Loan - Debit',
-                            type='L',
-                            ses_date=timezone.now()
-                        )
-                        debit_transaction.save()
-
-                        unique_id = generate_loan_disbursement_id()
-                        debit_transaction.trx_no = unique_id
-                        debit_transaction.save()
-                    
-                        credit_transaction = Memtrans(
-                            branch=form.cleaned_data['branch'],
-                            gl_no=account.unearned_int_inc_gl,
-                            ac_no=account.unearned_int_inc_ac,
-                            amount=customer.total_interest,
-                            description='Interest on Loan - Credit',
-                        
-                            type='L',
-                            ses_date=timezone.now()
-                        )
-                        credit_transaction.save()
-
-                        credit_transaction.trx_no = debit_transaction.trx_no
-                        credit_transaction.save()
-                        messages.success(request, 'Loan Disbursed successfully!')
-                        return redirect('choose_to_disburse')
-                    else:
-                        messages.warning(request, 'Please Define all Required Loan Before Disbursement.')
-                        return redirect('choose_to_disburse')
-
-        else:
-            initial_data = {'gl_no': customer.gl_no}
-            form = LoansModifyForm(instance=customer, initial=initial_data)
-
-    return render(request, 'loans/loan_disbursement.html', {
+    return render(request, 'loans/loan_disbursement_reversal.html', {
         'form': form,
         'customers': customers,
         'customer': customer,
@@ -524,8 +545,11 @@ def loan_disbursement_reversal(request, id):
         'officer': officer,
         'ac_no_list': ac_no_list,
         'amounts': amounts,
-        'account': account,'company':company, 'company_date':company_date,
+        'account': account,
+        'company': company,
+        'company_date': company_date,
     })
+
 
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
@@ -606,7 +630,8 @@ def loan_disbursement(request, id):
     user = request.user
     branch_id = user.branch_id
     company = get_object_or_404(Branch, id=branch_id)
-    company_date = company.session_date.strftime('%Y-%m-%d') if company.session_date else ''
+    company_date = company.session_date  # keep it as date
+
     customer_branch = customer.branch
     user_branch = request.user.branch
 
@@ -1145,7 +1170,7 @@ def loan_repayment(request, id):
                         description='Principal Loan Repayment - Debit',
                         type='D',
                         account_type='C',
-                        ses_date=company_date,
+                        ses_date=company_date if company_date else None,
                         app_date=form.cleaned_data['app_date'],
                         trx_no=unique_id,
                         code='LP',
@@ -1595,67 +1620,113 @@ def display_loan_disbursements(request):
     # Pass data to the template for rendering
     return render(request, 'loans/display_loan_disbursements.html', {'disbursement_reversals': disbursement_reversals_details})
 
-
-
-
-from django.db import transaction
-from django.shortcuts import redirect
+from django.shortcuts import render, redirect
 from django.contrib import messages
-from .models import Loans, LoanHist  # Adjust as needed
-from transactions.models import Memtrans
 from django.utils import timezone
-from company.models import Company
+from django.db import transaction
+from .models import Loans, LoanHist
+from transactions.models import Memtrans
+
+def display_loan_disbursements(request):
+    """
+    Display loans that have been disbursed, with reversal option.
+    """
+    disbursement_reversals = Loans.objects.filter(disb_status='T').select_related('customer')
+
+    disbursement_reversals_details = []
+
+    for reversal in disbursement_reversals:
+        customer = reversal.customer
+        gl_no = customer.gl_no
+        ac_no = customer.ac_no
+        cycle = reversal.cycle
+        customer_name = f"{customer.first_name} {customer.last_name}"
+
+        memtrans_instance = Memtrans.objects.filter(gl_no=gl_no, ac_no=ac_no, cycle=cycle).first()
+        trx_no = memtrans_instance.trx_no if memtrans_instance else None
+        reversal_date = memtrans_instance.ses_date if memtrans_instance else None
+
+        disbursement_reversals_details.append({
+            'id': reversal.id,
+            'customer_name': customer_name,
+            'loan_amount': reversal.loan_amount,
+            'disbursement_date': reversal.disbursement_date,
+            'reversal_date': reversal_date,
+            'trx_no': trx_no,
+        })
+
+    context = {
+        'disbursement_reversals': disbursement_reversals_details,
+        'today': timezone.now().date(),  # Used for max date in the form
+    }
+    return render(request, 'loans/display_loan_disbursements.html', context)
+
 
 def delete_loan_transactions(request, trx_no, id):
-    if request.method == 'POST':
-        # Ensure CSRF token is validated
-        if request.POST.get('csrfmiddlewaretoken'):
-            try:
-                # Get the company object (assuming there's only one)
-                company = Company.objects.first()
-
-                if not company:
-                    messages.error(request, 'Company record not found.')
-                    return redirect('display_loan_disbursements')
-
-                # Get the current system date
-                system_date = timezone.now().date()
-
-                # Check if the company's system date is less than the current system date
-                if company.system_date_date >= system_date:
-                    with transaction.atomic():
-                        # Update Memtrans records with the given trx_no by appending 'H'
-                        Memtrans.objects.filter(trx_no=trx_no).update(error='H')
-                        
-                        # Update Loans record disb_status with 'H'
-                        Loans.objects.filter(id=id).update(disb_status='H')
-                        
-                        # Delete LoanHist records with the given trx_no
-                        LoanHist.objects.filter(trx_no=trx_no).delete()
-
-                        # Update Loans record disb_status with 'F'
-                        Loans.objects.filter(id=id).update(disb_status='')
-
-                    messages.success(request, f"Transactions with trx_no {trx_no} have been updated and deleted.")
-                    return redirect('display_loan_disbursements')
-                else:
-                    messages.error(request, 'Cannot delete transactions: company system date is less than the current system date.')
-                    return redirect('display_loan_disbursements')
-
-            except Exception as e:
-                # Handle any exceptions that may occur
-                messages.error(request, f"An error occurred: {str(e)}")
-                return redirect('display_loan_disbursements')
-        else:
-            messages.error(request, 'Missing CSRF token.')
-            return redirect('display_loan_disbursements')
-    else:
-        messages.error(request, 'Invalid request method.')
+    """
+    Delete loan transactions for a given trx_no and loan id.
+    Requires user to specify a deletion date.
+    """
+    if request.method != 'POST':
+        messages.error(request, "Invalid request method. Please submit the deletion form.")
         return redirect('display_loan_disbursements')
 
+    deletion_date_str = request.POST.get('deletion_date')
+    if not deletion_date_str:
+        messages.error(request, "Deletion date is required. Please select a valid date.")
+        return redirect('display_loan_disbursements')
 
+    try:
+        deletion_date = timezone.datetime.strptime(deletion_date_str, '%Y-%m-%d').date()
+    except ValueError:
+        messages.error(request, f"Invalid date format: '{deletion_date_str}'. Please use YYYY-MM-DD.")
+        return redirect('display_loan_disbursements')
 
+    system_date = timezone.now().date()
 
+    if deletion_date > system_date:
+        messages.error(
+            request,
+            f"Deletion date ({deletion_date}) cannot be in the future relative to system date ({system_date})."
+        )
+        return redirect('display_loan_disbursements')
+
+    try:
+        loan = Loans.objects.get(id=id)
+    except Loans.DoesNotExist:
+        messages.error(request, f"Loan with ID {id} does not exist.")
+        return redirect('display_loan_disbursements')
+
+    memtrans_exists = Memtrans.objects.filter(trx_no=trx_no).exists()
+    if not memtrans_exists:
+        messages.error(request, f"No transactions found with trx_no '{trx_no}' to delete.")
+        return redirect('display_loan_disbursements')
+
+    try:
+        with transaction.atomic():
+            # Mark Memtrans records as history
+            Memtrans.objects.filter(trx_no=trx_no).update(error='H')
+
+            # Mark loan as reversed temporarily
+            loan.disb_status = 'H'
+            loan.save()
+
+            # Delete LoanHist records if any
+            LoanHist.objects.filter(trx_no=trx_no).delete()
+
+            # Reset loan status
+            loan.disb_status = ''
+            loan.save()
+
+        messages.success(
+            request,
+            f"Transactions with trx_no '{trx_no}' have been successfully deleted for loan ID {id} on {deletion_date}."
+        )
+        return redirect('display_loan_disbursements')
+
+    except Exception as e:
+        messages.error(request, f"An unexpected error occurred while deleting transactions: {str(e)}")
+        return redirect('display_loan_disbursements')
 
 
 from transactions.models import Memtrans

@@ -138,3 +138,48 @@ def send_sms(phone_number, message, branch=None):
     except Exception as e:
         logger.exception("🚨 Unexpected error while sending SMS")
         return False
+
+
+
+
+
+
+
+
+from django.contrib import auth, messages
+from django.shortcuts import redirect
+from django.utils import timezone
+
+def enforce_auto_logout(request):
+    if not request.user.is_authenticated:
+        return None
+
+    minutes = request.session.get('auto_logout_minutes')
+    if not minutes:
+        return None
+
+    try:
+        minutes = int(minutes)
+        if minutes <= 0:
+            return None
+    except (TypeError, ValueError):
+        return None
+
+    now = timezone.now()
+    last_activity = request.session.get('last_activity')
+
+    if last_activity:
+        last_activity = timezone.datetime.fromisoformat(last_activity)
+        if timezone.is_naive(last_activity):
+            last_activity = timezone.make_aware(last_activity)
+    else:
+        last_activity = now
+
+    if (now - last_activity).total_seconds() > minutes * 60:
+        auth.logout(request)
+        request.session.flush()
+        messages.info(request, 'You have been logged out due to inactivity.')
+        return redirect('login')
+
+    request.session['last_activity'] = now.isoformat()
+    return None

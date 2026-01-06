@@ -509,3 +509,66 @@ class CustomerListSerializer(serializers.ModelSerializer):
             'bank_name'        # 🔥 Include bank data
         ]
 
+
+
+
+
+
+
+
+# 1. serializers.py - Add this to your serializers file
+from rest_framework import serializers
+from loans.models import LoanHist
+
+class LoanHistSerializer(serializers.ModelSerializer):
+    """Serializer for LoanHist model - Loan Ledger entries"""
+    
+    # Computed fields for frontend
+    total_amount = serializers.SerializerMethodField()
+    is_credit = serializers.SerializerMethodField()
+    branch_name = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = LoanHist
+        fields = [
+            'id',
+            'gl_no',
+            'ac_no',
+            'cycle',
+            'period',
+            'trx_date',
+            'trx_type',
+            'trx_naration',
+            'trx_no',
+            'principal',
+            'interest',
+            'penalty',
+            'total_amount',
+            'is_credit',
+            'branch_name',
+        ]
+    
+    def get_total_amount(self, obj):
+        """Calculate total amount (principal + interest + penalty)"""
+        return float(obj.principal + obj.interest + obj.penalty)
+    
+    def get_is_credit(self, obj):
+        """Determine if transaction is credit or debit based on type"""
+        # Adjust these based on your transaction types
+        credit_types = ['DISBURSEMENT', 'LOAN_DISBURSEMENT', 'PRINCIPAL_WAIVER', 'INTEREST_WAIVER']
+        return obj.trx_type.upper() in credit_types
+    
+    def get_branch_name(self, obj):
+        """Get branch name if available"""
+        return obj.branch.name if obj.branch else None
+
+
+class LoanLedgerSummarySerializer(serializers.Serializer):
+    """Serializer for loan ledger summary data"""
+    total_principal = serializers.DecimalField(max_digits=15, decimal_places=2)
+    total_interest = serializers.DecimalField(max_digits=15, decimal_places=2)
+    total_penalty = serializers.DecimalField(max_digits=15, decimal_places=2)
+    total_disbursed = serializers.DecimalField(max_digits=15, decimal_places=2)
+    total_repaid = serializers.DecimalField(max_digits=15, decimal_places=2)
+    outstanding_balance = serializers.DecimalField(max_digits=15, decimal_places=2)
+    transaction_count = serializers.IntegerField()
