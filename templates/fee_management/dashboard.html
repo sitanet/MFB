@@ -164,7 +164,7 @@
                     <div><strong>Created:</strong> {{ active_config.effective_date|date:"M d, Y H:i" }}</div>
                 </div>
                 <div style="margin-top: 15px;">
-                    <form method="post" action="{% url 'deactivate_configuration' active_config.id %}" style="display: inline;">
+                    <form method="post" action="{% url 'deactivate_configuration' active_config.uuid %}" style="display: inline;">
                         {% csrf_token %}
                         <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure? This will deactivate fees for ALL customers.')">
                             Deactivate Configuration
@@ -222,7 +222,7 @@
                     <td>{{ config.effective_date|date:"M d, Y" }}</td>
                     <td>
                         {% if config.is_active %}
-                            <form method="post" action="{% url 'deactivate_configuration' config.id %}" style="display: inline;">
+                            <form method="post" action="{% url 'deactivate_configuration' config.uuid %}" style="display: inline;">
                                 {% csrf_token %}
                                 <button type="submit" class="btn btn-danger" style="padding: 4px 8px; font-size: 0.8em;">
                                     Deactivate

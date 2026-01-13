@@ -1,9 +1,10 @@
 from django.db import models
+import uuid
 
 # Create your models here.
-from django.db import models
 
 class PsbBank(models.Model):
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     bank_code = models.CharField(max_length=20, unique=True)
     bank_name = models.CharField(max_length=100)
     bank_long_code = models.CharField(max_length=50, blank=True, null=True)

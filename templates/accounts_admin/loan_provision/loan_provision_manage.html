@@ -31,7 +31,7 @@
             </div>
             <div class="form-group">
               {% if form.instance.pk %}
-                <a href="{% url 'loan_provision_delete' form.instance.pk %}" class="btn btn-danger">Delete</a>
+                <a href="{% url 'loan_provision_delete' form.instance.uuid %}" class="btn btn-danger">Delete</a>
               {% endif %}
               {{ form.DELETE }}
             </div>

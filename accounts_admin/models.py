@@ -1,14 +1,16 @@
+import uuid
 from django.db import models
 
 
 from company.models import Company, Branch
+from profit_solutions.tenant_managers import TenantManager
 
 
 
 
 
 class Product_type(models.Model):
-    
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     branch = models.CharField(max_length=20, null=True, blank=True)
 
     internal_type = models.CharField(max_length=20, unique=True)
@@ -48,6 +50,7 @@ class Account(models.Model):
         (DEBIT, 'Debit'),
     )
 
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     branch = models.ForeignKey(
         Branch, on_delete=models.CASCADE, related_name="accounts", null=True, blank=True
     )
@@ -93,8 +96,12 @@ class Account(models.Model):
     fixed_dep_int_gl_no = models.CharField(max_length=6, blank=True, null=True)
     fixed_dep_int_ac_no = models.CharField(max_length=6, blank=True, null=True)
 
+    # Tenant-aware manager
+    objects = TenantManager()
+    all_objects = models.Manager()
+
     def has_related_child_accounts(self):
-        return Account.objects.filter(header=self).exists()
+        return Account.all_objects.filter(header=self).exists()
 
     def __str__(self):
         return f"{self.gl_name} ({self.gl_no})"
@@ -103,22 +110,27 @@ class Account(models.Model):
     
 
 class Region(models.Model):
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     branch = models.ForeignKey(Branch, on_delete=models.CASCADE, related_name="region", 
     null=True, blank=True)
     region_name = models.CharField(max_length=30, unique=True)
-    
 
+    objects = TenantManager()
+    all_objects = models.Manager()
 
     def __str__(self):
         return self.region_name
     
 
 class Account_Officer(models.Model):
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     branch = models.ForeignKey(Branch, on_delete=models.CASCADE, related_name="account_Officer", 
     null=True, blank=True)
     region = models.ForeignKey(Region, on_delete=models.CASCADE, null=True, blank=True)
     user =  models.CharField(max_length=30, unique=True)
 
+    objects = TenantManager()
+    all_objects = models.Manager()
 
     def __str__(self):
         return self.user
@@ -126,11 +138,13 @@ class Account_Officer(models.Model):
 
 
 class Category(models.Model):
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     branch = models.ForeignKey(Branch, on_delete=models.CASCADE, related_name="category", 
     null=True, blank=True)
     category_name = models.CharField(max_length=30)
-    
 
+    objects = TenantManager()
+    all_objects = models.Manager()
 
     def __str__(self):
         return self.category_name
@@ -139,11 +153,13 @@ class Category(models.Model):
 
 
 class Id_card_type(models.Model):
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     branch = models.ForeignKey(Branch, on_delete=models.CASCADE, related_name="id_card_type", 
     null=True, blank=True)
     id_card_name = models.CharField(max_length=30)
-    
 
+    objects = TenantManager()
+    all_objects = models.Manager()
 
     def __str__(self):
         return self.id_card_name
@@ -151,10 +167,14 @@ class Id_card_type(models.Model):
 
 
 class Business_Sector(models.Model):
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     branch = models.ForeignKey(Branch, on_delete=models.CASCADE, related_name="business_Sector", 
     null=True, blank=True)
     sector_name = models.CharField(max_length=30, unique=True)
-    
+
+    objects = TenantManager()
+    all_objects = models.Manager()
+
     def __str__(self):
         return self.sector_name
     
@@ -184,6 +204,7 @@ class Business_Sector(models.Model):
 from django.db import models
 
 class LoanProvision(models.Model):
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     branch = models.ForeignKey(Branch, on_delete=models.CASCADE, related_name="loanProvision", 
     null=True, blank=True)
     name = models.CharField(max_length=255)
@@ -191,5 +212,60 @@ class LoanProvision(models.Model):
     max_days = models.BigIntegerField(help_text="Maximum days of arrears")
     rate = models.DecimalField(max_digits=100, decimal_places=2)
 
+    objects = TenantManager()
+    all_objects = models.Manager()
+
     def __str__(self):
         return self.name
+
+
+class CustomerAccountType(models.Model):
+    """
+    Model to manage which Chart of Account entries should appear 
+    as selectable account types when creating customer accounts.
+    """
+    USAGE_CHOICES = [
+        ('customer', 'New Customer Account'),
+        ('additional', 'Additional Customer Account'),
+        ('both', 'Both New & Additional'),
+    ]
+    
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    branch = models.ForeignKey(
+        Branch, on_delete=models.CASCADE, related_name="customer_account_types",
+        null=True, blank=True
+    )
+    account = models.ForeignKey(
+        Account, on_delete=models.CASCADE, related_name="customer_account_type_settings",
+        help_text="Select account from Chart of Accounts"
+    )
+    display_name = models.CharField(
+        max_length=100, blank=True, null=True,
+        help_text="Custom display name (leave blank to use GL Name)"
+    )
+    usage_type = models.CharField(
+        max_length=20, choices=USAGE_CHOICES, default='both',
+        help_text="Where this account type should appear"
+    )
+    is_active = models.BooleanField(default=True)
+    sort_order = models.PositiveIntegerField(default=0, help_text="Display order (lower = first)")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    objects = TenantManager()
+    all_objects = models.Manager()
+
+    class Meta:
+        verbose_name = "Customer Account Type"
+        verbose_name_plural = "Customer Account Types"
+        ordering = ['sort_order', 'account__gl_name']
+        unique_together = ['branch', 'account']
+
+    def __str__(self):
+        return self.display_name or self.account.gl_name
+
+    def get_display_name(self):
+        return self.display_name or self.account.gl_name
+
+    def get_gl_no(self):
+        return self.account.gl_no

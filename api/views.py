@@ -2523,6 +2523,16 @@ class RegisterUserAPIView(APIView):
             except Customer.DoesNotExist:
                 return Response({'error': 'Customer not found'}, status=status.HTTP_400_BAD_REQUEST)
 
+            # --- Check branch customer limit ---
+            if orig_customer.branch:
+                from customers.utils import check_branch_customer_limit
+                limit_check = check_branch_customer_limit(orig_customer.branch.id)
+                if not limit_check['can_add']:
+                    return Response(
+                        {'error': limit_check['message']},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
             # --- Check if GL 20111 exists ---
             gl_account = Account.objects.filter(gl_no='20111').first()
             if not gl_account:
@@ -2616,6 +2626,11 @@ class RegisterUserAPIView(APIView):
                 )
 
                 # ✅ Create CustomUser — GL & AC from split input, not from Customer
+                # Get branch_id from customer's branch (Branch is ForeignKey in Customer model)
+                customer_branch_id = None
+                if new_customer.branch:
+                    customer_branch_id = str(new_customer.branch.id)
+                
                 user = CustomUser.objects.create_user(
                     username=username,
                     password=password,
@@ -2624,11 +2639,14 @@ class RegisterUserAPIView(APIView):
                     last_name=new_customer.last_name or "",
                     role=getattr(CustomUser, 'CUSTOMER', 'customer'),
                     gl_no=gl_no,
-                    ac_no=ac_no
+                    ac_no=ac_no,
+                    branch_id=customer_branch_id  # ✅ Pass branch_id to create_user
                 )
 
                 user.customer = new_customer
-                user.branch = new_customer.branch  # ✅ Attach the same branch
+                # ✅ Set branch_id from customer's branch (branch_id is CharField storing vendor DB branch ID)
+                if customer_branch_id:
+                    user.branch_id = customer_branch_id
                 if hasattr(user, 'verified'):
                     user.verified = True
                 if hasattr(user, 'phone_number'):
@@ -5034,12 +5052,12 @@ def create_fee_configuration(request):
 
 @login_required
 @user_passes_test(is_admin_user)
-def deactivate_configuration(request, config_id):
+def deactivate_configuration(request, uuid):
     """Deactivate a fee configuration"""
     
     if request.method == 'POST':
         try:
-            config = get_object_or_404(GlobalTransferFeeConfiguration, id=config_id)
+            config = get_object_or_404(GlobalTransferFeeConfiguration, uuid=uuid)
             config.is_active = False
             config.save()
             

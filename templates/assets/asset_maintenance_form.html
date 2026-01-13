@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <h2>Add Maintenance Record: {{ asset.asset_name }}</h2>
+    
+    <div class="card">
+        <div class="card-body">
+            <form method="POST">
+                {% csrf_token %}
+                
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Maintenance Type *</label>
+                        <select name="maintenance_type" class="form-control" required>
+                            <option value="preventive">Preventive Maintenance</option>
+                            <option value="corrective">Corrective Maintenance</option>
+                            <option value="emergency">Emergency Repair</option>
+                            <option value="upgrade">Upgrade/Enhancement</option>
+                            <option value="inspection">Inspection</option>
+                            <option value="calibration">Calibration</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Status *</label>
+                        <select name="status" class="form-control" required>
+                            <option value="completed">Completed</option>
+                            <option value="scheduled">Scheduled</option>
+                            <option value="in_progress">In Progress</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Maintenance Date *</label>
+                        <input type="date" name="maintenance_date" class="form-control" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Next Maintenance Date</label>
+                        <input type="date" name="next_maintenance_date" class="form-control">
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Description *</label>
+                    <textarea name="description" class="form-control" rows="3" required></textarea>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Performed By *</label>
+                        <input type="text" name="performed_by" class="form-control" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Cost</label>
+                        <input type="number" name="cost" class="form-control" step="0.01" value="0">
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Parts Replaced</label>
+                    <textarea name="parts_replaced" class="form-control" rows="2"></textarea>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Invoice Number</label>
+                        <input type="text" name="invoice_number" class="form-control">
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Notes</label>
+                    <textarea name="notes" class="form-control" rows="2"></textarea>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Save Maintenance Record</button>
+                <a href="{% url 'asset_detail' asset.uuid %}" class="btn btn-secondary">Cancel</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

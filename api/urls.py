@@ -137,14 +137,14 @@ urlpatterns = [
 
         # Beneficiary endpoints
     path('beneficiaries/', BeneficiaryListCreateView.as_view(), name='beneficiary-list-create'),
-    path('beneficiaries/<int:pk>/', BeneficiaryDetailView.as_view(), name='beneficiary-detail'),
+    path('beneficiaries/<uuid:uuid>/', BeneficiaryDetailView.as_view(), name='beneficiary-detail'),
 
 
 
 
     path('admin/fee-management/', views.fee_management_dashboard, name='fee_management_dashboard'),
     path('admin/fee-management/create/', views.create_fee_configuration, name='create_fee_configuration'),
-    path('admin/fee-management/deactivate/<int:config_id>/', views.deactivate_configuration, name='deactivate_configuration'),
+    path('admin/fee-management/deactivate/<uuid:uuid>/', views.deactivate_configuration, name='deactivate_configuration'),
     path('admin/fee-management/transactions/', views.transaction_history, name='transaction_history'),
     
     # API Endpoints for Mobile App

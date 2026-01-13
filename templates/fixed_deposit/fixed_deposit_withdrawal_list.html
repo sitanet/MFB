@@ -39,7 +39,7 @@
                 </td>
                 <td>
                     {% if withdrawal.status != "closed" %}
-                        <a href="{% url 'reverse_fixed_deposit_withdrawal' withdrawal.id %}" class="btn btn-danger btn-sm">
+                        <a href="{% url 'reverse_fixed_deposit_withdrawal' withdrawal.uuid %}" class="btn btn-danger btn-sm">
                             Reverse
                         </a>
                     {% else %}

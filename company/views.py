@@ -1,43 +1,285 @@
 from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib import messages
+from functools import wraps
 
 from accounts.views import check_role_admin
-from .models import Company, Branch
+from .models import Company, Branch, VendorUser
 from .forms import CompanyForm, BranchForm, EndSession
-from django.contrib import messages
-from django.contrib.auth.decorators import login_required, user_passes_test
 
 
+# ==================== VENDOR AUTHENTICATION DECORATOR ====================
+
+def vendor_login_required(view_func):
+    """
+    Decorator to require vendor user authentication.
+    Redirects to vendor login if not authenticated as vendor.
+    """
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        vendor_user_id = request.session.get('vendor_user_id')
+        if not vendor_user_id:
+            messages.error(request, 'Please login to access vendor management.')
+            return redirect('vendor_login')
+        
+        try:
+            vendor_user = VendorUser.objects.get(id=vendor_user_id, is_active=True)
+            request.vendor_user = vendor_user
+        except VendorUser.DoesNotExist:
+            request.session.pop('vendor_user_id', None)
+            messages.error(request, 'Session expired. Please login again.')
+            return redirect('vendor_login')
+        
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
+
+# ==================== VENDOR AUTHENTICATION VIEWS ====================
+
+def vendor_login(request):
+    """Vendor login view - separate from client login"""
+    # If already logged in as vendor, redirect to dashboard
+    if request.session.get('vendor_user_id'):
+        return redirect('vendor_dashboard')
+    
+    if request.method == 'POST':
+        email = request.POST.get('email', '').strip()
+        password = request.POST.get('password', '')
+        
+        if not email or not password:
+            messages.error(request, 'Email and password are required.')
+            return render(request, 'company/vendor_login.html')
+        
+        try:
+            vendor_user = VendorUser.objects.get(email=email)
+            if vendor_user.check_password(password):
+                if vendor_user.is_active:
+                    # Store vendor user in session
+                    request.session['vendor_user_id'] = vendor_user.id
+                    request.session['vendor_user_name'] = vendor_user.get_full_name()
+                    messages.success(request, f'Welcome back, {vendor_user.first_name}!')
+                    return redirect('vendor_dashboard')
+                else:
+                    messages.error(request, 'Your account is inactive. Contact administrator.')
+            else:
+                messages.error(request, 'Invalid email or password.')
+        except VendorUser.DoesNotExist:
+            messages.error(request, 'Invalid email or password.')
+    
+    return render(request, 'company/vendor_login.html')
+
+
+def vendor_logout(request):
+    """Vendor logout view"""
+    request.session.pop('vendor_user_id', None)
+    request.session.pop('vendor_user_name', None)
+    messages.success(request, 'You have been logged out successfully.')
+    return redirect('vendor_login')
+
+
+@vendor_login_required
+def vendor_dashboard(request):
+    """Vendor dashboard - overview of all companies and branches"""
+    companies = Company.objects.all()
+    branches = Branch.objects.all()
+    
+    # Statistics
+    total_companies = companies.count()
+    total_branches = branches.count()
+    active_branches = branches.filter(is_active=True).count()
+    inactive_branches = branches.filter(is_active=False).count()
+    
+    context = {
+        'vendor_user': request.vendor_user,
+        'total_companies': total_companies,
+        'total_branches': total_branches,
+        'active_branches': active_branches,
+        'inactive_branches': inactive_branches,
+        'recent_companies': companies.order_by('-id')[:5],
+        'recent_branches': branches.order_by('-created_at')[:5],
+    }
+    return render(request, 'company/vendor_dashboard.html', context)
+
+
+# ==================== VENDOR USER MANAGEMENT VIEWS ====================
+
+@vendor_login_required
+def vendor_user_list(request):
+    """List all vendor users"""
+    vendor_users = VendorUser.objects.all().order_by('-date_joined')
+    context = {
+        'vendor_user': request.vendor_user,
+        'vendor_users': vendor_users,
+    }
+    return render(request, 'company/vendor_user_list.html', context)
+
+
+@vendor_login_required
+def vendor_user_create(request):
+    """Create a new vendor user"""
+    if request.method == 'POST':
+        email = request.POST.get('email', '').strip()
+        username = request.POST.get('username', '').strip()
+        first_name = request.POST.get('first_name', '').strip()
+        last_name = request.POST.get('last_name', '').strip()
+        phone_number = request.POST.get('phone_number', '').strip()
+        password = request.POST.get('password', '')
+        confirm_password = request.POST.get('confirm_password', '')
+        is_supervendor = request.POST.get('is_supervendor') == 'on'
+        
+        # Validation
+        if not all([email, username, first_name, last_name, password]):
+            messages.error(request, 'All required fields must be filled.')
+            return render(request, 'company/vendor_user_create.html', {'vendor_user': request.vendor_user})
+        
+        if password != confirm_password:
+            messages.error(request, 'Passwords do not match.')
+            return render(request, 'company/vendor_user_create.html', {'vendor_user': request.vendor_user})
+        
+        if VendorUser.objects.filter(email=email).exists():
+            messages.error(request, 'A user with this email already exists.')
+            return render(request, 'company/vendor_user_create.html', {'vendor_user': request.vendor_user})
+        
+        if VendorUser.objects.filter(username=username).exists():
+            messages.error(request, 'A user with this username already exists.')
+            return render(request, 'company/vendor_user_create.html', {'vendor_user': request.vendor_user})
+        
+        try:
+            new_user = VendorUser.objects.create_user(
+                email=email,
+                username=username,
+                password=password,
+                first_name=first_name,
+                last_name=last_name,
+                phone_number=phone_number,
+                is_supervendor=is_supervendor,
+            )
+            messages.success(request, f'Vendor user "{email}" created successfully!')
+            return redirect('vendor_user_list')
+        except Exception as e:
+            messages.error(request, f'Error creating user: {str(e)}')
+    
+    return render(request, 'company/vendor_user_create.html', {'vendor_user': request.vendor_user})
+
+
+@vendor_login_required
+def vendor_user_edit(request, uuid):
+    """Edit an existing vendor user"""
+    user_to_edit = get_object_or_404(VendorUser, uuid=uuid)
+    
+    if request.method == 'POST':
+        first_name = request.POST.get('first_name', '').strip()
+        last_name = request.POST.get('last_name', '').strip()
+        phone_number = request.POST.get('phone_number', '').strip()
+        is_supervendor = request.POST.get('is_supervendor') == 'on'
+        new_password = request.POST.get('new_password', '')
+        confirm_password = request.POST.get('confirm_password', '')
+        
+        if not all([first_name, last_name]):
+            messages.error(request, 'First name and last name are required.')
+            return render(request, 'company/vendor_user_edit.html', {
+                'vendor_user': request.vendor_user,
+                'user_to_edit': user_to_edit,
+            })
+        
+        # Update password if provided
+        if new_password:
+            if new_password != confirm_password:
+                messages.error(request, 'Passwords do not match.')
+                return render(request, 'company/vendor_user_edit.html', {
+                    'vendor_user': request.vendor_user,
+                    'user_to_edit': user_to_edit,
+                })
+            user_to_edit.set_password(new_password)
+        
+        user_to_edit.first_name = first_name
+        user_to_edit.last_name = last_name
+        user_to_edit.phone_number = phone_number
+        user_to_edit.is_supervendor = is_supervendor
+        user_to_edit.save()
+        
+        messages.success(request, f'Vendor user "{user_to_edit.email}" updated successfully!')
+        return redirect('vendor_user_list')
+    
+    context = {
+        'vendor_user': request.vendor_user,
+        'user_to_edit': user_to_edit,
+    }
+    return render(request, 'company/vendor_user_edit.html', context)
+
+
+@vendor_login_required
+def vendor_user_toggle_active(request, uuid):
+    """Toggle vendor user active/inactive status"""
+    user_to_toggle = get_object_or_404(VendorUser, uuid=uuid)
+    
+    # Prevent deactivating yourself
+    if user_to_toggle.id == request.vendor_user.id:
+        messages.error(request, 'You cannot deactivate your own account.')
+        return redirect('vendor_user_list')
+    
+    if request.method == 'POST':
+        user_to_toggle.is_active = not user_to_toggle.is_active
+        user_to_toggle.save()
+        status = "activated" if user_to_toggle.is_active else "deactivated"
+        messages.success(request, f'Vendor user "{user_to_toggle.email}" has been {status}.')
+    
+    return redirect('vendor_user_list')
+
+
+@vendor_login_required
+def vendor_user_delete(request, uuid):
+    """Delete a vendor user"""
+    user_to_delete = get_object_or_404(VendorUser, uuid=uuid)
+    
+    # Prevent deleting yourself
+    if user_to_delete.id == request.vendor_user.id:
+        messages.error(request, 'You cannot delete your own account.')
+        return redirect('vendor_user_list')
+    
+    if request.method == 'POST':
+        email = user_to_delete.email
+        user_to_delete.delete()
+        messages.success(request, f'Vendor user "{email}" has been deleted.')
+    
+    return redirect('vendor_user_list')
+
+
+# ==================== COMPANY MANAGEMENT VIEWS ====================
+
+@vendor_login_required
 def company_list(request):
     companies = Company.objects.all()
     return render(request, 'company/company_list.html', {'companies': companies})
 
 
+@vendor_login_required
 def branch_list(request):
-    branches = Branch.objects.all()
-    print("DEBUG: branches type:", type(branches))
-    print("DEBUG: branches queryset:", branches)
+    # Vendor management - show ALL branches across all companies
+    branches = Branch.objects.select_related('company').all().order_by('company__company_name', 'branch_name')
     return render(request, 'branch/branch_list.html', {'branches': branches})
 
 
-
-
-def company_detail(request, pk):
-    company = get_object_or_404(Company, pk=pk)
+@vendor_login_required
+def company_detail(request, uuid):
+    company = get_object_or_404(Company, uuid=uuid)
     return render(request, 'company/company_detail.html', {'company': company})
 
 
-
-def branch_detail(request, pk):
-    branch = get_object_or_404(Branch, pk=pk)
+@vendor_login_required
+def branch_detail(request, uuid):
+    branch = get_object_or_404(Branch, uuid=uuid)
     return render(request, 'branch/branch_detail.html', {'branch': branch})
 
 
+@vendor_login_required
 def create_company(request):
     if request.method == "POST":
         form = CompanyForm(request.POST)
         if form.is_valid():
             form.save()
-            return redirect('company_list')  # Redirect to the company list page
+            return redirect('company_list')
     else:
         form = CompanyForm()
     return render(request, 'company/create_company.html', {'form': form})
@@ -207,12 +449,13 @@ from accounts.utils import send_sms  # 👈 Termii SMS util
 logger = logging.getLogger(__name__)
 
 
+@vendor_login_required
 def create_branch(request):
     try:
         print("🔍 Entered create_branch view")
 
-        company = Company.objects.first()
-        print(f"✅ Company fetched: {company}")
+        companies = Company.objects.all()
+        print(f"✅ Companies fetched: {companies.count()}")
 
         if request.method == 'POST':
             print("📩 Received POST request")
@@ -222,7 +465,8 @@ def create_branch(request):
                 print("✅ Form is valid")
 
                 branch = form.save(commit=False)
-                branch.company = company
+                # Company is now selected from the form dropdown
+                branch.company_name = branch.company.company_name
                 branch.phone_verified = False
                 branch.otp_code = str(random.randint(100000, 999999))
                 branch.save()
@@ -320,7 +564,7 @@ Thank you,
             print("📄 Received GET request, rendering form")
             form = BranchForm()
 
-        return render(request, 'branch/create_branch.html', {'form': form, 'company': company})
+        return render(request, 'branch/create_branch.html', {'form': form, 'companies': companies})
 
     except Exception as e:
         print(f"💥 Unexpected error: {e}")
@@ -495,8 +739,9 @@ def create_branch_old(request):
 
 
 
-def update_company(request, company_id):
-    company = get_object_or_404(Company, pk=company_id)
+@vendor_login_required
+def update_company(request, uuid):
+    company = get_object_or_404(Company, uuid=uuid)
     if request.method == "POST":
         form = CompanyForm(request.POST, instance=company)
         if form.is_valid():
@@ -507,17 +752,10 @@ def update_company(request, company_id):
     return render(request, 'company/update_company.html', {'form': form, 'company': company})
 
 
-
-
-
-# Function to update branch details along with company model
-from django.shortcuts import get_object_or_404, redirect, render
-from .models import Branch, Company
-from .forms import BranchForm
-
-def update_branch(request, id):
+@vendor_login_required
+def update_branch(request, uuid):
     # Get the branch object to update
-    branch = get_object_or_404(Branch, pk=id)
+    branch = get_object_or_404(Branch, uuid=uuid)
     
     # Get all companies for the dropdown
     companies = Company.objects.all()
@@ -544,17 +782,18 @@ def update_branch(request, id):
 
 
 
-def company_delete(request, id):
-    company = get_object_or_404(Company, id=id)
+@vendor_login_required
+def company_delete(request, uuid):
+    company = get_object_or_404(Company, uuid=uuid)
     if request.method == 'POST':
         company.delete()
         return redirect('company_list')
     return render(request, 'company/company_confirm_delete.html', {'company': company})
 
 
-
-def branch_delete(request, id):
-    branch = get_object_or_404(Branch, id=id)
+@vendor_login_required
+def branch_delete(request, uuid):
+    branch = get_object_or_404(Branch, uuid=uuid)
     if request.method == 'POST':
         branch.delete()
         return redirect('branch_list')
@@ -568,12 +807,12 @@ from django.utils import timezone
 @user_passes_test(check_role_admin)
 @login_required
 
-def session_mgt(request, branch_id):
+def session_mgt(request, uuid=None):
     # Get the branch — ensure user has access (optional security check)
-    branch = get_object_or_404(Branch, id=branch_id)
+    branch = get_object_or_404(Branch, uuid=uuid) if uuid else request.user.branch
 
     # Optional: Restrict access to user's own branch (recommended)
-    if hasattr(request.user, 'branch') and request.user.branch_id != branch_id:
+    if hasattr(request.user, 'branch') and request.user.branch_id != str(branch.id):
         messages.error(request, "You do not have permission to manage this branch's session.")
         return redirect('dashboard')  # or another safe page
 
@@ -586,8 +825,8 @@ def session_mgt(request, branch_id):
                 branch.system_date_date = timezone.now().date()
             form.save()
             messages.success(request, 'Session updated successfully.')
-            # ✅ Redirect with branch_id to match URL pattern
-            return redirect('session_mgt', branch_id=branch_id)
+            # ✅ Redirect with uuid to match URL pattern
+            return redirect('session_mgt', uuid=branch.uuid)
     else:
         form = EndSession(instance=branch)
 
@@ -607,8 +846,81 @@ def display_users_and_branches(request):
     # Get the custom User model
     User = get_user_model()  
     
-    # Fetch users and prefetch related branch and company data
-    users = User.objects.select_related('branch', 'branch__company').all()
+    # Fetch all users
+    users = User.objects.all()
 
     # Pass the user data to the template
     return render(request, 'users/display_users_and_branches.html', {'users': users})
+
+
+@vendor_login_required
+def create_branch_admin(request, uuid):
+    """
+    Create an administrator user for a specific branch.
+    This allows new branches to have their own admin who can then create other users.
+    """
+    User = get_user_model()
+    branch = get_object_or_404(Branch, uuid=uuid)
+    
+    if request.method == 'POST':
+        first_name = request.POST.get('first_name')
+        last_name = request.POST.get('last_name')
+        username = request.POST.get('username')
+        email = request.POST.get('email')
+        phone_number = request.POST.get('phone_number')
+        password = request.POST.get('password')
+        confirm_password = request.POST.get('confirm_password')
+        
+        # Validation
+        if password != confirm_password:
+            messages.error(request, 'Passwords do not match.')
+            return redirect('create_branch_admin', uuid=uuid)
+        
+        if User.objects.filter(username=username).exists():
+            messages.error(request, 'Username already exists.')
+            return redirect('create_branch_admin', uuid=uuid)
+        
+        if User.objects.filter(email=email).exists():
+            messages.error(request, 'Email already exists.')
+            return redirect('create_branch_admin', uuid=uuid)
+        
+        try:
+            # Create admin user for this branch
+            user = User.objects.create_user(
+                first_name=first_name,
+                last_name=last_name,
+                username=username,
+                email=email,
+                phone_number=phone_number,
+                password=password,
+                role=1,  # System Administrator
+                branch_id=str(branch.id),
+            )
+            user.is_active = True
+            user.is_staff = True
+            user.verified = True
+            user.save()
+            
+            messages.success(request, f'Administrator "{username}" created successfully for branch "{branch.branch_name}"!')
+            return redirect('branch_list')
+            
+        except Exception as e:
+            messages.error(request, f'Error creating user: {str(e)}')
+            return redirect('create_branch_admin', branch_id=branch_id)
+    
+    context = {
+        'branch': branch,
+    }
+    return render(request, 'branch/create_branch_admin.html', context)
+
+
+@vendor_login_required
+def toggle_branch_active(request, uuid):
+    """Toggle branch active/inactive status for subscription management"""
+    branch = get_object_or_404(Branch, uuid=uuid)
+    if request.method == 'POST':
+        branch.is_active = not branch.is_active
+        branch.save()
+        status = "activated" if branch.is_active else "deactivated"
+        messages.success(request, f'Branch "{branch.branch_name}" has been {status}.')
+    return redirect('branch_list')

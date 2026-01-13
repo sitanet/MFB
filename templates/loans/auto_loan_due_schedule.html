@@ -953,9 +953,12 @@
 
 {% block extra_js %}
 <script>
+console.log('=== Auto Loan Script Starting ===');
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('=== DOMContentLoaded fired ===');
     // Enhanced Variables
     const masterCheckbox = document.getElementById('master-checkbox');
+    console.log('masterCheckbox:', masterCheckbox);
     const loanCheckboxes = document.querySelectorAll('.loan-checkbox');
     const selectAllBtn = document.getElementById('select-all-btn');
     const clearAllBtn = document.getElementById('clear-all-btn');
@@ -968,22 +971,34 @@ document.addEventListener('DOMContentLoaded', function() {
     const summaryAmount = document.getElementById('summary-amount');
     const summaryBadge = document.getElementById('summary-badge');
     
+    // Exit early if required elements don't exist
+    if (!masterCheckbox || !processBtn || !selectedAmountDisplay) {
+        console.log('Required elements not found');
+        return;
+    }
+    
     // Enhanced Update Function
     function updateSelectionInfo() {
         const checkedBoxes = document.querySelectorAll('.loan-checkbox:checked');
         const selectedCount = checkedBoxes.length;
         let totalAmount = 0;
+        
+        console.log('Selected count:', selectedCount);
         let totalOverdueDays = 0;
         
         // Update row states and calculate totals
         checkedBoxes.forEach(checkbox => {
             const row = checkbox.closest('tr');
-            const amount = parseFloat(row.dataset.amount) || 0;
+            const rawAmount = row.dataset.amount;
+            console.log('Raw amount from data attribute:', rawAmount);
+            const amount = parseFloat(rawAmount) || 0;
+            console.log('Parsed amount:', amount);
             const daysOverdue = parseInt(row.dataset.daysOverdue) || 0;
             totalAmount += amount;
             totalOverdueDays += daysOverdue;
             row.classList.add('selected');
         });
+        console.log('Total amount:', totalAmount);
         
         // Remove selected state from unchecked rows
         document.querySelectorAll('.loan-checkbox:not(:checked)').forEach(checkbox => {
@@ -992,8 +1007,8 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Update displays
         const formattedAmount = `₦${totalAmount.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
-        selectedCountDisplay.textContent = selectedCount;
-        selectedAmountDisplay.textContent = formattedAmount;
+        if (selectedCountDisplay) selectedCountDisplay.textContent = selectedCount;
+        if (selectedAmountDisplay) selectedAmountDisplay.textContent = formattedAmount;
         
         // Update selection summary with overdue info
         if (selectedCount > 0) {
@@ -1002,13 +1017,13 @@ document.addEventListener('DOMContentLoaded', function() {
             if (avgOverdueDays > 0) {
                 summaryText += ` (avg. ${avgOverdueDays} days overdue)`;
             }
-            summaryCount.textContent = summaryText;
-            summaryAmount.textContent = formattedAmount;
-            summaryBadge.style.display = 'inline-flex';
-            selectionSummary.classList.add('active');
+            if (summaryCount) summaryCount.textContent = summaryText;
+            if (summaryAmount) summaryAmount.textContent = formattedAmount;
+            if (summaryBadge) summaryBadge.style.display = 'inline-flex';
+            if (selectionSummary) selectionSummary.classList.add('active');
         } else {
-            selectionSummary.classList.remove('active');
-            summaryBadge.style.display = 'none';
+            if (selectionSummary) selectionSummary.classList.remove('active');
+            if (summaryBadge) summaryBadge.style.display = 'none';
         }
         
         // Update process button
@@ -1074,7 +1089,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // Enhanced Button Actions
-    selectAllBtn.addEventListener('click', function() {
+    if (selectAllBtn) selectAllBtn.addEventListener('click', function() {
         const enabledCheckboxes = document.querySelectorAll('.loan-checkbox:not(:disabled)');
         enabledCheckboxes.forEach(checkbox => {
             checkbox.checked = true;
@@ -1092,7 +1107,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 1500);
     });
     
-    clearAllBtn.addEventListener('click', function() {
+    if (clearAllBtn) clearAllBtn.addEventListener('click', function() {
         loanCheckboxes.forEach(checkbox => {
             checkbox.checked = false;
         });
@@ -1104,7 +1119,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 1000);
     });
     
-    selectPayableBtn.addEventListener('click', function() {
+    if (selectPayableBtn) selectPayableBtn.addEventListener('click', function() {
         loanCheckboxes.forEach(checkbox => {
             const row = checkbox.closest('tr');
             const canPay = row.dataset.canPay === 'true';

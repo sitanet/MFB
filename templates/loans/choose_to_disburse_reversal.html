@@ -109,10 +109,10 @@
                                     <td>N{{ customer.loan_amount|default:"0.00"|floatformat:2 }}</td>
                                     <td>
                                         <button class="btn shadow-sm" style="background-color: #2E8B57;" type="button">
-                                            <a href="{% url 'loan_disbursement_reversal' customer.id %}" style="font-weight: bold; color: white;">Reverse Disburse</a>
+                                            <a href="{% url 'loan_disbursement_reversal' customer.uuid %}" style="font-weight: bold; color: white;">Reverse Disburse</a>
                                         </button>
                                         <!-- <button class="btn shadow-sm" style="background-color: #8b2e2e;" type="button">
-                                            <a href="{% url 'reject_loan' customer.id %}" style="font-weight: bold; color: white;">Reject</a>
+                                            <a href="{% url 'reject_loan' customer.uuid %}" style="font-weight: bold; color: white;">Reject</a>
                                         </button> -->
                                     </td>
                                 </tr>

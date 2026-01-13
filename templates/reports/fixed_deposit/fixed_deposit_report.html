@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container-fluid">
+  <!-- Quick Navigation -->
+  {% include 'include/quick_nav.html' with active_module='reports' %}
+
+  <div class="row"></div>
+
+  <div>
+    <!-- Chart of Account will come here -->
+  </div>
+
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-md-12">
+        <div class="page_title">
+          <h2>Fixed Deposit Reports</h2>
+        </div>
+      </div>
+
+      <div class="col-md-3 mb-2">
+        <div class="account_setting py-3 fs-2 bg-white">
+          <div class="couter_icon col-md-10">
+            <i class="fa fa-list-alt" style="color: #4682b4;"></i> <!-- Steel Blue -->
+          </div>
+          <a href="{% url 'fd_register_report' %}" class="text-center">
+            <h5 class="my-1">FD Register Report</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-3 mb-2">
+        <div class="account_setting py-3 fs-2 bg-white">
+          <div class="couter_icon col-md-10">
+            <i class="fa fa-calendar-alt" style="color: #ff6347;"></i> <!-- Tomato -->
+          </div>
+          <a href="{% url 'fd_maturity_report' %}" class="text-center">
+            <h5 class="my-1">FD Maturity Report</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-3 mb-2">
+        <div class="account_setting py-3 fs-2 bg-white rounded rounded-3">
+          <div class="couter_icon col-md-10">
+            <i class="fa fa-percentage" style="color: #32cd32;"></i> <!-- Lime Green -->
+          </div>
+          <a href="{% url 'fd_interest_report' %}" class="text-center">
+            <h5 class="my-1">FD Interest Report</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-3 mb-2">
+        <div class="account_setting py-3 fs-2 bg-white shadow-sm rounded rounded-3">
+          <div class="couter_icon col-md-10">
+            <i class="fa fa-chart-pie" style="color: #9932cc;"></i> <!-- Dark Orchid -->
+          </div>
+          <a href="{% url 'fd_register_report' %}" class="text-center">
+            <h5 class="my-1">FD Summary Report</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-3 mb-2">
+        <div class="account_setting py-3 fs-2 bg-white shadow-sm rounded rounded-3">
+          <div class="couter_icon col-md-10">
+            <i class="fa fa-clock" style="color: #ffa500;"></i> <!-- Orange -->
+          </div>
+          <a href="{% url 'fd_maturity_report' %}" class="text-center">
+            <h5 class="my-1">Maturing in 30 Days</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-3 mb-2">
+        <div class="account_setting py-3 fs-2 bg-white shadow-sm rounded rounded-3">
+          <div class="couter_icon col-md-10">
+            <i class="fa fa-redo" style="color: #20b2aa;"></i> <!-- Light Sea Green -->
+          </div>
+          <a href="{% url 'fd_register_report' %}" class="text-center">
+            <h5 class="my-1">Auto Renewal FDs</h5>
+          </a>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="row mt-3">
+      <div class="col-md-12">
+        <a href="{% url 'back_office_report' %}" class="btn btn-secondary">
+          <i class="fa fa-arrow-left"></i> Back to Reports
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

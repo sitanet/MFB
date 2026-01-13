@@ -227,18 +227,22 @@ class LoanDisbursementReportForm(forms.Form):
         super().__init__(*args, **kwargs)
 
         if user_branch:
-            # 🔹 Restrict to user's branch and GL accounts that start with 104
-            self.fields['branch'].queryset = Branch.objects.filter(id=user_branch.id)
+            # Filter by company - head office sees all company branches
+            if user_branch.head_office:
+                self.fields['branch'].queryset = Branch.objects.filter(
+                    company=user_branch.company
+                ).order_by('branch_name')
+            else:
+                self.fields['branch'].queryset = Branch.objects.filter(id=user_branch.id)
+            
             self.fields['gl_no'].queryset = Account.objects.filter(
-                branch=user_branch,
+                branch__company=user_branch.company,
                 gl_no__startswith="104"
             ).order_by('gl_no')
         else:
-            # 🔹 Show all branches and only GLs that start with 104
-            self.fields['branch'].queryset = Branch.objects.all().order_by('branch_name')
-            self.fields['gl_no'].queryset = Account.objects.filter(
-                gl_no__startswith="104"
-            ).order_by('gl_no')
+            # Default to none - should always pass user_branch
+            self.fields['branch'].queryset = Branch.objects.none()
+            self.fields['gl_no'].queryset = Account.objects.none()
 
         # Format GL account display
         self.fields['gl_no'].label_from_instance = lambda obj: f"{obj.gl_no} - {obj.gl_name}"
@@ -278,15 +282,21 @@ class LoanRepaymentReportForm(forms.Form):
         super().__init__(*args, **kwargs)
         
         if user_branch:
-            # Filter branches by the same company as the user's branch
-            self.fields['branch'].queryset = Branch.objects.filter(
-                company_name=user_branch.company_name
-            ).order_by('branch_name')
+            # Filter by company FK - head office sees all company branches
+            if user_branch.head_office:
+                self.fields['branch'].queryset = Branch.objects.filter(
+                    company=user_branch.company
+                ).order_by('branch_name')
+            else:
+                self.fields['branch'].queryset = Branch.objects.filter(id=user_branch.id)
             
-            # Filter GL accounts by the same company
+            # Filter GL accounts by company FK
             self.fields['gl_no'].queryset = Account.objects.filter(
-                branch__company_name=user_branch.company_name
+                branch__company=user_branch.company
             ).order_by('gl_no')
+        else:
+            self.fields['branch'].queryset = Branch.objects.none()
+            self.fields['gl_no'].queryset = Account.objects.none()
 
 
 class LoanTillSheetForm(forms.Form):
@@ -299,19 +309,35 @@ class LoanTillSheetForm(forms.Form):
         label='End Date'
     )
     branch = forms.ModelChoiceField(
-        queryset=Branch.objects.all().order_by('branch_name'),
+        queryset=Branch.objects.none(),  # Set dynamically in view
         required=False,
         widget=forms.Select(attrs={'class': 'form-control select2'}),
         label='Branch',
         empty_label="All Branches"
     )
     gl_no = forms.ModelChoiceField(
-        queryset=Account.objects.all().order_by('gl_name'),
+        queryset=Account.objects.none(),  # Set dynamically in view
         required=False,
         widget=forms.Select(attrs={'class': 'form-control select2'}),
         label='GL Account',
         empty_label="All Accounts"
     )
+
+    def __init__(self, *args, user_branch=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        if user_branch:
+            # Filter by company FK - head office sees all company branches
+            if user_branch.head_office:
+                self.fields['branch'].queryset = Branch.objects.filter(
+                    company=user_branch.company
+                ).order_by('branch_name')
+            else:
+                self.fields['branch'].queryset = Branch.objects.filter(id=user_branch.id)
+            
+            self.fields['gl_no'].queryset = Account.objects.filter(
+                branch__company=user_branch.company
+            ).order_by('gl_name')
 
     def clean(self):
         cleaned_data = super().clean()

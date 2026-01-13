@@ -50,6 +50,11 @@ class AuditMiddleware(MiddlewareMixin):
         user_agent = request.META.get('HTTP_USER_AGENT', '')
         session_key = request.session.session_key
         
+        # Get branch_id from user
+        branch_id = None
+        if user and hasattr(user, 'branch_id'):
+            branch_id = user.branch_id
+        
         # Determine action and category
         action = self._determine_action(request, response)
         category = determine_category(request)
@@ -66,6 +71,7 @@ class AuditMiddleware(MiddlewareMixin):
             AuditTrail.objects.create(
                 user=user,
                 session_key=session_key,
+                branch_id=branch_id,
                 action=action,
                 category=category,
                 description=description,

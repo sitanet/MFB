@@ -69,10 +69,10 @@
                                             </td>
                                             <td>
                                                 <div class="btn-group">
-                                                    <a href="{% url 'edit_internal_account' account.id %}" class="btn btn-sm btn-primary">
+                                                    <a href="{% url 'edit_internal_account' account.uuid %}" class="btn btn-sm btn-primary">
                                                         <i class="fa fa-edit"></i> Edit
                                                     </a>
-                                                    <a href="{% url 'delete_internal_account' account.pk %}" class="btn btn-sm btn-danger">
+                                                    <a href="{% url 'delete_internal_account' account.uuid %}" class="btn btn-sm btn-danger">
                                                         <i class="fa fa-trash"></i> Delete
                                                     </a>
                                                 </div>

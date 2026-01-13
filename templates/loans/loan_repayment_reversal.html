@@ -44,7 +44,7 @@
                                 <td>{{ loan.interest_rate }}</td>
                                 <td>{{ loan.total_loan }}</td>
                                 <td>
-                                    <a href="{% url 'loan_history' loan.id %}" class="btn btn-primary">View Loan History</a>
+                                    <a href="{% url 'loan_history' loan.uuid %}" class="btn btn-primary">View Loan History</a>
                                 </td>
                             </tr>
                             {% endfor %}

@@ -1,6 +1,9 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="container-fluid">
+    <!-- Quick Navigation -->
+    {% include 'include/quick_nav.html' with active_module='loans' %}
+
     <div class="row">
         <div class="col-md-12">
             <div class="page_title">
@@ -21,50 +24,12 @@
         {% endif %}
         <h6 style="color: red;" >{{ form.errors }}</h6>
      {% include 'includes/alerts.html' %}
+            
+            <!-- Shortcut Cards -->
+            {% include 'include/shortcut_cards.html' %}
+            
             <div class="row mt-3 table-row1">
                 <a href="{% url 'loans' %}" style="color: green; font-weight: bold; text-align: right; display: block;">Loans Menu</a>
-                
-                
-                <div class="col-md-3 mb-3">
-                    <div class="account_setting  py-5 fs-1 bg-white shadow-lg rounded rounded-5">
-                       <div class="couter_icon  col-md-3">
-                          <i class="couter_icon fa fa-user yellow_color"></i>
-                       </div>
-                       <a href="{% url 'loans' %}" class="text-center">
-                          <h5 class="my-2">Loan Simulation</h5>
-                       </a>
-                    </div>
-                 </div>
-                 <div class="col-md-3 mb-3">
-                    <div class="account_setting  py-5 fs-1 bg-white shadow-lg rounded rounded-5">
-                       <div class="couter_icon  col-md-3">
-                          <i class="couter_icon fa fa-user yellow_color"></i>
-                       </div>
-                       <a href="{% url 'loans' %}" class="text-center">
-                          <h5 class="my-2">Loan Simulation</h5>
-                       </a>
-                    </div>
-                 </div>
-                 <div class="col-md-3 mb-3">
-                    <div class="account_setting  py-5 fs-1 bg-white shadow-lg rounded rounded-5">
-                       <div class="couter_icon  col-md-3">
-                          <i class="couter_icon fa fa-user yellow_color"></i>
-                       </div>
-                       <a href="{% url 'loans' %}" class="text-center">
-                          <h5 class="my-2">Loan Simulation</h5>
-                       </a>
-                    </div>
-                 </div>
-                 <div class="col-md-3 mb-3">
-                    <div class="account_setting  py-5 fs-1 bg-white shadow-lg rounded rounded-5">
-                       <div class="couter_icon  col-md-3">
-                          <i class="couter_icon fa fa-user yellow_color"></i>
-                       </div>
-                       <a href="{% url 'loans' %}" class="text-center">
-                          <h5 class="my-2">Loan Simulation</h5>
-                       </a>
-                    </div>
-                 </div>
                 <div class="col-md-12 justify-content-center text-center m-auto">
                     <div class="input-group mb-3">
                         
@@ -108,10 +73,10 @@
                                 <td>N{{ customer.loan_amount|default:"0.00"|floatformat:2 }}</td>
                                 <td>
                                     <button class="btn shadow-sm" style="background-color: #2E8B57;" type="button">
-                                        <a href="{% url 'loan_approval' customer.id %}" style="font-weight: bold; color: white;">Approve</a>
+                                        <a href="{% url 'loan_approval' customer.uuid %}" style="font-weight: bold; color: white;">Approve</a>
                                     </button>
                                     <button class="btn shadow-sm" style="background-color: #8b2e2e;" type="button">
-                                        <a href="{% url 'reject_loan' customer.id %}" style="font-weight: bold; color: white;">Reject</a>
+                                        <a href="{% url 'reject_loan' customer.uuid %}" style="font-weight: bold; color: white;">Reject</a>
                                     </button>
                                 </td>
                             </tr>

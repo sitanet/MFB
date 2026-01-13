@@ -288,18 +288,26 @@
                 {% csrf_token %}
 
                 <!-- Auto Company Name -->
-               <!-- Auto Company Name (display only, no form submission) -->
+               <!-- Company Dropdown Selection -->
             <div class="form-group">
-                <label>
+                <label for="id_company">
                     <i class="fas fa-building"></i> Company Name
                 </label>
-                <input type="text" class="form-control" value="{{ company.company_name }}" readonly>
+                <select name="company" id="id_company" class="form-control" required>
+                    <option value="">-- Select Company --</option>
+                    {% for company in companies %}
+                        <option value="{{ company.id }}" {% if form.company.value == company.id|stringformat:"s" %}selected{% endif %}>{{ company.company_name }}</option>
+                    {% endfor %}
+                </select>
+                {% if form.company.errors %}
+                    <div class="form-error">{{ form.company.errors.0 }}</div>
+                {% endif %}
             </div>
 
 
                 <div class="form-row">
                     {% for field in form.visible_fields %}
-                        {% if field.name != "company_name" and field.name != "company_type" and field.name != "plan" %}
+                        {% if field.name != "company_name" and field.name != "company_type" and field.name != "plan" and field.name != "company" %}
                         <div class="form-group">
                             <label for="{{ field.id_for_label }}">
                                 <i class="fas fa-{% if field.name == 'phone_number' %}phone
@@ -365,6 +373,85 @@
                         {% if form.plan.errors %}
                             <div class="form-error">{{ form.plan.errors.0 }}</div>
                         {% endif %}
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>
+                            <i class="fas fa-users"></i> Maximum Customers
+                        </label>
+                        <input type="number" name="max_customers" class="form-control" 
+                               value="{{ form.max_customers.value|default:0 }}" 
+                               min="0" placeholder="0 = Unlimited">
+                        <small class="text-muted">Set to 0 for unlimited customers</small>
+                        {% if form.max_customers.errors %}
+                            <div class="form-error">{{ form.max_customers.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Feature Flags Section -->
+                <div style="margin-top: 1.5rem; padding: 1rem; background: #f8fafc; border-radius: var(--border-radius); border: 1px solid var(--light-gray);">
+                    <h4 style="margin-bottom: 1rem; color: var(--dark);">
+                        <i class="fas fa-cogs"></i> Branch Features
+                    </h4>
+                    <p style="font-size: 0.9rem; color: var(--gray); margin-bottom: 1rem;">
+                        Select which features this branch can access:
+                    </p>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <div class="form-check">
+                                <input type="checkbox" name="can_fixed_deposit" id="can_fixed_deposit" 
+                                       class="form-check-input" {% if form.can_fixed_deposit.value %}checked{% endif %}>
+                                <label for="can_fixed_deposit" class="form-check-label">
+                                    <i class="fas fa-piggy-bank"></i> Fixed Deposit
+                                </label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="form-check">
+                                <input type="checkbox" name="can_loans" id="can_loans" 
+                                       class="form-check-input" {% if form.can_loans.value %}checked{% endif %}>
+                                <label for="can_loans" class="form-check-label">
+                                    <i class="fas fa-hand-holding-usd"></i> Loans
+                                </label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="form-check">
+                                <input type="checkbox" name="can_transfers" id="can_transfers" 
+                                       class="form-check-input" {% if form.can_transfers.value %}checked{% endif %}>
+                                <label for="can_transfers" class="form-check-label">
+                                    <i class="fas fa-exchange-alt"></i> Fund Transfers
+                                </label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="form-check">
+                                <input type="checkbox" name="can_fixed_assets" id="can_fixed_assets" 
+                                       class="form-check-input" {% if form.can_fixed_assets.value %}checked{% endif %}>
+                                <label for="can_fixed_assets" class="form-check-label">
+                                    <i class="fas fa-building"></i> Fixed Assets
+                                </label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="form-check">
+                                <input type="checkbox" name="can_mobile_banking" id="can_mobile_banking" 
+                                       class="form-check-input" {% if form.can_mobile_banking.value %}checked{% endif %}>
+                                <label for="can_mobile_banking" class="form-check-label">
+                                    <i class="fas fa-mobile-alt"></i> Mobile Banking
+                                </label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="form-check">
+                                <input type="checkbox" name="can_sms_alerts" id="can_sms_alerts" 
+                                       class="form-check-input" {% if form.can_sms_alerts.value %}checked{% endif %}>
+                                <label for="can_sms_alerts" class="form-check-label">
+                                    <i class="fas fa-sms"></i> SMS Alerts
+                                </label>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

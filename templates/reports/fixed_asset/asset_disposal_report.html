@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Asset Disposal Report</h2>
+        <button onclick="window.print()" class="btn btn-primary">
+            <i class="fas fa-print"></i> Print Report
+        </button>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card bg-secondary text-white">
+                <div class="card-body">
+                    <h5>Total Disposed</h5>
+                    <h3>{{ disposal_count }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h5>Total Disposal Value</h5>
+                    <h3>{{ total_disposal_value|floatformat:2 }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Asset ID</th>
+                            <th>Asset Name</th>
+                            <th>Disposal Date</th>
+                            <th>Original Cost</th>
+                            <th>Disposal Price</th>
+                            <th>Gain/Loss</th>
+                            <th>Reason</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for d in disposals %}
+                        <tr>
+                            <td>{{ d.asset.asset_id }}</td>
+                            <td>{{ d.asset.asset_name }}</td>
+                            <td>{{ d.disposal_date }}</td>
+                            <td>{{ d.asset.asset_cost|floatformat:2 }}</td>
+                            <td>{{ d.disposal_price|floatformat:2 }}</td>
+                            <td class="{% if d.gain_or_loss >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                {{ d.gain_or_loss|floatformat:2 }}
+                            </td>
+                            <td>{{ d.disposal_reason|truncatechars:30 }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="7" class="text-center">No disposed assets found</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <a href="{% url 'fixed_asset_report' %}" class="btn btn-secondary mt-3">
+        <i class="fa fa-arrow-left"></i> Back
+    </a>
+</div>
+{% endblock %}

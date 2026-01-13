@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <h2>Delete Asset Type</h2>
+    
+    <div class="card">
+        <div class="card-body">
+            <div class="alert alert-danger">
+                Are you sure you want to delete asset type: <strong>{{ type.name }}</strong>?
+            </div>
+            <form method="POST">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">Yes, Delete</button>
+                <a href="{% url 'asset_type_list' %}" class="btn btn-secondary">Cancel</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

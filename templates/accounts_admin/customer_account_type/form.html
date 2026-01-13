@@ -1,0 +1,140 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="midde_cont">
+    <div class="container-fluid">
+        <div class="row column_title">
+            <div class="col-md-12">
+                <div class="page_title">
+                    <h2>{{ title }}</h2>
+                    <p>Select an account from Chart of Accounts to make available for customer account creation</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="row column1">
+            <div class="col-md-8">
+                <div class="white_shd full margin_bottom_30">
+                    <div class="full graph_head">
+                        <div class="heading1 margin_0">
+                            <h2>{{ title }}</h2>
+                        </div>
+                    </div>
+                    <div class="full price_table padding_infor_info">
+                        {% if messages %}
+                            {% for message in messages %}
+                                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+
+                        <form method="POST" class="needs-validation" novalidate>
+                            {% csrf_token %}
+                            
+                            <div class="form-group">
+                                <label for="id_account"><strong>Select Account from Chart of Accounts *</strong></label>
+                                {{ form.account }}
+                                <small class="form-text text-muted">
+                                    Choose which GL account should be available as an account type for customers
+                                </small>
+                                {% if form.account.errors %}
+                                    <div class="text-danger">{{ form.account.errors }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="form-group">
+                                <label for="id_display_name"><strong>Custom Display Name</strong></label>
+                                {{ form.display_name }}
+                                <small class="form-text text-muted">
+                                    Optional: Enter a custom name to show in dropdowns (e.g., "Savings Account" instead of GL Name)
+                                </small>
+                                {% if form.display_name.errors %}
+                                    <div class="text-danger">{{ form.display_name.errors }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="form-group">
+                                <label for="id_usage_type"><strong>Usage Type *</strong></label>
+                                {{ form.usage_type }}
+                                <small class="form-text text-muted">
+                                    <strong>New Customer Account:</strong> Shows when creating a new customer<br>
+                                    <strong>Additional Account:</strong> Shows when adding another account to existing customer<br>
+                                    <strong>Both:</strong> Shows in both scenarios
+                                </small>
+                                {% if form.usage_type.errors %}
+                                    <div class="text-danger">{{ form.usage_type.errors }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="form-group">
+                                <label for="id_sort_order"><strong>Sort Order</strong></label>
+                                {{ form.sort_order }}
+                                <small class="form-text text-muted">
+                                    Lower numbers appear first in dropdown lists (default: 0)
+                                </small>
+                                {% if form.sort_order.errors %}
+                                    <div class="text-danger">{{ form.sort_order.errors }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="form-group">
+                                <div class="form-check">
+                                    {{ form.is_active }}
+                                    <label class="form-check-label" for="id_is_active">
+                                        <strong>Active</strong> - Show this account type in dropdown menus
+                                    </label>
+                                </div>
+                            </div>
+
+                            <hr>
+                            
+                            <div class="form-group">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fa fa-save"></i> Save
+                                </button>
+                                <a href="{% url 'customer_account_type_list' %}" class="btn btn-secondary">
+                                    <i class="fa fa-arrow-left"></i> Back to List
+                                </a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="white_shd full margin_bottom_30">
+                    <div class="full graph_head">
+                        <div class="heading1 margin_0">
+                            <h2><i class="fa fa-info-circle"></i> Help</h2>
+                        </div>
+                    </div>
+                    <div class="full price_table padding_infor_info">
+                        <h5>How it works:</h5>
+                        <ol>
+                            <li>First create accounts in <strong>Chart of Accounts</strong></li>
+                            <li>Then add them here to make them <strong>selectable</strong> when creating customer accounts</li>
+                            <li>Only <strong>active</strong> account types will appear in dropdowns</li>
+                        </ol>
+                        
+                        <hr>
+                        
+                        <h5>Usage Types:</h5>
+                        <ul>
+                            <li><span class="badge badge-info">New Customer</span> - For first-time account opening</li>
+                            <li><span class="badge badge-warning">Additional</span> - For adding accounts to existing customers</li>
+                            <li><span class="badge badge-success">Both</span> - Available in both scenarios</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

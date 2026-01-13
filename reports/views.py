@@ -24,8 +24,8 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.views import View
 
 
-def generate_pdf(request, id):
-    customer = get_object_or_404(Loans, id=id)
+def generate_pdf(request, uuid):
+    customer = get_object_or_404(Loans, uuid=uuid)
 
     # Access the related Customer instance
     customers = customer.customer
@@ -76,8 +76,8 @@ from django.shortcuts import render, get_object_or_404
 from django.template.loader import render_to_string
 import os
 
-def generate_doc(request, id):
-    customer = get_object_or_404(Loans, id=id)
+def generate_doc(request, uuid):
+    customer = get_object_or_404(Loans, uuid=uuid)
 
     # Access the related Customer instance
     customers = customer.customer
@@ -137,8 +137,8 @@ from django.http import HttpResponse
 from io import BytesIO
 from django.template.loader import render_to_string
 
-def generate_excel(request, id):
-    customer = get_object_or_404(Loans, id=id)
+def generate_excel(request, uuid):
+    customer = get_object_or_404(Loans, uuid=uuid)
 
     # Access the related Customer instance
     customers = customer.customer
@@ -218,8 +218,8 @@ import csv
 from django.http import HttpResponse
 from io import StringIO
 
-def generate_csv(request, id):
-    customer = get_object_or_404(Loans, id=id)
+def generate_csv(request, uuid):
+    customer = get_object_or_404(Loans, uuid=uuid)
 
     # Access the related Customer instance
     customers = customer.customer
@@ -420,8 +420,12 @@ import os
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
 def generate_statement_view(request):
-    # ✅ Always use the logged-in user's branch
-    branch = Branch.objects.using('vendor_db').get(id=request.user.branch_id)
+    from accounts.utils import get_branch_from_vendor_db
+    # Get user's branch
+    branch = get_branch_from_vendor_db(request.user.branch_id)
+    if not branch:
+        return HttpResponse("No branch assigned to user.")
+    
     branch_date = branch.session_date.strftime('%Y-%m-%d') if branch.session_date else ''
 
     if branch.session_status == 'Closed':
@@ -611,8 +615,16 @@ def generate_trial_balance(start_date, end_date, branch_code=None):
 
 
 def trial_balance(request):
-    user_branch = request.user.branch  # assuming User has a branch FK
-    branches = Branch.objects.all() if user_branch.head_office else Branch.objects.filter(id=user_branch.id)
+    from accounts.utils import get_branch_from_vendor_db
+    user_branch = get_branch_from_vendor_db(request.user.branch_id)
+    if not user_branch:
+        messages.error(request, 'No branch assigned to user.')
+        return redirect('dashboard')
+    # Filter branches by company - head office sees all company branches, others see only their branch
+    if user_branch.head_office:
+        branches = Branch.objects.filter(company=user_branch.company)
+    else:
+        branches = Branch.objects.filter(id=user_branch.id)
     head_office = user_branch.head_office 
     if request.method == 'POST':
         form = TrialBalanceForm(request.POST)
@@ -927,8 +939,10 @@ def transaction_journal_listing_by_ses_date(request):
         user_obj = form.cleaned_data['user']
         code = form.cleaned_data['code']
 
-        # Base queryset
-        report_data = Memtrans.objects.all()
+        # Base queryset - filter by company branches
+        from accounts.utils import get_company_branch_ids
+        branch_ids = get_company_branch_ids(request.user)
+        report_data = Memtrans.all_objects.filter(branch_id__in=branch_ids)
 
         # Date filtering
         if start_date and end_date:
@@ -2109,7 +2123,8 @@ def all_customers_account_balances(request):
     grand_total = 0
 
     # ✅ Get user branch safely
-    user_branch = getattr(request.user, "branch", None) if request.user.is_authenticated else None
+    from accounts.utils import get_branch_from_vendor_db
+    user_branch = get_branch_from_vendor_db(request.user.branch_id) if request.user.is_authenticated else None
 
     # Defaults
     branches = []
@@ -2118,22 +2133,22 @@ def all_customers_account_balances(request):
     gl_accounts = []
     customers = Customer.objects.none()
 
-    # ✅ Handle branch access rules
+    # ✅ Handle branch access rules - filter by company
     if user_branch:
         if user_branch.head_office:
-            # Head office sees everything
-            branches = Branch.objects.all()
-            regions = Region.objects.all()
-            account_officers = Account_Officer.objects.all()
-            gl_accounts = Account.objects.all().distinct("gl_no")
-            customers = Customer.objects.all()
+            # Head office sees all branches in their company only
+            branches = Branch.objects.filter(company=user_branch.company)
+            regions = Region.objects.filter(branch__company=user_branch.company)
+            account_officers = Account_Officer.objects.filter(branch__company=user_branch.company)
+            gl_accounts = Account.all_objects.filter(branch__company=user_branch.company).distinct("gl_no")
+            customers = Customer.all_objects.filter(branch__company=user_branch.company)
         else:
             # Normal branch user sees only their branch
             branches = [user_branch]
             regions = Region.objects.filter(branch=user_branch)
             account_officers = Account_Officer.objects.filter(branch=user_branch)
-            gl_accounts = Account.objects.filter(branch=user_branch).distinct("gl_no")
-            customers = Customer.objects.filter(branch=user_branch)
+            gl_accounts = Account.all_objects.filter(branch=user_branch).distinct("gl_no")
+            customers = Customer.all_objects.filter(branch=user_branch)
 
     if request.method == "POST":
         reporting_date_str = request.POST.get("reporting_date")
@@ -2284,23 +2299,23 @@ def savings_transaction_report(request):
     if not user_branch:
         return render(request, 'error.html', {'message': 'User has no branch assigned.'})
     
-    user_company_name = user_branch.company_name
+    user_company = user_branch.company
     is_head_office = user_branch.head_office
 
     try:
-        # Initialize filter options based on head office or branch
+        # Initialize filter options based on head office or branch - use company FK
         if is_head_office:
-            branches = Branch.objects.filter(company_name=user_company_name).order_by('branch_name')
-            regions = Region.objects.filter(branch__company_name=user_company_name)
-            account_officers = Account_Officer.objects.filter(region__branch__company_name=user_company_name)
+            branches = Branch.objects.filter(company=user_company).order_by('branch_name')
+            regions = Region.objects.filter(branch__company=user_company)
+            account_officers = Account_Officer.objects.filter(region__branch__company=user_company)
         else:
             branches = Branch.objects.filter(id=user_branch.id)
             regions = Region.objects.filter(branch=user_branch)
             account_officers = Account_Officer.objects.filter(region__branch=user_branch)
         
         gl_accounts = Account.objects.filter(
-            gl_no__in=Customer.objects.filter(branch__company_name=user_company_name).values('gl_no').distinct(),
-            branch__company_name=user_company_name
+            gl_no__in=Customer.objects.filter(branch__company=user_company).values('gl_no').distinct(),
+            branch__company=user_company
         )
         current_datetime = timezone.now()
 
@@ -2530,13 +2545,13 @@ def savings_account_listing(request):
         start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date() if start_date_str else default_start_date
         end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date() if end_date_str else default_end_date
 
-        # ✅ Handle head office vs normal branch
+        # ✅ Handle head office vs normal branch - filter by company
         if user_branch and user_branch.head_office:
-            # Head office user → can see all customers
-            customers = Customer.objects.all()
+            # Head office user → can see all customers in their company
+            customers = Customer.all_objects.filter(branch__company=user_branch.company)
         elif user_branch:
             # Normal branch user → only customers in their branch
-            customers = Customer.objects.filter(branch=user_branch)
+            customers = Customer.all_objects.filter(branch=user_branch)
         else:
             customers = Customer.objects.none()
 
@@ -2626,15 +2641,15 @@ def savings_account_listing(request):
             customer_data[gl_no]["count"] += 1
             grand_total += total_balance
 
-    # Prepare dropdown data
+    # Prepare dropdown data - filter by company
     if user_branch and user_branch.head_office:
-        branches = Branch.objects.all()
-        gl_accounts = Account.objects.exclude(gl_no="").order_by("gl_no").distinct()
-        regions = Region.objects.all()
-        account_officers = Account_Officer.objects.all()
+        branches = Branch.objects.filter(company=user_branch.company)
+        gl_accounts = Account.all_objects.filter(branch__company=user_branch.company).exclude(gl_no="").order_by("gl_no").distinct()
+        regions = Region.objects.filter(branch__company=user_branch.company)
+        account_officers = Account_Officer.objects.filter(branch__company=user_branch.company)
     elif user_branch:
         branches = [user_branch]
-        gl_accounts = Account.objects.filter(branch=user_branch).exclude(gl_no="").order_by("gl_no").distinct()
+        gl_accounts = Account.all_objects.filter(branch=user_branch).exclude(gl_no="").order_by("gl_no").distinct()
         regions = Region.objects.filter(branch=user_branch)
         account_officers = Account_Officer.objects.filter(branch=user_branch)
     else:
@@ -2678,20 +2693,20 @@ def savings_account_status(request):
     except Branch.DoesNotExist:
         return render(request, 'error.html', {'message': 'User has no branch assigned.'})
 
-    user_company_name = user_branch.company_name
+    user_company = user_branch.company
 
-    # Determine accessible branches
+    # Determine accessible branches - use company FK not company_name
     if user_branch.head_office:
-        branches = Branch.objects.filter(company_name=user_company_name)
+        branches = Branch.objects.filter(company=user_company)
     else:
         branches = Branch.objects.filter(id=user_branch.id)
 
-    # Base querysets
-    gl_accounts = Account.objects.filter(branch__company_name=user_company_name)
-    customers = Customer.objects.filter(branch__company_name=user_company_name, label='C')
-    memtrans = Memtrans.objects.filter(branch__company_name=user_company_name)
-    regions = Region.objects.filter(branch__company_name=user_company_name)
-    account_officers = Account_Officer.objects.filter(region__branch__company_name=user_company_name)
+    # Base querysets - filter by company FK
+    gl_accounts = Account.objects.filter(branch__company=user_company)
+    customers = Customer.objects.filter(branch__company=user_company, label='C')
+    memtrans = Memtrans.objects.filter(branch__company=user_company)
+    regions = Region.objects.filter(branch__company=user_company)
+    account_officers = Account_Officer.objects.filter(region__branch__company=user_company)
 
     # Initialize context
     context = {
@@ -2817,15 +2832,18 @@ def savings_account_with_zero_balance(request):
     user_branch = getattr(user, 'branch', None)
     if not user_branch:
         return render(request, 'error.html', {'message': 'User has no branch assigned.'})
-    user_company_name = user_branch.company_name
+    user_company = user_branch.company
 
-    # Initialize filter options - filtered by company_name
-    branches = Branch.objects.filter(company_name=user_company_name)
-    regions = Region.objects.filter(branch__company_name=user_company_name)
-    account_officers = Account_Officer.objects.filter(region__branch__company_name=user_company_name)
+    # Initialize filter options - filtered by company (not company_name to avoid cross-company data)
+    if user_branch.head_office:
+        branches = Branch.objects.filter(company=user_company)
+    else:
+        branches = Branch.objects.filter(id=user_branch.id)
+    regions = Region.objects.filter(branch__company=user_company)
+    account_officers = Account_Officer.objects.filter(region__branch__company=user_company)
     gl_accounts = Account.objects.filter(
-        gl_no__in=Customer.objects.filter(branch__company_name=user_company_name).values('gl_no').distinct(),
-        branch__company_name=user_company_name
+        gl_no__in=Customer.objects.filter(branch__company=user_company).values('gl_no').distinct(),
+        branch__company=user_company
     )
     current_datetime = timezone.now()
 
@@ -3130,11 +3148,15 @@ def savings_account_overdrawn(request):
     except Exception as e:
         logger.error(f"Error in savings_account_overdrawn: {str(e)}", exc_info=True)
         messages.error(request, f"An error occurred: {str(e)}")
+        # Filter by company for error fallback
+        from accounts.utils import get_branch_from_vendor_db
+        err_user_branch = get_branch_from_vendor_db(request.user.branch_id)
+        err_company = err_user_branch.company if err_user_branch else None
         return render(request, 'reports/savings_report/savings_overdrawn_account_status.html', {
-            'branches': Branch.objects.all().order_by('branch_name'),
-            'regions': Region.objects.all(),
-            'account_officers': Account_Officer.objects.all(),
-            'gl_accounts': Account.objects.filter(gl_no__in=Customer.objects.values('gl_no').distinct()),
+            'branches': Branch.objects.filter(company=err_company).order_by('branch_name') if err_company else [],
+            'regions': Region.objects.filter(branch__company=err_company) if err_company else [],
+            'account_officers': Account_Officer.objects.filter(branch__company=err_company) if err_company else [],
+            'gl_accounts': Account.all_objects.filter(branch__company=err_company, gl_no__in=Customer.all_objects.filter(branch__company=err_company).values('gl_no').distinct()) if err_company else [],
             'customer_data': {},
             'grand_total': 0,
             'current_datetime': timezone.now(),
@@ -3159,23 +3181,23 @@ def savings_interest_paid(request):
     if not user_branch:
         return render(request, 'error.html', {'message': 'User has no branch assigned.'})
     
-    user_company_name = user_branch.company_name
+    user_company = user_branch.company
     is_head_office = user_branch.head_office
 
     try:
-        # Initialize filter options
+        # Initialize filter options - use company FK
         if is_head_office:
-            branches = Branch.objects.filter(company_name=user_company_name).order_by('branch_name')
-            regions = Region.objects.filter(branch__company_name=user_company_name)
-            account_officers = Account_Officer.objects.filter(region__branch__company_name=user_company_name)
+            branches = Branch.objects.filter(company=user_company).order_by('branch_name')
+            regions = Region.objects.filter(branch__company=user_company)
+            account_officers = Account_Officer.objects.filter(region__branch__company=user_company)
         else:
             branches = Branch.objects.filter(id=user_branch.id)
             regions = Region.objects.filter(branch=user_branch)
             account_officers = Account_Officer.objects.filter(region__branch=user_branch)
         
         gl_accounts = Account.objects.filter(
-            gl_no__in=Customer.objects.filter(branch__company_name=user_company_name).values('gl_no').distinct(),
-            branch__company_name=user_company_name
+            gl_no__in=Customer.objects.filter(branch__company=user_company).values('gl_no').distinct(),
+            branch__company=user_company
         )
 
         # Default values
@@ -3335,17 +3357,17 @@ def savings_account_credit_balance(request):
     user_branch = getattr(user, 'branch', None)
     if not user_branch:
         return render(request, 'error.html', {'message': 'User has no branch assigned.'})
-    user_company_name = user_branch.company_name
+    user_company = user_branch.company
 
     try:
         # Determine if user is head office
         is_head_office = user_branch.head_office
 
-        # Initialize filter options
+        # Initialize filter options - use company FK
         if is_head_office:
-            branches = Branch.objects.filter(company_name=user_company_name).order_by('branch_name')
-            regions = Region.objects.filter(branch__company_name=user_company_name)
-            account_officers = Account_Officer.objects.filter(region__branch__company_name=user_company_name)
+            branches = Branch.objects.filter(company=user_company).order_by('branch_name')
+            regions = Region.objects.filter(branch__company=user_company)
+            account_officers = Account_Officer.objects.filter(region__branch__company=user_company)
         else:
             # Non-head-office users: only their branch
             branches = Branch.objects.filter(id=user_branch.id)
@@ -3353,8 +3375,8 @@ def savings_account_credit_balance(request):
             account_officers = Account_Officer.objects.filter(region__branch=user_branch)
 
         gl_accounts = Account.objects.filter(
-            gl_no__in=Customer.objects.filter(branch__company_name=user_company_name).values('gl_no').distinct(),
-            branch__company_name=user_company_name
+            gl_no__in=Customer.objects.filter(branch__company=user_company).values('gl_no').distinct(),
+            branch__company=user_company
         )
         current_datetime = timezone.now()
 
@@ -3758,14 +3780,15 @@ def balance_sheet(request):
     # Determine if user is head office
     is_head_office = getattr(user_branch, 'head_office', False)
 
-    # Branch list: head office sees all, others see only their branch
+    # Branch list: head office sees all company branches, others see only their branch
     if is_head_office:
-        branches = Branch.objects.all().order_by('branch_name')
+        branches = Branch.objects.filter(company=user_branch.company).order_by('branch_name')
     else:
         branches = Branch.objects.filter(id=user_branch.id)
 
     if request.method == 'POST':
         form = TrialBalanceForm(request.POST)
+        form.fields['branch'].queryset = branches  # Filter branch choices
         if form.is_valid():
             start_date = form.cleaned_data['start_date']
             end_date = form.cleaned_data['end_date']
@@ -3806,6 +3829,7 @@ def balance_sheet(request):
 
     else:
         form = TrialBalanceForm()
+        form.fields['branch'].queryset = branches  # Filter branch choices
 
     return render(request, 'reports/financials/balance_sheet.html', {
         'form': form,
@@ -3894,10 +3918,20 @@ def generate_profit_and_loss(start_date, end_date, branch_code=None):
     return sorted_profit_and_loss_data, subtotal_4, subtotal_5, total_debit, total_credit, net_income
 
 def profit_and_loss(request):
-    branches = Branch.objects.all()  # Changed from Company to Branch
+    from accounts.utils import get_branch_from_vendor_db
+    user_branch = get_branch_from_vendor_db(request.user.branch_id)
+    if not user_branch:
+        messages.error(request, 'No branch assigned to user.')
+        return redirect('dashboard')
+    # Filter branches by company
+    if user_branch.head_office:
+        branches = Branch.objects.filter(company=user_branch.company)
+    else:
+        branches = Branch.objects.filter(id=user_branch.id)
 
     if request.method == 'POST':
         form = TrialBalanceForm(request.POST)
+        form.fields['branch'].queryset = branches  # Filter branch choices
         if form.is_valid():
             start_date = form.cleaned_data['start_date']
             end_date = form.cleaned_data['end_date']
@@ -3930,6 +3964,7 @@ def profit_and_loss(request):
             })
     else:
         form = TrialBalanceForm()
+        form.fields['branch'].queryset = branches  # Filter branch choices
 
     return render(request, 'reports/financials/profit_and_loss.html', {
         'form': form,
@@ -3990,12 +4025,23 @@ from django.shortcuts import render
 from django.db.models import Sum
 
 def loan_ledger_card_view(request):
-    branches = Branch.objects.all()
-    accounts = Account.objects.filter(gl_no__startswith="104")
+    from accounts.utils import get_branch_from_vendor_db
+    user_branch = get_branch_from_vendor_db(request.user.branch_id)
+    if not user_branch:
+        messages.error(request, 'No branch assigned to user.')
+        return redirect('dashboard')
+    # Filter branches by company
+    if user_branch.head_office:
+        branches = Branch.objects.filter(company=user_branch.company)
+    else:
+        branches = Branch.objects.filter(id=user_branch.id)
+    accounts = Account.all_objects.filter(branch__company=user_branch.company, gl_no__startswith="104")
     error_message = None
 
     if request.method == 'POST':
-        form = LoanLedgerCardForm(request.POST)  # ✅ no user_branch
+        form = LoanLedgerCardForm(request.POST)
+        form.fields['branch'].queryset = branches  # Filter branch choices
+        form.fields['account'].queryset = accounts  # Filter account choices
         if form.is_valid():
             branch = form.cleaned_data['branch']
             account = form.cleaned_data['account']
@@ -4071,6 +4117,8 @@ def loan_ledger_card_view(request):
 
     else:
         form = LoanLedgerCardForm()
+        form.fields['branch'].queryset = branches  # Filter branch choices
+        form.fields['account'].queryset = accounts  # Filter account choices
 
     return render(request, 'reports/loans/loan_ledger_card.html', {
         'form': form,
@@ -4112,10 +4160,18 @@ def loan_repayment_schedule(request):
       - computes grand totals and final balances
       - provides safe default values for form inputs (ac_no_value, cycle_value)
     """
+    from accounts.utils import get_branch_from_vendor_db
+    user_branch = get_branch_from_vendor_db(request.user.branch_id)
+    if not user_branch:
+        messages.error(request, 'No branch assigned to user.')
+        return redirect('dashboard')
 
-    # Basic lookups and safe defaults
-    branches = Branch.objects.all()
-    accounts = Account.objects.filter(gl_no__startswith="104")
+    # Basic lookups and safe defaults - filter by company
+    if user_branch.head_office:
+        branches = Branch.objects.filter(company=user_branch.company)
+    else:
+        branches = Branch.objects.filter(id=user_branch.id)
+    accounts = Account.all_objects.filter(branch__company=user_branch.company, gl_no__startswith="104")
     ledger_card = []
     error_message = None
     selected_branch = None
@@ -4154,6 +4210,8 @@ def loan_repayment_schedule(request):
 
     if request.method == "POST":
         form = LoanLedgerCardForm(request.POST)
+        form.fields['branch'].queryset = branches  # Filter branch choices
+        form.fields['account'].queryset = accounts  # Filter account choices
         if form.is_valid():
             branch = form.cleaned_data["branch"]
             account = form.cleaned_data["account"]
@@ -4269,6 +4327,8 @@ def loan_repayment_schedule(request):
     # Ensure form variable exists even for GET
     if request.method != "POST":
         form = LoanLedgerCardForm()
+        form.fields['branch'].queryset = branches  # Filter branch choices
+        form.fields['account'].queryset = accounts  # Filter account choices
 
     # Prepare context and render
     context = {
@@ -4332,23 +4392,31 @@ from company.models import Branch
 @login_required
 
 def loan_disbursement_report(request):
-    # Get current user's branch (default)
+    # Get current user's branch
     user_branch = request.user.branch
+    
+    if not user_branch:
+        messages.error(request, 'No branch assigned to user.')
+        return redirect('dashboard')
 
-    # Initialize form with user's branch
+    # Initialize form with user's branch for proper filtering
     form = LoanDisbursementReportForm(
         request.POST or None,
-        user_branch=None,   # 🔹 force form to load ALL branches
+        user_branch=user_branch,
         initial={'reporting_date': date.today()}
     )
 
 
-    # Initialize context
+    # Initialize context - filter by company
+    if user_branch.head_office:
+        ctx_branches = Branch.objects.filter(company=user_branch.company)
+    else:
+        ctx_branches = Branch.objects.filter(id=user_branch.id)
     context = {
         'form': form,
         'expected_repayments': [],
-        'branches': Branch.objects.all(),  # 🔹 allow all branches
-        'gl_accounts': Account.objects.filter(gl_no__startswith="104"), # 🔹 allow all accounts
+        'branches': ctx_branches,
+        'gl_accounts': Account.all_objects.filter(branch__company=user_branch.company, gl_no__startswith="104"),
         'current_date': timezone.now().strftime('%d/%m/%Y'),
         'reporting_date': None,
         'selected_branch': None,
@@ -4631,13 +4699,22 @@ from datetime import datetime, timedelta
 from django.utils.timezone import now
 
 @login_required
- # adjust imports as needed
-
 def repayment_since_disbursement_report(request):
-    user_branches = Branch.objects.filter(user=request.user)
+    from accounts.utils import get_branch_from_vendor_db
+    user_branch = get_branch_from_vendor_db(request.user.branch_id)
+    
+    if not user_branch:
+        from django.contrib import messages
+        messages.error(request, 'No branch assigned to user.')
+        return redirect('dashboard')
+    
+    # Filter branches by company - head office sees all, others see only their branch
+    if user_branch.head_office:
+        user_branches = Branch.objects.filter(company=user_branch.company)
+    else:
+        user_branches = Branch.objects.filter(id=user_branch.id)
 
-    # Assuming Account has a ForeignKey to Branch as 'branch', if not, adjust accordingly
-    user_gl_accounts = Account.objects.filter(branch__in=user_branches).distinct()
+    user_gl_accounts = Account.objects.filter(branch__company=user_branch.company).distinct()
 
     context = {
         'report_title': 'Repayment Since Disbursement',
@@ -4777,13 +4854,23 @@ from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from decimal import Decimal
 @login_required
-
 def loan_outstanding_balance(request):
+    from accounts.utils import get_branch_from_vendor_db
     user = request.user
-
-    user_company_names = Branch.objects.filter(user=user).values_list('company_name', flat=True).distinct()
-    branches = Branch.objects.filter(company_name__in=user_company_names)
-    gl_accounts = Account.objects.filter(branch__company_name__in=user_company_names)
+    user_branch = get_branch_from_vendor_db(user.branch_id)
+    
+    if not user_branch:
+        from django.contrib import messages
+        messages.error(request, 'No branch assigned to user.')
+        return redirect('dashboard')
+    
+    # Filter branches by company - head office sees all, others see only their branch
+    if user_branch.head_office:
+        branches = Branch.objects.filter(company=user_branch.company)
+    else:
+        branches = Branch.objects.filter(id=user_branch.id)
+    
+    gl_accounts = Account.objects.filter(branch__company=user_branch.company)
 
     outstanding_loans = []
     reporting_date = ''
@@ -4806,10 +4893,17 @@ def loan_outstanding_balance(request):
         selected_gl_no = request.POST.get('gl_no', '')
 
         if reporting_date:
-            loans = Loans.objects.filter(
-                disbursement_date__lte=reporting_date,
-                branch__company_name__in=user_company_names
-            )
+            # Filter loans by user's accessible branches
+            if user_branch.head_office:
+                loans = Loans.objects.filter(
+                    disbursement_date__lte=reporting_date,
+                    branch__company=user_branch.company
+                )
+            else:
+                loans = Loans.objects.filter(
+                    disbursement_date__lte=reporting_date,
+                    branch=user_branch
+                )
 
             if selected_branch:
                 branch_qs = branches.filter(id=selected_branch)
@@ -4921,6 +5015,8 @@ from django.utils import timezone
 
 
 def expected_repayment(request):
+    from accounts.utils import get_branch_from_vendor_db
+    
     # Initialize variables
     expected_repayments = []
     grand_total_repayment = 0
@@ -4932,10 +5028,19 @@ def expected_repayment(request):
     selected_gl_no = ''
 
     if request.user.is_authenticated:
-        # Get branches linked to the logged-in user
-        branches = Branch.objects.filter(user=request.user)
-        # Get accounts linked to those branches
-        gl_accounts = Account.objects.filter(branch__in=branches)
+        user_branch = get_branch_from_vendor_db(request.user.branch_id)
+        
+        if not user_branch:
+            messages.error(request, 'No branch assigned to user.')
+            return redirect('dashboard')
+        
+        # Filter branches by company - head office sees all, others see only their branch
+        if user_branch.head_office:
+            branches = Branch.objects.filter(company=user_branch.company)
+        else:
+            branches = Branch.objects.filter(id=user_branch.id)
+        
+        gl_accounts = Account.objects.filter(branch__company=user_branch.company)
     else:
         branches = Branch.objects.none()
         gl_accounts = Account.objects.none()
@@ -4956,8 +5061,11 @@ def expected_repayment(request):
         else:
             reporting_date = timezone.now().date()
 
-        # Filter loans disbursed on or before reporting_date
-        loans = Loans.objects.filter(disbursement_date__lte=reporting_date)
+        # Filter loans disbursed on or before reporting_date - only from user's branches
+        loans = Loans.objects.filter(
+            disbursement_date__lte=reporting_date,
+            branch__in=branches
+        )
 
         # Filter loans by selected branch if provided and the branch belongs to the user
         if selected_branch:
@@ -5068,9 +5176,18 @@ def active_loans_by_officer(request):
     reporting_date = ''
 
     # Fetch all options for dropdowns
-    officers = Account_Officer.objects.all()
-    branches = Branch.objects.all()
-    gl_accounts = Account.objects.all()  # Changed from products
+    from accounts.utils import get_branch_from_vendor_db
+    user_branch = get_branch_from_vendor_db(request.user.branch_id)
+    if not user_branch:
+        messages.error(request, 'No branch assigned to user.')
+        return redirect('dashboard')
+    # Filter by company
+    if user_branch.head_office:
+        branches = Branch.objects.filter(company=user_branch.company)
+    else:
+        branches = Branch.objects.filter(id=user_branch.id)
+    officers = Account_Officer.objects.filter(branch__company=user_branch.company)
+    gl_accounts = Account.all_objects.filter(branch__company=user_branch.company)
 
     if request.method == 'POST':
         # Get form data
@@ -5151,6 +5268,13 @@ from .forms import LoanTillSheetForm
 
 
 def loan_till_sheet(request):
+    from accounts.utils import get_branch_from_vendor_db
+    user_branch = get_branch_from_vendor_db(request.user.branch_id)
+    
+    if not user_branch:
+        messages.error(request, 'No branch assigned to user.')
+        return redirect('dashboard')
+    
     # Initialize variables
     repayments_with_percentage = []
     grand_total_principal = grand_total_interest = grand_total_penalty = total_paid_sum = 0
@@ -5158,8 +5282,8 @@ def loan_till_sheet(request):
     selected_branch = None
     selected_gl_no = None
 
-    # Initialize form
-    form = LoanTillSheetForm(request.POST or None)
+    # Initialize form with user_branch for proper filtering
+    form = LoanTillSheetForm(request.POST or None, user_branch=user_branch)
 
     if request.method == 'POST' and form.is_valid():
         try:
@@ -5169,8 +5293,11 @@ def loan_till_sheet(request):
             selected_branch = form.cleaned_data.get('branch')
             selected_gl_no = form.cleaned_data.get('gl_no')
 
-            # Fetch loans disbursed before or on the end date
-            loans = Loans.objects.filter(disbursement_date__lte=end_date) if end_date else Loans.objects.all()
+            # Fetch loans disbursed before or on the end date - filter by company
+            from accounts.utils import get_company_branch_ids
+            branch_ids = get_company_branch_ids(request.user)
+            base_loans = Loans.all_objects.filter(branch_id__in=branch_ids)
+            loans = base_loans.filter(disbursement_date__lte=end_date) if end_date else base_loans
             
             if selected_gl_no:
                 loans = loans.filter(gl_no=selected_gl_no.gl_no)
@@ -5255,6 +5382,13 @@ def loan_till_sheet(request):
 
 
 def loan_due_vs_repayment_report(request):
+    from accounts.utils import get_branch_from_vendor_db
+    user_branch = get_branch_from_vendor_db(request.user.branch_id)
+    
+    if not user_branch:
+        messages.error(request, 'No branch assigned to user.')
+        return redirect('dashboard')
+    
     # Initialize variables
     expected_repayments = []
     grand_totals = {
@@ -5283,8 +5417,17 @@ def loan_due_vs_repayment_report(request):
             except ValueError:
                 return HttpResponseBadRequest("Invalid date format. Please use YYYY-MM-DD.")
 
-        # Initialize queryset with filters
-        loans = Loans.objects.filter(disbursement_date__lte=reporting_date)
+        # Initialize queryset with filters - only user's company branches
+        if user_branch.head_office:
+            loans = Loans.objects.filter(
+                disbursement_date__lte=reporting_date,
+                branch__company=user_branch.company
+            )
+        else:
+            loans = Loans.objects.filter(
+                disbursement_date__lte=reporting_date,
+                branch=user_branch
+            )
         
         # Apply branch filter if provided
         if selected_branch:
@@ -5353,14 +5496,24 @@ def loan_due_vs_repayment_report(request):
                 'expected_interest_repayment': expected_interest_repayment,
             })
 
+    # Get branches filtered by company
+    from accounts.utils import get_branch_from_vendor_db
+    ctx_user_branch = get_branch_from_vendor_db(request.user.branch_id)
+    if ctx_user_branch and ctx_user_branch.head_office:
+        ctx_branches = Branch.objects.filter(company=ctx_user_branch.company)
+    elif ctx_user_branch:
+        ctx_branches = Branch.objects.filter(id=ctx_user_branch.id)
+    else:
+        ctx_branches = []
+    
     context = {
         'report_title': 'Loan Dues vs Repayment Report',
         'expected_repayments': expected_repayments if request.method == 'POST' else None,
         'grand_totals': grand_totals,
         'current_date': timezone.now(),
         'reporting_date': reporting_date,
-        'branches': Branch.objects.all(),
-        'gl_accounts': Account.objects.all(),
+        'branches': ctx_branches,
+        'gl_accounts': Account.all_objects.filter(branch__company=ctx_user_branch.company) if ctx_user_branch else [],
         'selected_branch': selected_branch,
         'selected_gl_no': selected_gl_no
     }
@@ -6193,9 +6346,17 @@ def export_statement_pdf(data):
     response['Content-Disposition'] = f'attachment; filename="statement_{data["ac_no"]}_{datetime.now().strftime("%Y%m%d")}.pdf"'
     
     try:
-        # Use WeasyPrint to generate PDF
-        html_doc = weasyprint.HTML(string=html_content)
-        html_doc.write_pdf(response)
+        # Use xhtml2pdf to generate PDF
+        from xhtml2pdf import pisa
+        from io import BytesIO
+        
+        result = BytesIO()
+        pdf = pisa.pisaDocument(BytesIO(html_content.encode("UTF-8")), result)
+        
+        if not pdf.err:
+            response.write(result.getvalue())
+        else:
+            response = HttpResponse(html_content, content_type='text/html')
     except Exception as e:
         # Fallback - return HTML if PDF generation fails
         response = HttpResponse(html_content, content_type='text/html')
@@ -6416,3 +6577,251 @@ def export_statement_csv(data):
     ])
     
     return response
+
+
+# ==================== FIXED DEPOSIT REPORTS ====================
+
+@login_required(login_url='login')
+@user_passes_test(check_role_admin)
+def fixed_deposit_report(request):
+    """Fixed Deposit Reports Dashboard"""
+    return render(request, 'reports/fixed_deposit/fixed_deposit_report.html')
+
+
+@login_required(login_url='login')
+@user_passes_test(check_role_admin)
+def fd_register_report(request):
+    """Fixed Deposit Register Report"""
+    from accounts.utils import get_company_branch_ids
+    from fixed_deposit.models import FixedDeposit
+    from django.db.models import Sum
+    from decimal import Decimal
+    
+    branch_ids = get_company_branch_ids(request.user)
+    
+    deposits = FixedDeposit.objects.filter(branch_id__in=branch_ids).select_related('customer', 'branch')
+    
+    active_deposits = deposits.filter(status='active')
+    matured_deposits = deposits.filter(status='matured')
+    closed_deposits = deposits.filter(status='closed')
+    
+    total_principal = active_deposits.aggregate(total=Sum('deposit_amount'))['total'] or Decimal('0')
+    total_interest = active_deposits.aggregate(total=Sum('interest_amount'))['total'] or Decimal('0')
+    
+    context = {
+        'deposits': deposits,
+        'active_deposits': active_deposits,
+        'matured_deposits': matured_deposits,
+        'closed_deposits': closed_deposits,
+        'total_principal': total_principal,
+        'total_interest': total_interest,
+        'active_count': active_deposits.count(),
+        'matured_count': matured_deposits.count(),
+        'closed_count': closed_deposits.count(),
+    }
+    return render(request, 'reports/fixed_deposit/fd_register_report.html', context)
+
+
+@login_required(login_url='login')
+@user_passes_test(check_role_admin)
+def fd_maturity_report(request):
+    """Fixed Deposits Maturing Soon Report"""
+    from accounts.utils import get_company_branch_ids
+    from fixed_deposit.models import FixedDeposit
+    from datetime import date, timedelta
+    
+    branch_ids = get_company_branch_ids(request.user)
+    today = date.today()
+    next_30_days = today + timedelta(days=30)
+    next_60_days = today + timedelta(days=60)
+    next_90_days = today + timedelta(days=90)
+    
+    maturing_30 = FixedDeposit.objects.filter(
+        branch_id__in=branch_ids, status='active',
+        maturity_date__gte=today, maturity_date__lte=next_30_days
+    ).select_related('customer')
+    
+    maturing_60 = FixedDeposit.objects.filter(
+        branch_id__in=branch_ids, status='active',
+        maturity_date__gt=next_30_days, maturity_date__lte=next_60_days
+    ).select_related('customer')
+    
+    maturing_90 = FixedDeposit.objects.filter(
+        branch_id__in=branch_ids, status='active',
+        maturity_date__gt=next_60_days, maturity_date__lte=next_90_days
+    ).select_related('customer')
+    
+    already_matured = FixedDeposit.objects.filter(
+        branch_id__in=branch_ids, status='active',
+        maturity_date__lt=today
+    ).select_related('customer')
+    
+    context = {
+        'maturing_30': maturing_30,
+        'maturing_60': maturing_60,
+        'maturing_90': maturing_90,
+        'already_matured': already_matured,
+        'today': today,
+    }
+    return render(request, 'reports/fixed_deposit/fd_maturity_report.html', context)
+
+
+@login_required(login_url='login')
+@user_passes_test(check_role_admin)
+def fd_interest_report(request):
+    """Fixed Deposit Interest Report"""
+    from accounts.utils import get_company_branch_ids
+    from fixed_deposit.models import FixedDeposit
+    from django.db.models import Sum
+    from decimal import Decimal
+    
+    branch_ids = get_company_branch_ids(request.user)
+    
+    deposits = FixedDeposit.objects.filter(
+        branch_id__in=branch_ids, status='active'
+    ).select_related('customer')
+    
+    total_accrued = Decimal('0')
+    for fd in deposits:
+        if hasattr(fd, 'calculate_accrued_interest'):
+            total_accrued += fd.calculate_accrued_interest() or Decimal('0')
+    
+    context = {
+        'deposits': deposits,
+        'total_accrued': total_accrued,
+    }
+    return render(request, 'reports/fixed_deposit/fd_interest_report.html', context)
+
+
+# ==================== FIXED ASSET REPORTS ====================
+
+@login_required(login_url='login')
+@user_passes_test(check_role_admin)
+def fixed_asset_report(request):
+    """Fixed Asset Reports Dashboard"""
+    return render(request, 'reports/fixed_asset/fixed_asset_report.html')
+
+
+@login_required(login_url='login')
+@user_passes_test(check_role_admin)
+def asset_register_report(request):
+    """Fixed Asset Register Report"""
+    from accounts.utils import get_company_branch_ids
+    from fixed_assets.models import FixedAsset
+    from django.db.models import Sum
+    from decimal import Decimal
+    
+    branch_ids = get_company_branch_ids(request.user)
+    assets = FixedAsset.objects.filter(branch_id__in=branch_ids).select_related(
+        'asset_type', 'asset_group', 'branch', 'department', 'officer', 'asset_location'
+    )
+    
+    total_cost = assets.aggregate(total=Sum('asset_cost'))['total'] or Decimal('0')
+    total_depreciation = assets.aggregate(total=Sum('total_depreciation'))['total'] or Decimal('0')
+    total_nbv = total_cost - total_depreciation
+    
+    active_assets = assets.filter(is_disposed=False)
+    disposed_assets = assets.filter(is_disposed=True)
+    
+    by_type = {}
+    for asset in active_assets:
+        type_name = asset.asset_type.name
+        if type_name not in by_type:
+            by_type[type_name] = {'count': 0, 'cost': Decimal('0'), 'nbv': Decimal('0')}
+        by_type[type_name]['count'] += 1
+        by_type[type_name]['cost'] += asset.asset_cost
+        by_type[type_name]['nbv'] += asset.net_book_value
+    
+    context = {
+        'assets': active_assets,
+        'disposed_assets': disposed_assets,
+        'total_cost': total_cost,
+        'total_depreciation': total_depreciation,
+        'total_nbv': total_nbv,
+        'by_type': by_type,
+        'active_count': active_assets.count(),
+        'disposed_count': disposed_assets.count(),
+    }
+    return render(request, 'reports/fixed_asset/asset_register_report.html', context)
+
+
+@login_required(login_url='login')
+@user_passes_test(check_role_admin)
+def asset_depreciation_schedule(request):
+    """Asset Depreciation Schedule Report"""
+    from accounts.utils import get_company_branch_ids
+    from fixed_assets.models import FixedAsset
+    from datetime import date
+    from dateutil.relativedelta import relativedelta
+    from decimal import Decimal
+    
+    branch_ids = get_company_branch_ids(request.user)
+    assets = FixedAsset.objects.filter(branch_id__in=branch_ids, is_disposed=False)
+    
+    schedule = []
+    for asset in assets:
+        if asset.asset_life_months <= 0:
+            continue
+            
+        monthly_dep = (asset.asset_cost - asset.residual_value) / Decimal(asset.asset_life_months)
+        remaining_life = max(0, asset.asset_life_months - int(asset.total_depreciation / monthly_dep) if monthly_dep > 0 else 0)
+        
+        projections = []
+        current_nbv = asset.net_book_value
+        current_date = date.today()
+        
+        for i in range(min(12, remaining_life)):
+            if current_nbv <= asset.residual_value:
+                break
+            dep_amount = min(monthly_dep, current_nbv - asset.residual_value)
+            current_nbv -= dep_amount
+            
+            if asset.depreciation_frequency == '12':
+                period_date = current_date + relativedelta(months=i+1)
+            elif asset.depreciation_frequency == '4':
+                period_date = current_date + relativedelta(months=(i+1)*3)
+            elif asset.depreciation_frequency == '2':
+                period_date = current_date + relativedelta(months=(i+1)*6)
+            else:
+                period_date = current_date + relativedelta(years=i+1)
+            
+            projections.append({
+                'period': i + 1,
+                'date': period_date,
+                'depreciation': dep_amount,
+                'nbv': current_nbv,
+            })
+        
+        schedule.append({
+            'asset': asset,
+            'monthly_depreciation': monthly_dep,
+            'remaining_life': remaining_life,
+            'projections': projections,
+        })
+    
+    return render(request, 'reports/fixed_asset/asset_depreciation_schedule.html', {'schedule': schedule})
+
+
+@login_required(login_url='login')
+@user_passes_test(check_role_admin)
+def asset_disposal_report(request):
+    """Disposed Assets Report"""
+    from accounts.utils import get_company_branch_ids
+    from fixed_assets.models import FixedAsset, AssetDisposal
+    from django.db.models import Sum
+    from decimal import Decimal
+    
+    branch_ids = get_company_branch_ids(request.user)
+    
+    disposals = AssetDisposal.objects.filter(
+        asset__branch_id__in=branch_ids
+    ).select_related('asset')
+    
+    total_disposal_value = disposals.aggregate(total=Sum('disposal_price'))['total'] or Decimal('0')
+    
+    context = {
+        'disposals': disposals,
+        'total_disposal_value': total_disposal_value,
+        'disposal_count': disposals.count(),
+    }
+    return render(request, 'reports/fixed_asset/asset_disposal_report.html', context)

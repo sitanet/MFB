@@ -5,11 +5,12 @@ These models are stored in the VENDOR database and contain
 only basic company/branch structure controlled by the software vendor.
 """
 
+import uuid
 from django.utils import timezone
 from django.db import models
 from django.conf import settings
-from django.contrib.auth.models import User
-from django.db import models
+from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
+from django.contrib.auth.hashers import make_password, check_password
 from django.utils.timezone import now
 
 class Company(models.Model):
@@ -19,6 +20,7 @@ class Company(models.Model):
     This model is controlled by the software vendor and contains
     basic company structure and licensing information.
     """
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     company_name = models.CharField(max_length=100, null=True, blank=True)
     contact_person = models.CharField(max_length=100)
     office_address = models.CharField(max_length=100)
@@ -77,6 +79,7 @@ class Branch(models.Model):
     This model is controlled by the software vendor and contains
     branch structure and subscription plans.
     """
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     PLAN_CHOICES = [
         ("Starter", "Starter"),
         ("Basic", "Basic"),
@@ -109,6 +112,40 @@ class Branch(models.Model):
     system_date_date = models.DateField(null=True, blank=True)
     session_status = models.CharField(max_length=10, null=True, blank=True)
     expire_date = models.DateField(null=True, blank=True)
+    is_active = models.BooleanField(default=True, help_text="Uncheck to deactivate branch when subscription is not made")
+    
+    # Customer limit - set by vendor during branch registration
+    max_customers = models.PositiveIntegerField(
+        default=0,
+        help_text="Maximum number of customers this branch can create. 0 = unlimited."
+    )
+    
+    # Feature flags - enable/disable features per branch
+    can_fixed_deposit = models.BooleanField(
+        default=True, 
+        help_text="Enable Fixed Deposit feature for this branch"
+    )
+    can_loans = models.BooleanField(
+        default=True, 
+        help_text="Enable Loans feature for this branch"
+    )
+    can_transfers = models.BooleanField(
+        default=True, 
+        help_text="Enable Fund Transfers feature for this branch"
+    )
+    can_fixed_assets = models.BooleanField(
+        default=True, 
+        help_text="Enable Fixed Assets feature for this branch"
+    )
+    can_mobile_banking = models.BooleanField(
+        default=False, 
+        help_text="Enable Mobile Banking feature for this branch"
+    )
+    can_sms_alerts = models.BooleanField(
+        default=False, 
+        help_text="Enable SMS Alerts feature for this branch"
+    )
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -125,6 +162,23 @@ class Branch(models.Model):
 
     def __str__(self):
         return f"{self.company_name} - {self.branch_name} - {self.plan}"
+    
+    def get_customer_count(self):
+        """Get current number of customers in this branch"""
+        from customers.models import Customer
+        return Customer.objects.filter(branch_id=self.id).count()
+    
+    def can_add_customer(self):
+        """Check if branch can add more customers based on limit"""
+        if self.max_customers == 0:  # 0 = unlimited
+            return True
+        return self.get_customer_count() < self.max_customers
+    
+    def remaining_customer_slots(self):
+        """Get number of remaining customer slots"""
+        if self.max_customers == 0:
+            return None  # Unlimited
+        return max(0, self.max_customers - self.get_customer_count())
 
 
 class SmsDelivery(models.Model):
@@ -134,6 +188,7 @@ class SmsDelivery(models.Model):
     This model references Branch but is stored in client database.
     Uses branch_id to reference branch in vendor database.
     """
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     STATUS_CHOICES = [
         ('pending', 'Pending'),
         ('sent', 'Sent'),
@@ -168,3 +223,81 @@ class SmsDelivery(models.Model):
     
     def __str__(self):
         return f"SMS to {self.phone_number} ({self.status})"
+
+
+# ==================== VENDOR USER AUTHENTICATION ====================
+
+class VendorUserManager(BaseUserManager):
+    """
+    Custom manager for VendorUser model.
+    Handles vendor-level user creation for software vendor management.
+    """
+    
+    def create_user(self, email, username, password=None, **extra_fields):
+        if not email:
+            raise ValueError('Vendor user must have an email address')
+        if not username:
+            raise ValueError('Vendor user must have a username')
+        
+        email = self.normalize_email(email)
+        user = self.model(email=email, username=username, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+    
+    def create_superuser(self, email, username, password=None, **extra_fields):
+        extra_fields.setdefault('is_active', True)
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_supervendor', True)
+        
+        return self.create_user(email, username, password, **extra_fields)
+
+
+class VendorUser(AbstractBaseUser):
+    """
+    Vendor User model - Stored in VENDOR database
+    
+    This model is used for software vendor authentication.
+    Completely separate from client User model.
+    Vendor users can manage all companies and branches.
+    """
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    email = models.EmailField(max_length=255, unique=True)
+    username = models.CharField(max_length=50, unique=True)
+    first_name = models.CharField(max_length=50)
+    last_name = models.CharField(max_length=50)
+    phone_number = models.CharField(max_length=20, blank=True, null=True)
+    
+    # Permissions
+    is_active = models.BooleanField(default=True)
+    is_staff = models.BooleanField(default=False)
+    is_supervendor = models.BooleanField(default=False, help_text="Super vendor has full access to all vendor operations")
+    
+    # Timestamps
+    date_joined = models.DateTimeField(auto_now_add=True)
+    last_login = models.DateTimeField(auto_now=True)
+    
+    objects = VendorUserManager()
+    
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ['username', 'first_name', 'last_name']
+    
+    class Meta:
+        app_label = 'company'
+        verbose_name = 'Vendor User'
+        verbose_name_plural = 'Vendor Users'
+    
+    def __str__(self):
+        return f"{self.first_name} {self.last_name} ({self.email})"
+    
+    def get_full_name(self):
+        return f"{self.first_name} {self.last_name}"
+    
+    def get_short_name(self):
+        return self.first_name
+    
+    def has_perm(self, perm, obj=None):
+        return self.is_supervendor
+    
+    def has_module_perms(self, app_label):
+        return self.is_supervendor

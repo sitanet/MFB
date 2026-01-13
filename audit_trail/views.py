@@ -11,17 +11,23 @@ import json
 import csv
 from .models import AuditTrail, AuditConfiguration, AuditAlert, AuditStatistics, AuditAction, AuditCategory
 from .utils import format_currency, create_audit_log
+from accounts.utils import get_company_branch_ids_all
 
 @login_required
 def audit_dashboard(request):
-    """Main audit trail dashboard"""
+    """Main audit trail dashboard - filtered by user's company (all branches)"""
     
-    # Get recent audit trails (last 50)
-    recent_audits = AuditTrail.objects.select_related('user').order_by('-timestamp')[:50]
+    # Get all branch IDs belonging to user's company
+    company_branch_ids = get_company_branch_ids_all(request.user)
     
-    # Get statistics for today
+    # Get recent audit trails (last 50) - filtered by company branches
+    recent_audits = AuditTrail.objects.select_related('user').filter(
+        branch_id__in=company_branch_ids
+    ).order_by('-timestamp')[:50]
+    
+    # Get statistics for today - filtered by company branches
     today = timezone.now().date()
-    today_stats = AuditTrail.objects.filter(timestamp__date=today)
+    today_stats = AuditTrail.objects.filter(timestamp__date=today, branch_id__in=company_branch_ids)
     
     stats = {
         'today_total': today_stats.count(),
@@ -30,9 +36,9 @@ def audit_dashboard(request):
         'today_transactions': today_stats.filter(category=AuditCategory.TRANSACTION).count(),
     }
     
-    # Get top users by activity
+    # Get top users by activity - filtered by company branches
     top_users = (AuditTrail.objects
-                .filter(timestamp__date=today)
+                .filter(timestamp__date=today, branch_id__in=company_branch_ids)
                 .values('user__first_name', 'user__last_name', 'user__email', 'user__username')
                 .annotate(activity_count=Count('id'))
                 .order_by('-activity_count')[:10])
@@ -69,7 +75,10 @@ def audit_dashboard(request):
 
 @login_required
 def audit_list(request):
-    """List all audit trails with filtering and pagination"""
+    """List all audit trails with filtering and pagination - filtered by user's company (all branches)"""
+    
+    # Get all branch IDs belonging to user's company
+    company_branch_ids = get_company_branch_ids_all(request.user)
     
     # Get filter parameters
     user_filter = request.GET.get('user', '')
@@ -80,8 +89,10 @@ def audit_list(request):
     search = request.GET.get('search', '')
     success_filter = request.GET.get('success', '')
     
-    # Build query
-    audit_trails = AuditTrail.objects.select_related('user').order_by('-timestamp')
+    # Build query - filtered by company branches
+    audit_trails = AuditTrail.objects.select_related('user').filter(
+        branch_id__in=company_branch_ids
+    ).order_by('-timestamp')
     
     # Apply filters
     if user_filter:
@@ -126,10 +137,13 @@ def audit_list(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
-    # Get filter choices
+    # Get filter choices - users from all company branches
     from django.contrib.auth import get_user_model
     User = get_user_model()
-    users = User.objects.filter(audittrail__isnull=False).distinct().order_by('first_name', 'last_name')
+    users = User.objects.filter(
+        audittrail__isnull=False,
+        branch_id__in=company_branch_ids
+    ).distinct().order_by('first_name', 'last_name')
     
     # Format users for dropdown
     formatted_users = []
@@ -161,9 +175,13 @@ def audit_list(request):
 
 @login_required
 def audit_detail(request, audit_id):
-    """View detailed audit trail entry"""
+    """View detailed audit trail entry - restricted to user's company branches"""
     
-    audit = get_object_or_404(AuditTrail, id=audit_id)
+    # Get all branch IDs belonging to user's company
+    company_branch_ids = get_company_branch_ids_all(request.user)
+    
+    # Only allow viewing audit logs from the same company
+    audit = get_object_or_404(AuditTrail, id=audit_id, branch_id__in=company_branch_ids)
     
     # Get related audit entries (same user, similar time)
     time_window = timedelta(minutes=5)
@@ -184,7 +202,10 @@ def audit_detail(request, audit_id):
 
 @login_required
 def audit_statistics(request):
-    """Audit trail statistics and reports"""
+    """Audit trail statistics and reports - filtered by user's company (all branches)"""
+    
+    # Get all branch IDs belonging to user's company
+    company_branch_ids = get_company_branch_ids_all(request.user)
     
     # Get date range
     end_date = timezone.now().date()
@@ -195,23 +216,23 @@ def audit_statistics(request):
         date__range=(start_date, end_date)
     ).order_by('date')
     
-    # Category breakdown for the period
+    # Category breakdown for the period - filtered by company branches
     category_breakdown = (AuditTrail.objects
-                         .filter(timestamp__date__range=(start_date, end_date))
+                         .filter(timestamp__date__range=(start_date, end_date), branch_id__in=company_branch_ids)
                          .values('category')
                          .annotate(count=Count('id'))
                          .order_by('-count'))
     
-    # Action breakdown
+    # Action breakdown - filtered by company branches
     action_breakdown = (AuditTrail.objects
-                       .filter(timestamp__date__range=(start_date, end_date))
+                       .filter(timestamp__date__range=(start_date, end_date), branch_id__in=company_branch_ids)
                        .values('action')
                        .annotate(count=Count('id'))
                        .order_by('-count'))
     
-    # User activity
+    # User activity - filtered by company branches
     user_activity = (AuditTrail.objects
-                    .filter(timestamp__date__range=(start_date, end_date))
+                    .filter(timestamp__date__range=(start_date, end_date), branch_id__in=company_branch_ids)
                     .values('user__first_name', 'user__last_name', 'user__email', 'user__username')
                     .annotate(activity_count=Count('id'))
                     .order_by('-activity_count')[:20])
@@ -227,9 +248,9 @@ def audit_statistics(request):
             'activity_count': user['activity_count']
         })
     
-    # Failed attempts
+    # Failed attempts - filtered by company branches
     failed_attempts = (AuditTrail.objects
-                      .filter(timestamp__date__range=(start_date, end_date), success=False)
+                      .filter(timestamp__date__range=(start_date, end_date), success=False, branch_id__in=company_branch_ids)
                       .values('action', 'category')
                       .annotate(count=Count('id'))
                       .order_by('-count')[:10])
@@ -311,10 +332,15 @@ def audit_configuration(request):
 
 @login_required
 def export_audit_csv(request):
-    """Export audit trails to CSV"""
+    """Export audit trails to CSV - filtered by user's company (all branches)"""
     
-    # Apply same filters as list view
-    audit_trails = AuditTrail.objects.select_related('user').order_by('-timestamp')
+    # Get all branch IDs belonging to user's company
+    company_branch_ids = get_company_branch_ids_all(request.user)
+    
+    # Apply same filters as list view - filtered by company branches
+    audit_trails = AuditTrail.objects.select_related('user').filter(
+        branch_id__in=company_branch_ids
+    ).order_by('-timestamp')
     
     # Apply filters from GET parameters
     user_filter = request.GET.get('user', '')

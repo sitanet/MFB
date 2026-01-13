@@ -71,7 +71,7 @@
                                 <td>{{ disbursement.reversal_date }}</td>
                                 <td>{{ disbursement.trx_no }}</td>
                                 <td>
-                                    <form action="{% url 'delete_loan_transactions' disbursement.trx_no disbursement.id %}" method="post" style="display:inline;">
+                                    <form action="{% url 'delete_loan_transactions' disbursement.trx_no disbursement.uuid %}" method="post" style="display:inline;">
                                         {% csrf_token %}
                                         <input 
     type="date" 

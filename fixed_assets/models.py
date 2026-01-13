@@ -1,9 +1,12 @@
+import uuid
 from django.db import models
 from accounts_admin.models import Account
 from datetime import date, timedelta
 from decimal import Decimal
+from profit_solutions.tenant_managers import TenantManager
 
 class AssetType(models.Model):
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     name = models.CharField(max_length=100, unique=True)
 
     def __str__(self):
@@ -11,6 +14,7 @@ class AssetType(models.Model):
 
 
 class AssetGroup(models.Model):
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     name = models.CharField(max_length=100, unique=True)
 
     def __str__(self):
@@ -18,6 +22,7 @@ class AssetGroup(models.Model):
 
 
 class AssetClass(models.Model):
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     name = models.CharField(max_length=20, unique=True)
 
     def __str__(self):
@@ -25,6 +30,7 @@ class AssetClass(models.Model):
 
 
 class AssetLocation(models.Model):
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     name = models.CharField(max_length=255, unique=True)
 
     def __str__(self):
@@ -32,6 +38,7 @@ class AssetLocation(models.Model):
 
 
 class Department(models.Model):
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     name = models.CharField(max_length=100, unique=True)
 
     def __str__(self):
@@ -39,6 +46,7 @@ class Department(models.Model):
 
 
 class Officer(models.Model):
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     name = models.CharField(max_length=100, unique=True)
 
     def __str__(self):
@@ -46,6 +54,7 @@ class Officer(models.Model):
 
 
 class DepreciationMethod(models.Model):
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     method = models.CharField(max_length=50, unique=True)
 
     def __str__(self):
@@ -69,6 +78,7 @@ from accounts_admin.models import Account
 from .models import AssetType, AssetGroup, AssetClass, AssetLocation, Department, Officer, DepreciationMethod
 
 class FixedAsset(models.Model):
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     DEPRECIATION_FREQUENCY_CHOICES = [
         ('12', 'Monthly'),
         ('4', 'Quarterly'),
@@ -141,6 +151,10 @@ class FixedAsset(models.Model):
             raise ValidationError("Cannot manually set asset as disposed.")
         super().save(*args, **kwargs)
 
+    # Tenant-aware manager
+    objects = TenantManager()
+    all_objects = models.Manager()
+
     def __str__(self):
         return f"{self.asset_id} - {self.asset_name} ({self.asset_type}) (Disposed: {self.is_disposed})"
 
@@ -148,6 +162,7 @@ class FixedAsset(models.Model):
 
 from django.utils.timezone import now
 class AssetRevaluation(models.Model):
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     asset = models.ForeignKey(FixedAsset, on_delete=models.CASCADE, related_name="revaluations")
     previous_value = models.DecimalField(max_digits=15, decimal_places=2)
     new_value = models.DecimalField(max_digits=15, decimal_places=2)
@@ -171,6 +186,7 @@ class AssetRevaluation(models.Model):
 
 
 class AssetTransaction(models.Model):
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     # Transaction Details
     asset = models.ForeignKey(FixedAsset, on_delete=models.CASCADE, related_name="transactions")
     transaction_date = models.DateField()
@@ -190,6 +206,7 @@ from django.utils import timezone
 from decimal import Decimal
 
 class AssetDisposal(models.Model):
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     asset = models.OneToOneField("FixedAsset", on_delete=models.CASCADE, related_name="disposal")
     disposal_date = models.DateField(default=timezone.now)
     disposal_price = models.DecimalField(max_digits=15, decimal_places=2)
@@ -225,3 +242,202 @@ class AssetDisposal(models.Model):
 
     def __str__(self):
         return f"Disposal of {self.asset.asset_name} on {self.disposal_date} (Gain/Loss: {self.gain_or_loss})"
+
+
+class AssetTransfer(models.Model):
+    """Track asset transfers between branches, departments, locations, or officers"""
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    asset = models.ForeignKey("FixedAsset", on_delete=models.CASCADE, related_name="transfers")
+    transfer_date = models.DateField(default=timezone.now)
+    
+    # From
+    from_branch = models.ForeignKey(Branch, on_delete=models.PROTECT, related_name="transfers_out", null=True, blank=True)
+    from_department = models.ForeignKey(Department, on_delete=models.PROTECT, related_name="transfers_out", null=True, blank=True)
+    from_location = models.ForeignKey(AssetLocation, on_delete=models.PROTECT, related_name="transfers_out", null=True, blank=True)
+    from_officer = models.ForeignKey(Officer, on_delete=models.PROTECT, related_name="transfers_out", null=True, blank=True)
+    
+    # To
+    to_branch = models.ForeignKey(Branch, on_delete=models.PROTECT, related_name="transfers_in", null=True, blank=True)
+    to_department = models.ForeignKey(Department, on_delete=models.PROTECT, related_name="transfers_in", null=True, blank=True)
+    to_location = models.ForeignKey(AssetLocation, on_delete=models.PROTECT, related_name="transfers_in", null=True, blank=True)
+    to_officer = models.ForeignKey(Officer, on_delete=models.PROTECT, related_name="transfers_in", null=True, blank=True)
+    
+    reason = models.TextField(blank=True, null=True)
+    approved_by = models.CharField(max_length=100, blank=True, null=True)
+    transfer_document = models.FileField(upload_to='asset_transfers/', blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def save(self, *args, **kwargs):
+        # Update asset with new values
+        if self.to_branch:
+            self.asset.branch = self.to_branch
+        if self.to_department:
+            self.asset.department = self.to_department
+        if self.to_location:
+            self.asset.asset_location = self.to_location
+        if self.to_officer:
+            self.asset.officer = self.to_officer
+        self.asset.save()
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"Transfer of {self.asset.asset_name} on {self.transfer_date}"
+
+
+class AssetImpairment(models.Model):
+    """Track asset impairments (write-downs in value)"""
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    asset = models.ForeignKey("FixedAsset", on_delete=models.CASCADE, related_name="impairments")
+    impairment_date = models.DateField(default=timezone.now)
+    previous_nbv = models.DecimalField(max_digits=15, decimal_places=2)
+    impairment_loss = models.DecimalField(max_digits=15, decimal_places=2)
+    new_nbv = models.DecimalField(max_digits=15, decimal_places=2)
+    reason = models.TextField()
+    approved_by = models.CharField(max_length=100, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def save(self, *args, **kwargs):
+        # Update asset total_depreciation to reflect impairment
+        self.asset.total_depreciation += self.impairment_loss
+        self.asset.save()
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"Impairment of {self.asset.asset_name}: {self.impairment_loss}"
+
+
+class AssetInsurance(models.Model):
+    """Track insurance policies for assets"""
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    asset = models.ForeignKey("FixedAsset", on_delete=models.CASCADE, related_name="insurances")
+    policy_number = models.CharField(max_length=100)
+    insurance_company = models.CharField(max_length=200)
+    coverage_type = models.CharField(max_length=100, choices=[
+        ('comprehensive', 'Comprehensive'),
+        ('fire', 'Fire'),
+        ('theft', 'Theft'),
+        ('all_risk', 'All Risk'),
+        ('other', 'Other'),
+    ])
+    coverage_amount = models.DecimalField(max_digits=15, decimal_places=2)
+    premium_amount = models.DecimalField(max_digits=15, decimal_places=2)
+    start_date = models.DateField()
+    expiry_date = models.DateField()
+    is_active = models.BooleanField(default=True)
+    contact_person = models.CharField(max_length=100, blank=True, null=True)
+    contact_phone = models.CharField(max_length=20, blank=True, null=True)
+    notes = models.TextField(blank=True, null=True)
+    policy_document = models.FileField(upload_to='asset_insurance/', blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f"Insurance {self.policy_number} for {self.asset.asset_name}"
+    
+    @property
+    def is_expired(self):
+        return date.today() > self.expiry_date
+    
+    @property
+    def days_to_expiry(self):
+        return (self.expiry_date - date.today()).days
+
+
+class AssetMaintenance(models.Model):
+    """Track maintenance and service records for assets"""
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    asset = models.ForeignKey("FixedAsset", on_delete=models.CASCADE, related_name="maintenances")
+    maintenance_type = models.CharField(max_length=50, choices=[
+        ('preventive', 'Preventive Maintenance'),
+        ('corrective', 'Corrective Maintenance'),
+        ('emergency', 'Emergency Repair'),
+        ('upgrade', 'Upgrade/Enhancement'),
+        ('inspection', 'Inspection'),
+        ('calibration', 'Calibration'),
+    ])
+    maintenance_date = models.DateField()
+    next_maintenance_date = models.DateField(blank=True, null=True)
+    description = models.TextField()
+    performed_by = models.CharField(max_length=200)  # Vendor or internal staff
+    cost = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal('0.00'))
+    parts_replaced = models.TextField(blank=True, null=True)
+    status = models.CharField(max_length=20, choices=[
+        ('scheduled', 'Scheduled'),
+        ('in_progress', 'In Progress'),
+        ('completed', 'Completed'),
+        ('cancelled', 'Cancelled'),
+    ], default='completed')
+    invoice_number = models.CharField(max_length=50, blank=True, null=True)
+    notes = models.TextField(blank=True, null=True)
+    document = models.FileField(upload_to='asset_maintenance/', blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-maintenance_date']
+    
+    def __str__(self):
+        return f"{self.get_maintenance_type_display()} for {self.asset.asset_name} on {self.maintenance_date}"
+
+
+class AssetWarranty(models.Model):
+    """Track warranty information for assets"""
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    asset = models.ForeignKey("FixedAsset", on_delete=models.CASCADE, related_name="warranties")
+    warranty_provider = models.CharField(max_length=200)
+    warranty_type = models.CharField(max_length=50, choices=[
+        ('manufacturer', 'Manufacturer Warranty'),
+        ('extended', 'Extended Warranty'),
+        ('service', 'Service Contract'),
+        ('parts', 'Parts Warranty'),
+    ])
+    start_date = models.DateField()
+    expiry_date = models.DateField()
+    coverage_details = models.TextField()
+    terms_and_conditions = models.TextField(blank=True, null=True)
+    contact_person = models.CharField(max_length=100, blank=True, null=True)
+    contact_phone = models.CharField(max_length=20, blank=True, null=True)
+    contact_email = models.EmailField(blank=True, null=True)
+    is_active = models.BooleanField(default=True)
+    warranty_document = models.FileField(upload_to='asset_warranty/', blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f"Warranty for {self.asset.asset_name} until {self.expiry_date}"
+    
+    @property
+    def is_expired(self):
+        return date.today() > self.expiry_date
+    
+    @property
+    def days_to_expiry(self):
+        return (self.expiry_date - date.today()).days
+
+
+class AssetVerification(models.Model):
+    """Track physical verification/audit of assets"""
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    asset = models.ForeignKey("FixedAsset", on_delete=models.CASCADE, related_name="verifications")
+    verification_date = models.DateField()
+    verified_by = models.CharField(max_length=100)
+    status = models.CharField(max_length=20, choices=[
+        ('verified', 'Verified - Asset Found'),
+        ('not_found', 'Not Found'),
+        ('damaged', 'Found - Damaged'),
+        ('relocated', 'Found - Different Location'),
+    ])
+    physical_condition = models.CharField(max_length=20, choices=[
+        ('excellent', 'Excellent'),
+        ('good', 'Good'),
+        ('fair', 'Fair'),
+        ('poor', 'Poor'),
+        ('unusable', 'Unusable'),
+    ], blank=True, null=True)
+    actual_location = models.ForeignKey(AssetLocation, on_delete=models.SET_NULL, null=True, blank=True)
+    remarks = models.TextField(blank=True, null=True)
+    photo = models.ImageField(upload_to='asset_verification/', blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-verification_date']
+    
+    def __str__(self):
+        return f"Verification of {self.asset.asset_name} on {self.verification_date}"

@@ -1,6 +1,9 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="container-fluid">
+    <!-- Quick Navigation -->
+    {% include 'include/quick_nav.html' with active_module='withdrawal' %}
+
     <div class="row">
         <div class="col-md-12">
             <div class="page_title">
@@ -85,7 +88,7 @@
                                     <td>{{ item.customer.branch.branch_name }}</td>
                                     <td>
                                         {% if item.can_withdraw %}
-                                        <a href="{% url 'withdraw' item.customer.id %}" 
+                                        <a href="{% url 'withdraw' item.customer.uuid %}" 
                                            class="btn shadow-sm" 
                                            style="background-color: #FE632A; font-weight: bold; color: white;">
                                             Withdraw

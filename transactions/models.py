@@ -1,4 +1,5 @@
 # models.py
+import uuid
 from django.db import models
 
 from accounts.models import User
@@ -7,9 +8,11 @@ from customers.models import Customer
 from loans.models import Loans
 from django.utils import timezone
 from company.models import Company, Branch
+from profit_solutions.tenant_managers import TenantManager, TenantManagerWithCustBranch, CompanyTenantManager
 
 
 class Memtrans(models.Model):
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     # branch = models.ForeignKey(Branch, on_delete=models.CASCADE, related_name="branch_memtrans", 
     # null=True, blank=True)
     branch = models.ForeignKey(Branch, on_delete=models.CASCADE, related_name="memtrans_branch", null=True, blank=True)
@@ -37,6 +40,11 @@ class Memtrans(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)  # Add user field
     trx_type = models.CharField(max_length=20, null=True, blank=True, default='')
 
+    # Tenant-aware manager (filters by cust_branch for transactions)
+    objects = TenantManagerWithCustBranch()
+    company_objects = CompanyTenantManager()
+    all_objects = models.Manager()
+
     def __str__(self):
         return f"Memtrans {self.trx_no}"
 
@@ -49,6 +57,7 @@ class Memtrans(models.Model):
 from django.db import models
 
 class InterestRate(models.Model):
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     branch = models.ForeignKey(Branch, on_delete=models.CASCADE, related_name="interestRate", 
     null=True, blank=True)
     gl_no = models.CharField(max_length=6, unique=True)
@@ -56,6 +65,10 @@ class InterestRate(models.Model):
     glno_debit_account = models.CharField(max_length=6)
     acno_debit_account = models.CharField(max_length=1)
     ses_date = models.DateField() 
+
+    # Tenant-aware manager
+    objects = TenantManager()
+    all_objects = models.Manager()
 
     def __str__(self):
         return f"GL No: {self.gl_no}, Rate: {self.rate}"
@@ -87,6 +100,7 @@ class PendingTransaction(models.Model):
     """
     Model for staging account officer transactions before approval
     """
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     TRANSACTION_TYPES = [
         ('DEPOSIT', 'Deposit'),
         ('WITHDRAWAL', 'Withdrawal'),
@@ -132,6 +146,10 @@ class PendingTransaction(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
+    # Tenant-aware manager
+    objects = TenantManagerWithCustBranch()
+    all_objects = models.Manager()
+
     class Meta:
         ordering = ['-created_at']
         indexes = [

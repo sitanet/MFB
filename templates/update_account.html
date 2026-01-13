@@ -34,7 +34,7 @@
 
                                <!-- table -->
 
-  <form method="POST" class="chart_of_account p-5 shadow-lg rounded rounded-5" action="{% url 'update_account' account.id  %}">
+  <form method="POST" class="chart_of_account p-5 shadow-lg rounded rounded-5" action="{% url 'update_account' account.uuid  %}">
                                     {% csrf_token %}
                                     {% if messages %}
                             <ul class="messages">

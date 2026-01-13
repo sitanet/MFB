@@ -62,7 +62,7 @@ from django.http import HttpResponse, Http404
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
 
-def deposit(request, id):
+def deposit(request, uuid):
     # Get user and branch - FIXED: use get_branch() method
     user = request.user
     user_branch = user.get_branch()  # ✅ This gets the Branch instance
@@ -72,7 +72,7 @@ def deposit(request, id):
         messages.error(request, 'No valid branch assigned to user')
         return HttpResponse("No valid branch assigned to user", status=400)
     
-    customer = get_object_or_404(Customer, id=id)
+    customer = get_object_or_404(Customer, uuid=uuid)
     formatted_balance = '{:,.2f}'.format(customer.balance)
     data = Memtrans.objects.filter(branch=user_branch).order_by('-id').first()
 
@@ -267,11 +267,11 @@ def deposit(request, id):
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
 
-def withdraw(request, id):
+def withdraw(request, uuid):
     # Get user and branch information
     user = request.user
     user_branch = user.branch
-    customer = get_object_or_404(Customer, id=id)
+    customer = get_object_or_404(Customer, uuid=uuid)
     formatted_balance = '{:,.2f}'.format(customer.balance)
     data = Memtrans.objects.filter(branch=user_branch).order_by('-id').first()
 
@@ -476,11 +476,11 @@ def withdraw(request, id):
 
 
 
-def income(request, id):
+def income(request, uuid):
     # Retrieve the logged-in user's branch (Branch instance)
     user_branch = request.user.branch
-    # Retrieve the customer based on the provided ID
-    customer = get_object_or_404(Customer, id=id)
+    # Retrieve the customer based on the provided UUID
+    customer = get_object_or_404(Customer, uuid=uuid)
     formatted_balance = '{:,.2f}'.format(customer.balance)
     
     # Retrieve the latest transaction for the branch
@@ -635,11 +635,11 @@ def income(request, id):
 # Ensure this function exists
 
 
-def expense(request, id):
+def expense(request, uuid):
     # Get user and branch information
     user = request.user
     user_branch = user.branch
-    customer = get_object_or_404(Customer, id=id)
+    customer = get_object_or_404(Customer, uuid=uuid)
     formatted_balance = '{:,.2f}'.format(customer.balance)
     data = Memtrans.objects.filter(branch=user_branch).order_by('-id').first()
 
@@ -891,14 +891,24 @@ def choose_withdrawal(request):
     # Get the latest transaction (if any exists)
     latest_transaction = Memtrans.objects.order_by('-id').first()
 
-    # ✅ Fixed line — use 'users' instead of 'user'
-    user_company_names = Branch.objects.filter(users=request.user).values_list('company_name', flat=True)
-
-    # Filter customers with label 'C' whose branch's company_name is in user_company_names
-    customers = Customer.objects.filter(
-        label='C',
-        branch__company_name__in=user_company_names
-    ).order_by('-id')
+    # Get branch by the user's branch_id
+    from accounts.utils import get_branch_from_vendor_db
+    user_branch = get_branch_from_vendor_db(request.user.branch_id)
+    
+    # Filter customers based on branch access - head office sees all company branches
+    if user_branch:
+        if user_branch.head_office:
+            customers = Customer.objects.filter(
+                label='C',
+                branch__company=user_branch.company
+            ).order_by('-id')
+        else:
+            customers = Customer.objects.filter(
+                label='C',
+                branch=user_branch
+            ).order_by('-id')
+    else:
+        customers = Customer.objects.none()
 
     # Prepare GL/AC pairs for all filtered customers
     gl_ac_pairs = customers.values_list('gl_no', 'ac_no')
@@ -1055,10 +1065,10 @@ def choose_general_journal(request):
 
 
 
-def general_journal(request, id):
+def general_journal(request, uuid):
     user_branch = request.user.branch
-    # Fetch the customer with the given ID and ensure it belongs to the user's branch
-    customer = get_object_or_404(Customer, id=id, branch=user_branch)
+    # Fetch the customer with the given UUID and ensure it belongs to the user's branch
+    customer = get_object_or_404(Customer, uuid=uuid, branch=user_branch)
     formatted_balance = '{:,.2f}'.format(customer.balance)
     data = Memtrans.objects.all().order_by('-id').first()  # Get the last transaction
     total_amount = None
@@ -1261,11 +1271,13 @@ from django.urls import reverse
 
 
 def memtrans_list(request):
-    memtrans_list = Memtrans.objects.all()
+    from accounts.utils import get_company_branch_ids
+    branch_ids = get_company_branch_ids(request.user)
+    memtrans_list = Memtrans.all_objects.filter(branch_id__in=branch_ids)
     return render(request, 'transactions/non_cash/memtrans_list.html', {'memtrans_list': memtrans_list})
 
-def delete_memtrans(request, memtrans_id):
-    memtrans = get_object_or_404(Memtrans, pk=memtrans_id)
+def delete_memtrans(request, uuid):
+    memtrans = get_object_or_404(Memtrans, uuid=uuid)
     trx_no = memtrans.trx_no
     Memtrans.objects.filter(trx_no=trx_no).delete()
     return redirect(reverse('memtrans_list'))
@@ -1278,15 +1290,16 @@ from django.urls import reverse
 
 
 def loan_list(request):
-    loan_list = Loans.objects.all()
+    from accounts.utils import get_company_branch_ids
+    branch_ids = get_company_branch_ids(request.user)
+    loan_list = Loans.all_objects.filter(branch_id__in=branch_ids)
     return render(request, 'loans/loan_list.html', {'loan_list': loan_list})
 
 
 
-def delete_loan(request, id):
-    loan = get_object_or_404(Loans, pk=id)
-    id = loan.id
-    Loans.objects.filter(id=id).delete()
+def delete_loan(request, uuid):
+    loan = get_object_or_404(Loans, uuid=uuid)
+    loan.delete()
     return redirect(reverse('loans_list'))
 
 # views.py
@@ -1483,13 +1496,15 @@ def add_interest_rate(request):
     return render(request, 'transactions/add_interest_rate.html', {'form': form})
 
 def interest_rate_list(request):
-    rates = InterestRate.objects.all()
+    from accounts.utils import get_company_branch_ids
+    branch_ids = get_company_branch_ids(request.user)
+    rates = InterestRate.all_objects.filter(branch_id__in=branch_ids) if hasattr(InterestRate, 'all_objects') else InterestRate.objects.filter(branch_id__in=branch_ids)
     return render(request, 'transactions/interest_rate_list.html', {'rates': rates})
 
 
 
-def edit_interest_rate(request, pk):
-    rate = get_object_or_404(InterestRate, pk=pk)
+def edit_interest_rate(request, uuid):
+    rate = get_object_or_404(InterestRate, uuid=uuid)
     if request.method == 'POST':
         form = InterestRateForm(request.POST, instance=rate)
         if form.is_valid():
@@ -1500,8 +1515,8 @@ def edit_interest_rate(request, pk):
     
     return render(request, 'transactions/edit_interest_rate.html', {'form': form})
 
-def delete_interest_rate(request, pk):
-    rate = get_object_or_404(InterestRate, pk=pk)
+def delete_interest_rate(request, uuid):
+    rate = get_object_or_404(InterestRate, uuid=uuid)
     if request.method == 'POST':
         rate.delete()
         return redirect('interest_rate_list')  # Redirect to the list page

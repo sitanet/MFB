@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Asset Maintenance Records</h2>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Asset</th>
+                            <th>Type</th>
+                            <th>Date</th>
+                            <th>Performed By</th>
+                            <th>Cost</th>
+                            <th>Status</th>
+                            <th>Next Due</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for m in maintenances %}
+                        <tr>
+                            <td>{{ m.asset.asset_name }}</td>
+                            <td>{{ m.get_maintenance_type_display }}</td>
+                            <td>{{ m.maintenance_date }}</td>
+                            <td>{{ m.performed_by }}</td>
+                            <td>{{ m.cost|floatformat:2 }}</td>
+                            <td>
+                                <span class="badge {% if m.status == 'completed' %}bg-success{% elif m.status == 'in_progress' %}bg-warning{% else %}bg-secondary{% endif %}">
+                                    {{ m.get_status_display }}
+                                </span>
+                            </td>
+                            <td>{{ m.next_maintenance_date|default:"-" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="7" class="text-center">No maintenance records found</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

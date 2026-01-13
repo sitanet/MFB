@@ -4,7 +4,7 @@ from django.shortcuts import get_object_or_404, render
 from django.shortcuts import render, redirect
 
 from accounts.views import check_role_admin
-from accounts_admin.models import Account, Account_Officer, Category, Id_card_type, Region
+from accounts_admin.models import Account, Account_Officer, Category, Id_card_type, Region, CustomerAccountType
 from company.models import Company
 from customers.utils import generate_unique_6_digit_number
 # from transactions.models import Memtrans
@@ -20,8 +20,10 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
 def customer_list(request):
-    customers = Customer.objects.exclude(ac_no='1')
-    # customers = Customer.objects.filter(label='C')
+    from accounts.utils import get_company_branch_ids
+    branch_ids = get_company_branch_ids(request.user)
+    # Use all_objects to bypass TenantManager auto-filtering
+    customers = Customer.all_objects.filter(branch_id__in=branch_ids).exclude(ac_no='1')
     return render(request, 'customer_list.html', {'customers': customers})
 
 # def customer_detail(request, ac_no):
@@ -30,20 +32,38 @@ def customer_list(request):
 
 
 from .sms_service import send_sms
+from .utils import check_branch_customer_limit
+
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
 
 def customers(request):
     user_branch = request.user.branch  # Get the user's branch
+    user_company = user_branch.company if user_branch else None
+    
+    # Get branch IDs for this company
+    from accounts.utils import get_company_branch_ids_all
+    branch_ids = get_company_branch_ids_all(request.user)
 
-    # Filter accounts using the user's branch
-    cust_data = Account.objects.filter(gl_no__startswith='20') \
-        .exclude(gl_no='20100') \
-        .exclude(gl_no='20200') \
-        .exclude(gl_no='20000')
-
-    gl_no = Account.objects.filter(branch=user_branch) \
-        .values_list('gl_no', flat=True).filter(gl_no__startswith='20')
+    # Get customer account types configured in Admin - for new customer accounts
+    customer_account_types = CustomerAccountType.all_objects.filter(
+        branch_id__in=branch_ids,
+        is_active=True,
+        usage_type__in=['customer', 'both']
+    ).select_related('account').order_by('sort_order', 'account__gl_name')
+    
+    # Fallback to old method if no account types configured
+    if customer_account_types.exists():
+        cust_data = [cat.account for cat in customer_account_types]
+        gl_no = [cat.account.gl_no for cat in customer_account_types]
+    else:
+        # Legacy fallback - filter accounts using the user's branch
+        cust_data = Account.objects.filter(gl_no__startswith='20') \
+            .exclude(gl_no='20100') \
+            .exclude(gl_no='20200') \
+            .exclude(gl_no='20000')
+        gl_no = Account.objects.filter(branch=user_branch) \
+            .values_list('gl_no', flat=True).filter(gl_no__startswith='20')
 
     # officer = Account_Officer.objects.filter(branch=user_branch)
     # region = Region.objects.filter(branch=user_branch)  # Make sure Region has a ForeignKey to Branch
@@ -51,17 +71,27 @@ def customers(request):
     # id_card = Id_card_type.objects.filter(branch=user_branch)  # Ensure Id_card_type has a ForeignKey to Branch
 
 
-    officer = Account_Officer.objects.all()
-    region = Region.objects.all()  # Make sure Region has a ForeignKey to Branch
-    category = Category.objects.all()  # Make sure Category has a ForeignKey to Branch
-    id_card = Id_card_type.objects.all()
+    # Filter by company
+    user_company = user_branch.company if user_branch else None
+    officer = Account_Officer.objects.filter(branch__company=user_company) if user_company else []
+    region = Region.objects.filter(branch__company=user_company) if user_company else []
+    category = Category.objects.all()  # Category may be global
+    id_card = Id_card_type.objects.all()  # ID card types may be global
     # Since you're not using a Company model, fetch the current branch only
     cust_branch = [user_branch]
 
-    # Get the most recent customer
-    customer = Customer.objects.filter(branch=user_branch).order_by('-gl_no', '-ac_no').first()
+    # Get the most recent customer from user's branch
+    customer = Customer.all_objects.filter(branch=user_branch).order_by('-gl_no', '-ac_no').first() if user_branch else None
+    
+    # Check customer limit for this branch
+    customer_limit_info = check_branch_customer_limit(user_branch.id) if user_branch else {'can_add': False, 'message': 'No branch assigned.'}
 
     if request.method == 'POST':
+        # Check customer limit before processing form
+        if not customer_limit_info['can_add']:
+            messages.error(request, customer_limit_info['message'])
+            return redirect('customers')
+        
         form = CustomerForm(request.POST, request.FILES)
 
         if form.is_valid():
@@ -113,7 +143,8 @@ def customers(request):
         'region': region,
         'category': category,
         'customer': customer,
-        'id_card': id_card
+        'id_card': id_card,
+        'customer_limit_info': customer_limit_info,
     })
 
 
@@ -137,8 +168,8 @@ def company_reg(request):
     # Get branches under this company
     cust_branch = user_company.branches.all()
 
-    # Get most recent customer
-    customer = Customer.objects.all().order_by('-gl_no', '-ac_no').first()
+    # Get most recent customer from company
+    customer = Customer.all_objects.filter(branch__company=user_company).order_by('-gl_no', '-ac_no').first()
 
     if request.method == 'POST':
         form = CustomerForm(request.POST, request.FILES)
@@ -199,7 +230,7 @@ def company_reg(request):
         'id_card': id_card,
     })
 
-def edit_company_reg(request, customer_id):
+def edit_company_reg(request, uuid):
     # Fetch the user company and branches as in the original function
     user_company = request.user.branch.company
     cust_data = Account.objects.filter(gl_no__startswith='104') \
@@ -216,7 +247,7 @@ def edit_company_reg(request, customer_id):
 
     # Fetch the customer to edit
     try:
-        customer = Customer.objects.get(id=customer_id)
+        customer = Customer.objects.get(uuid=uuid)
     except Customer.DoesNotExist:
         messages.error(request, "Customer not found.")
         return redirect('some-fallback-view')  # Redirect to an appropriate page if customer doesn't exist
@@ -431,16 +462,16 @@ def assign_customers_to_group(request):
     return render(request, 'groups/assign_customers.html', {'form': form})
 
 
-def remove_from_group(request, customer_id):
+def remove_from_group(request, uuid):
     try:
-        customer = Customer.objects.get(id=customer_id)
-        group_id = customer.group.id if customer.group else None
+        customer = Customer.objects.get(uuid=uuid)
+        group_uuid = customer.group.uuid if customer.group else None
         customer.group = None
         customer.save()
 
         messages.success(request, f"{customer.first_name} {customer.last_name} has been removed from the group.")
-        if group_id:
-            return redirect('group_customers', group_id=group_id)
+        if group_uuid:
+            return redirect('group_customers', uuid=group_uuid)
         else:
             return redirect('assign_customers_to_group')
     except Customer.DoesNotExist:
@@ -452,8 +483,8 @@ def remove_from_group(request, customer_id):
 # Remove customer from group
 from django.shortcuts import get_object_or_404
 
-def group_customers(request, group_id):
-    group = get_object_or_404(Group, id=group_id)
+def group_customers(request, uuid):
+    group = get_object_or_404(Group, uuid=uuid)
     customers = Customer.objects.filter(group=group)
 
     return render(request, 'groups/group_customers.html', {
@@ -463,20 +494,26 @@ def group_customers(request, group_id):
 
 
 def group_list(request):
-    groups = Group.objects.all()
+    from accounts.utils import get_company_branch_ids
+    branch_ids = get_company_branch_ids(request.user)
+    groups = Group.all_objects.filter(branch_id__in=branch_ids) if hasattr(Group, 'all_objects') else Group.objects.filter(branch_id__in=branch_ids)
     return render(request, 'groups/group_list.html', {'groups': groups})
 
 
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
-def edit_customer(request, id):
-    customer = get_object_or_404(Customer, id=id)
-    cust_data = Account.objects.filter(gl_no__startswith='200').exclude(gl_no='200100').exclude(gl_no='200200').exclude(gl_no='200000')
-    gl_no = Account.objects.all().values_list('gl_no', flat=True).filter(gl_no__startswith='200')
-    cust_branch = Company.objects.all()
+def edit_customer(request, uuid):
+    from accounts.utils import get_branch_from_vendor_db
+    user_branch = get_branch_from_vendor_db(request.user.branch_id)
+    user_company = user_branch.company if user_branch else None
+    
+    customer = get_object_or_404(Customer, uuid=uuid)
+    cust_data = Account.all_objects.filter(branch__company=user_company, gl_no__startswith='200').exclude(gl_no='200100').exclude(gl_no='200200').exclude(gl_no='200000') if user_company else []
+    gl_no = Account.all_objects.filter(branch__company=user_company, gl_no__startswith='200').values_list('gl_no', flat=True) if user_company else []
+    cust_branch = Branch.objects.filter(company=user_company) if user_company else []
     category = Category.objects.all()
-    region = Region.objects.all()
-    officer = Account_Officer.objects.all()
+    region = Region.objects.filter(branch__company=user_company) if user_company else []
+    officer = Account_Officer.objects.filter(branch__company=user_company) if user_company else []
     if request.method == 'POST':
         form = CustomerForm(request.POST, request.FILES, instance=customer)
         if form.is_valid():
@@ -497,8 +534,8 @@ from .models import Customer
 # from transactions.models import Memtrans
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
-def delete_customer(request, id):
-    customer = get_object_or_404(Customer, id=id)
+def delete_customer(request, uuid):
+    customer = get_object_or_404(Customer, uuid=uuid)
     # Check if there are transactions associated with this customer
     transactions_exist = Memtrans.objects.filter(customer=customer).exists()
     
@@ -592,8 +629,8 @@ def internal_accounts(request):
 
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
-def edit_internal_account(request, id):
-    account = get_object_or_404(Customer, id=id)
+def edit_internal_account(request, uuid):
+    account = get_object_or_404(Customer, uuid=uuid)
     cust_branch = Company.objects.all()
     cust_data = Account.objects.filter(gl_no__startswith='').exclude(gl_no='200100').exclude(gl_no='200200').exclude(gl_no='200000')
 
@@ -612,8 +649,8 @@ def edit_internal_account(request, id):
 
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
-def delete_internal_account(request, id):
-    account = get_object_or_404(Customer, id=id)
+def delete_internal_account(request, uuid):
+    account = get_object_or_404(Customer, uuid=uuid)
 
     if request.method == 'POST':
         # You may add a confirmation step here if needed
@@ -759,25 +796,49 @@ def choose_create_another_account(request):
 
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
-def create_another_account(request, id):
+def create_another_account(request, uuid):
     # Get the logged-in user's branch
     user_branch = request.user.branch
-    customer = get_object_or_404(Customer, id=id)
+    customer = get_object_or_404(Customer, uuid=uuid)
+    user_company = user_branch.company if user_branch else None
     
-    # Filter accounts for loan accounts, excluding specific GL numbers
-    loan_account = Account.objects.filter(
-        (Q(gl_no__startswith='104') | Q(gl_no__startswith='20')),
-        branch=user_branch
-    ).exclude(gl_no='20000')
+    # Get branch IDs for this company
+    from accounts.utils import get_company_branch_ids_all
+    branch_ids = get_company_branch_ids_all(request.user)
+    
+    # Get customer account types configured in Admin - for additional accounts
+    # Check for 'additional' or 'both' usage types
+    customer_account_types = CustomerAccountType.all_objects.filter(
+        branch_id__in=branch_ids,
+        is_active=True,
+        usage_type__in=['additional', 'both']
+    ).select_related('account').order_by('sort_order', 'account__gl_name')
+    
+    # Debug: print count
+    print(f"DEBUG: Found {customer_account_types.count()} customer account types for additional accounts")
+    print(f"DEBUG: Branch IDs: {list(branch_ids)}")
+    
+    # Use configured account types if available, otherwise fallback
+    if customer_account_types.exists():
+        loan_account = [cat.account for cat in customer_account_types]
+        print(f"DEBUG: Using {len(loan_account)} configured account types")
+    else:
+        # Fallback: Filter accounts for loan accounts, excluding specific GL numbers
+        print("DEBUG: No configured account types, using fallback")
+        loan_account = Account.objects.filter(
+            (Q(gl_no__startswith='104') | Q(gl_no__startswith='20')),
+            branch=user_branch
+        ).exclude(gl_no='20000')
     
     # Set initial values for the form
     initial_values = {'gl_no_cust': customer.gl_no, 'ac_no_cust': customer.ac_no}
     
-    # Fetch required data for the form
+    # Fetch required data for the form - filter by company
+    user_company = user_branch.company if user_branch else None
     id_card = Id_card_type.objects.all()
     category = Category.objects.all()
-    region = Region.objects.all()
-    credit_officer = Account_Officer.objects.all()
+    region = Region.objects.filter(branch__company=user_company) if user_company else []
+    credit_officer = Account_Officer.objects.filter(branch__company=user_company) if user_company else []
     
     # Initialize GL number variable
     gl_no = None
@@ -835,8 +896,8 @@ def create_another_account(request, id):
 
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
-def create_loan(request, id):
-    customer = get_object_or_404(Customer, id=id)
+def create_loan(request, uuid):
+    customer = get_object_or_404(Customer, uuid=uuid)
     loan_account = Account.objects.filter(
     Q(gl_no__startswith='104') | Q(gl_no__startswith='206')
 ).exclude(gl_no='104000').exclude(gl_no='104100').exclude(gl_no='104200')
@@ -902,9 +963,9 @@ def customer_list_account(request):
 
 
 
-def customer_detail(request, pk):
-    # Retrieve the customer by primary key
-    customer = get_object_or_404(Customer, pk=pk)
+def customer_detail(request, uuid):
+    # Retrieve the customer by UUID
+    customer = get_object_or_404(Customer, uuid=uuid)
     
     # Retrieve the account number from the customer
     ac_no_customer = customer.ac_no
@@ -977,11 +1038,11 @@ def register_fixed_deposit_account(request):
     else:
         form = FixedDepositAccountForm()
 
-    # Fetch all customers for the dropdown
-    customers = Customer.objects.all()
-
-    # Get the logged-in user's branch
-    user_branch = request.user.branch  # Assuming the user has a branch field
+    # Fetch customers for the dropdown - filter by company
+    from accounts.utils import get_branch_from_vendor_db
+    user_branch = get_branch_from_vendor_db(request.user.branch_id)
+    user_company = user_branch.company if user_branch else None
+    customers = Customer.all_objects.filter(branch__company=user_company) if user_company else []
 
     return render(request, "fixed_deposit/register_fixed_deposit_account.html", {
         "form": form,

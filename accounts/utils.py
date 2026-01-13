@@ -7,6 +7,162 @@ from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import EmailMessage, message
 from django.conf import settings
 
+
+# ==================== BRANCH/COMPANY FILTERING HELPERS ====================
+
+def get_branch_from_vendor_db(branch_id):
+    """Helper function to get branch from database"""
+    if not branch_id:
+        return None
+    try:
+        from company.models import Branch
+        # Convert to int if it's a string
+        branch_id_int = int(branch_id) if isinstance(branch_id, str) else branch_id
+        return Branch.objects.get(id=branch_id_int)
+    except (Branch.DoesNotExist, ValueError, TypeError):
+        return None
+
+
+def get_all_branches_from_vendor_db():
+    """Helper function to get all branches from database"""
+    from company.models import Branch
+    return Branch.objects.all()
+
+
+def is_admin_user(user):
+    """
+    Check if user is a System Administrator (role=1) or has admin privileges.
+    Admins can view all branch activities in their company.
+    """
+    if not user:
+        return False
+    return user.role == 1 or user.is_admin or user.is_superadmin
+
+
+def is_super_admin(user):
+    """
+    Check if user is a Super Admin (software vendor level).
+    Super admins can view ALL data across ALL companies without restriction.
+    """
+    if not user:
+        return False
+    return user.is_superadmin
+
+
+def get_company_branch_ids(user, admin_sees_all=True):
+    """
+    Get branch IDs for filtering based on user role.
+    
+    - Super Admin (is_superadmin): See ALL branches across ALL companies
+    - Admin users (role=1): See all branches in their company
+    - Non-admin users: See only their own branch (unless admin_sees_all=False)
+    
+    Args:
+        user: The current user
+        admin_sees_all: If True, admins see all company branches. If False, filter by user's branch only.
+    
+    Returns a list of branch IDs (integers for ForeignKey, strings for CharField).
+    """
+    from company.models import Branch
+    
+    if not user:
+        return []
+    
+    # Super Admin sees ALL branches across ALL companies
+    if is_super_admin(user):
+        all_branches = Branch.objects.all()
+        return [b.id for b in all_branches]
+    
+    if not user.branch_id:
+        return []
+    
+    user_branch = get_branch_from_vendor_db(user.branch_id)
+    if not user_branch or not user_branch.company:
+        try:
+            return [int(user.branch_id)] if user.branch_id else []
+        except (ValueError, TypeError):
+            return [user.branch_id] if user.branch_id else []
+    
+    # Admin users see all branches in the company
+    if admin_sees_all and is_admin_user(user):
+        company_branches = Branch.objects.filter(company=user_branch.company)
+        return [b.id for b in company_branches]
+    
+    # Non-admin users see only their own branch
+    try:
+        return [int(user.branch_id)]
+    except (ValueError, TypeError):
+        return [user.branch_id]
+
+
+def get_company_branch_ids_all(user):
+    """
+    Get ALL branch IDs belonging to the user's company.
+    This always returns all company branches regardless of user role.
+    Used for company-wide resources like Chart of Accounts.
+    
+    - Super Admin (is_superadmin): See ALL branches across ALL companies
+    - Other users: See all branches in their company
+    """
+    from company.models import Branch
+    
+    if not user:
+        return []
+    
+    # Super Admin sees ALL branches across ALL companies
+    if is_super_admin(user):
+        all_branches = Branch.objects.all()
+        return [b.id for b in all_branches]
+    
+    if not user.branch_id:
+        return []
+    
+    user_branch = get_branch_from_vendor_db(user.branch_id)
+    if not user_branch or not user_branch.company:
+        try:
+            return [int(user.branch_id)] if user.branch_id else []
+        except (ValueError, TypeError):
+            return [user.branch_id] if user.branch_id else []
+    
+    # Get all branches belonging to the same company
+    company_branches = Branch.objects.filter(company=user_branch.company)
+    return [b.id for b in company_branches]
+
+
+def get_user_company(user):
+    """Get the company object for the current user"""
+    if not user or not user.branch_id:
+        return None
+    
+    user_branch = get_branch_from_vendor_db(user.branch_id)
+    if user_branch:
+        return user_branch.company
+    return None
+
+
+def filter_by_company(queryset, user, branch_field='branch_id', admin_sees_all=True):
+    """
+    Filter a queryset based on user role and branch.
+    
+    - Admin users: See records from all branches in their company
+    - Non-admin users: See only records from their own branch
+    
+    Args:
+        queryset: The Django queryset to filter
+        user: The current user
+        branch_field: The name of the branch_id field in the model (default: 'branch_id')
+        admin_sees_all: If True, admins see all company data. If False, everyone sees only their branch.
+    
+    Returns:
+        Filtered queryset
+    """
+    branch_ids = get_company_branch_ids(user, admin_sees_all=admin_sees_all)
+    if not branch_ids:
+        return queryset.none()
+    
+    filter_kwargs = {f'{branch_field}__in': branch_ids}
+    return queryset.filter(**filter_kwargs)
+
 def detectUser(user):
     if user.role == 1:
         redirectUrl = 'dashboard'

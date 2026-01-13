@@ -32,7 +32,5 @@ class Migration(migrations.Migration):
             name='bank_account',
             field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='bank_accounts', to='accounts_admin.account'),
         ),
-        migrations.DeleteModel(
-            name='Account',
-        ),
+        # migrations.DeleteModel(name='Account') - Removed: Account model was never in fixed_assets app
     ]

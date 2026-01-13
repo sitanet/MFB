@@ -1,0 +1,153 @@
+{% comment %}
+Report Export Toolbar
+Include this in report templates to add PDF, Word, Excel, CSV export functionality
+
+Usage:
+{% include 'include/report_export_toolbar.html' with report_name='loan_outstanding' %}
+{% endcomment %}
+
+<style>
+.export-toolbar {
+    background: white;
+    border-radius: 12px;
+    padding: 1rem 1.5rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    border-left: 4px solid #f97316;
+}
+
+.export-group {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.export-btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.export-btn:hover {
+    transform: translateY(-2px);
+    text-decoration: none;
+}
+
+.btn-pdf { 
+    background: #dc2626; 
+    color: white; 
+    box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);
+}
+.btn-pdf:hover { 
+    background: #b91c1c; 
+    color: white;
+}
+
+.btn-word { 
+    background: #2563eb; 
+    color: white; 
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+}
+.btn-word:hover { 
+    background: #1d4ed8; 
+    color: white;
+}
+
+.btn-excel { 
+    background: #16a34a; 
+    color: white; 
+    box-shadow: 0 2px 8px rgba(22, 163, 74, 0.3);
+}
+.btn-excel:hover { 
+    background: #15803d; 
+    color: white;
+}
+
+.btn-csv { 
+    background: #f59e0b; 
+    color: white; 
+    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+}
+.btn-csv:hover { 
+    background: #d97706; 
+    color: white;
+}
+
+.btn-print { 
+    background: #64748b; 
+    color: white; 
+    box-shadow: 0 2px 8px rgba(100, 116, 139, 0.3);
+}
+.btn-print:hover { 
+    background: #475569; 
+    color: white;
+}
+
+@media print {
+    .export-toolbar {
+        display: none !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .export-toolbar {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .export-group {
+        justify-content: center;
+    }
+}
+</style>
+
+<div class="export-toolbar no-print">
+    <div>
+        <h6 class="mb-0" style="color: #16a34a; font-weight: 600;">
+            <i class="fas fa-download me-2"></i>Export Options
+        </h6>
+        <small class="text-muted">Download report in your preferred format</small>
+    </div>
+    <div class="export-group">
+        {% if export_pdf_url %}
+        <a href="{{ export_pdf_url }}" class="export-btn btn-pdf" target="_blank">
+            <i class="fas fa-file-pdf"></i> PDF
+        </a>
+        {% endif %}
+        
+        {% if export_word_url %}
+        <a href="{{ export_word_url }}" class="export-btn btn-word" target="_blank">
+            <i class="fas fa-file-word"></i> Word
+        </a>
+        {% endif %}
+        
+        {% if export_excel_url %}
+        <a href="{{ export_excel_url }}" class="export-btn btn-excel" target="_blank">
+            <i class="fas fa-file-excel"></i> Excel
+        </a>
+        {% endif %}
+        
+        {% if export_csv_url %}
+        <a href="{{ export_csv_url }}" class="export-btn btn-csv" target="_blank">
+            <i class="fas fa-file-csv"></i> CSV
+        </a>
+        {% endif %}
+        
+        <button onclick="window.print()" class="export-btn btn-print">
+            <i class="fas fa-print"></i> Print
+        </button>
+    </div>
+</div>

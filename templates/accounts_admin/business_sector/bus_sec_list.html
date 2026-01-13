@@ -37,10 +37,10 @@
                                         <td>{{ sector.sector_name }}</td>
                                         <td>
                                             <div class="btn-group">
-                                                <a href="{% url 'update_bus_sector' sector.id %}" class="btn btn-sm btn-primary">
+                                                <a href="{% url 'update_bus_sector' sector.uuid %}" class="btn btn-sm btn-primary">
                                                     <i class="fa fa-edit"></i> Edit
                                                 </a>
-                                                <a href="{% url 'bus_sec_delete' sector.id %}" class="btn btn-sm btn-danger">
+                                                <a href="{% url 'bus_sec_delete' sector.uuid %}" class="btn btn-sm btn-danger">
                                                     <i class="fa fa-trash"></i> Delete
                                                 </a>
                                             </div>

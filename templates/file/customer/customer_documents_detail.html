@@ -11,7 +11,7 @@
                     <a href="{% url 'customer_documents_list' %}" class="btn btn-outline-secondary btn-sm me-2">
                         <i class="fa fa-arrow-left"></i> Back
                     </a>
-                    <a href="{% url 'customer_detail' customer.pk %}" class="btn btn-outline-primary btn-sm">
+                    <a href="{% url 'customer_detail' customer.uuid %}" class="btn btn-outline-primary btn-sm">
                         <i class="fas fa-user"></i> Profile
                     </a>
                 </div>
@@ -68,7 +68,7 @@
                         </div>
                         
                         <div class="document-actions">
-                            <a href="{% url 'download_document' document.id %}" class="btn btn-primary btn-sm">
+                            <a href="{% url 'download_document' document.uuid %}" class="btn btn-primary btn-sm">
                                 <i class="fas fa-download"></i> Download
                             </a>
                         </div>
@@ -82,7 +82,7 @@
             <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
             <h4 class="text-muted">No documents uploaded</h4>
             <p class="text-muted">This customer hasn't uploaded any additional documents yet.</p>
-            <a href="{% url 'edit_customer' customer.id %}" class="btn btn-primary">
+            <a href="{% url 'edit_customer' customer.uuid %}" class="btn btn-primary">
                 <i class="fas fa-edit"></i> Edit Customer
             </a>
         </div>

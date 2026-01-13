@@ -108,7 +108,7 @@
                                     <td>N{{ item.total_amount|floatformat:2 }}</td>
                                     <td>{{ item.customer.branch }}</td>
                                     <td>
-                                        <button class="btn shadow-sm" style="background-color: #FE632A;" type="button"><a href="{% url 'expense' item.customer.id %}" style="font-weight: bold; color: white;">Choose</a></button>
+                                        <button class="btn shadow-sm" style="background-color: #FE632A;" type="button"><a href="{% url 'expense' item.customer.uuid %}" style="font-weight: bold; color: white;">Choose</a></button>
                                     </td>
                                 </tr>
                             {% endfor %}

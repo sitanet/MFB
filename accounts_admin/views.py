@@ -55,10 +55,22 @@ from django.shortcuts import render
 
 @login_required
 def chart_of_accounts(request):
-    # Retrieve accounts specific to the user's company_name
-    accounts = Account.objects.filter(
+    from accounts.utils import get_company_branch_ids_all, get_branch_from_vendor_db
+    
+    # Get user's branch and company
+    user_branch = get_branch_from_vendor_db(request.user.branch_id)
+    
+    if not user_branch:
+        messages.error(request, 'No branch assigned to your account. Please contact administrator to assign you to a branch.')
+        return redirect('dashboard')
+    
+    # Get all branch IDs for this company (chart of accounts is always company-wide)
+    branch_ids = get_company_branch_ids_all(request.user)
+    
+    # Retrieve accounts for the entire company (visible to all branches)
+    accounts = Account.all_objects.filter(
         header=None,
-        branch__company_name=request.user.branch.company_name
+        branch_id__in=branch_ids
     ).order_by('gl_no')
     
     if request.method == 'POST':
@@ -66,21 +78,21 @@ def chart_of_accounts(request):
         if form.is_valid():
             account = form.save(commit=False)
             # Assign the logged-in user's branch to the new account
-            account.branch = request.user.branch
+            account.branch = user_branch
 
-            # Check for duplicate gl_no within the same branch
-            if Account.objects.filter(gl_no=account.gl_no, branch=account.branch).exists():
-                form.add_error('gl_no', 'An account with this GL number already exists in your branch.')
+            # Check for duplicate gl_no within the same COMPANY (not just branch)
+            if Account.all_objects.filter(gl_no=account.gl_no, branch_id__in=branch_ids).exists():
+                form.add_error('gl_no', 'An account with this GL number already exists in your company.')
             else:
                 account.save()
-                messages.success(request, 'Account added successfully!')
+                messages.success(request, 'Account added successfully! It is now visible to all branches in your company.')
                 return redirect('chart_of_accounts')
     else:
         form = AccountForm()
 
-    # Retrieve all accounts within the user's company_name
-    account = Account.objects.filter(
-        branch__company_name=request.user.branch.company_name
+    # Retrieve all accounts within the company
+    account = Account.all_objects.filter(
+        branch_id__in=branch_ids
     ).order_by('gl_no')
 
     return render(request, 'accounts_admin/chart_of_accounts.html', {
@@ -106,11 +118,16 @@ def success_view(request):
 
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
-def update_chart_of_account(request, id):
-    chart_of_account = Account.objects.get(id=id)
+def update_chart_of_account(request, uuid):
+    from accounts.utils import get_company_branch_ids_all
     
-    # Filter the accounts based on the logged-in user's branch
-    accounts = Account.objects.filter(header=None, branch=request.user.branch)
+    chart_of_account = Account.all_objects.get(uuid=uuid)
+    
+    # Get all branch IDs for this company (chart of accounts is always company-wide)
+    branch_ids = get_company_branch_ids_all(request.user)
+    
+    # Filter the accounts based on the company (visible to all branches)
+    accounts = Account.all_objects.filter(header=None, branch_id__in=branch_ids)
     
     form = AccountForm(instance=chart_of_account)
 
@@ -118,7 +135,7 @@ def update_chart_of_account(request, id):
         form = AccountForm(request.POST, instance=chart_of_account)
         if form.is_valid():
             form.save()
-            messages.success(request, 'Edited successfully!')
+            messages.success(request, 'Account updated successfully!')
             return redirect('chart_of_accounts')
 
     return render(request, 'accounts_admin/update_chart_of_account.html', {
@@ -129,21 +146,8 @@ def update_chart_of_account(request, id):
 
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
-def delete_chart_of_account(request, id):
-    chart_of_account = Account.objects.get(id=id)
-    chart_of_account.delete()
-    messages.success(request, 'Delete successfully!.')
-    return render(request, 'accounts_admin/confirm_delete.html')
-
-# views.py
-from django.shortcuts import render, redirect, get_object_or_404
-from .models import Account
-
-
-@login_required(login_url='login')
-@user_passes_test(check_role_admin)
-def delete_chart_of_account(request, id):
-    instance = get_object_or_404(Account, id=id)
+def delete_chart_of_account(request, uuid):
+    instance = get_object_or_404(Account, uuid=uuid)
 
     if request.method == 'POST':
         if instance.has_related_child_accounts():
@@ -223,8 +227,8 @@ def account_officer_list(request):
 
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
-def update_account_officer(request, id):
-    officer = get_object_or_404(Account_Officer, id=id)
+def update_account_officer(request, uuid):
+    officer = get_object_or_404(Account_Officer, uuid=uuid)
     branches = Company.objects.all()  # Retrieve the list of branches or adjust the query as needed
 
     if request.method == "POST":
@@ -239,8 +243,8 @@ def update_account_officer(request, id):
 
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
-def account_officer_delete(request, id):
-    officer = get_object_or_404(Account_Officer, id=id)
+def account_officer_delete(request, uuid):
+    officer = get_object_or_404(Account_Officer, uuid=uuid)
     if request.method == 'POST':
         officer.delete()
         return redirect('account_officer_list')
@@ -291,8 +295,8 @@ def region_list(request):
 
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
-def update_region(request, id):
-    region = get_object_or_404(Region, id=id)
+def update_region(request, uuid):
+    region = get_object_or_404(Region, uuid=uuid)
     
    
     if request.method == "POST":
@@ -308,8 +312,8 @@ def update_region(request, id):
 
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
-def region_delete(request, id):
-    officer = get_object_or_404(Region, id=id)
+def region_delete(request, uuid):
+    officer = get_object_or_404(Region, uuid=uuid)
     if request.method == 'POST':
         officer.delete()
         return redirect('region_list')
@@ -356,8 +360,8 @@ def category_list(request):
 
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
-def update_category(request, id):
-    category = get_object_or_404(Category, id=id)
+def update_category(request, uuid):
+    category = get_object_or_404(Category, uuid=uuid)
     
    
     if request.method == "POST":
@@ -373,8 +377,8 @@ def update_category(request, id):
 
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
-def category_delete(request, id):
-    category = get_object_or_404(Category, id=id)
+def category_delete(request, uuid):
+    category = get_object_or_404(Category, uuid=uuid)
     if request.method == 'POST':
         category.delete()
         return redirect('category_list')
@@ -414,8 +418,8 @@ def id_type_list(request):
 
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
-def update_id_type(request, id):
-    id_type = get_object_or_404(Id_card_type, id=id)
+def update_id_type(request, uuid):
+    id_type = get_object_or_404(Id_card_type, uuid=uuid)
     
    
     if request.method == "POST":
@@ -431,8 +435,8 @@ def update_id_type(request, id):
 
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
-def id_type_delete(request, id):
-    id_type = get_object_or_404(Id_card_type, id=id)
+def id_type_delete(request, uuid):
+    id_type = get_object_or_404(Id_card_type, uuid=uuid)
     if request.method == 'POST':
         id_type.delete()
         return redirect('id_type_list')
@@ -492,8 +496,8 @@ def bus_sec_list(request):
 
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
-def update_bus_sector(request, id):
-    bus_sec = get_object_or_404(Business_Sector, id=id)
+def update_bus_sector(request, uuid):
+    bus_sec = get_object_or_404(Business_Sector, uuid=uuid)
     
    
     if request.method == "POST":
@@ -509,8 +513,8 @@ def update_bus_sector(request, id):
 
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
-def bus_sec_delete(request, id):
-    bus_sec = get_object_or_404(Business_Sector, id=id)
+def bus_sec_delete(request, uuid):
+    bus_sec = get_object_or_404(Business_Sector, uuid=uuid)
     if request.method == 'POST':
         bus_sec.delete()
         return redirect('bus_sec_list')
@@ -646,11 +650,13 @@ def update_account_old(request):
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
 def account_list(request):
-    # Get the company name from the user's branch
-    user_company_name = request.user.branch.company_name
+    from accounts.utils import get_company_branch_ids_all
+    
+    # Get all branch IDs for this company (accounts list is always company-wide)
+    branch_ids = get_company_branch_ids_all(request.user)
 
-    # Filter accounts by company name and order by GL number
-    accounts = Account.objects.filter(branch__company_name=user_company_name).order_by('gl_no')
+    # Filter accounts by company branches and order by GL number (company-wide visibility)
+    accounts = Account.all_objects.filter(branch_id__in=branch_ids).order_by('gl_no')
 
     return render(request, 'account_list.html', {'accounts': accounts})
 
@@ -659,7 +665,7 @@ def account_list(request):
 
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
-def update_account(request, id):
+def update_account(request, uuid):
     # Ensure the user is assigned to a branch
     user_branch = getattr(request.user, 'branch', None)
     if not user_branch:
@@ -669,7 +675,7 @@ def update_account(request, id):
     user_company = user_branch.company  # Get the user's company
 
     # Get the account, ensuring it belongs to the same company
-    account = get_object_or_404(Account, id=id, branch__company=user_company)
+    account = get_object_or_404(Account, uuid=uuid, branch__company=user_company)
 
     # Optional: Fetch only branches in the user's company for dropdown or reference
     cust_branch = Branch.objects.filter(company=user_company)
@@ -694,8 +700,8 @@ def update_account(request, id):
 
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
-def delete_account(request, id):
-    account = get_object_or_404(Account, id=id)
+def delete_account(request, uuid):
+    account = get_object_or_404(Account, uuid=uuid)
     if request.method == 'POST':
         account.delete()
         messages.success(request, 'Account saved successfully!')
@@ -800,8 +806,8 @@ from django.shortcuts import render, redirect, get_object_or_404
 from .models import LoanProvision
 from .forms import LoanProvisionForm
 
-def edit_loan_provision(request, pk):
-    loan_provision = get_object_or_404(LoanProvision, pk=pk)
+def edit_loan_provision(request, uuid):
+    loan_provision = get_object_or_404(LoanProvision, uuid=uuid)
     if request.method == 'POST':
         form = LoanProvisionForm(request.POST, instance=loan_provision)
         if form.is_valid():
@@ -815,10 +821,136 @@ def edit_loan_provision(request, pk):
 
 # loans/views.py
 
-def delete_loan_provision(request, pk):
-    loan_provision = get_object_or_404(LoanProvision, pk=pk)
+def delete_loan_provision(request, uuid):
+    loan_provision = get_object_or_404(LoanProvision, uuid=uuid)
     if request.method == 'POST':
         loan_provision.delete()
         return redirect('loan_provision_list')
     
     return render(request, 'accounts_admin/loan_provision/delete_loan_provision.html', {'loan_provision': loan_provision})
+
+
+# ==================== CUSTOMER ACCOUNT TYPE MANAGEMENT ====================
+from .models import CustomerAccountType
+from .forms import CustomerAccountTypeForm
+
+
+@login_required(login_url='login')
+@user_passes_test(check_role_admin)
+def customer_account_type_list(request):
+    """List all customer account types for the company"""
+    from accounts.utils import get_company_branch_ids_all
+    
+    branch_ids = get_company_branch_ids_all(request.user)
+    account_types = CustomerAccountType.all_objects.filter(
+        branch_id__in=branch_ids
+    ).select_related('account').order_by('sort_order', 'account__gl_name')
+    
+    return render(request, 'accounts_admin/customer_account_type/list.html', {
+        'account_types': account_types
+    })
+
+
+@login_required(login_url='login')
+@user_passes_test(check_role_admin)
+def customer_account_type_create(request):
+    """Create a new customer account type"""
+    from accounts.utils import get_company_branch_ids_all, get_branch_from_vendor_db
+    
+    user_branch = get_branch_from_vendor_db(request.user.branch_id)
+    branch_ids = get_company_branch_ids_all(request.user)
+    
+    # Get accounts that are not already added as customer account types
+    existing_account_ids = CustomerAccountType.all_objects.filter(
+        branch_id__in=branch_ids
+    ).values_list('account_id', flat=True)
+    
+    available_accounts = Account.all_objects.filter(
+        branch_id__in=branch_ids
+    ).exclude(id__in=existing_account_ids).order_by('gl_no')
+    
+    if request.method == 'POST':
+        form = CustomerAccountTypeForm(request.POST)
+        form.fields['account'].queryset = available_accounts
+        
+        if form.is_valid():
+            account_type = form.save(commit=False)
+            account_type.branch = user_branch
+            account_type.save()
+            messages.success(request, 'Customer Account Type added successfully!')
+            return redirect('customer_account_type_list')
+    else:
+        form = CustomerAccountTypeForm()
+        form.fields['account'].queryset = available_accounts
+    
+    return render(request, 'accounts_admin/customer_account_type/form.html', {
+        'form': form,
+        'title': 'Add Customer Account Type',
+        'available_accounts': available_accounts,
+    })
+
+
+@login_required(login_url='login')
+@user_passes_test(check_role_admin)
+def customer_account_type_edit(request, uuid):
+    """Edit an existing customer account type"""
+    from accounts.utils import get_company_branch_ids_all
+    
+    account_type = get_object_or_404(CustomerAccountType, uuid=uuid)
+    branch_ids = get_company_branch_ids_all(request.user)
+    
+    # Get accounts - include current one plus those not already used
+    existing_account_ids = CustomerAccountType.all_objects.filter(
+        branch_id__in=branch_ids
+    ).exclude(uuid=uuid).values_list('account_id', flat=True)
+    
+    available_accounts = Account.all_objects.filter(
+        branch_id__in=branch_ids
+    ).exclude(id__in=existing_account_ids).order_by('gl_no')
+    
+    if request.method == 'POST':
+        form = CustomerAccountTypeForm(request.POST, instance=account_type)
+        form.fields['account'].queryset = available_accounts
+        
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Customer Account Type updated successfully!')
+            return redirect('customer_account_type_list')
+    else:
+        form = CustomerAccountTypeForm(instance=account_type)
+        form.fields['account'].queryset = available_accounts
+    
+    return render(request, 'accounts_admin/customer_account_type/form.html', {
+        'form': form,
+        'title': 'Edit Customer Account Type',
+        'account_type': account_type,
+    })
+
+
+@login_required(login_url='login')
+@user_passes_test(check_role_admin)
+def customer_account_type_delete(request, uuid):
+    """Delete a customer account type"""
+    account_type = get_object_or_404(CustomerAccountType, uuid=uuid)
+    
+    if request.method == 'POST':
+        account_type.delete()
+        messages.success(request, 'Customer Account Type deleted successfully!')
+        return redirect('customer_account_type_list')
+    
+    return render(request, 'accounts_admin/customer_account_type/delete.html', {
+        'account_type': account_type
+    })
+
+
+@login_required(login_url='login')
+@user_passes_test(check_role_admin)
+def customer_account_type_toggle(request, uuid):
+    """Toggle active status of a customer account type"""
+    account_type = get_object_or_404(CustomerAccountType, uuid=uuid)
+    account_type.is_active = not account_type.is_active
+    account_type.save()
+    
+    status = "activated" if account_type.is_active else "deactivated"
+    messages.success(request, f'Account Type {status} successfully!')
+    return redirect('customer_account_type_list')

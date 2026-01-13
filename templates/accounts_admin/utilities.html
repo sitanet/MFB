@@ -1,29 +1,25 @@
 {% extends "base.html" %}
 
-
-
 {% block content %}
 
-
-
 <div class="container-fluid">
+  <!-- Quick Navigation -->
+  {% include 'include/quick_nav.html' with active_module='admin' %}
+
   <div class="row">
- 
-    
-        </div>
-    
+  </div>
 
-        <div>
-              <!-- Chart of Accoutwill come here -->
-        </div>
+  <div>
+    <!-- Chart of Account will come here -->
+  </div>
 
-        <div class="container-fluid">
-            <div class="row">
-               <div class="col-md-12">
-                  <div class="page_title">
-                     <h2>Account Setting</h2>
-                  </div>
-               </div>
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-md-12">
+        <div class="page_title">
+          <h2>Account Setting</h2>
+        </div>
+      </div>
 
         
       
@@ -32,7 +28,7 @@
                      <div class="couter_icon  col-md-12">
                         <i class="couter_icon fa fa-user yellow_color"></i>
                      </div>
-                     <a href="{% url 'session_mgt' branch_id=request.user.branch.id %}" class="text-center">
+                     <a href="{% url 'session_mgt' branch_id=request.user.branch.uuid %}" class="text-center">
                         <h5 class="my-4">Change  Session</h5>
                      </a>
                   </div>

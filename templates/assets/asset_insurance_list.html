@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Asset Insurance Policies</h2>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Asset</th>
+                            <th>Policy Number</th>
+                            <th>Insurance Company</th>
+                            <th>Coverage</th>
+                            <th>Coverage Amount</th>
+                            <th>Premium</th>
+                            <th>Expiry Date</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ins in insurances %}
+                        <tr>
+                            <td>{{ ins.asset.asset_name }}</td>
+                            <td>{{ ins.policy_number }}</td>
+                            <td>{{ ins.insurance_company }}</td>
+                            <td>{{ ins.get_coverage_type_display }}</td>
+                            <td>{{ ins.coverage_amount|floatformat:2 }}</td>
+                            <td>{{ ins.premium_amount|floatformat:2 }}</td>
+                            <td>{{ ins.expiry_date }}</td>
+                            <td>
+                                {% if ins.is_expired %}
+                                <span class="badge bg-danger">Expired</span>
+                                {% elif ins.days_to_expiry <= 30 %}
+                                <span class="badge bg-warning">Expiring Soon ({{ ins.days_to_expiry }} days)</span>
+                                {% else %}
+                                <span class="badge bg-success">Active</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="8" class="text-center">No insurance policies found</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,9 +1,11 @@
 import random
+import uuid
 from django.db import models
 from django.core.exceptions import ValidationError
 from accounts_admin.models import Account, Account_Officer, Category, Id_card_type, Region
 from company.models import Company, Branch
 from django.db.models import UniqueConstraint
+from profit_solutions.tenant_managers import TenantManager, CompanyTenantManager
 
 
 
@@ -11,6 +13,7 @@ from django.db.models import UniqueConstraint
 
 
 class Group(models.Model):
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     group_name = models.CharField(max_length=100, unique=True)
     group_code = models.CharField(max_length=50, unique=True)
     created_date = models.DateField(auto_now_add=True)
@@ -21,6 +24,7 @@ class Group(models.Model):
 
         
 class Customer(models.Model):
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     photo = models.ImageField(upload_to='photo/customer', default='images/avatar.jpg')  # Customer Photo
     sign = models.ImageField(upload_to='sign/customer', default='images/avatar.jpg') 
     branch = models.ForeignKey(Branch, on_delete=models.CASCADE, related_name="customer", 
@@ -98,6 +102,13 @@ class Customer(models.Model):
     office_email = models.EmailField(blank=True, null=True)
     date_registered = models.DateField(auto_now_add=True, blank=True, null=True)
     is_company = models.BooleanField(default=False)
+
+    # Tenant-aware manager (auto-filters by branch)
+    objects = TenantManager()
+    # Company-wide manager (all branches in user's company)
+    company_objects = CompanyTenantManager()
+    # Unfiltered manager for admin/cross-tenant operations
+    all_objects = models.Manager()
 
     class Meta:
         constraints = [
@@ -227,6 +238,7 @@ class VirtualCard(models.Model):
 
 
 class KYCDocument(models.Model):
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     DOCUMENT_TYPES = (
         ('PASSPORT', 'Passport'),
         ('NATIONAL_ID', 'National ID'),
@@ -253,6 +265,7 @@ class FixedDepositAccount(models.Model):
     """
     Represents a fixed deposit account linked to a customer.
     """
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
     fixed_gl_no = models.CharField(max_length=20, unique=True)
     fixed_ac_no = models.CharField(max_length=20, unique=True)  # Unique FD Account Number

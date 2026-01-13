@@ -70,8 +70,8 @@
                                                 {% endfor %}
                                             </td>
                                             <td>
-                                                <a href="{% url 'edit_customer' customer.id %}" style="font-weight: bold; color: blue;">Edit</a>
-                                                <a href="{% url 'delete_customer' customer.pk %}" style="font-weight: bold; color: red;">Delete</a>
+                                                <a href="{% url 'edit_customer' customer.uuid %}" style="font-weight: bold; color: blue;">Edit</a>
+                                                <a href="{% url 'delete_customer' customer.uuid %}" style="font-weight: bold; color: red;">Delete</a>
                                                 <a href="{% url 'register_fixed_deposit' %}?customer_id={{ customer.id }}&cust_gl_no={{ customer.gl_no }}&cust_ac_no={{ customer.ac_no }}" 
                                                 class="btn btn-primary">
                                                  Fixed Deposit

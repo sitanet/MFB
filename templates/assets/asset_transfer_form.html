@@ -1,18 +1,90 @@
-{% extends "base.html" %}
-
-{% block title %} Transfer Asset {% endblock %}
+{% extends 'base.html' %}
 
 {% block content %}
-<div class="container mt-4">
+<div class="container">
     <h2>Transfer Asset: {{ asset.asset_name }}</h2>
     
-    <form method="post">
-        {% csrf_token %}
-        <div class="mb-3">
-            {{ form.as_p }}
+    <div class="card mb-4">
+        <div class="card-header">Current Assignment</div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3"><strong>Branch:</strong> {{ asset.branch }}</div>
+                <div class="col-md-3"><strong>Department:</strong> {{ asset.department }}</div>
+                <div class="col-md-3"><strong>Location:</strong> {{ asset.asset_location }}</div>
+                <div class="col-md-3"><strong>Officer:</strong> {{ asset.officer }}</div>
+            </div>
         </div>
-        <button type="submit" class="btn btn-primary">Transfer</button>
-        <a href="{% url 'asset_list' %}" class="btn btn-secondary">Cancel</a>
-    </form>
+    </div>
+
+    <div class="card">
+        <div class="card-header">Transfer To</div>
+        <div class="card-body">
+            <form method="POST">
+                {% csrf_token %}
+                
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Transfer Date</label>
+                        <input type="date" name="transfer_date" class="form-control" required>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">To Branch</label>
+                        <select name="to_branch" class="form-control">
+                            <option value="">-- Keep Current --</option>
+                            {% for branch in branches %}
+                            <option value="{{ branch.id }}">{{ branch.branch_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">To Department</label>
+                        <select name="to_department" class="form-control">
+                            <option value="">-- Keep Current --</option>
+                            {% for dept in departments %}
+                            <option value="{{ dept.id }}">{{ dept.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">To Location</label>
+                        <select name="to_location" class="form-control">
+                            <option value="">-- Keep Current --</option>
+                            {% for loc in locations %}
+                            <option value="{{ loc.id }}">{{ loc.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">To Officer</label>
+                        <select name="to_officer" class="form-control">
+                            <option value="">-- Keep Current --</option>
+                            {% for officer in officers %}
+                            <option value="{{ officer.id }}">{{ officer.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Reason for Transfer</label>
+                    <textarea name="reason" class="form-control" rows="3"></textarea>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Approved By</label>
+                    <input type="text" name="approved_by" class="form-control">
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Transfer Asset</button>
+                <a href="{% url 'asset_detail' asset.uuid %}" class="btn btn-secondary">Cancel</a>
+            </form>
+        </div>
+    </div>
 </div>
 {% endblock %}

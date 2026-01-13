@@ -143,8 +143,7 @@ MIDDLEWARE = [
     # 'audit_trail.middleware.AuditMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'audit_trail.middleware.AuditMiddleware',
-  
-
+    'profit_solutions.tenant_middleware.TenantMiddleware',  # Multi-tenant middleware
 ]
 
 

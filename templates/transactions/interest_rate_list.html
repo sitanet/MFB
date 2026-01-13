@@ -23,8 +23,8 @@
                     <td>{{ rate.glno_debit_account }}</td>
                     <td>{{ rate.acno_debit_account }}</td>
                     <td>
-                        <a href="{% url 'edit_interest_rate' rate.pk %}" class="btn btn-warning btn-sm">Edit</a>
-                        <a href="{% url 'delete_interest_rate' rate.pk %}" class="btn btn-danger btn-sm">Delete</a>
+                        <a href="{% url 'edit_interest_rate' rate.uuid %}" class="btn btn-warning btn-sm">Edit</a>
+                        <a href="{% url 'delete_interest_rate' rate.uuid %}" class="btn btn-danger btn-sm">Delete</a>
                     </td>
                 </tr>
             {% endfor %}

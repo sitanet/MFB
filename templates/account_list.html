@@ -93,9 +93,9 @@
                                                       <!-- <td>{{ user.get_role_display }}</td> -->
 
                                                       <td>
-                                                         <a href="{% url 'update_account' accounts.id %}" style="font-weight: bold; color: green;">Paramenters</a>/
-                                                          <a href="{% url 'update_account' accounts.id %}" style="font-weight: bold; color: blue;">Ledger</a>/
-                                                         <a href="{% url 'delete_account' accounts.pk %}" style="font-weight: bold; color: red;" >Delete</a>
+                                                         <a href="{% url 'update_account' accounts.uuid %}" style="font-weight: bold; color: green;">Paramenters</a>/
+                                                          <a href="{% url 'update_account' accounts.uuid %}" style="font-weight: bold; color: blue;">Ledger</a>/
+                                                         <a href="{% url 'delete_account' accounts.uuid %}" style="font-weight: bold; color: red;" >Delete</a>
                                                       </td>
                                                       
                                                       

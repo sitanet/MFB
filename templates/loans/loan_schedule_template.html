@@ -115,10 +115,10 @@
                             ⬇️ Download
                         </button>
                         <div class="dropdown-menu" aria-labelledby="downloadMenu">
-                            <a class="dropdown-item" href="{% url 'generate_pdf' id=loan_instance.id %}" target="_blank">PDF</a>
-                            <a class="dropdown-item" href="{% url 'generate_doc' id=loan_instance.id %}" target="_blank">Doc</a>
-                            <a class="dropdown-item" href="{% url 'generate_excel' id=loan_instance.id %}" target="_blank">Excel</a>
-                            <a class="dropdown-item" href="{% url 'generate_csv' id=loan_instance.id %}" target="_blank">CSV</a>
+                            <a class="dropdown-item" href="{% url 'generate_pdf' uuid=loan_instance.uuid %}" target="_blank">PDF</a>
+                            <a class="dropdown-item" href="{% url 'generate_doc' uuid=loan_instance.uuid %}" target="_blank">Doc</a>
+                            <a class="dropdown-item" href="{% url 'generate_excel' uuid=loan_instance.uuid %}" target="_blank">Excel</a>
+                            <a class="dropdown-item" href="{% url 'generate_csv' uuid=loan_instance.uuid %}" target="_blank">CSV</a>
                         </div>
                     </div>
                     <button class="btn btn-primary" onclick="window.print()">🖨 Print</button>

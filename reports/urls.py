@@ -6,10 +6,10 @@ from . import views
 urlpatterns = [
   
    
-    path('generate_pdf/<int:id>/', views.generate_pdf, name='generate_pdf'),
-    path('generate_doc/<int:id>/generate_doc/', views.generate_doc, name='generate_doc'),
-    path('generate_excel/<int:id>/generate_excel/', views.generate_excel, name='generate_excel'),
-    path('generate_csv/<int:id>/generate_csv/', views.generate_csv, name='generate_csv'),
+    path('generate_pdf/<uuid:uuid>/', views.generate_pdf, name='generate_pdf'),
+    path('generate_doc/<uuid:uuid>/generate_doc/', views.generate_doc, name='generate_doc'),
+    path('generate_excel/<uuid:uuid>/generate_excel/', views.generate_excel, name='generate_excel'),
+    path('generate_csv/<uuid:uuid>/generate_csv/', views.generate_csv, name='generate_csv'),
 
     path('generate-statement/', views.generate_statement_view, name='generate_statement'),
     path('front_office_report/', views.front_office_report, name='front_office_report'),
@@ -67,5 +67,15 @@ urlpatterns = [
     path('cbn-returns/', views.cbn_returns, name='cbn_returns'),
     path('cbn-returns/<str:form_code>/', views.cbn_return_detail, name='cbn_return_detail'),
 
-    
+    # Fixed Deposit Reports
+    path('fixed-deposit/', views.fixed_deposit_report, name='fixed_deposit_report'),
+    path('fixed-deposit/register/', views.fd_register_report, name='fd_register_report'),
+    path('fixed-deposit/maturity/', views.fd_maturity_report, name='fd_maturity_report'),
+    path('fixed-deposit/interest/', views.fd_interest_report, name='fd_interest_report'),
+
+    # Fixed Asset Reports
+    path('fixed-asset/', views.fixed_asset_report, name='fixed_asset_report'),
+    path('fixed-asset/register/', views.asset_register_report, name='asset_register_report'),
+    path('fixed-asset/depreciation-schedule/', views.asset_depreciation_schedule, name='asset_depreciation_schedule'),
+    path('fixed-asset/disposal/', views.asset_disposal_report, name='asset_disposal_report'),
 ]

@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container-fluid">
+  <div class="row"></div>
+
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-md-12">
+        <div class="page_title">
+          <h2>Fixed Deposit Maturity Report</h2>
+        </div>
+      </div>
+    </div>
+
+    <div class="d-flex justify-content-end mb-3">
+      <button onclick="window.print()" class="btn btn-primary">
+        <i class="fas fa-print"></i> Print Report
+      </button>
+    </div>
+
+    <!-- Already Matured -->
+    {% if matured_fds %}
+    <div class="card mb-4">
+      <div class="card-header bg-danger text-white">
+        <h5 class="mb-0">Already Matured (Pending Action) - {{ matured_fds.count }}</h5>
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-striped table-sm">
+            <thead>
+              <tr>
+                <th>FD No</th>
+                <th>Customer</th>
+                <th>Principal</th>
+                <th>Interest Rate</th>
+                <th>Maturity Date</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for fd in matured_fds %}
+              <tr>
+                <td>{{ fd.fixed_ac_no }}</td>
+                <td>{{ fd.customer.first_name }} {{ fd.customer.last_name }}</td>
+                <td>{{ fd.deposit_amount|floatformat:2 }}</td>
+                <td>{{ fd.interest_rate }}%</td>
+                <td>{{ fd.maturity_date }}</td>
+                <td>
+                  <a href="{% url 'withdraw_fixed_deposit' fd.uuid %}" class="btn btn-sm btn-warning">Withdraw</a>
+                  <a href="{% url 'renew_fixed_deposit' fd.uuid %}" class="btn btn-sm btn-success">Renew</a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Maturing in 30 Days -->
+    <div class="card mb-4">
+      <div class="card-header bg-warning">
+        <h5 class="mb-0">Maturing in Next 30 Days - {{ maturing_fds.count }}</h5>
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-striped table-sm">
+            <thead>
+              <tr>
+                <th>FD No</th>
+                <th>Customer</th>
+                <th>Principal</th>
+                <th>Interest Rate</th>
+                <th>Start Date</th>
+                <th>Maturity Date</th>
+                <th>Days Remaining</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for fd in maturing_fds %}
+              <tr>
+                <td>{{ fd.fixed_ac_no }}</td>
+                <td>{{ fd.customer.first_name }} {{ fd.customer.last_name }}</td>
+                <td>{{ fd.deposit_amount|floatformat:2 }}</td>
+                <td>{{ fd.interest_rate }}%</td>
+                <td>{{ fd.start_date }}</td>
+                <td>{{ fd.maturity_date }}</td>
+                <td>
+                  {% widthratio fd.maturity_date|date:"U" today|date:"U" 1 as diff %}
+                  {{ fd.maturity_date|timeuntil:today }}
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="7" class="text-center">No deposits maturing in the next 30 days</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="row mt-3">
+      <div class="col-md-12">
+        <a href="{% url 'fixed_dep' %}" class="btn btn-secondary">
+          <i class="fa fa-arrow-left"></i> Back to Fixed Deposit
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

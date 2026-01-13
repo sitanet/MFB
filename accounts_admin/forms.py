@@ -139,3 +139,31 @@ LoanProvisionFormSet = forms.modelformset_factory(
     form=LoanProvisionForm,
     extra=1  # Initially, only one form is displayed
 )
+
+
+# Customer Account Type Form
+from .models import CustomerAccountType
+
+class CustomerAccountTypeForm(forms.ModelForm):
+    class Meta:
+        model = CustomerAccountType
+        fields = ['account', 'display_name', 'usage_type', 'is_active', 'sort_order']
+        widgets = {
+            'account': forms.Select(attrs={'class': 'form-control'}),
+            'display_name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Leave blank to use GL Name'
+            }),
+            'usage_type': forms.Select(attrs={'class': 'form-control'}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'sort_order': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': '0',
+                'placeholder': '0'
+            }),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['display_name'].required = False
+        self.fields['sort_order'].required = False

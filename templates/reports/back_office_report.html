@@ -3,6 +3,9 @@
 {% block content %}
 
 <div class="container-fluid">
+  <!-- Quick Navigation -->
+  {% include 'include/quick_nav.html' with active_module='reports' %}
+
   <div class="row"></div>
 
   <div>
@@ -57,6 +60,28 @@
           </div>
           <a href="{% url 'customer_list' %}" class="text-center">
             <h5 class="my-2">General Report</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-3 mb-3">
+        <div class="account_setting py-5 fs-1 bg-white">
+          <div class="couter_icon col-md-12">
+            <i class="fa fa-piggy-bank" style="color: #9932cc;"></i> <!-- Dark Orchid -->
+          </div>
+          <a href="{% url 'fixed_deposit_report' %}" class="text-center">
+            <h5 class="my-2">Fixed Deposit Report</h5>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-3 mb-3">
+        <div class="account_setting py-5 fs-1 bg-white">
+          <div class="couter_icon col-md-12">
+            <i class="fa fa-building" style="color: #008080;"></i> <!-- Teal -->
+          </div>
+          <a href="{% url 'fixed_asset_report' %}" class="text-center">
+            <h5 class="my-2">Fixed Asset Report</h5>
           </a>
         </div>
       </div>

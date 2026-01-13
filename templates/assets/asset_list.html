@@ -50,7 +50,7 @@
                     </thead>
                     <tbody>
                         {% for asset in assets %}
-                        <tr class="bg-white shadow-sm clickable-row" data-href="{% url 'asset_detail' asset.id %}" style="cursor: pointer;">
+                        <tr class="bg-white shadow-sm clickable-row" data-href="{% url 'asset_detail' asset.uuid %}" style="cursor: pointer;">
                             <td><strong>{{ asset.asset_id }}</strong></td>
                             <td class="fw-bold text-dark">{{ asset.asset_name }}</td>
                             <td class="text-muted">{{ asset.asset_type }}</td>
@@ -61,19 +61,19 @@
                             <td class="text-end text-success fw-bold">{{ asset.nbv|floatformat:2 }}</td>
                             <td class="text-center">
                                 <div class="btn-group" role="group">
-                                    <a href="{% url 'asset_update' asset.id %}" class="btn btn-sm btn-dark shadow-sm" onclick="event.stopPropagation();">
+                                    <a href="{% url 'asset_update' asset.uuid %}" class="btn btn-sm btn-dark shadow-sm" onclick="event.stopPropagation();">
                                         <i class="fas fa-edit"></i> Edit
                                     </a>
-                                    <a href="{% url 'asset_delete' asset.id %}" class="btn btn-sm btn-danger shadow-sm" onclick="event.stopPropagation();">
+                                    <a href="{% url 'asset_delete' asset.uuid %}" class="btn btn-sm btn-danger shadow-sm" onclick="event.stopPropagation();">
                                         <i class="fas fa-trash"></i> Delete
                                     </a>
-                                    <a href="{% url 'post_depreciation' asset.id %}" class="btn btn-sm btn-warning shadow-sm" onclick="event.stopPropagation();">
+                                    <a href="{% url 'post_depreciation' asset.uuid %}" class="btn btn-sm btn-warning shadow-sm" onclick="event.stopPropagation();">
                                         <i class="fas fa-calculator"></i> Depreciate
                                     </a>
-                                    <a href="{% url 'dispose_asset' asset.id %}" class="btn btn-sm btn-secondary shadow-sm" onclick="event.stopPropagation();">
+                                    <a href="{% url 'dispose_asset' asset.uuid %}" class="btn btn-sm btn-secondary shadow-sm" onclick="event.stopPropagation();">
                                         <i class="fas fa-recycle"></i> Dispose
                                     </a>
-                                    <a href="{% url 'revalue_asset' asset.id %}" class="btn btn-sm btn-info shadow-sm" onclick="event.stopPropagation();">
+                                    <a href="{% url 'revalue_asset' asset.uuid %}" class="btn btn-sm btn-info shadow-sm" onclick="event.stopPropagation();">
                                         <i class="fas fa-sync-alt"></i> Revalue
                                     </a>
                                 </div>

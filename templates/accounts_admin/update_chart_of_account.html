@@ -123,20 +123,20 @@
     {% for account in accounts %}
       <li>
         {{ account.gl_no }} {{ account.gl_name }}
-        <a href="{% url 'update_chart_of_account' account.id %}">Edit</a>
-              <a href="{% url 'delete_chart_of_account' account.id %}">Delete</a>
+        <a href="{% url 'update_chart_of_account' account.uuid %}">Edit</a>
+              <a href="{% url 'delete_chart_of_account' account.uuid %}">Delete</a>
         <ul>
           {% for child in account.account_set.all %}
             <li class="child">
               {{ child.gl_no }} {{ child.gl_name }}
-              <a href="{% url 'update_chart_of_account' child.id %}">Edit</a>
-              <a href="{% url 'delete_chart_of_account' child.id %}">Delete</a>
+              <a href="{% url 'update_chart_of_account' child.uuid %}">Edit</a>
+              <a href="{% url 'delete_chart_of_account' child.uuid %}">Delete</a>
               <ul>
                 {% for grandchild in child.account_set.all %}
                   <li class="grandchild">
                     {{ grandchild.gl_no }} {{ grandchild.gl_name }}
-                    <a href="{% url 'update_chart_of_account' grandchild.id %}">Edit</a>
-                    <a class="submit" href="{% url 'delete_chart_of_account' grandchild.id %}">Delete</a>
+                    <a href="{% url 'update_chart_of_account' grandchild.uuid %}">Edit</a>
+                    <a class="submit" href="{% url 'delete_chart_of_account' grandchild.uuid %}">Delete</a>
                   </li>
                 {% endfor %}
               </ul>

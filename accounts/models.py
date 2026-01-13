@@ -5,6 +5,7 @@ This module contains user-related models that are stored in the CLIENT database 
 Company and Branch models are referenced by ID from the VENDOR database.
 """
 
+import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 from django.utils.timezone import now
@@ -23,6 +24,7 @@ class Role(models.Model):
     """
     User Role model - Stored in CLIENT database
     """
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     name = models.CharField(max_length=50)
 
     def __str__(self):
@@ -64,7 +66,7 @@ class UserManager(BaseUserManager):
             phone_number=phone_number,
             cashier_gl=cashier_gl,
             cashier_ac=cashier_ac,
-            branch=branch,  # Store branch ID as string
+            branch_id=branch_id,  # Store branch ID as string
             gl_no=gl_no,
             ac_no=ac_no,
         )
@@ -126,7 +128,7 @@ class UserManager(BaseUserManager):
             username=username,
             email=email,
             role=User.SYSTEM_ADMINISTRATOR,
-            branch=default_branch,  # Store branch ID as string
+            branch_id=str(default_branch.id),  # Store branch ID as string
             phone_number="+2348066311516",
             cashier_gl=None,
             cashier_ac=None,
@@ -180,6 +182,7 @@ class User(AbstractBaseUser):
     )
 
     # Basic user information
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     profile_picture = models.ImageField(upload_to='users/profile_pictures', default='images/avatar.jpg')
     first_name = models.CharField(max_length=50)
     last_name = models.CharField(max_length=50)
@@ -190,7 +193,7 @@ class User(AbstractBaseUser):
     
     # Branch reference - CHANGED: Now stores branch ID instead of ForeignKey
     # Branch reference - COMPULSORY for all users
-    branch = models.CharField(max_length=20, help_text="Vendor DB Branch ID")
+    branch_id = models.CharField(max_length=20, db_column='branch_id', blank=True, null=True, help_text="Vendor DB Branch ID")
 
     # Authentication and security fields
     otp_code = models.CharField(max_length=6, blank=True, null=True)
@@ -252,18 +255,23 @@ class User(AbstractBaseUser):
     # --- Cross-Database Helper Methods ---
     
     def get_branch(self):
-        """Get the branch object from vendor database"""
+        """Get the branch object from database"""
         if not self.branch_id:
             return None
             
         try:
             from company.models import Branch
-            return Branch.objects.using('vendor_db').get(id=self.branch_id)
+            return Branch.objects.get(id=self.branch_id)
         except (Branch.DoesNotExist, ValueError):
             return None
     
+    @property
+    def branch(self):
+        """Property to get branch object (backward compatibility)"""
+        return self.get_branch()
+    
     def get_company(self):
-        """Get the company object from vendor database through branch"""
+        """Get the company object through branch"""
         branch = self.get_branch()
         if branch:
             return branch.company
@@ -289,8 +297,7 @@ class User(AbstractBaseUser):
             
         try:
             from company.models import Branch
-            # Validate branch exists in vendor database
-            Branch.objects.using('vendor_db').get(id=branch_id)
+            Branch.objects.get(id=branch_id)
             self.branch_id = str(branch_id)
             return True
         except (Branch.DoesNotExist, ValueError):
@@ -355,6 +362,7 @@ class User(AbstractBaseUser):
 
 class UserProfile(models.Model):
     """Extended user profile information - Stored in CLIENT database"""
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     user = models.OneToOneField(User, on_delete=models.CASCADE, blank=True, null=True)
     address = models.CharField(max_length=250, blank=True, null=True)
     country = models.CharField(max_length=15, blank=True, null=True)
@@ -369,6 +377,7 @@ class UserProfile(models.Model):
 
 class UserActivityLog(models.Model):
     """User activity tracking - Stored in CLIENT database"""
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE, blank=True, null=True)
     ip_address = models.GenericIPAddressField()
     function_used = models.CharField(max_length=255)
@@ -388,6 +397,7 @@ class UserActivityLog(models.Model):
 
 class Clients(models.Model):
     """Client information model - Stored in CLIENT database"""
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     name = models.CharField(max_length=100)
     email = models.EmailField(unique=True)
     date_of_birth = models.DateField()

@@ -1,0 +1,43 @@
+<!-- Quick Shortcut Cards -->
+<div class="row mt-3 mb-3">
+    <div class="col-md-3 mb-3">
+        <div class="account_setting py-4 fs-2 bg-white shadow-sm rounded-4" style="border-left: 4px solid #16a34a;">
+           <div class="couter_icon col-md-3">
+              <i class="fa fa-arrow-down" style="color: #16a34a;"></i>
+           </div>
+           <a href="{% url 'choose_deposit' %}" class="text-center">
+              <h6 class="my-1">Deposit</h6>
+           </a>
+        </div>
+     </div>
+     <div class="col-md-3 mb-3">
+        <div class="account_setting py-4 fs-2 bg-white shadow-sm rounded-4" style="border-left: 4px solid #ef4444;">
+           <div class="couter_icon col-md-3">
+              <i class="fa fa-arrow-up" style="color: #ef4444;"></i>
+           </div>
+           <a href="{% url 'choose_withdrawal' %}" class="text-center">
+              <h6 class="my-1">Withdrawal</h6>
+           </a>
+        </div>
+     </div>
+     <div class="col-md-3 mb-3">
+        <div class="account_setting py-4 fs-2 bg-white shadow-sm rounded-4" style="border-left: 4px solid #8b5cf6;">
+           <div class="couter_icon col-md-3">
+              <i class="fa fa-hand-holding-usd" style="color: #8b5cf6;"></i>
+           </div>
+           <a href="{% url 'loans' %}" class="text-center">
+              <h6 class="my-1">Loans</h6>
+           </a>
+        </div>
+     </div>
+     <div class="col-md-3 mb-3">
+        <div class="account_setting py-4 fs-2 bg-white shadow-sm rounded-4" style="border-left: 4px solid #14b8a6;">
+           <div class="couter_icon col-md-3">
+              <i class="fa fa-piggy-bank" style="color: #14b8a6;"></i>
+           </div>
+           <a href="{% url 'fixed_dep' %}" class="text-center">
+              <h6 class="my-1">Fixed Deposit</h6>
+           </a>
+        </div>
+     </div>
+</div>

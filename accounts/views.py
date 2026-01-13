@@ -50,26 +50,26 @@ User = get_user_model()
 # ==================== HELPER FUNCTIONS ====================
 
 def get_branch_from_vendor_db(branch_id):
-    """Helper function to get branch from vendor database"""
+    """Helper function to get branch from database"""
     if not branch_id:
         return None
     try:
-        return Branch.objects.using('vendor_db').get(id=branch_id)
+        return Branch.objects.get(id=branch_id)
     except Branch.DoesNotExist:
         return None
 
 
 def get_all_branches_from_vendor_db():
-    """Helper function to get all branches from vendor database"""
-    return Branch.objects.using('vendor_db').all()
+    """Helper function to get all branches from database"""
+    return Branch.objects.all()
 
 
 def get_company_from_vendor_db(company_id):
-    """Helper function to get company from vendor database"""
+    """Helper function to get company from database"""
     if not company_id:
         return None
     try:
-        return Company.objects.using('vendor_db').get(id=company_id)
+        return Company.objects.get(id=company_id)
     except Company.DoesNotExist:
         return None
 
@@ -81,7 +81,7 @@ def get_user_branches_from_vendor_db(user):
     
     user_branch = get_branch_from_vendor_db(user.branch_id)
     if user_branch and user_branch.company:
-        return Branch.objects.using('vendor_db').filter(company=user_branch.company)
+        return Branch.objects.filter(company=user_branch.company)
     
     return get_all_branches_from_vendor_db()
 
@@ -293,7 +293,7 @@ Thank you!
 
 def registerusermasterintelligent(request):
     """Master intelligent user registration"""
-    companies = Company.objects.using('vendor_db').all()
+    companies = Company.objects.all()
     
     if request.method == 'POST':
         form = UserForm(request.POST)
@@ -703,7 +703,7 @@ def users(request):
     
     if user_branch and user_branch.company:
         # Filter users by same company
-        company_branches = Branch.objects.using('vendor_db').filter(company=user_branch.company)
+        company_branches = Branch.objects.filter(company=user_branch.company)
         branch_ids = [str(branch.id) for branch in company_branches]
         users_list = User.objects.filter(branch_id__in=branch_ids)
     else:
@@ -721,7 +721,7 @@ def users(request):
     context = {
         'users': users_with_branch_info,
     }
-    return render(request, 'accounts/users.html', context)
+    return render(request, 'accounts/display_all_user.html', context)
 
 
 # Alias for compatibility
@@ -730,14 +730,14 @@ display_all_user = users
 
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
-def editUser(request, pk=None):
+def editUser(request, uuid=None):
     """Edit user with multi-database branch support"""
-    user = get_object_or_404(User, pk=pk)
+    user = get_object_or_404(User, uuid=uuid)
     
     # Get allowed branches based on current user's company
     user_branch = get_branch_from_vendor_db(request.user.branch_id)
     if user_branch and user_branch.company:
-        allowed_branches = Branch.objects.using('vendor_db').filter(company=user_branch.company)
+        allowed_branches = Branch.objects.filter(company=user_branch.company)
     else:
         allowed_branches = get_all_branches_from_vendor_db()
     
@@ -759,10 +759,10 @@ def editUser(request, pk=None):
     context = {
         'form': form,
         'user': user,
-        'branches': allowed_branches,
+        'branch': allowed_branches,
         'customers': customers,
     }
-    return render(request, 'accounts/editUser.html', context)
+    return render(request, 'accounts/update_user.html', context)
 
 
 # Alias for compatibility
@@ -771,18 +771,18 @@ edit_user = editUser
 
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
-def deleteUser(request, pk=None):
+def deleteUser(request, uuid=None):
     """Delete a user"""
-    user = get_object_or_404(User, pk=pk)
+    user = get_object_or_404(User, uuid=uuid)
     user.delete()
     messages.success(request, 'User deleted successfully!')
     return redirect('users')
 
 
 # Alias for compatibility
-def delete_user(request, id):
-    """Delete user by ID (compatibility function)"""
-    user = User.objects.get(id=id)
+def delete_user(request, uuid):
+    """Delete user by UUID (compatibility function)"""
+    user = User.objects.get(uuid=uuid)
     user.delete()
     messages.success(request, 'User deleted successfully!')
     return redirect('users')
@@ -802,9 +802,21 @@ def dashboard(request):
     user_branch = get_branch_from_vendor_db(request.user.branch_id)
     user_company = user_branch.company if user_branch else None
 
+    # Get company branches for filtering
+    if user_company:
+        company_branches = Branch.objects.filter(company=user_company)
+        company_branch_ids = [b.id for b in company_branches]  # Keep as integers for ForeignKey
+    else:
+        company_branch_ids = [int(request.user.branch_id)] if request.user.branch_id else []
+
+    # Filter base querysets by company branches (use all_objects to bypass TenantManager)
+    company_customers = Customer.all_objects.filter(branch_id__in=company_branch_ids)
+    company_loans = Loans.all_objects.filter(branch_id__in=company_branch_ids)
+    company_memtrans = Memtrans.all_objects.filter(branch_id__in=company_branch_ids)
+
     # Current Month Deposits
     current_month_deposits = (
-        Memtrans.objects.filter(
+        company_memtrans.filter(
             ses_date__month=current_month,
             ses_date__year=current_year,
             amount__gt=0,
@@ -814,7 +826,7 @@ def dashboard(request):
 
     # Current Month Loans (disbursed only)
     current_month_loans = (
-        Loans.objects.filter(
+        company_loans.filter(
             appli_date__month=current_month,
             appli_date__year=current_year,
             disb_status='T'
@@ -823,7 +835,7 @@ def dashboard(request):
 
     # Accumulated Deposits (YTD)
     total_deposits = (
-        Memtrans.objects.filter(
+        company_memtrans.filter(
             ses_date__year=current_year,
             amount__gt=0,
             account_type='C'
@@ -832,19 +844,19 @@ def dashboard(request):
 
     # Accumulated Loans (YTD)
     total_loans = (
-        Loans.objects.filter(
+        company_loans.filter(
             disb_status='T',
             disbursement_date__year=current_year
         ).aggregate(total=Sum('loan_amount'))['total'] or 0
     )
 
-    total_customers = Customer.objects.count()
+    total_customers = company_customers.count()
 
     # NPL Ratio
     npl_ratio = 0
-    if Loans.objects.exists():
-        total_loans_count = Loans.objects.count()
-        defaulted_count = Loans.objects.filter(approval_status='Defaulted').count()
+    if company_loans.exists():
+        total_loans_count = company_loans.count()
+        defaulted_count = company_loans.filter(approval_status='Defaulted').count()
         npl_ratio = (
             round((defaulted_count / total_loans_count) * 100, 2)
             if total_loans_count > 0 else 0
@@ -860,7 +872,7 @@ def dashboard(request):
 
     for m in range(1, 13):
         deposits = (
-            Memtrans.objects.filter(
+            company_memtrans.filter(
                 ses_date__month=m,
                 ses_date__year=current_year,
                 amount__gt=0,
@@ -869,7 +881,7 @@ def dashboard(request):
         )
 
         loans = (
-            Loans.objects.filter(
+            company_loans.filter(
                 appli_date__month=m,
                 appli_date__year=current_year,
                 disb_status='T'
@@ -879,41 +891,45 @@ def dashboard(request):
         deposits_trend.append(float(deposits) / 1_000_000_000)
         loans_trend.append(float(loans) / 1_000_000_000)
 
-    # Customer Segmentation
+    # Customer Segmentation (filtered by company)
     segmentation = {}
     for cat in Category.objects.all():
-        segmentation[cat.category_name] = Customer.objects.filter(cust_cat=cat).count()
+        segmentation[cat.category_name] = company_customers.filter(cust_cat=cat).count()
 
-    # Branch Performance
+    # Branch Performance (only show company branches)
     branch_data = []
-    all_branches = get_all_branches_from_vendor_db()
+    # Get branches belonging to user's company only
+    if user_company:
+        branches_to_show = Branch.objects.filter(company=user_company)
+    else:
+        branches_to_show = Branch.objects.filter(id=request.user.branch_id) if request.user.branch_id else []
     
-    for branch in all_branches:
-        # Count customers and loans for this branch
-        cust_count = Customer.objects.filter(branch_id=str(branch.id)).count()
+    for branch in branches_to_show:
+        # Count customers and loans for this branch (use all_objects to bypass TenantManager)
+        cust_count = Customer.all_objects.filter(branch_id=branch.id).count()
         
         branch_deposits = (
-            Memtrans.objects.filter(
-                cust_branch__in=Customer.objects.filter(branch_id=str(branch.id)).values_list('id', flat=True),
+            Memtrans.all_objects.filter(
+                branch_id=branch.id,
                 amount__gt=0,
                 account_type='C'
             ).aggregate(total=Sum('amount'))['total'] or 0
         )
 
         branch_loans = (
-            Loans.objects.filter(
-                customer__branch_id=str(branch.id),
+            Loans.all_objects.filter(
+                branch_id=branch.id,
                 disb_status='T'
             ).aggregate(total=Sum('loan_amount'))['total'] or 0
         )
 
         profit = Decimal(branch_loans) * Decimal('0.05')
         
-        npl = Loans.objects.filter(
-            customer__branch_id=str(branch.id),
+        npl = Loans.all_objects.filter(
+            branch_id=branch.id,
             approval_status='Defaulted'
         ).count()
-        total_loans_branch = Loans.objects.filter(customer__branch_id=str(branch.id)).count()
+        total_loans_branch = Loans.all_objects.filter(branch_id=branch.id).count()
         npl_ratio_branch = (
             round((npl / total_loans_branch) * 100, 2)
             if total_loans_branch > 0 else 0
@@ -1270,3 +1286,22 @@ def branch_users_ajax(request, branch_id):
         return JsonResponse(data)
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
+
+
+# ==================== AUTO LOGOUT SETTINGS ====================
+
+@login_required(login_url='login')
+def auto_logout_settings(request):
+    """Auto logout settings view"""
+    if request.method == 'POST':
+        # Handle auto logout settings update
+        timeout_minutes = request.POST.get('timeout_minutes', 30)
+        # Store in session or user preferences
+        request.session['auto_logout_timeout'] = int(timeout_minutes)
+        messages.success(request, 'Auto logout settings updated.')
+        return redirect('myAccount')
+    
+    context = {
+        'current_timeout': request.session.get('auto_logout_timeout', 30),
+    }
+    return render(request, 'accounts/auto_logout_settings.html', context)

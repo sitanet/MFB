@@ -57,7 +57,7 @@
                                                            onerror="this.src='{% static 'images/avatar.jpg' %}'"  alt="#" /></td> -->
                                                         <td>{{ region.region_name }}</td>
                                                        
-                                                        <td><a href="{% url 'update_region' region.id %}"style="font-weight: bold; color: blue;" >Edit</a>/<a href="{% url 'region_delete' region.id %}" style="font-weight: bold; color: red;" >Delete</a></td>
+                                                        <td><a href="{% url 'update_region' region.uuid %}"style="font-weight: bold; color: blue;" >Edit</a>/<a href="{% url 'region_delete' region.uuid %}" style="font-weight: bold; color: red;" >Delete</a></td>
                                                        
 
                                                        

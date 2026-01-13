@@ -1,0 +1,198 @@
+<!-- Quick Navigation Shortcuts -->
+<div class="quick-nav-container mb-4">
+    <div class="d-flex flex-wrap justify-content-center gap-2">
+        <a href="{% url 'dashboard' %}" class="btn btn-sm quick-nav-btn nav-dashboard {% if active_module == 'dashboard' %}active{% endif %}">
+            <i class="fas fa-tachometer-alt"></i> Dashboard
+        </a>
+        <a href="{% url 'new_accounts' %}" class="btn btn-sm quick-nav-btn nav-accounts {% if active_module == 'accounts' %}active{% endif %}">
+            <i class="fas fa-user-plus"></i> Create Account
+        </a>
+        <a href="{% url 'choose_deposit' %}" class="btn btn-sm quick-nav-btn nav-deposit {% if active_module == 'deposit' %}active{% endif %}">
+            <i class="fas fa-arrow-down"></i> Deposit
+        </a>
+        <a href="{% url 'choose_withdrawal' %}" class="btn btn-sm quick-nav-btn nav-withdrawal {% if active_module == 'withdrawal' %}active{% endif %}">
+            <i class="fas fa-arrow-up"></i> Withdrawal
+        </a>
+        <a href="{% url 'loans' %}" class="btn btn-sm quick-nav-btn nav-loans {% if active_module == 'loans' %}active{% endif %}">
+            <i class="fas fa-hand-holding-usd"></i> Loans
+        </a>
+        <a href="{% url 'fixed_dep' %}" class="btn btn-sm quick-nav-btn nav-fd {% if active_module == 'fixed_deposit' %}active{% endif %}">
+            <i class="fas fa-piggy-bank"></i> Fixed Deposit
+        </a>
+        <a href="{% url 'fixed_asset_dash' %}" class="btn btn-sm quick-nav-btn nav-fa {% if active_module == 'fixed_assets' %}active{% endif %}">
+            <i class="fas fa-building"></i> Fixed Assets
+        </a>
+        <a href="{% url 'customer_list' %}" class="btn btn-sm quick-nav-btn nav-customers {% if active_module == 'customers' %}active{% endif %}">
+            <i class="fas fa-users"></i> Customers
+        </a>
+        <a href="{% url 'back_office_report' %}" class="btn btn-sm quick-nav-btn nav-reports {% if active_module == 'reports' %}active{% endif %}">
+            <i class="fas fa-chart-bar"></i> Reports
+        </a>
+        <a href="{% url 'utilities' %}" class="btn btn-sm quick-nav-btn nav-admin {% if active_module == 'admin' %}active{% endif %}">
+            <i class="fas fa-cogs"></i> Admin
+        </a>
+    </div>
+</div>
+
+<style>
+.quick-nav-container {
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    padding: 15px 20px;
+    border-radius: 16px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+}
+
+.quick-nav-btn {
+    padding: 10px 16px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    border-radius: 10px;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    border: none;
+    color: white;
+}
+
+/* Dashboard - Orange */
+.nav-dashboard {
+    background: linear-gradient(135deg, #f97316, #fb923c);
+    box-shadow: 0 3px 10px rgba(249, 115, 22, 0.4);
+}
+.nav-dashboard:hover {
+    background: linear-gradient(135deg, #ea580c, #f97316);
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(249, 115, 22, 0.5);
+    color: white;
+}
+
+/* Create Account - Blue */
+.nav-accounts {
+    background: linear-gradient(135deg, #3b82f6, #60a5fa);
+    box-shadow: 0 3px 10px rgba(59, 130, 246, 0.4);
+}
+.nav-accounts:hover {
+    background: linear-gradient(135deg, #2563eb, #3b82f6);
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5);
+    color: white;
+}
+
+/* Deposit - Green */
+.nav-deposit {
+    background: linear-gradient(135deg, #16a34a, #22c55e);
+    box-shadow: 0 3px 10px rgba(22, 163, 74, 0.4);
+}
+.nav-deposit:hover {
+    background: linear-gradient(135deg, #15803d, #16a34a);
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(22, 163, 74, 0.5);
+    color: white;
+}
+
+/* Withdrawal - Red */
+.nav-withdrawal {
+    background: linear-gradient(135deg, #ef4444, #f87171);
+    box-shadow: 0 3px 10px rgba(239, 68, 68, 0.4);
+}
+.nav-withdrawal:hover {
+    background: linear-gradient(135deg, #dc2626, #ef4444);
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(239, 68, 68, 0.5);
+    color: white;
+}
+
+/* Loans - Purple */
+.nav-loans {
+    background: linear-gradient(135deg, #8b5cf6, #a78bfa);
+    box-shadow: 0 3px 10px rgba(139, 92, 246, 0.4);
+}
+.nav-loans:hover {
+    background: linear-gradient(135deg, #7c3aed, #8b5cf6);
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(139, 92, 246, 0.5);
+    color: white;
+}
+
+/* Fixed Deposit - Teal */
+.nav-fd {
+    background: linear-gradient(135deg, #14b8a6, #2dd4bf);
+    box-shadow: 0 3px 10px rgba(20, 184, 166, 0.4);
+}
+.nav-fd:hover {
+    background: linear-gradient(135deg, #0d9488, #14b8a6);
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(20, 184, 166, 0.5);
+    color: white;
+}
+
+/* Fixed Assets - Indigo */
+.nav-fa {
+    background: linear-gradient(135deg, #6366f1, #818cf8);
+    box-shadow: 0 3px 10px rgba(99, 102, 241, 0.4);
+}
+.nav-fa:hover {
+    background: linear-gradient(135deg, #4f46e5, #6366f1);
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+    color: white;
+}
+
+/* Customers - Pink */
+.nav-customers {
+    background: linear-gradient(135deg, #ec4899, #f472b6);
+    box-shadow: 0 3px 10px rgba(236, 72, 153, 0.4);
+}
+.nav-customers:hover {
+    background: linear-gradient(135deg, #db2777, #ec4899);
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(236, 72, 153, 0.5);
+    color: white;
+}
+
+/* Reports - Amber */
+.nav-reports {
+    background: linear-gradient(135deg, #f59e0b, #fbbf24);
+    box-shadow: 0 3px 10px rgba(245, 158, 11, 0.4);
+}
+.nav-reports:hover {
+    background: linear-gradient(135deg, #d97706, #f59e0b);
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(245, 158, 11, 0.5);
+    color: white;
+}
+
+/* Admin - Slate */
+.nav-admin {
+    background: linear-gradient(135deg, #64748b, #94a3b8);
+    box-shadow: 0 3px 10px rgba(100, 116, 139, 0.4);
+}
+.nav-admin:hover {
+    background: linear-gradient(135deg, #475569, #64748b);
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(100, 116, 139, 0.5);
+    color: white;
+}
+
+/* Active state - add glow ring */
+.quick-nav-btn.active {
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.5), 0 6px 20px rgba(0, 0, 0, 0.3);
+    transform: translateY(-2px);
+}
+
+.quick-nav-btn i {
+    margin-right: 6px;
+}
+
+@media (max-width: 768px) {
+    .quick-nav-btn {
+        padding: 8px 12px;
+        font-size: 0.75rem;
+    }
+    .quick-nav-btn i {
+        margin-right: 4px;
+    }
+    .quick-nav-container {
+        padding: 10px 12px;
+    }
+}
+</style>

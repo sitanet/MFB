@@ -21,6 +21,10 @@ def should_track_request(request):
     if request.path.startswith('/admin/'):
         return False
     
+    # Skip company app URLs (vendor-only management pages)
+    if request.path.startswith('/company/'):
+        return False
+    
     # Skip API health checks
     if 'health' in request.path.lower():
         return False

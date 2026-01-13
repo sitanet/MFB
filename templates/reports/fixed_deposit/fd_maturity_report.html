@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Fixed Deposit Maturity Report</h2>
+        <button onclick="window.print()" class="btn btn-primary">
+            <i class="fas fa-print"></i> Print Report
+        </button>
+    </div>
+
+    <!-- Already Matured -->
+    {% if already_matured %}
+    <div class="card mb-4">
+        <div class="card-header bg-danger text-white">
+            <h5>Already Matured (Pending Action)</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-sm">
+                    <thead>
+                        <tr>
+                            <th>FD No</th>
+                            <th>Customer</th>
+                            <th>Principal</th>
+                            <th>Maturity Date</th>
+                            <th>Days Overdue</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for fd in already_matured %}
+                        <tr>
+                            <td>{{ fd.fixed_ac_no }}</td>
+                            <td>{{ fd.customer.first_name }} {{ fd.customer.last_name }}</td>
+                            <td>{{ fd.deposit_amount|floatformat:2 }}</td>
+                            <td>{{ fd.maturity_date }}</td>
+                            <td class="text-danger">{{ today|date:"U"|floatformat:0|stringformat:"d" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Maturing in 30 Days -->
+    <div class="card mb-4">
+        <div class="card-header bg-warning">
+            <h5>Maturing in Next 30 Days ({{ maturing_30.count }})</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-sm">
+                    <thead>
+                        <tr>
+                            <th>FD No</th>
+                            <th>Customer</th>
+                            <th>Principal</th>
+                            <th>Maturity Date</th>
+                            <th>Auto Renewal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for fd in maturing_30 %}
+                        <tr>
+                            <td>{{ fd.fixed_ac_no }}</td>
+                            <td>{{ fd.customer.first_name }} {{ fd.customer.last_name }}</td>
+                            <td>{{ fd.deposit_amount|floatformat:2 }}</td>
+                            <td>{{ fd.maturity_date }}</td>
+                            <td>{% if fd.auto_renewal %}Yes{% else %}No{% endif %}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="5" class="text-center">None</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Maturing in 31-60 Days -->
+    <div class="card mb-4">
+        <div class="card-header bg-info text-white">
+            <h5>Maturing in 31-60 Days ({{ maturing_60.count }})</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-sm">
+                    <thead>
+                        <tr>
+                            <th>FD No</th>
+                            <th>Customer</th>
+                            <th>Principal</th>
+                            <th>Maturity Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for fd in maturing_60 %}
+                        <tr>
+                            <td>{{ fd.fixed_ac_no }}</td>
+                            <td>{{ fd.customer.first_name }} {{ fd.customer.last_name }}</td>
+                            <td>{{ fd.deposit_amount|floatformat:2 }}</td>
+                            <td>{{ fd.maturity_date }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="4" class="text-center">None</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Maturing in 61-90 Days -->
+    <div class="card mb-4">
+        <div class="card-header bg-secondary text-white">
+            <h5>Maturing in 61-90 Days ({{ maturing_90.count }})</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-sm">
+                    <thead>
+                        <tr>
+                            <th>FD No</th>
+                            <th>Customer</th>
+                            <th>Principal</th>
+                            <th>Maturity Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for fd in maturing_90 %}
+                        <tr>
+                            <td>{{ fd.fixed_ac_no }}</td>
+                            <td>{{ fd.customer.first_name }} {{ fd.customer.last_name }}</td>
+                            <td>{{ fd.deposit_amount|floatformat:2 }}</td>
+                            <td>{{ fd.maturity_date }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="4" class="text-center">None</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <a href="{% url 'fixed_deposit_report' %}" class="btn btn-secondary">
+        <i class="fa fa-arrow-left"></i> Back
+    </a>
+</div>
+{% endblock %}

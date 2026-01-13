@@ -75,7 +75,7 @@
                 </li>
                 
            
-                <li>
+                <!-- <li>
                       <a href="#endofperiod" data-toggle="collapse" aria-expanded="false"
                             class="dropdown-toggle">
                             <i class="fas fa-calendar-alt"></i> <span>End of Period</span>
@@ -88,7 +88,7 @@
                             <li><a href="financial_snapshot.html">><span>Stock</span></a></li>
 
                       </ul>
-                </li>
+                </li> -->
 
 
                 <!-- <li>
@@ -110,9 +110,12 @@
                       </a>
                       <ul class="collapse list-unstyled" id="reports">
                             <li><a href="{% url 'front_office_report' %}">><span>Front Office Report</span></a></li>
-                            <li><a href="{% url 'back_office_report' %}">><span>Back Office Report</span></a>
-                            </li>
-                            
+                            <li><a href="{% url 'back_office_report' %}">><span>Back Office Report</span></a></li>
+                            <li><a href="{% url 'savings_report' %}">><span>Savings Report</span></a></li>
+                            <li><a href="{% url 'loan_report' %}">><span>Loans Report</span></a></li>
+                            <li><a href="{% url 'financial_report' %}">><span>Financial Report</span></a></li>
+                            <li><a href="{% url 'fixed_deposit_report' %}">><span>Fixed Deposit Report</span></a></li>
+                            <li><a href="{% url 'fixed_asset_report' %}">><span>Fixed Asset Report</span></a></li>
                       </ul>
                 </li>
 
@@ -148,6 +151,7 @@
                             <li><a href="{% url 'account_settings' %}"><span>Account Setting</span></a>
                             </li>
                             <li><a href="{% url 'product_settings'%}">><span>Product Setting</span></a></li>
+                            <li><a href="{% url 'customer_account_type_list' %}">><span>Customer Account Types</span></a></li>
                             <li><a href="{% url 'user_define' %}">><span>User Define</span></a></li>
                             <li><a href="permissions.html">><span>Customize Files and
                                               Charge</span></a></li>

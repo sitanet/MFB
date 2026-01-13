@@ -56,7 +56,7 @@
                                                            onerror="this.src='{% static 'images/avatar.jpg' %}'"  alt="#" /></td> -->
                                                         <td>{{ id_type.id_card_name }}</td>
                                                         
-                                                        <td><a href="{% url 'update_id_type' id_type.id %}"style="font-weight: bold; color: blue;" >Edit</a>/<a href="{% url 'id_type_delete' id_type.id %}" style="font-weight: bold; color: red;" >Delete</a></td>
+                                                        <td><a href="{% url 'update_id_type' id_type.uuid %}"style="font-weight: bold; color: blue;" >Edit</a>/<a href="{% url 'id_type_delete' id_type.uuid %}" style="font-weight: bold; color: red;" >Delete</a></td>
                                                        
 
                                                        

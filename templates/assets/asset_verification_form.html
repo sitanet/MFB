@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <h2>Verify Asset: {{ asset.asset_name }}</h2>
+    
+    <div class="card mb-4">
+        <div class="card-header">Asset Details</div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3"><strong>Asset ID:</strong> {{ asset.asset_id }}</div>
+                <div class="col-md-3"><strong>Serial No:</strong> {{ asset.asset_serial_no }}</div>
+                <div class="col-md-3"><strong>Location:</strong> {{ asset.asset_location }}</div>
+                <div class="col-md-3"><strong>Officer:</strong> {{ asset.officer }}</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">Verification Record</div>
+        <div class="card-body">
+            <form method="POST">
+                {% csrf_token %}
+                
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Verification Date *</label>
+                        <input type="date" name="verification_date" class="form-control" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Verified By *</label>
+                        <input type="text" name="verified_by" class="form-control" required>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Status *</label>
+                        <select name="status" class="form-control" required>
+                            <option value="verified">Verified - Asset Found</option>
+                            <option value="not_found">Not Found</option>
+                            <option value="damaged">Found - Damaged</option>
+                            <option value="relocated">Found - Different Location</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Physical Condition</label>
+                        <select name="physical_condition" class="form-control">
+                            <option value="">-- Select --</option>
+                            <option value="excellent">Excellent</option>
+                            <option value="good">Good</option>
+                            <option value="fair">Fair</option>
+                            <option value="poor">Poor</option>
+                            <option value="unusable">Unusable</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Actual Location (if different)</label>
+                    <select name="actual_location" class="form-control">
+                        <option value="">-- Same as recorded --</option>
+                        {% for loc in locations %}
+                        <option value="{{ loc.id }}">{{ loc.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Remarks</label>
+                    <textarea name="remarks" class="form-control" rows="3"></textarea>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Save Verification</button>
+                <a href="{% url 'asset_detail' asset.uuid %}" class="btn btn-secondary">Cancel</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

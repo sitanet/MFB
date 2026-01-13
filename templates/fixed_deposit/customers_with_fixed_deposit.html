@@ -48,7 +48,7 @@
                             <td>
                                 <!-- Conditionally display Withdraw button -->
                                 {% if deposit.status != "closed" %}
-                                    <a href="{% url 'withdraw_fixed_deposit' deposit.id %}" class="btn btn-danger btn-sm">Withdraw</a>
+                                    <a href="{% url 'withdraw_fixed_deposit' deposit.uuid %}" class="btn btn-danger btn-sm">Withdraw</a>
                                 {% else %}
                                     <span class="text-muted">Closed</span>
                                 {% endif %}

@@ -4,12 +4,28 @@ from .models import FixedAsset
 from .forms import FixedAssetForm
 from company.models import Branch
 from decimal import Decimal
+from functools import wraps
 
-# View for listing assets
+
+def require_fixed_assets_feature(view_func):
+    """Decorator to check if branch has Fixed Assets feature enabled"""
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        if hasattr(request.user, 'branch') and request.user.branch:
+            if not request.user.branch.can_fixed_assets:
+                messages.error(request, "Fixed Assets feature is not enabled for your branch. Please contact administrator.")
+                return redirect('dashboard')
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
+
+@require_fixed_assets_feature
 def asset_list(request):
-    assets = FixedAsset.objects.filter(is_disposed=False)
+    from accounts.utils import get_company_branch_ids
+    branch_ids = get_company_branch_ids(request.user)
+    assets = FixedAsset.objects.filter(is_disposed=False, branch_id__in=branch_ids)
     for asset in assets:
-        asset.nbv = asset.net_book_value  # ✅ Access it as a property, without parentheses
+        asset.nbv = asset.net_book_value  # Access it as a property
     return render(request, 'assets/asset_list.html', {'assets': assets})
 
 from django.shortcuts import render, redirect
@@ -21,6 +37,8 @@ from .forms import FixedAssetForm
 from transactions.models import Memtrans
 from transactions.utils import generate_fixed_asset_id
 
+
+@require_fixed_assets_feature
 def asset_create(request):
     if request.method == "POST":
         try:
@@ -145,28 +163,39 @@ def asset_create(request):
             messages.error(request, f"An error occurred: {e}")
             return redirect("asset_create")
 
-    # Querying required dropdown fields
+    # Querying required dropdown fields - filter by company
+    from accounts.utils import get_branch_from_vendor_db
+    user_branch = get_branch_from_vendor_db(request.user.branch_id)
+    user_company = user_branch.company if user_branch else None
+    
+    if user_branch and user_branch.head_office:
+        ctx_branches = Branch.objects.filter(company=user_company)
+    elif user_branch:
+        ctx_branches = Branch.objects.filter(id=user_branch.id)
+    else:
+        ctx_branches = []
+    
     context = {
         "asset_types": AssetType.objects.all(),
         "asset_groups": AssetGroup.objects.all(),
-        "branches": Branch.objects.all(),
+        "branches": ctx_branches,
         "departments": Department.objects.all(),
         "officers": Officer.objects.all(),
         "asset_classes": AssetClass.objects.all(),
         "asset_locations": AssetLocation.objects.all(),
         "depreciation_methods": DepreciationMethod.objects.all(),
-        "gl_accounts": Account.objects.all(),
-        "bank_accounts": Account.objects.all(),
-        "allowance_accounts": Account.objects.all(),
-        "expense_accounts": Account.objects.all(),
+        "gl_accounts": Account.all_objects.filter(branch__company=user_company) if user_company else [],
+        "bank_accounts": Account.all_objects.filter(branch__company=user_company) if user_company else [],
+        "allowance_accounts": Account.all_objects.filter(branch__company=user_company) if user_company else [],
+        "expense_accounts": Account.all_objects.filter(branch__company=user_company) if user_company else [],
         "asset_class": AssetClass.objects.all(),
     }
 
     return render(request, "assets/asset_form.html", context)
 
-# View for deleting an asset
-def asset_delete(request, asset_id):
-    asset = get_object_or_404(FixedAsset, id=asset_id)
+@require_fixed_assets_feature
+def asset_delete(request, uuid):
+    asset = get_object_or_404(FixedAsset, uuid=uuid)
     if request.method == "POST":
         asset.delete()
         messages.success(request, "Asset deleted successfully!")
@@ -178,8 +207,10 @@ from django.shortcuts import render, get_object_or_404, redirect
 from .models import FixedAsset
 from .forms import FixedAssetForm
 
-def asset_update(request, asset_id):
-    asset = get_object_or_404(FixedAsset, id=asset_id)
+
+@require_fixed_assets_feature
+def asset_update(request, uuid):
+    asset = get_object_or_404(FixedAsset, uuid=uuid)
     
     if request.method == "POST":
         form = FixedAssetForm(request.POST, instance=asset)
@@ -204,12 +235,14 @@ from transactions.utils import generate_fixed_asset_dep_id
 
 from company.models import Branch
 
-def post_depreciation(request, asset_id):
+
+@require_fixed_assets_feature
+def post_depreciation(request, uuid):
     """
     Handles depreciation posting while preventing duplicate entries on the same day
     and ensuring it follows the asset’s depreciation frequency.
     """
-    asset = get_object_or_404(FixedAsset, id=asset_id)
+    asset = get_object_or_404(FixedAsset, uuid=uuid)
     branch = asset.branch  # Get the branch associated with the asset
     session_date = branch.session_date if branch.session_date else timezone.now().date()
 
@@ -316,11 +349,21 @@ def post_depreciation(request, asset_id):
 
 
 
+@require_fixed_assets_feature
 def post_all_depreciation(request):
     """
     Posts depreciation for all assets due on the session date and generates a report.
     """
-    branches = Branch.objects.all()
+    from accounts.utils import get_branch_from_vendor_db
+    user_branch = get_branch_from_vendor_db(request.user.branch_id)
+    if not user_branch:
+        messages.error(request, 'No branch assigned to user.')
+        return redirect('dashboard')
+    # Filter branches by company
+    if user_branch.head_office:
+        branches = Branch.objects.filter(company=user_branch.company)
+    else:
+        branches = Branch.objects.filter(id=user_branch.id)
     depreciated_assets = []  # Store depreciated assets for the report
 
     for branch in branches:
@@ -427,6 +470,7 @@ def post_all_depreciation(request):
 
 
 
+@require_fixed_assets_feature
 def fixed_asset_dash(request):
     return render(request, 'assets/fixed_asset_dash.html')
 
@@ -440,8 +484,10 @@ from decimal import Decimal
 from .models import FixedAsset, AssetDisposal
 from transactions.models import Memtrans
 
-def dispose_fixed_asset(request, asset_id):
-    asset = get_object_or_404(FixedAsset, id=asset_id)
+
+@require_fixed_assets_feature
+def dispose_fixed_asset(request, uuid):
+    asset = get_object_or_404(FixedAsset, uuid=uuid)
 
     if request.method == "POST":
         disposal_price = Decimal(request.POST.get("disposal_price"))
@@ -500,8 +546,10 @@ def dispose_fixed_asset(request, asset_id):
 
 from .models import FixedAsset
 
-def asset_detail(request, asset_id):
-    asset = get_object_or_404(FixedAsset, id=asset_id)  # Fetch the asset or return 404 if not found
+
+@require_fixed_assets_feature
+def asset_detail(request, uuid):
+    asset = get_object_or_404(FixedAsset, uuid=uuid)  # Fetch the asset or return 404 if not found
     return render(request, 'assets/asset_detail.html', {'asset': asset})
 
 
@@ -512,8 +560,10 @@ from decimal import Decimal
 from .models import FixedAsset, AssetRevaluation
 from .forms import AssetRevaluationForm
 
-def revalue_asset(request, asset_id):
-    asset = get_object_or_404(FixedAsset, pk=asset_id)
+
+@require_fixed_assets_feature
+def revalue_asset(request, uuid):
+    asset = get_object_or_404(FixedAsset, uuid=uuid)
 
     # Calculate total depreciation and Net Book Value (NBV)
     total_depreciated = getattr(asset, "total_depreciation", Decimal("0.00"))
@@ -560,3 +610,551 @@ def revalue_asset(request, asset_id):
         "total_depreciated": total_depreciated,
         "net_book_value": net_book_value
     })
+
+
+# ==================== ASSET TRANSFER ====================
+
+from .models import AssetTransfer, AssetImpairment, AssetInsurance, AssetMaintenance, AssetWarranty, AssetVerification
+
+
+@require_fixed_assets_feature
+def asset_transfer(request, uuid):
+    """Transfer asset to different branch/department/location/officer"""
+    asset = get_object_or_404(FixedAsset, uuid=uuid)
+    
+    from accounts.utils import get_branch_from_vendor_db
+    user_branch = get_branch_from_vendor_db(request.user.branch_id)
+    user_company = user_branch.company if user_branch else None
+    
+    if request.method == "POST":
+        try:
+            transfer = AssetTransfer.objects.create(
+                asset=asset,
+                transfer_date=request.POST.get('transfer_date') or timezone.now().date(),
+                from_branch=asset.branch,
+                from_department=asset.department,
+                from_location=asset.asset_location,
+                from_officer=asset.officer,
+                to_branch_id=request.POST.get('to_branch') or None,
+                to_department_id=request.POST.get('to_department') or None,
+                to_location_id=request.POST.get('to_location') or None,
+                to_officer_id=request.POST.get('to_officer') or None,
+                reason=request.POST.get('reason', ''),
+                approved_by=request.POST.get('approved_by', ''),
+            )
+            messages.success(request, f"Asset {asset.asset_name} transferred successfully!")
+            return redirect('asset_detail', uuid=asset.uuid)
+        except Exception as e:
+            messages.error(request, f"Error transferring asset: {e}")
+    
+    context = {
+        'asset': asset,
+        'branches': Branch.objects.filter(company=user_company) if user_company else [],
+        'departments': Department.objects.all(),
+        'locations': AssetLocation.objects.all(),
+        'officers': Officer.objects.all(),
+    }
+    return render(request, 'assets/asset_transfer_form.html', context)
+
+
+@require_fixed_assets_feature
+def asset_transfer_history(request, uuid):
+    """View transfer history for an asset"""
+    asset = get_object_or_404(FixedAsset, uuid=uuid)
+    transfers = asset.transfers.all().order_by('-transfer_date')
+    return render(request, 'assets/asset_transfer_history.html', {'asset': asset, 'transfers': transfers})
+
+
+# ==================== ASSET IMPAIRMENT ====================
+
+@require_fixed_assets_feature
+def asset_impairment(request, uuid):
+    """Record impairment loss for an asset"""
+    asset = get_object_or_404(FixedAsset, uuid=uuid)
+    
+    if request.method == "POST":
+        try:
+            impairment_loss = Decimal(request.POST.get('impairment_loss', '0'))
+            previous_nbv = asset.net_book_value
+            new_nbv = previous_nbv - impairment_loss
+            
+            if impairment_loss <= 0:
+                messages.error(request, "Impairment loss must be greater than zero.")
+                return redirect('asset_impairment', uuid=uuid)
+            
+            if new_nbv < asset.residual_value:
+                messages.error(request, "Impairment cannot reduce NBV below residual value.")
+                return redirect('asset_impairment', uuid=uuid)
+            
+            AssetImpairment.objects.create(
+                asset=asset,
+                impairment_date=request.POST.get('impairment_date') or timezone.now().date(),
+                previous_nbv=previous_nbv,
+                impairment_loss=impairment_loss,
+                new_nbv=new_nbv,
+                reason=request.POST.get('reason', ''),
+                approved_by=request.POST.get('approved_by', ''),
+            )
+            messages.success(request, f"Impairment of {impairment_loss} recorded for {asset.asset_name}.")
+            return redirect('asset_detail', uuid=asset.uuid)
+        except Exception as e:
+            messages.error(request, f"Error recording impairment: {e}")
+    
+    return render(request, 'assets/asset_impairment_form.html', {'asset': asset})
+
+
+# ==================== ASSET INSURANCE ====================
+
+@require_fixed_assets_feature
+def asset_insurance_list(request):
+    """List all asset insurance policies"""
+    from accounts.utils import get_company_branch_ids
+    branch_ids = get_company_branch_ids(request.user)
+    
+    insurances = AssetInsurance.objects.filter(asset__branch_id__in=branch_ids).select_related('asset')
+    return render(request, 'assets/asset_insurance_list.html', {'insurances': insurances})
+
+
+@require_fixed_assets_feature
+def asset_insurance_add(request, uuid):
+    """Add insurance policy for an asset"""
+    asset = get_object_or_404(FixedAsset, uuid=uuid)
+    
+    if request.method == "POST":
+        try:
+            AssetInsurance.objects.create(
+                asset=asset,
+                policy_number=request.POST.get('policy_number'),
+                insurance_company=request.POST.get('insurance_company'),
+                coverage_type=request.POST.get('coverage_type'),
+                coverage_amount=Decimal(request.POST.get('coverage_amount', '0')),
+                premium_amount=Decimal(request.POST.get('premium_amount', '0')),
+                start_date=request.POST.get('start_date'),
+                expiry_date=request.POST.get('expiry_date'),
+                contact_person=request.POST.get('contact_person', ''),
+                contact_phone=request.POST.get('contact_phone', ''),
+                notes=request.POST.get('notes', ''),
+            )
+            messages.success(request, f"Insurance policy added for {asset.asset_name}.")
+            return redirect('asset_detail', uuid=asset.uuid)
+        except Exception as e:
+            messages.error(request, f"Error adding insurance: {e}")
+    
+    return render(request, 'assets/asset_insurance_form.html', {'asset': asset})
+
+
+# ==================== ASSET MAINTENANCE ====================
+
+@require_fixed_assets_feature
+def asset_maintenance_list(request):
+    """List all maintenance records"""
+    from accounts.utils import get_company_branch_ids
+    branch_ids = get_company_branch_ids(request.user)
+    
+    maintenances = AssetMaintenance.objects.filter(asset__branch_id__in=branch_ids).select_related('asset')
+    return render(request, 'assets/asset_maintenance_list.html', {'maintenances': maintenances})
+
+
+@require_fixed_assets_feature
+def asset_maintenance_add(request, uuid):
+    """Add maintenance record for an asset"""
+    asset = get_object_or_404(FixedAsset, uuid=uuid)
+    
+    if request.method == "POST":
+        try:
+            AssetMaintenance.objects.create(
+                asset=asset,
+                maintenance_type=request.POST.get('maintenance_type'),
+                maintenance_date=request.POST.get('maintenance_date'),
+                next_maintenance_date=request.POST.get('next_maintenance_date') or None,
+                description=request.POST.get('description'),
+                performed_by=request.POST.get('performed_by'),
+                cost=Decimal(request.POST.get('cost', '0')),
+                parts_replaced=request.POST.get('parts_replaced', ''),
+                status=request.POST.get('status', 'completed'),
+                invoice_number=request.POST.get('invoice_number', ''),
+                notes=request.POST.get('notes', ''),
+            )
+            messages.success(request, f"Maintenance record added for {asset.asset_name}.")
+            return redirect('asset_detail', uuid=asset.uuid)
+        except Exception as e:
+            messages.error(request, f"Error adding maintenance: {e}")
+    
+    return render(request, 'assets/asset_maintenance_form.html', {'asset': asset})
+
+
+# ==================== ASSET WARRANTY ====================
+
+@require_fixed_assets_feature  
+def asset_warranty_list(request):
+    """List all warranty records"""
+    from accounts.utils import get_company_branch_ids
+    branch_ids = get_company_branch_ids(request.user)
+    
+    warranties = AssetWarranty.objects.filter(asset__branch_id__in=branch_ids).select_related('asset')
+    return render(request, 'assets/asset_warranty_list.html', {'warranties': warranties})
+
+
+@require_fixed_assets_feature
+def asset_warranty_add(request, uuid):
+    """Add warranty for an asset"""
+    asset = get_object_or_404(FixedAsset, uuid=uuid)
+    
+    if request.method == "POST":
+        try:
+            AssetWarranty.objects.create(
+                asset=asset,
+                warranty_provider=request.POST.get('warranty_provider'),
+                warranty_type=request.POST.get('warranty_type'),
+                start_date=request.POST.get('start_date'),
+                expiry_date=request.POST.get('expiry_date'),
+                coverage_details=request.POST.get('coverage_details'),
+                terms_and_conditions=request.POST.get('terms_and_conditions', ''),
+                contact_person=request.POST.get('contact_person', ''),
+                contact_phone=request.POST.get('contact_phone', ''),
+                contact_email=request.POST.get('contact_email', ''),
+            )
+            messages.success(request, f"Warranty added for {asset.asset_name}.")
+            return redirect('asset_detail', uuid=asset.uuid)
+        except Exception as e:
+            messages.error(request, f"Error adding warranty: {e}")
+    
+    return render(request, 'assets/asset_warranty_form.html', {'asset': asset})
+
+
+# ==================== ASSET VERIFICATION ====================
+
+@require_fixed_assets_feature
+def asset_verification_list(request):
+    """List all verification records"""
+    from accounts.utils import get_company_branch_ids
+    branch_ids = get_company_branch_ids(request.user)
+    
+    verifications = AssetVerification.objects.filter(asset__branch_id__in=branch_ids).select_related('asset')
+    return render(request, 'assets/asset_verification_list.html', {'verifications': verifications})
+
+
+@require_fixed_assets_feature
+def asset_verification_add(request, uuid):
+    """Add verification record for an asset"""
+    asset = get_object_or_404(FixedAsset, uuid=uuid)
+    
+    if request.method == "POST":
+        try:
+            AssetVerification.objects.create(
+                asset=asset,
+                verification_date=request.POST.get('verification_date'),
+                verified_by=request.POST.get('verified_by'),
+                status=request.POST.get('status'),
+                physical_condition=request.POST.get('physical_condition', ''),
+                actual_location_id=request.POST.get('actual_location') or None,
+                remarks=request.POST.get('remarks', ''),
+            )
+            messages.success(request, f"Verification recorded for {asset.asset_name}.")
+            return redirect('asset_detail', uuid=asset.uuid)
+        except Exception as e:
+            messages.error(request, f"Error recording verification: {e}")
+    
+    context = {
+        'asset': asset,
+        'locations': AssetLocation.objects.all(),
+    }
+    return render(request, 'assets/asset_verification_form.html', context)
+
+
+# ==================== REPORTS ====================
+
+@require_fixed_assets_feature
+def depreciation_schedule_report(request):
+    """Generate depreciation schedule report"""
+    from accounts.utils import get_company_branch_ids
+    from datetime import date
+    from dateutil.relativedelta import relativedelta
+    
+    branch_ids = get_company_branch_ids(request.user)
+    assets = FixedAsset.objects.filter(branch_id__in=branch_ids, is_disposed=False)
+    
+    schedule = []
+    for asset in assets:
+        if asset.asset_life_months <= 0:
+            continue
+            
+        monthly_dep = (asset.asset_cost - asset.residual_value) / Decimal(asset.asset_life_months)
+        remaining_life = max(0, asset.asset_life_months - int(asset.total_depreciation / monthly_dep) if monthly_dep > 0 else 0)
+        
+        # Project future depreciation
+        projections = []
+        current_nbv = asset.net_book_value
+        current_date = date.today()
+        
+        for i in range(min(12, remaining_life)):  # Show next 12 periods max
+            if current_nbv <= asset.residual_value:
+                break
+            dep_amount = min(monthly_dep, current_nbv - asset.residual_value)
+            current_nbv -= dep_amount
+            
+            if asset.depreciation_frequency == '12':
+                period_date = current_date + relativedelta(months=i+1)
+            elif asset.depreciation_frequency == '4':
+                period_date = current_date + relativedelta(months=(i+1)*3)
+            elif asset.depreciation_frequency == '2':
+                period_date = current_date + relativedelta(months=(i+1)*6)
+            else:
+                period_date = current_date + relativedelta(years=i+1)
+            
+            projections.append({
+                'period': i + 1,
+                'date': period_date,
+                'depreciation': dep_amount,
+                'nbv': current_nbv,
+            })
+        
+        schedule.append({
+            'asset': asset,
+            'monthly_depreciation': monthly_dep,
+            'remaining_life': remaining_life,
+            'projections': projections,
+        })
+    
+    return render(request, 'assets/depreciation_schedule_report.html', {'schedule': schedule})
+
+
+@require_fixed_assets_feature
+def asset_register_report(request):
+    """Generate complete asset register report"""
+    from accounts.utils import get_company_branch_ids
+    from django.db.models import Sum
+    
+    branch_ids = get_company_branch_ids(request.user)
+    assets = FixedAsset.objects.filter(branch_id__in=branch_ids).select_related(
+        'asset_type', 'asset_group', 'branch', 'department', 'officer', 'asset_location'
+    )
+    
+    # Summary statistics
+    total_cost = assets.aggregate(total=Sum('asset_cost'))['total'] or Decimal('0')
+    total_depreciation = assets.aggregate(total=Sum('total_depreciation'))['total'] or Decimal('0')
+    total_nbv = total_cost - total_depreciation
+    
+    active_assets = assets.filter(is_disposed=False)
+    disposed_assets = assets.filter(is_disposed=True)
+    
+    # Group by type
+    by_type = {}
+    for asset in active_assets:
+        type_name = asset.asset_type.name
+        if type_name not in by_type:
+            by_type[type_name] = {'count': 0, 'cost': Decimal('0'), 'nbv': Decimal('0')}
+        by_type[type_name]['count'] += 1
+        by_type[type_name]['cost'] += asset.asset_cost
+        by_type[type_name]['nbv'] += asset.net_book_value
+    
+    context = {
+        'assets': active_assets,
+        'disposed_assets': disposed_assets,
+        'total_cost': total_cost,
+        'total_depreciation': total_depreciation,
+        'total_nbv': total_nbv,
+        'by_type': by_type,
+        'active_count': active_assets.count(),
+        'disposed_count': disposed_assets.count(),
+    }
+    return render(request, 'assets/asset_register_report.html', context)
+
+
+# ==================== ASSET CATEGORY CRUD ====================
+
+@require_fixed_assets_feature
+def asset_type_list(request):
+    """List all asset types"""
+    types = AssetType.objects.all()
+    return render(request, 'assets/asset_type_list.html', {'types': types})
+
+
+@require_fixed_assets_feature
+def asset_type_create(request):
+    """Create new asset type"""
+    if request.method == "POST":
+        name = request.POST.get('name')
+        if name:
+            AssetType.objects.create(name=name)
+            messages.success(request, f"Asset Type '{name}' created.")
+            return redirect('asset_type_list')
+    return render(request, 'assets/asset_type_form.html', {'title': 'Create Asset Type'})
+
+
+@require_fixed_assets_feature
+def asset_type_edit(request, uuid):
+    """Edit asset type"""
+    asset_type = get_object_or_404(AssetType, uuid=uuid)
+    if request.method == "POST":
+        asset_type.name = request.POST.get('name')
+        asset_type.save()
+        messages.success(request, f"Asset Type updated.")
+        return redirect('asset_type_list')
+    return render(request, 'assets/asset_type_form.html', {'type': asset_type, 'title': 'Edit Asset Type'})
+
+
+@require_fixed_assets_feature
+def asset_type_delete(request, uuid):
+    """Delete asset type"""
+    asset_type = get_object_or_404(AssetType, uuid=uuid)
+    if request.method == "POST":
+        asset_type.delete()
+        messages.success(request, "Asset Type deleted.")
+        return redirect('asset_type_list')
+    return render(request, 'assets/asset_type_confirm_delete.html', {'type': asset_type})
+
+
+@require_fixed_assets_feature
+def asset_group_list(request):
+    """List all asset groups"""
+    groups = AssetGroup.objects.all()
+    return render(request, 'assets/asset_group_list.html', {'groups': groups})
+
+
+@require_fixed_assets_feature
+def asset_group_create(request):
+    """Create new asset group"""
+    if request.method == "POST":
+        name = request.POST.get('name')
+        if name:
+            AssetGroup.objects.create(name=name)
+            messages.success(request, f"Asset Group '{name}' created.")
+            return redirect('asset_group_list')
+    return render(request, 'assets/asset_group_form.html', {'title': 'Create Asset Group'})
+
+
+@require_fixed_assets_feature
+def asset_group_edit(request, uuid):
+    """Edit asset group"""
+    group = get_object_or_404(AssetGroup, uuid=uuid)
+    if request.method == "POST":
+        group.name = request.POST.get('name')
+        group.save()
+        messages.success(request, "Asset Group updated.")
+        return redirect('asset_group_list')
+    return render(request, 'assets/asset_group_form.html', {'group': group, 'title': 'Edit Asset Group'})
+
+
+@require_fixed_assets_feature
+def asset_location_list(request):
+    """List all asset locations"""
+    locations = AssetLocation.objects.all()
+    return render(request, 'assets/asset_location_list.html', {'locations': locations})
+
+
+@require_fixed_assets_feature
+def asset_location_create(request):
+    """Create new asset location"""
+    if request.method == "POST":
+        name = request.POST.get('name')
+        if name:
+            AssetLocation.objects.create(name=name)
+            messages.success(request, f"Asset Location '{name}' created.")
+            return redirect('asset_location_list')
+    return render(request, 'assets/asset_location_form.html', {'title': 'Create Asset Location'})
+
+
+@require_fixed_assets_feature
+def asset_location_edit(request, uuid):
+    """Edit asset location"""
+    location = get_object_or_404(AssetLocation, uuid=uuid)
+    if request.method == "POST":
+        location.name = request.POST.get('name')
+        location.save()
+        messages.success(request, "Asset Location updated.")
+        return redirect('asset_location_list')
+    return render(request, 'assets/asset_location_form.html', {'location': location, 'title': 'Edit Asset Location'})
+
+
+@require_fixed_assets_feature
+def department_list(request):
+    """List all departments"""
+    departments = Department.objects.all()
+    return render(request, 'assets/department_list.html', {'departments': departments})
+
+
+@require_fixed_assets_feature
+def department_create(request):
+    """Create new department"""
+    if request.method == "POST":
+        name = request.POST.get('name')
+        if name:
+            Department.objects.create(name=name)
+            messages.success(request, f"Department '{name}' created.")
+            return redirect('department_list')
+    return render(request, 'assets/department_form.html', {'title': 'Create Department'})
+
+
+@require_fixed_assets_feature
+def department_edit(request, uuid):
+    """Edit department"""
+    department = get_object_or_404(Department, uuid=uuid)
+    if request.method == "POST":
+        department.name = request.POST.get('name')
+        department.save()
+        messages.success(request, "Department updated.")
+        return redirect('department_list')
+    return render(request, 'assets/department_form.html', {'department': department, 'title': 'Edit Department'})
+
+
+@require_fixed_assets_feature
+def officer_list(request):
+    """List all officers"""
+    officers = Officer.objects.all()
+    return render(request, 'assets/officer_list.html', {'officers': officers})
+
+
+@require_fixed_assets_feature
+def officer_create(request):
+    """Create new officer"""
+    if request.method == "POST":
+        name = request.POST.get('name')
+        if name:
+            Officer.objects.create(name=name)
+            messages.success(request, f"Officer '{name}' created.")
+            return redirect('officer_list')
+    return render(request, 'assets/officer_form.html', {'title': 'Create Officer'})
+
+
+@require_fixed_assets_feature
+def officer_edit(request, uuid):
+    """Edit officer"""
+    officer = get_object_or_404(Officer, uuid=uuid)
+    if request.method == "POST":
+        officer.name = request.POST.get('name')
+        officer.save()
+        messages.success(request, "Officer updated.")
+        return redirect('officer_list')
+    return render(request, 'assets/officer_form.html', {'officer': officer, 'title': 'Edit Officer'})
+
+
+@require_fixed_assets_feature
+def depreciation_method_list(request):
+    """List all depreciation methods"""
+    methods = DepreciationMethod.objects.all()
+    return render(request, 'assets/depreciation_method_list.html', {'methods': methods})
+
+
+@require_fixed_assets_feature
+def depreciation_method_create(request):
+    """Create new depreciation method"""
+    if request.method == "POST":
+        method = request.POST.get('method')
+        if method:
+            DepreciationMethod.objects.create(method=method)
+            messages.success(request, f"Depreciation Method '{method}' created.")
+            return redirect('depreciation_method_list')
+    return render(request, 'assets/depreciation_method_form.html', {'title': 'Create Depreciation Method'})
+
+
+@require_fixed_assets_feature
+def depreciation_method_edit(request, uuid):
+    """Edit depreciation method"""
+    dep_method = get_object_or_404(DepreciationMethod, uuid=uuid)
+    if request.method == "POST":
+        dep_method.method = request.POST.get('method')
+        dep_method.save()
+        messages.success(request, "Depreciation Method updated.")
+        return redirect('depreciation_method_list')
+    return render(request, 'assets/depreciation_method_form.html', {'dep_method': dep_method, 'title': 'Edit Depreciation Method'})

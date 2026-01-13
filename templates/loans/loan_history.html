@@ -53,7 +53,7 @@
                                     <td>{{ history.interest }}</td>
                                     <td>{{ history.penalty }}</td>
                                     <td>
-                                        <form action="{% url 'delete_loan_history' history.id loan.id %}" method="post">
+                                        <form action="{% url 'delete_loan_history' history.id loan.uuid %}" method="post">
                                             {% csrf_token %}
                                             <button class="btn btn-danger" type="submit">Reverse Repayment</button>
                                         </form>

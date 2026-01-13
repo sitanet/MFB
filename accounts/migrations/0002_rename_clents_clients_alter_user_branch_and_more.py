@@ -12,10 +12,10 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RenameModel(
-            old_name='Clents',
-            new_name='Clients',
-        ),
+        # migrations.RenameModel(
+        #     old_name='Clents',
+        #     new_name='Clients',
+        # ),  # Commented out - model already named Clients in regenerated 0001_initial
         migrations.AlterField(
             model_name='user',
             name='branch',

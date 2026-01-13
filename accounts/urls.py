@@ -24,8 +24,8 @@ urlpatterns = [
     path('change_password/', views.change_password, name='change_password'),
     path('user_admin/', views.user_admin, name='user_admin'),
     path('display_all_user/', views.display_all_user, name='display_all_user'),
-    path('edit_user/<int:id>/', views.edit_user, name='edit_user'),
-    path('delete_user/<int:id>/', views.delete_user, name='delete_user'),
+    path('edit_user/<uuid:uuid>/', views.edit_user, name='edit_user'),
+    path('delete_user/<uuid:uuid>/', views.delete_user, name='delete_user'),
 
 
     path('register/', views.register, name='register'),

@@ -1,3 +1,4 @@
+import uuid
 from django.db import models
 
 # Create your models here.
@@ -10,6 +11,7 @@ from customers.models import Customer
 from django.utils.timezone import now
 
 class Notification(models.Model):
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     NOTIF_TYPE_CHOICES = [
         ('transaction_alert', 'Transaction Alert'),
         ('low_balance', 'Low Balance'),
@@ -42,6 +44,7 @@ from django.db import models
 from django.conf import settings
 
 class Beneficiary(models.Model):
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,   
         on_delete=models.CASCADE,
@@ -76,6 +79,7 @@ import random
 
 class OTPVerification(models.Model):
     """Model to store OTP verification data - replaces sessions"""
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     
     account_number = models.CharField(max_length=20, db_index=True)
     phone_number = models.CharField(max_length=20)
@@ -177,6 +181,7 @@ class OTPVerification(models.Model):
 
 class RegistrationToken(models.Model):
     """Model to store registration tokens after OTP verification"""
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     
     account_number = models.CharField(max_length=20, db_index=True)
     token = models.CharField(max_length=64, unique=True)
@@ -276,6 +281,7 @@ class GlobalTransferFeeConfiguration(models.Model):
     GLOBAL fee configuration that applies to ALL customers
     Only ONE active configuration should exist at a time
     """
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     
     TRANSFER_TYPE_CHOICES = [
         ('other_bank', 'Transfer to Other Bank'),
@@ -374,6 +380,7 @@ class CustomerTransferUsage(models.Model):
     Track individual customer usage for free transfer allowances
     NOTE: Fee amounts are GLOBAL - this only tracks usage counts
     """
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     
     customer_id = models.CharField(max_length=50, db_index=True)
     date = models.DateField(db_index=True)
@@ -408,6 +415,7 @@ class GlobalTransferFeeTransaction(models.Model):
     Audit log for ALL fee transactions across ALL customers
     Records every fee charged or waived
     """
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     
     # Customer Information
     customer_id = models.CharField(max_length=50, db_index=True)
@@ -492,6 +500,7 @@ import uuid
 
 class VASProvider(models.Model):
     """VAS service providers (MTN, AIRTEL, GLO, etc.)"""
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     name = models.CharField(max_length=50, unique=True)
     code = models.CharField(max_length=20, unique=True)
     is_active = models.BooleanField(default=True)
@@ -510,6 +519,7 @@ class VASProvider(models.Model):
 
 class DataPlan(models.Model):
     """Available data plans for each provider"""
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     PLAN_TYPES = [
         ('HOT', 'Hot Deals'),
         ('DAILY', 'Daily Plans'),
@@ -637,6 +647,7 @@ class VASTransaction(models.Model):
 
 class VASCharges(models.Model):
     """VAS service charges configuration"""
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     transaction_type = models.CharField(max_length=20, choices=VASTransaction.TRANSACTION_TYPES, unique=True)
     fixed_charge = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     percentage_charge = models.DecimalField(max_digits=5, decimal_places=2, default=0.00)
@@ -672,6 +683,7 @@ class VASCharges(models.Model):
 
 class BillsCategory(models.Model):
     """Bills payment categories"""
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     name = models.CharField(max_length=50, unique=True)
     code = models.CharField(max_length=20, unique=True)
     description = models.TextField(blank=True)
@@ -691,6 +703,7 @@ class BillsCategory(models.Model):
 
 class BillsBiller(models.Model):
     """Bills payment service providers"""
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     category = models.ForeignKey(BillsCategory, on_delete=models.CASCADE, related_name='billers')
     name = models.CharField(max_length=100)
     code = models.CharField(max_length=50, unique=True)
@@ -714,6 +727,7 @@ class BillsBiller(models.Model):
 
 class VASTokenCache(models.Model):
     """Cache for external API tokens"""
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     provider = models.CharField(max_length=50, unique=True)
     access_token = models.TextField()
     refresh_token = models.TextField(blank=True)

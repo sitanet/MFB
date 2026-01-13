@@ -32,11 +32,11 @@ class Migration(migrations.Migration):
             name='branch',
             field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='id_card_type', to='company.branch'),
         ),
-        migrations.AddField(
-            model_name='interestrate',
-            name='branch',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='interestRate', to='company.branch'),
-        ),
+        # migrations.AddField(
+        #     model_name='interestrate',
+        #     name='branch',
+        #     field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='interestRate', to='company.branch'),
+        # ),  # Commented out - InterestRate model removed in regenerated 0001_initial
         migrations.AddField(
             model_name='loanprovision',
             name='branch',

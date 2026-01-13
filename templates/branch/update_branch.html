@@ -356,6 +356,80 @@
                             {% endfor %}
                         </select>
                     </div>
+
+                    <!-- Max Customers -->
+                    <div class="form-group">
+                        <label for="max_customers">Maximum Customers</label>
+                        <input type="number" class="form-control" id="max_customers" name="max_customers" 
+                               value="{{ branch.max_customers|default:0 }}" min="0" placeholder="0 = Unlimited">
+                        <small style="color: var(--gray);">Set to 0 for unlimited customers</small>
+                    </div>
+                </div>
+
+                <!-- Feature Flags Section -->
+                <div style="margin-top: 1.5rem; padding: 1rem; background: #f8fafc; border-radius: var(--border-radius); border: 1px solid var(--light-gray);">
+                    <h4 style="margin-bottom: 1rem; color: var(--dark);">
+                        <i class="fas fa-cogs"></i> Branch Features
+                    </h4>
+                    <p style="font-size: 0.9rem; color: var(--gray); margin-bottom: 1rem;">
+                        Select which features this branch can access:
+                    </p>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <input type="checkbox" name="can_fixed_deposit" id="can_fixed_deposit" 
+                                       style="width: 18px; height: 18px;" {% if branch.can_fixed_deposit %}checked{% endif %}>
+                                <label for="can_fixed_deposit" style="margin: 0;">
+                                    <i class="fas fa-piggy-bank"></i> Fixed Deposit
+                                </label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <input type="checkbox" name="can_loans" id="can_loans" 
+                                       style="width: 18px; height: 18px;" {% if branch.can_loans %}checked{% endif %}>
+                                <label for="can_loans" style="margin: 0;">
+                                    <i class="fas fa-hand-holding-usd"></i> Loans
+                                </label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <input type="checkbox" name="can_transfers" id="can_transfers" 
+                                       style="width: 18px; height: 18px;" {% if branch.can_transfers %}checked{% endif %}>
+                                <label for="can_transfers" style="margin: 0;">
+                                    <i class="fas fa-exchange-alt"></i> Fund Transfers
+                                </label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <input type="checkbox" name="can_fixed_assets" id="can_fixed_assets" 
+                                       style="width: 18px; height: 18px;" {% if branch.can_fixed_assets %}checked{% endif %}>
+                                <label for="can_fixed_assets" style="margin: 0;">
+                                    <i class="fas fa-building"></i> Fixed Assets
+                                </label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <input type="checkbox" name="can_mobile_banking" id="can_mobile_banking" 
+                                       style="width: 18px; height: 18px;" {% if branch.can_mobile_banking %}checked{% endif %}>
+                                <label for="can_mobile_banking" style="margin: 0;">
+                                    <i class="fas fa-mobile-alt"></i> Mobile Banking
+                                </label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <input type="checkbox" name="can_sms_alerts" id="can_sms_alerts" 
+                                       style="width: 18px; height: 18px;" {% if branch.can_sms_alerts %}checked{% endif %}>
+                                <label for="can_sms_alerts" style="margin: 0;">
+                                    <i class="fas fa-sms"></i> SMS Alerts
+                                </label>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <button type="submit" class="btn btn-success" style="width: 100%; margin-top: 1rem;">

@@ -1,3 +1,4 @@
+import uuid
 from decimal import Decimal, getcontext
 from operator import itemgetter
 from django.db import models
@@ -9,6 +10,7 @@ from customers.models import Customer
 # import numpy as np
 from datetime import timedelta
 from company.models import Company, Branch
+from profit_solutions.tenant_managers import TenantManager, CompanyTenantManager
 
 
 
@@ -17,6 +19,7 @@ from decimal import Decimal
 
 
 class Loans(models.Model):
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
 
     INTEREST_CALCULATION_METHOD_CHOICES = [
         ('1', 'Compound Interest'),
@@ -406,6 +409,10 @@ class Loans(models.Model):
 
     # ... add other methods for different interest calculation methods ...
 
+    # Tenant-aware manager (auto-filters by branch)
+    objects = TenantManager()
+    company_objects = CompanyTenantManager()
+    all_objects = models.Manager()
 
     def __str__(self):
             return f"Loans - {self.ac_no}"
@@ -416,6 +423,7 @@ class Loans(models.Model):
 
 
 class LoanHist(models.Model):
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     branch = models.ForeignKey(Branch, on_delete=models.CASCADE, related_name="loanHist", 
     null=True, blank=True)
     # customer = models.CharField(max_length=30, null=True, blank=True) 
@@ -430,6 +438,10 @@ class LoanHist(models.Model):
     principal = models.DecimalField(max_digits=10, decimal_places=2)
     interest = models.DecimalField(max_digits=10, decimal_places=2)
     penalty = models.DecimalField(max_digits=10, decimal_places=2)
+
+    # Tenant-aware manager
+    objects = TenantManager()
+    all_objects = models.Manager()
 
     def __str__(self):
             return f"LoanHist - {self.ac_no}"

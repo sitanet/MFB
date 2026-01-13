@@ -75,9 +75,9 @@ from django.utils import timezone
 @user_passes_test(check_role_admin)
 
 
-def loan_application(request, id):
-    # Get customer by ID
-    customer = get_object_or_404(Customer, id=id)
+def loan_application(request, uuid):
+    # Get customer by UUID
+    customer = get_object_or_404(Customer, uuid=uuid)
     cust_branch = customer.branch
 
     # Filter loan accounts based on GL number
@@ -171,8 +171,8 @@ def choose_to_modify_loan(request):
 
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
-def loan_modification(request, id):
-    loan_instance = get_object_or_404(Loans, id=id)
+def loan_modification(request, uuid):
+    loan_instance = get_object_or_404(Loans, uuid=uuid)
     cust_data = Account.objects.filter(gl_no__startswith='200').exclude(gl_no='200100').exclude(gl_no='200200').exclude(gl_no='200000')
     gl_no_list = Account.objects.all().values_list('gl_no', flat=True).filter(gl_no__startswith='200')
     cust_branch = Company.objects.all()
@@ -242,8 +242,8 @@ def choose_loan_approval(request):
 @user_passes_test(check_role_admin)
 
 
-def loan_approval(request, id):
-    customer = get_object_or_404(Loans, id=id)
+def loan_approval(request, uuid):
+    customer = get_object_or_404(Loans, uuid=uuid)
     cust_data = Account.objects.filter(gl_no__startswith='200').exclude(
         gl_no='200100').exclude(gl_no='200200').exclude(gl_no='200000')
     gl_no = Account.objects.filter(gl_no__startswith='200').values_list('gl_no', flat=True)
@@ -309,8 +309,8 @@ def loan_approval(request, id):
 
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
-def reject_loan(request, id):
-    customer = get_object_or_404(Loans, id=id)
+def reject_loan(request, uuid):
+    customer = get_object_or_404(Loans, uuid=uuid)
     cust_data = Account.objects.filter(gl_no__startswith='200').exclude(gl_no='200100').exclude(gl_no='200200').exclude(gl_no='200000')
     gl_no = Account.objects.all().values_list('gl_no', flat=True).filter(gl_no__startswith='200')
     cust_branch = Company.objects.all()
@@ -336,9 +336,9 @@ def reject_loan(request, id):
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
 def choose_approved_loan(request):
-    customers = Loans.objects.filter(approval_status='T')
- 
-  
+    from accounts.utils import get_company_branch_ids
+    branch_ids = get_company_branch_ids(request.user)
+    customers = Loans.all_objects.filter(approval_status='T', branch_id__in=branch_ids)
     return render(request, 'loans/choose_reverse_loan_approval.html', {'customers': customers})
 
 
@@ -346,8 +346,8 @@ def choose_approved_loan(request):
 
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
-def reverse_loan_approval(request, id):
-    customer = get_object_or_404(Loans, id=id)
+def reverse_loan_approval(request, uuid):
+    customer = get_object_or_404(Loans, uuid=uuid)
     cust_data = Account.objects.filter(gl_no__startswith='200').exclude(gl_no='200100').exclude(gl_no='200200').exclude(gl_no='200000')
     gl_no = Account.objects.all().values_list('gl_no', flat=True).filter(gl_no__startswith='200')
     cust_branch = Company.objects.all()
@@ -380,9 +380,9 @@ def reverse_loan_approval(request, id):
 @user_passes_test(check_role_admin)
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
-def loan_disbursement_reversal(request, id):
+def loan_disbursement_reversal(request, uuid):
 
-    customer = get_object_or_404(Loans, id=id)
+    customer = get_object_or_404(Loans, uuid=uuid)
     account = get_object_or_404(Account, gl_no=customer.gl_no)
     customers = customer.customer
 
@@ -615,8 +615,8 @@ from decimal import InvalidOperation
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
 
-def loan_disbursement(request, id):
-    loan = get_object_or_404(Loans, id=id)
+def loan_disbursement(request, uuid):
+    loan = get_object_or_404(Loans, uuid=uuid)
     account = get_object_or_404(Account, gl_no=loan.gl_no)
     customer = loan.customer
     
@@ -977,8 +977,8 @@ from django.db.models import Sum
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
 
-def loan_schedule_view(request, loan_id):
-    loan_instance = get_object_or_404(Loans, id=loan_id)
+def loan_schedule_view(request, uuid):
+    loan_instance = get_object_or_404(Loans, uuid=uuid)
     loan_schedule = loan_instance.calculate_loan_schedule()
     customers = loan_instance.customer
 
@@ -1088,17 +1088,27 @@ from company.models import Company
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)  
 
-def loan_repayment(request, id):
-    customer = get_object_or_404(Loans, id=id)
+def loan_repayment(request, uuid):
+    customer = get_object_or_404(Loans, uuid=uuid)
     account = get_object_or_404(Account, gl_no=customer.gl_no)
     customers = customer.customer
 
-    cust_data = Account.objects.filter(gl_no__startswith='20').exclude(gl_no__in=['20100', '20200', '20000'])
-    gl_no = Account.objects.filter(gl_no__startswith='200').values_list('gl_no', flat=True)
-    ac_no_list = Memtrans.objects.filter(ac_no=customer.ac_no).values_list('ac_no', flat=True).distinct()
-    cust_branch = Branch.objects.all()
-    amounts = Memtrans.objects.filter(ac_no=customer.ac_no, gl_no__startswith='2').values('gl_no').annotate(total_amount=Sum('amount')).order_by('-total_amount')
-    officer = Account_Officer.objects.all()
+    from accounts.utils import get_branch_from_vendor_db
+    user_branch_obj = get_branch_from_vendor_db(request.user.branch_id)
+    user_company = user_branch_obj.company if user_branch_obj else None
+    
+    cust_data = Account.all_objects.filter(branch__company=user_company, gl_no__startswith='20').exclude(gl_no__in=['20100', '20200', '20000']) if user_company else []
+    gl_no = Account.all_objects.filter(branch__company=user_company, gl_no__startswith='200').values_list('gl_no', flat=True) if user_company else []
+    ac_no_list = Memtrans.all_objects.filter(ac_no=customer.ac_no).values_list('ac_no', flat=True).distinct()
+    # Filter branches by company
+    if user_branch_obj and user_branch_obj.head_office:
+        cust_branch = Branch.objects.filter(company=user_company)
+    elif user_branch_obj:
+        cust_branch = Branch.objects.filter(id=user_branch_obj.id)
+    else:
+        cust_branch = []
+    amounts = Memtrans.all_objects.filter(ac_no=customer.ac_no, gl_no__startswith='2').values('gl_no').annotate(total_amount=Sum('amount')).order_by('-total_amount')
+    officer = Account_Officer.objects.filter(branch__company=user_company) if user_company else []
 
     user = User.objects.get(id=request.user.id)
     branch_id = user.branch_id
@@ -1348,8 +1358,8 @@ def choose_loan_written_off(request):
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)  
 
-def loan_written_off(request, id):
-    customer = get_object_or_404(Loans, id=id)
+def loan_written_off(request, uuid):
+    customer = get_object_or_404(Loans, uuid=uuid)
     account = get_object_or_404(Account, gl_no=customer.gl_no)
     customers = customer.customer
 
@@ -1560,8 +1570,10 @@ from django.db.models import Sum
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
 def loan_due(request):
-    # Filter customers with approval status 'T'
-    customers = Loans.objects.filter(approval_status='T')
+    from accounts.utils import get_company_branch_ids
+    branch_ids = get_company_branch_ids(request.user)
+    # Filter customers with approval status 'T' and by company branches
+    customers = Loans.all_objects.filter(approval_status='T', branch_id__in=branch_ids)
 
     user = User.objects.get(id=request.user.id)
     branch_id = user.branch_id
@@ -1631,7 +1643,9 @@ def display_loan_disbursements(request):
     """
     Display loans that have been disbursed, with reversal option.
     """
-    disbursement_reversals = Loans.objects.filter(disb_status='T').select_related('customer')
+    from accounts.utils import get_company_branch_ids
+    branch_ids = get_company_branch_ids(request.user)
+    disbursement_reversals = Loans.all_objects.filter(disb_status='T', branch_id__in=branch_ids).select_related('customer')
 
     disbursement_reversals_details = []
 
@@ -1662,9 +1676,9 @@ def display_loan_disbursements(request):
     return render(request, 'loans/display_loan_disbursements.html', context)
 
 
-def delete_loan_transactions(request, trx_no, id):
+def delete_loan_transactions(request, trx_no, uuid):
     """
-    Delete loan transactions for a given trx_no and loan id.
+    Delete loan transactions for a given trx_no and loan uuid.
     Requires user to specify a deletion date.
     """
     if request.method != 'POST':
@@ -1752,14 +1766,17 @@ def delete_transactions(request, customer_id):
 
 
 def display_loans(request):
+    from accounts.utils import get_company_branch_ids
+    branch_ids = get_company_branch_ids(request.user)
+    
     if request.method == "POST":
         id = request.POST.get('id')
         loan_entry = get_object_or_404(Loans, id=id)
         loan_entry.delete()
         messages.success(request, 'Loan entry deleted successfully!')
-        return redirect('display_loans')  # Assuming 'display_loans' is the name of the URL pattern for this view
+        return redirect('display_loans')
 
-    loans = Loans.objects.all()
+    loans = Loans.all_objects.filter(branch_id__in=branch_ids)
     return render(request, 'loans/display_loans.html', {'loans': loans})
 
 
@@ -1769,21 +1786,23 @@ from django.shortcuts import render, get_object_or_404
 from .models import Loans, LoanHist
 
 def loan_repayment_reversal(request):
-    loans = Loans.objects.filter(total_loan__gt=0)
+    from accounts.utils import get_company_branch_ids
+    branch_ids = get_company_branch_ids(request.user)
+    loans = Loans.all_objects.filter(total_loan__gt=0, branch_id__in=branch_ids)
     return render(request, 'loans/loan_repayment_reversal.html', {'loans': loans})
 
-def loan_history(request, loan_id):
-    loan = get_object_or_404(Loans, id=loan_id)
+def loan_history(request, uuid):
+    loan = get_object_or_404(Loans, uuid=uuid)
     loan_histories = LoanHist.objects.filter(gl_no=loan.gl_no, ac_no=loan.ac_no, cycle=loan.cycle, trx_type='LP')
     return render(request, 'loans/loan_history.html', {'loan': loan, 'loan_histories': loan_histories})
 
 
-def delete_loan_history(request, loan_hist_id, loan_id):
-    loan_hist = get_object_or_404(LoanHist, id=loan_hist_id)
+def delete_loan_history(request, uuid, loan_uuid):
+    loan_hist = get_object_or_404(LoanHist, uuid=uuid)
     trx_no = loan_hist.trx_no
     loan_hist.delete()
     Memtrans.objects.filter(trx_no=trx_no).update(error='H')
-    return redirect('loan_history', loan_id=loan_id)
+    return redirect('loan_history', uuid=loan_uuid)
 
 
 
@@ -1819,6 +1838,9 @@ def calculate_due_date(disbursement_date, payment_freq, num_install):
     return due_date
 
 def due_loans(request):
+    from accounts.utils import get_company_branch_ids
+    branch_ids = get_company_branch_ids(request.user)
+    
     gl_no = request.GET.get('gl_no', None)
     ac_no = request.GET.get('ac_no', None)
     cycle = request.GET.get('cycle', None)
@@ -1827,7 +1849,7 @@ def due_loans(request):
     company_date_str = company.session_date.strftime('%Y-%m-%d') if company.session_date else date.today().strftime('%Y-%m-%d')
     company_date = datetime.strptime(company_date_str, '%Y-%m-%d').date()
 
-    due_loans = Loans.objects.all()
+    due_loans = Loans.all_objects.filter(branch_id__in=branch_ids)
     if gl_no:
         due_loans = due_loans.filter(gl_no=gl_no)
     if ac_no:
@@ -2047,8 +2069,8 @@ def choose_to_apply_simple_loan(request):
 @user_passes_test(check_role_admin)
 
 
-def loan_application_and_approval(request, id):
-    customer = get_object_or_404(Customer, id=id)
+def loan_application_and_approval(request, uuid):
+    customer = get_object_or_404(Customer, uuid=uuid)
     loan_account = Account.objects.filter(gl_no__startswith='104').exclude(gl_no='10400').exclude(gl_no='104100').exclude(gl_no='104200')
     initial_values = {'gl_no_cust': customer.gl_no, 'ac_no_cust': customer.ac_no}
     user = User.objects.get(id=request.user.id)
@@ -2142,8 +2164,8 @@ def choose_simple_disburse(request):
 
 
 
-def simple_loan_disbursement(request, id):
-    loan = get_object_or_404(Loans, id=id)
+def simple_loan_disbursement(request, uuid):
+    loan = get_object_or_404(Loans, uuid=uuid)
     account = get_object_or_404(Account, gl_no=loan.gl_no)
     customer = loan.customer  # Assuming loan.customer is a ForeignKey to Customer model
     

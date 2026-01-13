@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Fixed Deposit Register Report</h2>
+        <button onclick="window.print()" class="btn btn-primary">
+            <i class="fas fa-print"></i> Print Report
+        </button>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h5>Active Deposits</h5>
+                    <h3>{{ active_count }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <h5>Matured</h5>
+                    <h3>{{ matured_count }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-secondary text-white">
+                <div class="card-body">
+                    <h5>Closed</h5>
+                    <h3>{{ closed_count }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h5>Total Principal</h5>
+                    <h3>{{ total_principal|floatformat:2 }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Deposits -->
+    <div class="card mb-4">
+        <div class="card-header bg-success text-white">
+            <h5>Active Fixed Deposits</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-sm">
+                    <thead>
+                        <tr>
+                            <th>FD No</th>
+                            <th>Customer</th>
+                            <th>Principal</th>
+                            <th>Rate (%)</th>
+                            <th>Tenure</th>
+                            <th>Start Date</th>
+                            <th>Maturity Date</th>
+                            <th>Interest</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for fd in active_deposits %}
+                        <tr>
+                            <td>{{ fd.fixed_ac_no }}</td>
+                            <td>{{ fd.customer.first_name }} {{ fd.customer.last_name }}</td>
+                            <td>{{ fd.deposit_amount|floatformat:2 }}</td>
+                            <td>{{ fd.interest_rate }}</td>
+                            <td>{{ fd.tenure_months }} months</td>
+                            <td>{{ fd.start_date }}</td>
+                            <td>{{ fd.maturity_date }}</td>
+                            <td>{{ fd.interest_amount|floatformat:2 }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="8" class="text-center">No active deposits</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <a href="{% url 'fixed_deposit_report' %}" class="btn btn-secondary">
+        <i class="fa fa-arrow-left"></i> Back
+    </a>
+</div>
+{% endblock %}

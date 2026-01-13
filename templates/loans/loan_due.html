@@ -104,7 +104,7 @@
                                     <td>N{{ customer.loan_amount|default:"0.00"|floatformat:2 }}</td>
                                     <td>
                                         <button class="btn shadow-sm" style="background-color: #2E8B57;" type="button">
-                                            <a href="{% url 'loan_repayment' customer.id %}" style="font-weight: bold; color: white;">Approve</a>
+                                            <a href="{% url 'loan_repayment' customer.uuid %}" style="font-weight: bold; color: white;">Approve</a>
                                         </button>
                                     </td>
                                 </tr>
