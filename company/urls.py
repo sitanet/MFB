@@ -28,6 +28,7 @@ urlpatterns = [
     path('branches/delete/<uuid:uuid>/', views.branch_delete, name='branch_delete'),
     path('<uuid:uuid>/branch_detail/', views.branch_detail, name='branch_detail'),
     path('branch/<uuid:uuid>/create-admin/', views.create_branch_admin, name='create_branch_admin'),
+    path('branch/<uuid:uuid>/edit-admin/', views.edit_branch_admin, name='edit_branch_admin'),
     path('branch/<uuid:uuid>/toggle-active/', views.toggle_branch_active, name='toggle_branch_active'),
     
     # Session Management (client-side, requires client login)
@@ -40,4 +41,10 @@ urlpatterns = [
     path('sms-webhook/', views.sms_delivery_webhook, name='sms_webhook'),
     path('sms-troubleshoot/', views.sms_troubleshoot, name='sms_troubleshoot'),
     path('resend_otp_branch/', views.resend_otp_branch, name='resend_otp_branch'),
+    
+    # Branch Superuser Management (Vendor)
+    path('branch-superusers/', views.branch_superuser_list, name='branch_superuser_list'),
+    path('branch-superusers/<uuid:uuid>/', views.branch_superuser_detail, name='branch_superuser_detail'),
+    path('branch-superusers/<uuid:branch_uuid>/user/<uuid:user_uuid>/edit/', views.branch_superuser_edit, name='branch_superuser_edit'),
+    path('branch-superusers/<uuid:branch_uuid>/user/<uuid:user_uuid>/toggle/', views.branch_superuser_toggle, name='branch_superuser_toggle'),
 ]

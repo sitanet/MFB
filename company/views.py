@@ -868,6 +868,8 @@ def create_branch_admin(request, uuid):
         username = request.POST.get('username')
         email = request.POST.get('email')
         phone_number = request.POST.get('phone_number')
+        cashier_gl = request.POST.get('cashier_gl', '').strip() or None
+        cashier_ac = request.POST.get('cashier_ac', '').strip() or None
         password = request.POST.get('password')
         confirm_password = request.POST.get('confirm_password')
         
@@ -892,6 +894,8 @@ def create_branch_admin(request, uuid):
                 username=username,
                 email=email,
                 phone_number=phone_number,
+                cashier_gl=cashier_gl,
+                cashier_ac=cashier_ac,
                 password=password,
                 role=1,  # System Administrator
                 branch_id=str(branch.id),
@@ -906,12 +910,73 @@ def create_branch_admin(request, uuid):
             
         except Exception as e:
             messages.error(request, f'Error creating user: {str(e)}')
-            return redirect('create_branch_admin', branch_id=branch_id)
+            return redirect('create_branch_admin', uuid=uuid)
     
     context = {
         'branch': branch,
     }
     return render(request, 'branch/create_branch_admin.html', context)
+
+
+@vendor_login_required
+def edit_branch_admin(request, uuid):
+    """
+    Edit the super user (administrator) for a specific branch.
+    Allows vendor to update the branch admin including cashier_gl and cashier_ac fields.
+    """
+    User = get_user_model()
+    branch = get_object_or_404(Branch, uuid=uuid)
+    
+    # Find the branch admin (System Administrator with role=1 for this branch)
+    branch_admin = User.objects.filter(branch_id=str(branch.id), role=1).first()
+    
+    if not branch_admin:
+        messages.error(request, f'No administrator found for branch "{branch.branch_name}". Please create one first.')
+        return redirect('create_branch_admin', uuid=uuid)
+    
+    if request.method == 'POST':
+        first_name = request.POST.get('first_name')
+        last_name = request.POST.get('last_name')
+        email = request.POST.get('email')
+        phone_number = request.POST.get('phone_number')
+        cashier_gl = request.POST.get('cashier_gl', '').strip() or None
+        cashier_ac = request.POST.get('cashier_ac', '').strip() or None
+        new_password = request.POST.get('new_password', '').strip()
+        confirm_password = request.POST.get('confirm_password', '').strip()
+        
+        # Validate email uniqueness (excluding current user)
+        if User.objects.filter(email=email).exclude(id=branch_admin.id).exists():
+            messages.error(request, 'Email already exists for another user.')
+            return redirect('edit_branch_admin', uuid=uuid)
+        
+        # Validate password if provided
+        if new_password:
+            if new_password != confirm_password:
+                messages.error(request, 'Passwords do not match.')
+                return redirect('edit_branch_admin', uuid=uuid)
+            branch_admin.set_password(new_password)
+        
+        try:
+            branch_admin.first_name = first_name
+            branch_admin.last_name = last_name
+            branch_admin.email = email
+            branch_admin.phone_number = phone_number
+            branch_admin.cashier_gl = cashier_gl
+            branch_admin.cashier_ac = cashier_ac
+            branch_admin.save()
+            
+            messages.success(request, f'Administrator "{branch_admin.username}" updated successfully!')
+            return redirect('branch_list')
+            
+        except Exception as e:
+            messages.error(request, f'Error updating user: {str(e)}')
+            return redirect('edit_branch_admin', uuid=uuid)
+    
+    context = {
+        'branch': branch,
+        'branch_admin': branch_admin,
+    }
+    return render(request, 'branch/edit_branch_admin.html', context)
 
 
 @vendor_login_required
@@ -924,3 +989,135 @@ def toggle_branch_active(request, uuid):
         status = "activated" if branch.is_active else "deactivated"
         messages.success(request, f'Branch "{branch.branch_name}" has been {status}.')
     return redirect('branch_list')
+
+
+# ==================== BRANCH SUPERUSER MANAGEMENT (VENDOR) ====================
+
+@vendor_login_required
+def branch_superuser_list(request):
+    """
+    List all branches with their superusers (System Administrators).
+    Allows vendor to see and manage all branch admins.
+    """
+    User = get_user_model()
+    branches = Branch.objects.select_related('company').all().order_by('company__company_name', 'branch_name')
+    
+    branches_data = []
+    for branch in branches:
+        superusers = User.objects.filter(
+            branch_id=str(branch.id),
+            role=1  # System Administrator
+        )
+        user_count = User.objects.filter(branch_id=str(branch.id)).count()
+        
+        branches_data.append({
+            'branch': branch,
+            'superusers': superusers,
+            'superuser_count': superusers.count(),
+            'total_users': user_count,
+        })
+    
+    context = {
+        'vendor_user': request.vendor_user,
+        'branches_data': branches_data,
+    }
+    return render(request, 'company/branch_superuser_list.html', context)
+
+
+@vendor_login_required
+def branch_superuser_detail(request, uuid):
+    """
+    View and manage all superusers for a specific branch.
+    """
+    User = get_user_model()
+    branch = get_object_or_404(Branch, uuid=uuid)
+    
+    superusers = User.objects.filter(
+        branch_id=str(branch.id),
+        role=1  # System Administrator
+    )
+    
+    context = {
+        'vendor_user': request.vendor_user,
+        'branch': branch,
+        'superusers': superusers,
+    }
+    return render(request, 'company/branch_superuser_detail.html', context)
+
+
+@vendor_login_required
+def branch_superuser_edit(request, branch_uuid, user_uuid):
+    """
+    Edit a specific superuser for a branch.
+    """
+    User = get_user_model()
+    branch = get_object_or_404(Branch, uuid=branch_uuid)
+    user_to_edit = get_object_or_404(User, uuid=user_uuid, branch_id=str(branch.id))
+    
+    if request.method == 'POST':
+        user_to_edit.first_name = request.POST.get('first_name', user_to_edit.first_name)
+        user_to_edit.last_name = request.POST.get('last_name', user_to_edit.last_name)
+        user_to_edit.email = request.POST.get('email', user_to_edit.email)
+        user_to_edit.phone_number = request.POST.get('phone_number', user_to_edit.phone_number)
+        user_to_edit.cashier_gl = request.POST.get('cashier_gl', '').strip() or None
+        user_to_edit.cashier_ac = request.POST.get('cashier_ac', '').strip() or None
+        user_to_edit.is_active = request.POST.get('is_active') == 'on'
+        
+        new_role = request.POST.get('role')
+        if new_role:
+            user_to_edit.role = int(new_role)
+        
+        new_password = request.POST.get('new_password', '').strip()
+        if new_password:
+            confirm_password = request.POST.get('confirm_password', '').strip()
+            if new_password != confirm_password:
+                messages.error(request, 'Passwords do not match.')
+                return redirect('branch_superuser_edit', branch_uuid=branch_uuid, user_uuid=user_uuid)
+            user_to_edit.set_password(new_password)
+        
+        user_to_edit.save()
+        messages.success(request, f'User {user_to_edit.username} updated successfully.')
+        return redirect('branch_superuser_detail', uuid=branch_uuid)
+    
+    # Get role choices from User model
+    ROLE_CHOICES = [
+        (1, 'System Administration'),
+        (2, 'General Manager'),
+        (3, 'Branch Manager'),
+        (4, 'Assistant Manager'),
+        (5, 'Accountant'),
+        (6, 'Accounts Assistant'),
+        (7, 'Credit Supervisor'),
+        (8, 'Credit Officer'),
+        (9, 'Verification Officer'),
+        (10, 'Customer Service Unit'),
+        (11, 'Teller'),
+        (12, 'Management Information System'),
+    ]
+    
+    context = {
+        'vendor_user': request.vendor_user,
+        'branch': branch,
+        'edit_user': user_to_edit,
+        'role_choices': ROLE_CHOICES,
+    }
+    return render(request, 'company/branch_superuser_edit.html', context)
+
+
+@vendor_login_required
+def branch_superuser_toggle(request, branch_uuid, user_uuid):
+    """
+    Toggle the active status of a superuser.
+    """
+    User = get_user_model()
+    branch = get_object_or_404(Branch, uuid=branch_uuid)
+    user_to_toggle = get_object_or_404(User, uuid=user_uuid, branch_id=str(branch.id))
+    
+    if request.method == 'POST':
+        user_to_toggle.is_active = not user_to_toggle.is_active
+        user_to_toggle.save()
+        
+        status = 'activated' if user_to_toggle.is_active else 'deactivated'
+        messages.success(request, f'User {user_to_toggle.username} has been {status}.')
+    
+    return redirect('branch_superuser_detail', uuid=branch_uuid)

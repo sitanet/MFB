@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Branch Administrators - FinanceFlex</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        :root {
+            --primary: #22c55e;
+            --primary-dark: #16a34a;
+            --secondary: #ff7f00;
+            --secondary-dark: #e67300;
+            --light: #f8fafc;
+            --dark: #1e293b;
+            --gray: #64748b;
+            --light-gray: #e2e8f0;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --info: #3b82f6;
+            --border-radius: 8px;
+            --box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --transition: all 0.3s ease;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f0fdf4 0%, #fff7ed 100%);
+            color: var(--dark);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .navbar {
+            background: white;
+            box-shadow: var(--box-shadow);
+            padding: 0 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-bottom: 3px solid var(--primary);
+        }
+
+        .nav-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+            height: 70px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        .logo i {
+            font-size: 1.8rem;
+            color: var(--secondary);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 1.5rem;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: var(--dark);
+            font-weight: 600;
+            padding: 8px 16px;
+            border-radius: var(--border-radius);
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .nav-links a:hover,
+        .nav-links a.active {
+            color: var(--dark);
+            font-weight: 700;
+        }
+
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 3px;
+            background: var(--secondary);
+            transition: var(--transition);
+            border-radius: 3px;
+        }
+
+        .nav-links a:hover::after,
+        .nav-links a.active::after {
+            width: 100%;
+        }
+
+        .user-menu {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 16px;
+            background: rgba(34, 197, 94, 0.1);
+            border-radius: var(--border-radius);
+        }
+
+        .user-info i {
+            color: var(--primary);
+        }
+
+        .user-info span {
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border-radius: var(--border-radius);
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            border: none;
+            font-size: 0.9rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        .btn-primary {
+            background: var(--secondary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--secondary-dark);
+            transform: translateY(-2px);
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 0.8rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1.5rem;
+        }
+
+        .page-header {
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid var(--light-gray);
+        }
+
+        .page-header h1 {
+            font-size: 2rem;
+            color: var(--dark);
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            font-weight: 700;
+        }
+
+        .page-header p {
+            color: var(--gray);
+            margin-top: 0.5rem;
+        }
+
+        .alert {
+            padding: 12px 16px;
+            border-radius: var(--border-radius);
+            margin-bottom: 1.5rem;
+        }
+
+        .alert-success {
+            background: rgba(34, 197, 94, 0.1);
+            color: var(--primary);
+            border: 1px solid rgba(34, 197, 94, 0.2);
+        }
+
+        .alert-error {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .branch-card {
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            overflow: hidden;
+            transition: var(--transition);
+        }
+
+        .branch-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .branch-card-header {
+            padding: 1rem 1.5rem;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            color: white;
+        }
+
+        .branch-card-header h3 {
+            font-size: 1.1rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .branch-card-header small {
+            opacity: 0.9;
+        }
+
+        .branch-card-body {
+            padding: 1rem 1.5rem;
+        }
+
+        .branch-stats {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--light-gray);
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-item .value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--dark);
+        }
+
+        .stat-item .label {
+            font-size: 0.75rem;
+            color: var(--gray);
+        }
+
+        .superuser-list {
+            margin-top: 1rem;
+        }
+
+        .superuser-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--light-gray);
+        }
+
+        .superuser-item:last-child {
+            border-bottom: none;
+        }
+
+        .superuser-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .superuser-avatar {
+            width: 36px;
+            height: 36px;
+            background: var(--light-gray);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--gray);
+        }
+
+        .superuser-name {
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .superuser-email {
+            font-size: 0.8rem;
+            color: var(--gray);
+        }
+
+        .status-badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        .status-active {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+        }
+
+        .status-inactive {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+        }
+
+        .branch-card-footer {
+            padding: 1rem 1.5rem;
+            background: var(--light);
+            border-top: 1px solid var(--light-gray);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 2rem;
+            color: var(--gray);
+        }
+
+        .footer {
+            text-align: center;
+            padding: 1.5rem;
+            color: var(--gray);
+            font-size: 0.85rem;
+            margin-top: 2rem;
+            border-top: 1px solid var(--light-gray);
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="{% url 'vendor_dashboard' %}" class="logo">
+                <i class="fas fa-leaf"></i>
+                <span>FinanceFlex</span>
+            </a>
+            
+            <div class="nav-links">
+                <a href="{% url 'vendor_dashboard' %}" class="nav-link">Dashboard</a>
+                <a href="{% url 'company_list' %}" class="nav-link">Companies</a>
+                <a href="{% url 'branch_list' %}" class="nav-link">Branches</a>
+                <a href="{% url 'branch_superuser_list' %}" class="nav-link active">Branch Admins</a>
+                <a href="{% url 'vendor_user_list' %}" class="nav-link">Vendor Users</a>
+            </div>
+            
+            <div class="user-menu">
+                <div class="user-info">
+                    <i class="fas fa-user-shield"></i>
+                    <span>{{ vendor_user.first_name }}</span>
+                </div>
+                <a href="{% url 'vendor_logout' %}" class="btn btn-danger">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="page-header">
+            <h1><i class="fas fa-user-shield"></i> Branch Administrators</h1>
+            <p>Manage superusers for each branch. These are the System Administrators created by the vendor.</p>
+        </div>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert {% if message.tags == 'error' %}alert-error{% else %}alert-{{ message.tags }}{% endif %}">
+                    <i class="fas {% if message.tags == 'error' %}fa-exclamation-circle{% else %}fa-check-circle{% endif %}"></i>
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <div class="cards-grid">
+            {% for data in branches_data %}
+            <div class="branch-card">
+                <div class="branch-card-header">
+                    <h3><i class="fas fa-building"></i> {{ data.branch.branch_name }}</h3>
+                    <small>{{ data.branch.company.company_name }} | Code: {{ data.branch.branch_code }}</small>
+                </div>
+                <div class="branch-card-body">
+                    <div class="branch-stats">
+                        <div class="stat-item">
+                            <div class="value">{{ data.superuser_count }}</div>
+                            <div class="label">Admins</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="value">{{ data.total_users }}</div>
+                            <div class="label">Total Users</div>
+                        </div>
+                        <div class="stat-item">
+                            {% if data.branch.is_active %}
+                            <div class="value" style="color: var(--success);"><i class="fas fa-check-circle"></i></div>
+                            <div class="label">Active</div>
+                            {% else %}
+                            <div class="value" style="color: var(--danger);"><i class="fas fa-times-circle"></i></div>
+                            <div class="label">Inactive</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="superuser-list">
+                        {% if data.superusers %}
+                            {% for su in data.superusers|slice:":3" %}
+                            <div class="superuser-item">
+                                <div class="superuser-info">
+                                    <div class="superuser-avatar">
+                                        <i class="fas fa-user"></i>
+                                    </div>
+                                    <div>
+                                        <div class="superuser-name">{{ su.first_name }} {{ su.last_name }}</div>
+                                        <div class="superuser-email">{{ su.email }}</div>
+                                    </div>
+                                </div>
+                                <span class="status-badge {% if su.is_active %}status-active{% else %}status-inactive{% endif %}">
+                                    {% if su.is_active %}Active{% else %}Inactive{% endif %}
+                                </span>
+                            </div>
+                            {% endfor %}
+                            {% if data.superuser_count > 3 %}
+                            <div style="text-align: center; padding: 0.5rem; color: var(--gray); font-size: 0.85rem;">
+                                +{{ data.superuser_count|add:"-3" }} more admin(s)
+                            </div>
+                            {% endif %}
+                        {% else %}
+                            <div class="empty-state">
+                                <i class="fas fa-user-slash" style="font-size: 1.5rem; margin-bottom: 0.5rem;"></i>
+                                <p>No administrators yet</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="branch-card-footer">
+                    <a href="{% url 'branch_superuser_detail' uuid=data.branch.uuid %}" class="btn btn-primary btn-sm" style="width: 100%; justify-content: center;">
+                        <i class="fas fa-cog"></i> Manage Admins
+                    </a>
+                </div>
+            </div>
+            {% empty %}
+            <div style="grid-column: 1 / -1;">
+                <div class="empty-state">
+                    <i class="fas fa-building" style="font-size: 3rem; margin-bottom: 1rem;"></i>
+                    <h3>No Branches Found</h3>
+                    <p>Create branches first to manage their administrators.</p>
+                    <a href="{% url 'create_branch' %}" class="btn btn-primary" style="margin-top: 1rem;">
+                        <i class="fas fa-plus"></i> Create Branch
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <div class="footer">
+        <p>FinanceFlex Vendor Management System &copy; 2023</p>
+    </div>
+</body>
+</html>

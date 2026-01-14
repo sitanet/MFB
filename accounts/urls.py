@@ -34,7 +34,4 @@ urlpatterns = [
     path('contact-support/', views.contact_support, name='contact_support'),
 
     path('auto-logout/', views.auto_logout_settings, name='auto_logout_settings'),
-  
- 
-    
 ]

@@ -402,6 +402,7 @@
                 <a href="{% url 'vendor_dashboard' %}" class="nav-link active">Dashboard</a>
                 <a href="{% url 'company_list' %}" class="nav-link">Companies</a>
                 <a href="{% url 'branch_list' %}" class="nav-link">Branches</a>
+                <a href="{% url 'branch_superuser_list' %}" class="nav-link">Branch Admins</a>
                 <a href="{% url 'vendor_user_list' %}" class="nav-link">Vendor Users</a>
             </div>
             
@@ -450,7 +451,11 @@
             </a>
             <a href="{% url 'vendor_user_list' %}" class="action-card">
                 <i class="fas fa-users-cog"></i>
-                <span>Manage Users</span>
+                <span>Vendor Users</span>
+            </a>
+            <a href="{% url 'branch_superuser_list' %}" class="action-card">
+                <i class="fas fa-user-shield"></i>
+                <span>Branch Admins</span>
             </a>
         </div>
 

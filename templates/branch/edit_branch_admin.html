@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Create Branch Administrator</title>
+    <title>Edit Branch Administrator</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * {
@@ -57,7 +57,7 @@
         }
 
         .header h1 {
-            color: var(--primary);
+            color: var(--secondary);
             font-size: 1.8rem;
             margin-bottom: 0.5rem;
         }
@@ -75,6 +75,17 @@
             border-radius: 20px;
             font-size: 0.9rem;
             margin-top: 0.5rem;
+        }
+
+        .admin-badge {
+            display: inline-block;
+            background: var(--primary);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+            margin-left: 0.5rem;
         }
 
         .form-group {
@@ -101,6 +112,11 @@
             outline: none;
             border-color: var(--primary);
             box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+        }
+
+        .form-group input:disabled {
+            background: var(--light-gray);
+            cursor: not-allowed;
         }
 
         .form-row {
@@ -183,6 +199,16 @@
             margin-right: 0.5rem;
         }
 
+        .password-note {
+            background: #f0f9ff;
+            border: 1px solid #7dd3fc;
+            border-radius: var(--border-radius);
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            font-size: 0.9rem;
+            color: #0369a1;
+        }
+
         @media (max-width: 600px) {
             .form-row {
                 grid-template-columns: 1fr;
@@ -193,10 +219,13 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1><i class="fas fa-user-shield"></i> Create Branch Administrator</h1>
-            <p class="branch-info">Creating admin for:</p>
+            <h1><i class="fas fa-user-edit"></i> Edit Branch Administrator</h1>
+            <p class="branch-info">Editing admin for:</p>
             <span class="branch-badge">
                 <i class="fas fa-building"></i> {{ branch.branch_name }}
+            </span>
+            <span class="admin-badge">
+                <i class="fas fa-user"></i> {{ branch_admin.username }}
             </span>
         </div>
 
@@ -210,7 +239,7 @@
 
         <div class="note">
             <i class="fas fa-info-circle"></i>
-            <strong>Note:</strong> This administrator will have full access to manage users, customers, transactions, and reports for this branch only.
+            <strong>Note:</strong> You can update the administrator's details including the Cashier GL and Cashier AC fields.
         </div>
 
         <form method="POST">
@@ -219,48 +248,53 @@
             <div class="form-row">
                 <div class="form-group">
                     <label for="first_name">First Name *</label>
-                    <input type="text" id="first_name" name="first_name" required placeholder="Enter first name">
+                    <input type="text" id="first_name" name="first_name" required placeholder="Enter first name" value="{{ branch_admin.first_name }}">
                 </div>
                 <div class="form-group">
                     <label for="last_name">Last Name *</label>
-                    <input type="text" id="last_name" name="last_name" required placeholder="Enter last name">
+                    <input type="text" id="last_name" name="last_name" required placeholder="Enter last name" value="{{ branch_admin.last_name }}">
                 </div>
             </div>
 
             <div class="form-group">
-                <label for="username">Username *</label>
-                <input type="text" id="username" name="username" required placeholder="Enter username">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" value="{{ branch_admin.username }}" disabled>
             </div>
 
             <div class="form-group">
                 <label for="email">Email Address *</label>
-                <input type="email" id="email" name="email" required placeholder="Enter email address">
+                <input type="email" id="email" name="email" required placeholder="Enter email address" value="{{ branch_admin.email }}">
             </div>
 
             <div class="form-group">
                 <label for="phone_number">Phone Number</label>
-                <input type="text" id="phone_number" name="phone_number" placeholder="e.g., +2348012345678">
+                <input type="text" id="phone_number" name="phone_number" placeholder="e.g., +2348012345678" value="{{ branch_admin.phone_number|default:'' }}">
             </div>
 
             <div class="form-row">
                 <div class="form-group">
                     <label for="cashier_gl">Cashier GL (Optional)</label>
-                    <input type="text" id="cashier_gl" name="cashier_gl" placeholder="e.g., 10001" maxlength="6">
+                    <input type="text" id="cashier_gl" name="cashier_gl" placeholder="e.g., 10001" maxlength="6" value="{{ branch_admin.cashier_gl|default:'' }}">
                 </div>
                 <div class="form-group">
                     <label for="cashier_ac">Cashier AC (Optional)</label>
-                    <input type="text" id="cashier_ac" name="cashier_ac" placeholder="e.g., 1" maxlength="1">
+                    <input type="text" id="cashier_ac" name="cashier_ac" placeholder="e.g., 1" maxlength="1" value="{{ branch_admin.cashier_ac|default:'' }}">
                 </div>
+            </div>
+
+            <div class="password-note">
+                <i class="fas fa-lock"></i>
+                <strong>Password:</strong> Leave blank to keep the current password. Fill in both fields to change it.
             </div>
 
             <div class="form-row">
                 <div class="form-group">
-                    <label for="password">Password *</label>
-                    <input type="password" id="password" name="password" required placeholder="Enter password" minlength="8">
+                    <label for="new_password">New Password</label>
+                    <input type="password" id="new_password" name="new_password" placeholder="Enter new password" minlength="8">
                 </div>
                 <div class="form-group">
-                    <label for="confirm_password">Confirm Password *</label>
-                    <input type="password" id="confirm_password" name="confirm_password" required placeholder="Confirm password" minlength="8">
+                    <label for="confirm_password">Confirm Password</label>
+                    <input type="password" id="confirm_password" name="confirm_password" placeholder="Confirm new password" minlength="8">
                 </div>
             </div>
 
@@ -269,7 +303,7 @@
                     <i class="fas fa-arrow-left"></i> Cancel
                 </a>
                 <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-user-plus"></i> Create Administrator
+                    <i class="fas fa-save"></i> Update Administrator
                 </button>
             </div>
         </form>
