@@ -542,7 +542,8 @@ def login(request):
                 return redirect('login')
 
             user.backend = 'accounts.backends.EmailBackend'
-            auth.login(request, user)
+            # DON'T login here - wait until OTP is verified
+            # auth.login(request, user)  # REMOVED - security fix
             print(f"[DEBUG] Authentication SUCCESS → user_id={user.id}")
 
             # Account verification check
@@ -562,11 +563,12 @@ def login(request):
             otp = randint(100000, 999999)
             print(f"[DEBUG] Generated OTP → {otp}")
 
-            # Store OTP in session
+            # Store OTP in session (user NOT logged in yet - will login after OTP verified)
             request.session['otp_data'] = {
                 'user_id': user.id,
                 'otp': otp,
-                'timestamp': timezone.now().isoformat()
+                'timestamp': timezone.now().isoformat(),
+                'backend': user.backend  # Store backend for login after OTP
             }
 
             # Send OTP in background
@@ -640,6 +642,8 @@ def verify_otp(request):
         
         # Validate OTP
         if entered_otp and (str(entered_otp) == str(session_otp) or str(entered_otp) == str(cache_otp)):
+            # Set the backend before login (required by Django)
+            user.backend = otp_data.get('backend', 'accounts.backends.EmailBackend')
             auth.login(request, user)
             
             # Cleanup
