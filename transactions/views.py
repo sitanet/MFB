@@ -78,7 +78,7 @@ def deposit(request, uuid):
 
     # Get cashier customer - ensure this returns a Customer instance
     cashier_gl_value = request.user.cashier_gl
-    cashier_customer = get_object_or_404(Customer, gl_no=cashier_gl_value)
+    cashier_customer = get_object_or_404(Customer.all_objects, gl_no=cashier_gl_value)
     
     # Get company info - this line was already correct
     company = get_object_or_404(Branch, id=user.branch_id)
@@ -277,7 +277,7 @@ def withdraw(request, uuid):
 
     # Get cashier information
     cashier_gl_value = user.cashier_gl
-    cashier_customer = get_object_or_404(Customer, gl_no=cashier_gl_value)
+    cashier_customer = get_object_or_404(Customer.all_objects, gl_no=cashier_gl_value)
     
     # Get company information
     company = get_object_or_404(Branch, id=user.branch_id)
@@ -577,7 +577,7 @@ def income(request, uuid):
                     customer_transaction.save()
 
                     # Create cashier transaction (debit)
-                    customer_with_gl = get_object_or_404(Customer, gl_no=request.user.cashier_gl)
+                    customer_with_gl = get_object_or_404(Customer.all_objects, gl_no=request.user.cashier_gl)
                     
                     cashier_transaction = Memtrans(
                         branch=user_branch,  # Branch instance
@@ -645,7 +645,7 @@ def expense(request, uuid):
 
     # Get cashier information
     cashier_gl_value = user.cashier_gl
-    cashier_customer = get_object_or_404(Customer, gl_no=cashier_gl_value)
+    cashier_customer = get_object_or_404(Customer.all_objects, gl_no=cashier_gl_value)
     
     # Get company information
     company = get_object_or_404(Branch, id=user.branch_id)
