@@ -75,16 +75,16 @@ class UserManager(BaseUserManager):
         return user
 
     def create_superuser(self, first_name, last_name, username, email, password=None):
-        """Create superuser with default company/branch in vendor database"""
+        """Create superuser with default company/branch"""
         from company.models import Company, Branch
         
-        # Work with vendor database for Company operations
+        # Get or create default company
         try:
-            default_company = Company.objects.using('vendor_db').get(
+            default_company = Company.objects.get(
                 company_name="Default Company"
             )
         except Company.DoesNotExist:
-            # Create default company in vendor database
+            # Create default company
             default_company = Company(
                 company_name="Default Company",
                 contact_person="Admin",
@@ -94,16 +94,16 @@ class UserManager(BaseUserManager):
                 expiration_date=now().date().replace(year=now().year + 1),
                 license_key="DEFAULTLICENSEKEY",
             )
-            default_company.save(using='vendor_db')
+            default_company.save()
 
-        # Work with vendor database for Branch operations
+        # Get or create default branch
         try:
-            default_branch = Branch.objects.using('vendor_db').get(
+            default_branch = Branch.objects.get(
                 company=default_company,
                 branch_name="Demo Branch"
             )
         except Branch.DoesNotExist:
-            # Create default branch in vendor database
+            # Create default branch
             default_branch = Branch(
                 company=default_company,
                 company_name=default_company.company_name,
@@ -119,7 +119,7 @@ class UserManager(BaseUserManager):
                 system_date_date=now().date(),
                 session_status="Active",
             )
-            default_branch.save(using='vendor_db')
+            default_branch.save()
 
         # Create superuser in client database with branch_id reference
         user = self.create_user(

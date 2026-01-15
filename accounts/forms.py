@@ -46,12 +46,12 @@ class UserForm(forms.ModelForm):
         widget=forms.TextInput(attrs={'placeholder': 'Enter Phone Number', 'required': 'required'})
     )
     
-    # Branch selection from vendor database
+    # Branch selection
     branch = forms.ModelChoiceField(
-        queryset=Branch.objects.using('vendor_db').all(),
+        queryset=Branch.objects.all(),
         empty_label="Select Branch",
         required=True,
-        help_text="Branch from vendor database"
+        help_text="Select branch"
     )
     
     role = forms.TypedChoiceField(
@@ -106,7 +106,7 @@ class UserForm(forms.ModelForm):
         # If editing existing user, set initial branch selection
         if self.instance.pk and self.instance.branch_id:
             try:
-                initial_branch = Branch.objects.using('vendor_db').get(id=self.instance.branch_id)
+                initial_branch = Branch.objects.get(id=self.instance.branch_id)
                 self.fields['branch'].initial = initial_branch
             except Branch.DoesNotExist:
                 pass
@@ -161,12 +161,12 @@ class EdituserForm(forms.ModelForm):
     Note: Keeping the old name for compatibility with existing views.
     """
     
-    # Branch selection from vendor database
+    # Branch selection
     branch = forms.ModelChoiceField(
-        queryset=Branch.objects.using('vendor_db').all(),
+        queryset=Branch.objects.all(),
         empty_label="Select Branch",
         required=True,
-        help_text="Branch from vendor database"
+        help_text="Select branch"
     )
     
     customer = forms.ModelChoiceField(
@@ -211,7 +211,7 @@ class EdituserForm(forms.ModelForm):
         # Set initial branch selection for existing users
         if self.instance.pk and self.instance.branch_id:
             try:
-                initial_branch = Branch.objects.using('vendor_db').get(id=self.instance.branch_id)
+                initial_branch = Branch.objects.get(id=self.instance.branch_id)
                 self.fields['branch'].initial = initial_branch
             except Branch.DoesNotExist:
                 pass
