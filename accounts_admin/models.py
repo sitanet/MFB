@@ -113,10 +113,13 @@ class Region(models.Model):
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     branch = models.ForeignKey(Branch, on_delete=models.CASCADE, related_name="region", 
     null=True, blank=True)
-    region_name = models.CharField(max_length=30, unique=True)
+    region_name = models.CharField(max_length=30)
 
     objects = TenantManager()
     all_objects = models.Manager()
+
+    class Meta:
+        unique_together = ['branch', 'region_name']
 
     def __str__(self):
         return self.region_name
