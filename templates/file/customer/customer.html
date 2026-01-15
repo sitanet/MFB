@@ -206,24 +206,6 @@
     </div>
 
 <script>
-    function previewImage(event) {
-        const reader = new FileReader();
-        reader.onload = function() {
-            const output = document.getElementById('preview-selected-image');
-            output.src = reader.result;
-        }
-        reader.readAsDataURL(event.target.files[0]);
-    }
-
-    function previewImage2(event) {
-        const reader = new FileReader();
-        reader.onload = function() {
-            const output = document.getElementById('preview-selected-image2');
-            output.src = reader.result;
-        }
-        reader.readAsDataURL(event.target.files[0]);
-    }
-
     function loadOfficers(regionId) {
         var officerSelect = document.getElementById('credit-officer-select');
         officerSelect.innerHTML = '<option value="">Select Account Officer</option>';
