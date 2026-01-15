@@ -235,10 +235,10 @@ def deposit(request, uuid):
                                 print(f"Failed to send email notification: {str(e)}")
 
                         messages.success(request, 'Deposit successful!')
-                        return redirect('deposit', id=id)
+                        return redirect('deposit', uuid=uuid)
             except Exception as e:
                 messages.error(request, f'Error processing deposit: {str(e)}')
-                return redirect('deposit', id=id)
+                return redirect('deposit', uuid=uuid)
     else:
         form = MemtransForm(initial=initial_values)
         form.fields['branch'].disabled = True
@@ -451,7 +451,7 @@ def withdraw(request, uuid):
                             print(f"Failed to send email notification: {str(e)}")
 
                     messages.success(request, 'Withdrawal successful!')
-                    return redirect('withdraw', id=id)
+                    return redirect('withdraw', uuid=uuid)
     else:
         form = MemtransForm(initial=initial_values)
         form.fields['branch'].disabled = True
@@ -609,7 +609,7 @@ def income(request, uuid):
                         customers.save()
 
                     messages.success(request, 'Transaction completed successfully!')
-                    return redirect('income', id=id)
+                    return redirect('income', uuid=uuid)
     else:
         form = MemtransForm(initial=initial_values)
         form.fields['branch'].disabled = True  # Disable the branch field to prevent changes
@@ -783,7 +783,7 @@ def expense(request, uuid):
                             print(f"Email sending failed: {str(e)}")
 
                     messages.success(request, 'Expense processed successfully!')
-                    return redirect('expense', id=id)
+                    return redirect('expense', uuid=uuid)
     else:
         form = MemtransForm(initial=initial_values)
         # Disable branch fields if needed
@@ -1158,7 +1158,7 @@ def general_journal(request, uuid):
                             cashier_to_update.save()
 
                         messages.success(request, 'Account saved successfully!')
-                        return redirect('general_journal', id=id)
+                        return redirect('general_journal', uuid=uuid)
 
             return render(request, 'transactions/non_cash/general_journal.html', {
                 'form': form,
