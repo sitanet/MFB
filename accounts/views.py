@@ -758,7 +758,7 @@ def editUser(request, uuid=None):
         if form.is_valid():
             form.save()
             messages.success(request, f'User {user.username} updated successfully!')
-            return redirect('users')
+            return redirect('display_all_user')
     else:
         form = EdituserForm(instance=user)
         form.fields['branch'].queryset = allowed_branches
