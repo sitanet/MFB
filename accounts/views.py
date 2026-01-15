@@ -747,6 +747,9 @@ def editUser(request, uuid=None):
     
     # Get customers for the form
     customers = Customer.objects.filter(gl_no__startswith='1')
+    
+    # Get chart of accounts for cashier GL dropdown
+    accounts = Account.objects.filter(branch=request.user.branch)
  
     if request.method == 'POST':
         form = EdituserForm(request.POST, request.FILES, instance=user)
@@ -765,6 +768,7 @@ def editUser(request, uuid=None):
         'user': user,
         'branch': allowed_branches,
         'customers': customers,
+        'accounts': accounts,
     }
     return render(request, 'accounts/update_user.html', context)
 
