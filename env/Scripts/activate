@@ -38,7 +38,7 @@ deactivate () {
 # unset irrelevant variables
 deactivate nondestructive
 
-VIRTUAL_ENV="C:\Users\User\Desktop\Development\Data_Flex\env"
+VIRTUAL_ENV="C:\Users\User\Desktop\Development\MFBB\MFB\env"
 export VIRTUAL_ENV
 
 _OLD_VIRTUAL_PATH="$PATH"
