@@ -54,8 +54,8 @@ class Account(models.Model):
     branch = models.ForeignKey(
         Branch, on_delete=models.CASCADE, related_name="accounts", null=True, blank=True
     )
-    gl_name = models.CharField(max_length=80, unique=True)
-    gl_no = models.CharField(max_length=10, unique=True)
+    gl_name = models.CharField(max_length=80)
+    gl_no = models.CharField(max_length=10)
     account_type = models.PositiveIntegerField(choices=ACCOUNT_TYPE, default=ASSETS, blank=True)
     currency = models.PositiveIntegerField(choices=CURRENCY, default=US_DOLLAR, blank=True)
     double_entry_type = models.PositiveIntegerField(choices=DOUBLE_ENTRY, default=DEBIT_CREDIT, blank=True)
@@ -100,14 +100,18 @@ class Account(models.Model):
     objects = TenantManager()
     all_objects = models.Manager()
 
+    class Meta:
+        unique_together = [
+            ['branch', 'gl_name'],
+            ['branch', 'gl_no'],
+        ]
+
     def has_related_child_accounts(self):
         return Account.all_objects.filter(header=self).exists()
 
     def __str__(self):
         return f"{self.gl_name} ({self.gl_no})"
 
-
-    
 
 class Region(models.Model):
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
