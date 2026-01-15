@@ -177,10 +177,13 @@ class Business_Sector(models.Model):
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     branch = models.ForeignKey(Branch, on_delete=models.CASCADE, related_name="business_Sector", 
     null=True, blank=True)
-    sector_name = models.CharField(max_length=30, unique=True)
+    sector_name = models.CharField(max_length=30)
 
     objects = TenantManager()
     all_objects = models.Manager()
+
+    class Meta:
+        unique_together = ['branch', 'sector_name']
 
     def __str__(self):
         return self.sector_name
