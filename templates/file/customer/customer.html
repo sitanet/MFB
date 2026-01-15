@@ -154,7 +154,7 @@
                             </div>
                             <div class="input-field">
                                 <label>Region</label>
-                                <select id="team_lead" name="region" value="{{ form.gl_no.value|default:""}}" required >
+                                <select id="region-select" name="region" value="{{ form.gl_no.value|default:""}}" required onchange="loadOfficers(this.value)">
                                     <option value="">Select Region</option>
                                     {% for region in region %}
                                     <option value="{{ region.id }}">{{ region.region_name }}</option>
@@ -163,11 +163,8 @@
                             </div>
                             <div class="input-field">
                                 <label>Credit Officer</label>
-                                <select id="team_lead" name="credit_officer" value="{{ form.credit_officer.value|default:""}}" required>
+                                <select id="credit-officer-select" name="credit_officer" value="{{ form.credit_officer.value|default:""}}" required>
                                     <option value="">Select Account Officer</option>
-                                    {% for officer in officer %}
-                                    <option value="{{ officer.id }}">{{ officer.user }}</option>
-                                    {% endfor %}
                                 </select>
                             </div>
                             <div class="input-field">
@@ -207,6 +204,48 @@
             </form>
         </div>
     </div>
+
+<script>
+    function previewImage(event) {
+        const reader = new FileReader();
+        reader.onload = function() {
+            const output = document.getElementById('preview-selected-image');
+            output.src = reader.result;
+        }
+        reader.readAsDataURL(event.target.files[0]);
+    }
+
+    function previewImage2(event) {
+        const reader = new FileReader();
+        reader.onload = function() {
+            const output = document.getElementById('preview-selected-image2');
+            output.src = reader.result;
+        }
+        reader.readAsDataURL(event.target.files[0]);
+    }
+
+    function loadOfficers(regionId) {
+        var officerSelect = document.getElementById('credit-officer-select');
+        officerSelect.innerHTML = '<option value="">Select Account Officer</option>';
+        
+        if (regionId) {
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', '/customers/api/officers-by-region/?region_id=' + regionId, true);
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4 && xhr.status === 200) {
+                    var data = JSON.parse(xhr.responseText);
+                    for (var i = 0; i < data.length; i++) {
+                        var option = document.createElement('option');
+                        option.value = data[i].id;
+                        option.textContent = data[i].user;
+                        officerSelect.appendChild(option);
+                    }
+                }
+            };
+            xhr.send();
+        }
+    }
+</script>
 
 {% endblock %}
 
@@ -248,23 +287,3 @@
         cursor: pointer;
     }
 </style>
-
-<script>
-    function previewImage(event) {
-        const reader = new FileReader();
-        reader.onload = function() {
-            const output = document.getElementById('preview-selected-image');
-            output.src = reader.result;
-        }
-        reader.readAsDataURL(event.target.files[0]);
-    }
-
-    function previewImage2(event) {
-        const reader = new FileReader();
-        reader.onload = function() {
-            const output = document.getElementById('preview-selected-image2');
-            output.src = reader.result;
-        }
-        reader.readAsDataURL(event.target.files[0]);
-    }
-</script>

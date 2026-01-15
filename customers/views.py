@@ -532,6 +532,22 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from .models import Customer
 # from transactions.models import Memtrans
+
+from django.http import JsonResponse
+
+@login_required(login_url='login')
+def get_officers_by_region(request):
+    """AJAX endpoint to get account officers filtered by region"""
+    region_id = request.GET.get('region_id')
+    if region_id:
+        try:
+            officers = Account_Officer.objects.filter(region_id=region_id).values('id', 'user')
+            return JsonResponse(list(officers), safe=False)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    return JsonResponse([], safe=False)
+
+
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
 def delete_customer(request, uuid):

@@ -174,25 +174,24 @@ def software_reg(request):
 
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
-
-@login_required
 def create_account_officer(request):
-    # Get the company_name associated with the current user
-    user_company_name = request.user.branch.company_name  # Assuming user has a branch with company_name
+    from accounts.utils import get_branch_from_vendor_db
+    user_branch = get_branch_from_vendor_db(request.user.branch_id)
+    user_company = user_branch.company if user_branch else None
 
-    # Filter Region based on company_name instead of branch
-    officer = Region.objects.filter(branch__company_name=user_company_name)
+    # Filter Region based on company
+    officer = Region.objects.filter(branch__company=user_company) if user_company else []
 
-    # Filter Users who are associated with branches having the same company_name
-    user_officer = User.objects.filter(branch__company_name=user_company_name)
+    # Filter Users who are associated with branches having the same company
+    from accounts.utils import get_company_branch_ids_all
+    branch_ids = get_company_branch_ids_all(request.user)
+    user_officer = User.objects.filter(branch_id__in=branch_ids)
 
     if request.method == "POST":
         form = CreditOfficerForm(request.POST)
         if form.is_valid():
-            # Save the form but don't commit yet
             account_officer = form.save(commit=False)
-            # Assign the user's branch to the new account officer
-            account_officer.branch = request.user.branch
+            account_officer.branch = user_branch
             account_officer.save()
             return redirect('account_officer_list')
     else:
@@ -208,14 +207,15 @@ def create_account_officer(request):
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
 def account_officer_list(request):
-    # Get the branch associated with the current user
-    user_branch = request.user.branch  # Assuming user has a 'branch' attribute
+    from accounts.utils import get_branch_from_vendor_db
+    user_branch = get_branch_from_vendor_db(request.user.branch_id)
+    user_company = user_branch.company if user_branch else None
 
-    # Filter Account_Officer based on the user's company_name (through region -> branch)
-    officers = Account_Officer.objects.filter(region__branch__company_name=user_branch.company_name)
+    # Filter Account_Officer based on the user's company
+    officers = Account_Officer.objects.filter(region__branch__company=user_company) if user_company else []
 
-    # Filter regions (branches) based on the same company_name
-    branches = Region.objects.filter(branch__company_name=user_branch.company_name)
+    # Filter regions based on the same company
+    branches = Region.objects.filter(branch__company=user_company) if user_company else []
 
     return render(
         request, 
