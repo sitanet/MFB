@@ -72,7 +72,7 @@ def deposit(request, uuid):
         messages.error(request, 'No valid branch assigned to user')
         return HttpResponse("No valid branch assigned to user", status=400)
     
-    customer = get_object_or_404(Customer, uuid=uuid)
+    customer = get_object_or_404(Customer.all_objects, uuid=uuid)
     formatted_balance = '{:,.2f}'.format(customer.balance)
     data = Memtrans.objects.filter(branch=user_branch).order_by('-id').first()
 
@@ -271,7 +271,7 @@ def withdraw(request, uuid):
     # Get user and branch information
     user = request.user
     user_branch = user.branch
-    customer = get_object_or_404(Customer, uuid=uuid)
+    customer = get_object_or_404(Customer.all_objects, uuid=uuid)
     formatted_balance = '{:,.2f}'.format(customer.balance)
     data = Memtrans.objects.filter(branch=user_branch).order_by('-id').first()
 
@@ -480,7 +480,7 @@ def income(request, uuid):
     # Retrieve the logged-in user's branch (Branch instance)
     user_branch = request.user.branch
     # Retrieve the customer based on the provided UUID
-    customer = get_object_or_404(Customer, uuid=uuid)
+    customer = get_object_or_404(Customer.all_objects, uuid=uuid)
     formatted_balance = '{:,.2f}'.format(customer.balance)
     
     # Retrieve the latest transaction for the branch
@@ -639,7 +639,7 @@ def expense(request, uuid):
     # Get user and branch information
     user = request.user
     user_branch = user.branch
-    customer = get_object_or_404(Customer, uuid=uuid)
+    customer = get_object_or_404(Customer.all_objects, uuid=uuid)
     formatted_balance = '{:,.2f}'.format(customer.balance)
     data = Memtrans.objects.filter(branch=user_branch).order_by('-id').first()
 
@@ -1067,8 +1067,8 @@ def choose_general_journal(request):
 
 def general_journal(request, uuid):
     user_branch = request.user.branch
-    # Fetch the customer with the given UUID and ensure it belongs to the user's branch
-    customer = get_object_or_404(Customer, uuid=uuid, branch=user_branch)
+    # Fetch the customer with the given UUID
+    customer = get_object_or_404(Customer.all_objects, uuid=uuid)
     formatted_balance = '{:,.2f}'.format(customer.balance)
     data = Memtrans.objects.all().order_by('-id').first()  # Get the last transaction
     total_amount = None
