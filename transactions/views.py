@@ -391,7 +391,7 @@ def withdraw(request, uuid):
                     ).aggregate(total_amount=Sum('amount'))['total_amount']
 
                     if sum_of_amounts is not None:
-                        customer_to_update = Customer.objects.get(
+                        customer_to_update = Customer.all_objects.get(
                             gl_no=customer.gl_no, 
                             ac_no=customer.ac_no
                         )
@@ -406,7 +406,7 @@ def withdraw(request, uuid):
                     ).aggregate(total_amount=Sum('amount'))['total_amount']
 
                     if sum_of_amounts is not None:
-                        cashier_to_update = Customer.objects.get(
+                        cashier_to_update = Customer.all_objects.get(
                             gl_no=cashier_customer.gl_no,
                             ac_no=cashier_customer.ac_no
                         )
@@ -415,7 +415,7 @@ def withdraw(request, uuid):
 
                     # Send SMS if enabled
                     if customer.sms:
-                        current_balance = Customer.objects.get(
+                        current_balance = Customer.all_objects.get(
                             gl_no=customer.gl_no,
                             ac_no=customer.ac_no
                         ).balance
@@ -424,7 +424,7 @@ def withdraw(request, uuid):
                     
                     # Send email notification if email_alert is True and email exists
                     if customer.email_alert and customer.email:
-                        current_balance = Customer.objects.get(
+                        current_balance = Customer.all_objects.get(
                             gl_no=customer.gl_no,
                             ac_no=customer.ac_no
                         ).balance
