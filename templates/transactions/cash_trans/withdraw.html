@@ -139,10 +139,13 @@
                         </div>
                     </div>
                     <div class="mt-8 d-flex justify-content-between align-items-center">
-                        <!-- New icons for photo and sign -->
+                        <!-- New icons for photo, sign, and history -->
                         <div class="icon-container">
-                            <i class="fas fa-image" onclick="showCustomerImage()"></i>
-                            <i class="fas fa-signature" onclick="showCustomerImage2()"></i>
+                            <a href="{% url 'customer_transaction_history' customer.uuid %}" target="_blank" title="View Transaction History">
+                                <i class="fas fa-history"></i>
+                            </a>
+                            <i class="fas fa-image" onclick="showCustomerImage()" title="View Photo"></i>
+                            <i class="fas fa-signature" onclick="showCustomerImage2()" title="View Signature"></i>
                         </div>
                         <button class="btn btn-success shadow-sm" type="Submit">Save</button>
                     </div>

@@ -1276,6 +1276,20 @@ def memtrans_list(request):
     memtrans_list = Memtrans.all_objects.filter(branch_id__in=branch_ids)
     return render(request, 'transactions/non_cash/memtrans_list.html', {'memtrans_list': memtrans_list})
 
+
+@login_required(login_url='login')
+def customer_transaction_history(request, uuid):
+    customer = get_object_or_404(Customer.all_objects, uuid=uuid)
+    transactions = Memtrans.all_objects.filter(
+        gl_no=customer.gl_no,
+        ac_no=customer.ac_no,
+        error='A'
+    ).order_by('-sys_date')[:50]
+    return render(request, 'transactions/cash_trans/customer_history.html', {
+        'customer': customer,
+        'transactions': transactions
+    })
+
 def delete_memtrans(request, uuid):
     memtrans = get_object_or_404(Memtrans, uuid=uuid)
     trx_no = memtrans.trx_no

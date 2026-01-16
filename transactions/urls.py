@@ -6,6 +6,7 @@ from django.views.generic import TemplateView
 urlpatterns = [
     path('withdraw/<uuid:uuid>/', views.withdraw, name='withdraw'),
     path('deposit/<uuid:uuid>/', views.deposit, name='deposit'),
+    path('customer-history/<uuid:uuid>/', views.customer_transaction_history, name='customer_transaction_history'),
     path('choose_deposit/', views.choose_deposit, name='choose_deposit'),
     path('choose_withdrawal/', views.choose_withdrawal, name='choose_withdrawal'),
     path('choose_income/', views.choose_income, name='choose_income'),
