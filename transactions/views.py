@@ -260,6 +260,11 @@ def deposit(request, uuid):
             error='A',
             branch=user_branch  # Branch instance
         ).order_by('-id').first(),
+        'last_transactions': Memtrans.all_objects.filter(
+            gl_no=customer.gl_no,
+            ac_no=customer.ac_no,
+            error='A'
+        ).order_by('-sys_date')[:50],
     })
 
     
@@ -468,6 +473,11 @@ def withdraw(request, uuid):
         'company': company,
         'company_date': company_date,
         'last_transaction': last_transaction,
+        'last_transactions': Memtrans.all_objects.filter(
+            gl_no=customer.gl_no,
+            ac_no=customer.ac_no,
+            error='A'
+        ).order_by('-sys_date')[:50],
     })
 
 @login_required(login_url='login')
