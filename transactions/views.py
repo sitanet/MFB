@@ -282,7 +282,7 @@ def withdraw(request, uuid):
 
     # Get cashier information
     cashier_gl_value = user.cashier_gl
-    cashier_customer = get_object_or_404(Customer.all_objects, gl_no=cashier_gl_value)
+    cashier_customer = Customer.all_objects.filter(gl_no=cashier_gl_value).first()
     
     # Get company information
     company = get_object_or_404(Branch, id=user.branch_id)
