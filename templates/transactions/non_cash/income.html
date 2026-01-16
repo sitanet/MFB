@@ -124,7 +124,9 @@
                                                 <h6 class="text-white-50 mb-1">DEBIT FROM</h6>
                                                 <h5 class="mb-0">{{ customers.first_name }}</h5>
                                             </div>
-                                            <i class="fas fa-minus-circle fa-2x text-white-50"></i>
+                                            <button type="button" class="btn btn-sm btn-light" onclick="showCashierHistory()" title="Cashier History">
+                                                <i class="fas fa-history text-danger"></i>
+                                            </button>
                                         </div>
                                         <div class="row g-2">
                                             <div class="col-6">
@@ -151,7 +153,9 @@
                                                 <h6 class="text-white-50 mb-1">CREDIT TO</h6>
                                                 <h5 class="mb-0">{{ customer.first_name }} {{ customer.middle_name }} {{ customer.last_name }}</h5>
                                             </div>
-                                            <i class="fas fa-plus-circle fa-2x text-white-50"></i>
+                                            <button type="button" class="btn btn-sm btn-light" onclick="showTransactionHistory()" title="Customer History">
+                                                <i class="fas fa-history text-info"></i>
+                                            </button>
                                         </div>
                                         <div class="row g-2">
                                             <div class="col-6">
@@ -224,13 +228,13 @@
     </div>
 </div>
 
-<!-- Transaction History Modal -->
+<!-- Customer Transaction History Modal -->
 <div class="modal fade" id="transactionHistoryModal" tabindex="-1">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content border-0 shadow">
-            <div class="modal-header border-0" style="background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%);">
+            <div class="modal-header border-0" style="background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);">
                 <div class="text-white">
-                    <h5 class="modal-title mb-0"><i class="fas fa-history me-2"></i>Transaction History</h5>
+                    <h5 class="modal-title mb-0"><i class="fas fa-history me-2"></i>Customer Transaction History</h5>
                     <small>{{ customer.first_name }} {{ customer.last_name }} | {{ customer.gl_no }}-{{ customer.ac_no }}</small>
                 </div>
                 <button type="button" class="btn-close btn-close-white" onclick="closeHistoryModal()"></button>
@@ -249,6 +253,62 @@
                         </thead>
                         <tbody>
                             {% for trx in last_transactions %}
+                            <tr>
+                                <td><small>{{ trx.sys_date|date:"d-m-Y H:i" }}</small></td>
+                                <td><code>{{ trx.trx_no }}</code></td>
+                                <td>{{ trx.description|truncatechars:30 }}</td>
+                                <td>
+                                    {% if trx.type == 'C' %}
+                                    <span class="badge bg-success">Credit</span>
+                                    {% else %}
+                                    <span class="badge bg-danger">Debit</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end fw-bold {% if trx.amount < 0 %}text-danger{% else %}text-success{% endif %}">
+                                    &#8358;{{ trx.amount|floatformat:2 }}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center py-5 text-muted">
+                                    <i class="fas fa-inbox fa-3x mb-3"></i>
+                                    <p class="mb-0">No transactions found</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Cashier Transaction History Modal -->
+<div class="modal fade" id="cashierHistoryModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);">
+                <div class="text-white">
+                    <h5 class="modal-title mb-0"><i class="fas fa-history me-2"></i>Cashier Transaction History</h5>
+                    <small>{{ customers.first_name }} {{ customers.last_name }} | {{ customers.gl_no }}-{{ customers.ac_no }}</small>
+                </div>
+                <button type="button" class="btn-close btn-close-white" onclick="closeCashierHistoryModal()"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th class="border-0">Date</th>
+                                <th class="border-0">Trx No</th>
+                                <th class="border-0">Description</th>
+                                <th class="border-0">Type</th>
+                                <th class="border-0 text-end">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for trx in cashier_transactions %}
                             <tr>
                                 <td><small>{{ trx.sys_date|date:"d-m-Y H:i" }}</small></td>
                                 <td><code>{{ trx.trx_no }}</code></td>
@@ -311,9 +371,19 @@
         document.getElementById("transactionHistoryModal").style.display = "none";
         document.body.classList.remove('modal-open');
     }
+    function showCashierHistory() {
+        document.getElementById("cashierHistoryModal").classList.add('show');
+        document.getElementById("cashierHistoryModal").style.display = "block";
+        document.body.classList.add('modal-open');
+    }
+    function closeCashierHistoryModal() {
+        document.getElementById("cashierHistoryModal").classList.remove('show');
+        document.getElementById("cashierHistoryModal").style.display = "none";
+        document.body.classList.remove('modal-open');
+    }
     
     window.onclick = function(event) {
-        var modals = ['customerImageModal', 'customerImageModal2', 'transactionHistoryModal'];
+        var modals = ['customerImageModal', 'customerImageModal2', 'transactionHistoryModal', 'cashierHistoryModal'];
         modals.forEach(function(id) {
             var modal = document.getElementById(id);
             if (event.target == modal) {

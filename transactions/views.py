@@ -651,6 +651,11 @@ def income(request, uuid):
             ac_no=customer.ac_no,
             error='A'
         ).order_by('-sys_date')[:50],
+        'cashier_transactions': Memtrans.all_objects.filter(
+            gl_no=customers.gl_no if customers else None,
+            ac_no=customers.ac_no if customers else None,
+            error='A'
+        ).order_by('-sys_date')[:50] if customers else [],
     }
     return render(request, 'transactions/non_cash/income.html', context)
 
@@ -821,12 +826,22 @@ def expense(request, uuid):
         'customer': customer,
         'total_amount': sum_of_amount_cust,
         'formatted_balance': formatted_balance,
-        'cashier_customer': cashier_customer,
+        'customers': cashier_customer,
         'sum_of_amount_cash': sum_of_amount_cash,
         'sum_of_amount_cust': sum_of_amount_cust,
         'company': company,
         'company_date': company_date,
         'last_transaction': last_transaction,
+        'last_transactions': Memtrans.all_objects.filter(
+            gl_no=customer.gl_no,
+            ac_no=customer.ac_no,
+            error='A'
+        ).order_by('-sys_date')[:50],
+        'cashier_transactions': Memtrans.all_objects.filter(
+            gl_no=cashier_customer.gl_no if cashier_customer else None,
+            ac_no=cashier_customer.ac_no if cashier_customer else None,
+            error='A'
+        ).order_by('-sys_date')[:50] if cashier_customer else [],
     }
     return render(request, 'transactions/non_cash/expense.html', context)
 
