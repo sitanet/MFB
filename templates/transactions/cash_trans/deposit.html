@@ -2,319 +2,350 @@
 {% block content %}
 
 {% include 'includes/alerts.html' %}
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-md-12">
-            <div class="page_title">
-                <h2>Deposit</h2>
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <!-- Header Card -->
+            <div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+                <div class="card-body py-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h2 class="text-white mb-1"><i class="fas fa-arrow-down me-2"></i>Deposit</h2>
+                            <p class="text-white-50 mb-0">Credit funds to customer account</p>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-white text-success px-3 py-2 fs-6">{{ company_date }}</span>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </div>
-        <!-- ................. -------------------------------->
-        <div class="container-fluid deposit p-5 shadow-lg rounded rounded-5">
-            <div class="mb-5">
-                <form method="POST">
-                    {% csrf_token %}
-                    {% if messages %}
-                    <ul class="messages">
-                        {% for message in messages %}
-                        <li style="font-size: 20px; color: brown; font-weight: bold;" {% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
-                        {% endfor %}
-                    </ul>
-                    {% endif %}
-                    {{ form.errors }}
-                    
-                    <div class="form-row">
-                        <div class="col-md-2">
-                            <label class="fw-bold" for="branch">Branch:</label>
-                            <!-- <input type="text" class="form-control bg-light" id="branch" name="branch" value="{{ user.branch.branch }}"> -->
-                        <input type="text" class="form-control bg-light" id="branch"  
-       value="{{ user.branch.branch_name }}" readonly>
-                        </div>
+
+            <!-- Main Form Card -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <form method="POST">
+                        {% csrf_token %}
                         
-                        <div class="col-md-2">
-                            <label class="fw-bold" for="branch">Customer Branch:</label>
-                            <input type="text" class="form-control bg-light" id="branch"  value="{{ customer.branch}}" >
+                        {% if messages %}
+                        <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                            {% for message in messages %}
+                            <i class="fas fa-exclamation-triangle me-2"></i>{{ message }}
+                            {% endfor %}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                         </div>
-                        
-                        <div class="col-md-2">
-                            <label class="fw-bold" for="branch">Transaction No:</label>
-                            <input type="text" class="form-control bg-light" id="branch" value="{{data.trx_no}}" readonly>
-                        </div>
-                        <div class="col-md-3 col-md-offset-9">
-                            <label class="fw-bold" for="ses_date">Session Date:</label>
-                            <input type="date" class="form-control bg-light" id="ses_date" name="ses_date" value="{{ company_date }}" readonly>
-                        </div>
-                        <div class="col-md-3 col-md-offset-9">
-                            <label class="fw-bold" for="ses_date">Transaction Date:</label>
-                            <input type="date" class="form-control {% if form.app_date.errors %}is-invalid{% endif %}" id="app_date" name="app_date" value="{{ form.app_date.value }}">
-                            {% if form.app_date.errors %}
-                            <div class="invalid-feedback">
-                                {% for error in form.app_date.errors %}
-                                    <p>{{ error }}</p>
-                                {% endfor %}
-                            </div>
                         {% endif %}
-                        </div>
-                        <div class="col-md-12 mb-2">
-                            <span class="fw-bold" id="tellerName" hidden></span>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="tellerGlNo">GL No.:</label>
-                            <input type="text" class="form-control bg-light" name="gl_no_cashier" value="{{user.cashier_gl}}">
-                        </div>
-                        <div class="col-md-6">
-                            <label for="tellerAccountNo">Account No.:</label>
-                            <input type="text" class="form-control bg-light" id="tellerAccountNo" name="ac_no_cashier" value="{{user.cashier_ac}}" readonly>
-                        </div>
-                        <div class="col-md-12 mt-3 mb-2">
-                            <span class="fw-bold" id="customerName" hidden></span>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="glNoInput">GL No.:</label>
-                            <input type="text" class="form-control bg-light" id="glNoInput1" name="gl_no" value="{{customer.gl_no}}" readonly>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="accountNoInput">Account No.:</label>
-                            <input type="text" class="form-control bg-light" id="accountNoInput1" name="ac_no" value="{{customer.ac_no}}" readonly>
-                        </div>
-                        <div class="col-md-6 mt-3">
-                            <label for="deposit_description">Amount:</label>
-                            <input type="number" class="form-control bg-light" id="deposit_description" placeholder="0.00" name="amount">
-                        </div>
-                        <div class="col-md-6 mt-3">
-                            <label for="deposit_description">Description:</label>
-                            <textarea id="deposit_description" class="form-control bg-light" cols="30" rows="2" name="description"></textarea>
-                        </div>
-                    </div>
-                    <div class="row mt-4">
-                        <div class="col-md-6">
-                            <div>
-                                <span class="fw-bold" id="customerName2">DEBIT:</span> <strong style="color: red; font-weight: bold;">{{customers.first_name}}</strong> <span class="fw-bold" id="teller_fullName2"></span>
+                        
+                        {% if form.errors %}
+                        <div class="alert alert-danger">{{ form.errors }}</div>
+                        {% endif %}
+
+                        <!-- Transaction Info Section -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold text-muted small">BRANCH</label>
+                                <input type="text" class="form-control form-control-lg bg-light border-0" value="{{ user.branch.branch_name }}" readonly>
                             </div>
-                            <div>
-                                <label class="mt-2">Available Balance:<strong style="color: green; font-weight: bold;">{{ sum_of_amount_cash|default:"0.00" }}</strong></label>
-                                <span id="customer_available_balance"></span>
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold text-muted small">CUSTOMER BRANCH</label>
+                                <input type="text" class="form-control form-control-lg bg-light border-0" value="{{ customer.branch }}" readonly>
                             </div>
-                            <div>
-                                <label>Total Balance:<strong style="color: black; font-weight: bold;">{{ sum_of_amount_cash|default:"0.00" }}</strong></label>
-                                <span id="customer_total_balance"></span>
+                            <div class="col-md-2">
+                                <label class="form-label fw-semibold text-muted small">TRX NO</label>
+                                <input type="text" class="form-control form-control-lg bg-light border-0" value="{{ data.trx_no }}" readonly>
                             </div>
-                            <div>
-                                <label class="mt-2">Last Transaction Amount:<strong style="color: green; font-weight: bold;">{{ data.amount|default:"0.00" }}</strong></label>
-                                <span id="customer_available_balance"></span>
+                            <div class="col-md-2">
+                                <label class="form-label fw-semibold text-muted small">SESSION DATE</label>
+                                <input type="date" class="form-control form-control-lg bg-light border-0" id="ses_date" name="ses_date" value="{{ company_date }}" readonly>
                             </div>
-                            <div>
-                                <label>Last Transaction ID:<strong style="color: black; font-weight: bold;">{{ data.trx_no}}</strong></label>
-                                <span id="customer_total_balance"></span>
+                            <div class="col-md-2">
+                                <label class="form-label fw-semibold text-muted small">TRX DATE</label>
+                                <input type="date" class="form-control form-control-lg {% if form.app_date.errors %}is-invalid border-danger{% else %}border-0{% endif %}" id="app_date" name="app_date" value="{{ form.app_date.value }}">
+                                {% if form.app_date.errors %}
+                                <div class="invalid-feedback">{% for error in form.app_date.errors %}{{ error }}{% endfor %}</div>
+                                {% endif %}
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <div>
-                                <span class="fw-bold" id="customerName2">CREDIT:{{customers_with_cashier_gl.balance}}</span> <strong style="color: green; font-weight: bold;">{{customer.first_name}} {{customer.middle_name}} {{customer.last_name}}</strong>
-                            </div>
-                            <div>
-                                <label class="mt-2">Current Balance:<strong style="color: green; font-weight: bold;">{{ sum_of_amount_cust|default:"0.00" }}</strong></label>
-                                <span id="teller_available_balance"></span>
-                            </div>
-                            <div>
-                                <label>Available Balance:</label>
-                                <span id="teller_balance"><strong style="color: black; font-weight: bold;">{{ sum_of_amount_cust|default:"0.00" }}</strong></span>
-                            </div>
-                            <div>
-                                <label>Last Transaction Amount:</label>
-                                <strong style="color: green; font-weight: bold;">{{ last_transaction.amount|default:"0.00" }}</strong>
-                            </div>
-                            <div>
-                                <label>Last Transaction ID:</label>
-                                <strong style="color: green; font-weight: bold;">{{ last_transaction.trx_no }}</strong>
-                            </div>
-                            <div>
-                                <label>Last Transaction Date:</label>
-                                <strong style="color: green; font-weight: bold;">{{ last_transaction.sys_date}}</strong>
+
+                        <hr class="my-4">
+
+                        <!-- Teller Account Section -->
+                        <div class="mb-4">
+                            <h6 class="text-muted mb-3"><i class="fas fa-user-tie me-2"></i>Teller Account (Debit)</h6>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold text-muted small">GL NO</label>
+                                    <input type="text" class="form-control form-control-lg bg-light border-0" name="gl_no_cashier" value="{{ user.cashier_gl }}" readonly>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold text-muted small">ACCOUNT NO</label>
+                                    <input type="text" class="form-control form-control-lg bg-light border-0" name="ac_no_cashier" value="{{ user.cashier_ac }}" readonly>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <div class="mt-8 d-flex justify-content-between align-items-center">
-                        <button class="btn btn-success shadow-sm" type="Submit">Save</button>
-                        <!-- New icons for photo, sign, and history -->
-                        <div class="icon-container">
-                            <i class="fas fa-history" onclick="showTransactionHistory()" title="View Transaction History"></i>
-                            <i class="fas fa-image" onclick="showCustomerImage()" title="View Photo"></i>
-                            <i class="fas fa-signature" onclick="showCustomerImage2()" title="View Signature"></i>
+
+                        <!-- Customer Account Section -->
+                        <div class="mb-4">
+                            <h6 class="text-muted mb-3"><i class="fas fa-user me-2"></i>Customer Account (Credit)</h6>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold text-muted small">GL NO</label>
+                                    <input type="text" class="form-control form-control-lg bg-light border-0" name="gl_no" value="{{ customer.gl_no }}" readonly>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold text-muted small">ACCOUNT NO</label>
+                                    <input type="text" class="form-control form-control-lg bg-light border-0" name="ac_no" value="{{ customer.ac_no }}" readonly>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                </form>
+
+                        <!-- Amount and Description -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold text-muted small">AMOUNT</label>
+                                <div class="input-group input-group-lg">
+                                    <span class="input-group-text bg-success text-white border-0">&#8358;</span>
+                                    <input type="number" class="form-control form-control-lg border-success" placeholder="0.00" name="amount" step="0.01">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold text-muted small">DESCRIPTION</label>
+                                <textarea class="form-control form-control-lg" rows="1" name="description" placeholder="Enter transaction description"></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Balance Cards -->
+                        <div class="row g-4 mb-4">
+                            <!-- Teller Balance Card -->
+                            <div class="col-md-6">
+                                <div class="card border-0 h-100" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);">
+                                    <div class="card-body text-white">
+                                        <div class="d-flex justify-content-between align-items-start mb-3">
+                                            <div>
+                                                <h6 class="text-white-50 mb-1">DEBIT FROM</h6>
+                                                <h5 class="mb-0">{{ customers.first_name }}</h5>
+                                            </div>
+                                            <i class="fas fa-minus-circle fa-2x text-white-50"></i>
+                                        </div>
+                                        <div class="row g-2">
+                                            <div class="col-6">
+                                                <small class="text-white-50">Available Balance</small>
+                                                <h4 class="mb-0">&#8358;{{ sum_of_amount_cash|default:"0.00" }}</h4>
+                                            </div>
+                                            <div class="col-6">
+                                                <small class="text-white-50">Last Trx Amount</small>
+                                                <h5 class="mb-0">&#8358;{{ data.amount|default:"0.00" }}</h5>
+                                            </div>
+                                        </div>
+                                        <hr class="my-2 border-light opacity-25">
+                                        <small class="text-white-50">Last Trx ID: {{ data.trx_no|default:"-" }}</small>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Customer Balance Card -->
+                            <div class="col-md-6">
+                                <div class="card border-0 h-100" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+                                    <div class="card-body text-white">
+                                        <div class="d-flex justify-content-between align-items-start mb-3">
+                                            <div>
+                                                <h6 class="text-white-50 mb-1">CREDIT TO</h6>
+                                                <h5 class="mb-0">{{ customer.first_name }} {{ customer.middle_name }} {{ customer.last_name }}</h5>
+                                            </div>
+                                            <i class="fas fa-plus-circle fa-2x text-white-50"></i>
+                                        </div>
+                                        <div class="row g-2">
+                                            <div class="col-6">
+                                                <small class="text-white-50">Current Balance</small>
+                                                <h4 class="mb-0">&#8358;{{ sum_of_amount_cust|default:"0.00" }}</h4>
+                                            </div>
+                                            <div class="col-6">
+                                                <small class="text-white-50">Last Trx Amount</small>
+                                                <h5 class="mb-0">&#8358;{{ last_transaction.amount|default:"0.00" }}</h5>
+                                            </div>
+                                        </div>
+                                        <hr class="my-2 border-light opacity-25">
+                                        <small class="text-white-50">Last Trx: {{ last_transaction.trx_no|default:"-" }} | {{ last_transaction.sys_date|date:"d-m-Y"|default:"-" }}</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-outline-primary btn-lg" onclick="showTransactionHistory()" title="Transaction History">
+                                    <i class="fas fa-history"></i>
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-lg" onclick="showCustomerImage()" title="View Photo">
+                                    <i class="fas fa-image"></i>
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-lg" onclick="showCustomerImage2()" title="View Signature">
+                                    <i class="fas fa-signature"></i>
+                                </button>
+                            </div>
+                            <button type="submit" class="btn btn-success btn-lg px-5">
+                                <i class="fas fa-check-circle me-2"></i>Process Deposit
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
-        <!-- ------------------- -->
     </div>
 </div>
 
-<!-- Modal to display the customer's image -->
-<div id="customerImageModal" class="modal">
-    <div class="modal-content">
-        <span class="close" onclick="closeModal()">&times;</span>
-        <img id="customerImage" src="{{ customer.photo.url }}" alt="Customer Image" style="width:100%;">
+<!-- Photo Modal -->
+<div class="modal fade" id="customerImageModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0 bg-primary text-white">
+                <h5 class="modal-title"><i class="fas fa-user-circle me-2"></i>Customer Photo</h5>
+                <button type="button" class="btn-close btn-close-white" onclick="closeModal()"></button>
+            </div>
+            <div class="modal-body p-0">
+                <img src="{{ customer.photo.url }}" alt="Customer Photo" class="img-fluid w-100">
+            </div>
+        </div>
     </div>
 </div>
 
-<!-- Modal to display the customer's signature -->
-<div id="customerImageModal2" class="modal">
-    <div class="modal-content">
-        <span class="close" onclick="closeModal2()">&times;</span>
-        <img id="customerImage2" src="{{ customer.sign.url }}" alt="Customer Signature" style="width:100%;">
+<!-- Signature Modal -->
+<div class="modal fade" id="customerImageModal2" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0 bg-secondary text-white">
+                <h5 class="modal-title"><i class="fas fa-signature me-2"></i>Customer Signature</h5>
+                <button type="button" class="btn-close btn-close-white" onclick="closeModal2()"></button>
+            </div>
+            <div class="modal-body p-0">
+                <img src="{{ customer.sign.url }}" alt="Customer Signature" class="img-fluid w-100">
+            </div>
+        </div>
     </div>
 </div>
 
-<!-- Modal to display transaction history -->
-<div id="transactionHistoryModal" class="modal">
-    <div class="modal-content" style="width: 70%; max-height: 80vh; overflow-y: auto;">
-        <span class="close" onclick="closeHistoryModal()">&times;</span>
-        <h4>Transaction History - {{ customer.first_name }} {{ customer.last_name }}</h4>
-        <p>Account: {{ customer.gl_no }}-{{ customer.ac_no }}</p>
-        <table class="table table-striped table-bordered">
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Trx No</th>
-                    <th>Description</th>
-                    <th>Type</th>
-                    <th>Amount</th>
-                </tr>
-            </thead>
-            <tbody id="transactionHistoryBody">
-                {% for trx in last_transactions %}
-                <tr>
-                    <td>{{ trx.sys_date|date:"d-m-Y H:i" }}</td>
-                    <td>{{ trx.trx_no }}</td>
-                    <td>{{ trx.description }}</td>
-                    <td>{{ trx.type }}</td>
-                    <td style="color: {% if trx.amount < 0 %}red{% else %}green{% endif %};">{{ trx.amount|floatformat:2 }}</td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="5" class="text-center">No transactions found</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
+<!-- Transaction History Modal -->
+<div class="modal fade" id="transactionHistoryModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0" style="background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%);">
+                <div class="text-white">
+                    <h5 class="modal-title mb-0"><i class="fas fa-history me-2"></i>Transaction History</h5>
+                    <small>{{ customer.first_name }} {{ customer.last_name }} | {{ customer.gl_no }}-{{ customer.ac_no }}</small>
+                </div>
+                <button type="button" class="btn-close btn-close-white" onclick="closeHistoryModal()"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th class="border-0">Date</th>
+                                <th class="border-0">Trx No</th>
+                                <th class="border-0">Description</th>
+                                <th class="border-0">Type</th>
+                                <th class="border-0 text-end">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for trx in last_transactions %}
+                            <tr>
+                                <td><small>{{ trx.sys_date|date:"d-m-Y H:i" }}</small></td>
+                                <td><code>{{ trx.trx_no }}</code></td>
+                                <td>{{ trx.description|truncatechars:30 }}</td>
+                                <td>
+                                    {% if trx.type == 'C' %}
+                                    <span class="badge bg-success">Credit</span>
+                                    {% else %}
+                                    <span class="badge bg-danger">Debit</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end fw-bold {% if trx.amount < 0 %}text-danger{% else %}text-success{% endif %}">
+                                    &#8358;{{ trx.amount|floatformat:2 }}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center py-5 text-muted">
+                                    <i class="fas fa-inbox fa-3x mb-3"></i>
+                                    <p class="mb-0">No transactions found</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
 <script>
-    // Function to show the modal with the customer's image
     function showCustomerImage() {
-        var modal = document.getElementById("customerImageModal");
-        modal.style.display = "block";
+        document.getElementById("customerImageModal").classList.add('show');
+        document.getElementById("customerImageModal").style.display = "block";
+        document.body.classList.add('modal-open');
     }
-
     function showCustomerImage2() {
-        var modal = document.getElementById("customerImageModal2");
-        modal.style.display = "block";
+        document.getElementById("customerImageModal2").classList.add('show');
+        document.getElementById("customerImageModal2").style.display = "block";
+        document.body.classList.add('modal-open');
     }
-
-    // Function to close the modal
-    function closeModal() {
-        var modal = document.getElementById("customerImageModal");
-        modal.style.display = "none";
-    }
-
-    function closeModal2() {
-        var modal = document.getElementById("customerImageModal2");
-        modal.style.display = "none";
-    }
-
     function showTransactionHistory() {
-        var modal = document.getElementById("transactionHistoryModal");
-        modal.style.display = "block";
+        document.getElementById("transactionHistoryModal").classList.add('show');
+        document.getElementById("transactionHistoryModal").style.display = "block";
+        document.body.classList.add('modal-open');
     }
-
+    function closeModal() {
+        document.getElementById("customerImageModal").classList.remove('show');
+        document.getElementById("customerImageModal").style.display = "none";
+        document.body.classList.remove('modal-open');
+    }
+    function closeModal2() {
+        document.getElementById("customerImageModal2").classList.remove('show');
+        document.getElementById("customerImageModal2").style.display = "none";
+        document.body.classList.remove('modal-open');
+    }
     function closeHistoryModal() {
-        var modal = document.getElementById("transactionHistoryModal");
-        modal.style.display = "none";
+        document.getElementById("transactionHistoryModal").classList.remove('show');
+        document.getElementById("transactionHistoryModal").style.display = "none";
+        document.body.classList.remove('modal-open');
     }
-
-    // Close the modal when clicking outside of the modal content
+    
     window.onclick = function(event) {
-        var modal = document.getElementById("customerImageModal");
-        if (event.target == modal) {
-            modal.style.display = "none";
-        }
-    }
-
-    // Close the modal when clicking outside of the modal content
-    window.onclick = function(event) {
-        var modal = document.getElementById("customerImageModal2");
-        if (event.target == modal) {
-            modal.style.display = "none";
-        }
+        var modals = ['customerImageModal', 'customerImageModal2', 'transactionHistoryModal'];
+        modals.forEach(function(id) {
+            var modal = document.getElementById(id);
+            if (event.target == modal) {
+                modal.classList.remove('show');
+                modal.style.display = "none";
+                document.body.classList.remove('modal-open');
+            }
+        });
     }
 
     document.addEventListener('DOMContentLoaded', function() {
         var sessionDateInput = document.getElementById('ses_date');
         var companyDate = '{{ company_date }}';
-
-        sessionDateInput.addEventListener('change', function() {
-            var selectedDate = new Date(sessionDateInput.value);
-            var companyDateObj = new Date(companyDate);
-
-            if (selectedDate > companyDateObj) {
-                alert('Please select a date not greater than the session date.');
-                sessionDateInput.value = '{{ company_date }}';
-            }
-        });
+        var appDateInput = document.getElementById('app_date');
+        if (appDateInput) {
+            appDateInput.addEventListener('change', function() {
+                var selectedDate = new Date(appDateInput.value);
+                var companyDateObj = new Date(companyDate);
+                if (selectedDate > companyDateObj) {
+                    alert('Please select a date not greater than the session date.');
+                    appDateInput.value = companyDate;
+                }
+            });
+        }
     });
 </script>
 
 <style>
-    .modal {
-        display: none;
-        position: fixed;
-        z-index: 1;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        overflow: auto;
-        background-color: rgb(0,0,0);
-        background-color: rgba(0,0,0,0.4);
-        padding-top: 60px;
-    }
-
-    .modal-content {
-        background-color: #fefefe;
-        margin: 5% auto;
-        padding: 20px;
-        border: 1px solid #888;
-        width: 40%;
-    }
-
-    .close {
-        color: #aaa;
-        float: right;
-        font-size: 28px;
-        font-weight: bold;
-    }
-
-    .close:hover,
-    .close:focus {
-        color: black;
-        text-decoration: none;
-        cursor: pointer;
-    }
-
-    .icon-container {
-        display: flex;
-        align-items: center;
-    }
-
-    .icon-container i {
-        font-size: 24px; /* Adjust size here */
-        margin-left: 10px;
-        cursor: pointer;
-    }
-
-    .icon-container i:hover {
-        color: #007bff;
-    }
+    .modal.show { background-color: rgba(0,0,0,0.5); }
+    .form-control:focus { box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25); border-color: #28a745; }
+    .card { transition: transform 0.2s; }
+    .btn-group .btn { border-radius: 0.5rem !important; margin-right: 0.25rem; }
 </style>
 
 {% endblock %}
