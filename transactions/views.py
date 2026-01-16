@@ -597,7 +597,7 @@ def income(request, uuid):
                     customer_transaction.save()
 
                     # Create cashier transaction (debit)
-                    customer_with_gl = get_object_or_404(Customer.all_objects, gl_no=request.user.cashier_gl)
+                    customer_with_gl = Customer.all_objects.filter(gl_no=request.user.cashier_gl).first()
                     
                     cashier_transaction = Memtrans(
                         branch=user_branch,  # Branch instance
