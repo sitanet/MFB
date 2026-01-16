@@ -190,10 +190,14 @@ def create_account_officer(request):
     if request.method == "POST":
         form = CreditOfficerForm(request.POST)
         if form.is_valid():
-            account_officer = form.save(commit=False)
-            account_officer.branch = user_branch
-            account_officer.save()
-            return redirect('account_officer_list')
+            user_value = form.cleaned_data.get('user')
+            if Account_Officer.objects.filter(user=user_value).exists():
+                form.add_error('user', 'An account officer with this user already exists in this branch.')
+            else:
+                account_officer = form.save(commit=False)
+                account_officer.branch = user_branch
+                account_officer.save()
+                return redirect('account_officer_list')
     else:
         form = CreditOfficerForm()
 

@@ -134,10 +134,13 @@ class Account_Officer(models.Model):
     branch = models.ForeignKey(Branch, on_delete=models.CASCADE, related_name="account_Officer", 
     null=True, blank=True)
     region = models.ForeignKey(Region, on_delete=models.CASCADE, null=True, blank=True)
-    user =  models.CharField(max_length=30, unique=True)
+    user = models.CharField(max_length=30)
 
     objects = TenantManager()
     all_objects = models.Manager()
+
+    class Meta:
+        unique_together = ['branch', 'user']
 
     def __str__(self):
         return self.user
