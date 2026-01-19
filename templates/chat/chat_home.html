@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="midde_cont">
+    <div class="container-fluid">
+        <div class="row column_title">
+            <div class="col-md-12">
+                <div class="page_title">
+                    <h2>Chat</h2>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-4">
+                <div class="white_shd full margin_bottom_30">
+                    <div class="full graph_head">
+                        <div class="heading1 margin_0 d-flex justify-content-between align-items-center">
+                            <h2>Conversations</h2>
+                            <button class="btn btn-sm btn-primary" data-toggle="modal" data-target="#newChatModal">
+                                <i class="fas fa-plus"></i> New
+                            </button>
+                        </div>
+                    </div>
+                    <div class="full progress_bar_inner">
+                        <div class="chat-search mb-3 p-2">
+                            <input type="text" id="searchStaff" class="form-control" placeholder="Search staff...">
+                            <div id="searchResults" class="search-results mt-2" style="display:none;"></div>
+                        </div>
+                        <div class="chat-list" style="max-height: 500px; overflow-y: auto;">
+                            {% for room in chat_rooms %}
+                            <a href="{% url 'chat_room' room.uuid %}" class="chat-item d-block p-3 border-bottom text-decoration-none {% if room.unread_count > 0 %}bg-light{% endif %}">
+                                <div class="d-flex align-items-center">
+                                    <div class="chat-avatar mr-3">
+                                        {% if room.room_type == 'direct' %}
+                                            {% with other=room.get_other_participant %}
+                                            <div class="avatar-circle" style="width:45px;height:45px;background:#007bff;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:bold;">
+                                                {{ other.first_name|slice:":1" }}{{ other.last_name|slice:":1" }}
+                                            </div>
+                                            {% endwith %}
+                                        {% else %}
+                                            <div class="avatar-circle" style="width:45px;height:45px;background:#28a745;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;">
+                                                <i class="fas fa-users"></i>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="chat-info flex-grow-1">
+                                        <div class="d-flex justify-content-between">
+                                            <h6 class="mb-0 text-dark">
+                                                {% if room.room_type == 'direct' %}
+                                                    {% with other=room.get_other_participant %}
+                                                        {{ other.first_name }} {{ other.last_name }}
+                                                    {% endwith %}
+                                                {% else %}
+                                                    {{ room.name|default:"Group Chat" }}
+                                                {% endif %}
+                                            </h6>
+                                            {% if room.unread_count > 0 %}
+                                            <span class="badge badge-primary">{{ room.unread_count }}</span>
+                                            {% endif %}
+                                        </div>
+                                        {% with last_msg=room.get_last_message %}
+                                        {% if last_msg %}
+                                        <small class="text-muted">{{ last_msg.content|truncatechars:30 }}</small>
+                                        {% endif %}
+                                        {% endwith %}
+                                    </div>
+                                </div>
+                            </a>
+                            {% empty %}
+                            <div class="p-4 text-center text-muted">
+                                <i class="fas fa-comments fa-3x mb-3"></i>
+                                <p>No conversations yet</p>
+                                <p class="small">Start a new chat with a colleague</p>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-8">
+                <div class="white_shd full margin_bottom_30">
+                    <div class="full graph_head">
+                        <div class="heading1 margin_0">
+                            <h2>Select a Conversation</h2>
+                        </div>
+                    </div>
+                    <div class="full progress_bar_inner p-5 text-center" style="min-height: 500px; display: flex; align-items: center; justify-content: center;">
+                        <div>
+                            <i class="fas fa-comments fa-5x text-muted mb-4"></i>
+                            <h4 class="text-muted">Select a conversation to start messaging</h4>
+                            <p class="text-muted">Or start a new chat with a colleague</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- New Chat Modal -->
+<div class="modal fade" id="newChatModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Start New Chat</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <h6 class="mb-3">Branch Staff</h6>
+                <div class="list-group mb-4">
+                    {% for staff in branch_staff %}
+                    <a href="{% url 'start_chat' staff.id %}" class="list-group-item list-group-item-action d-flex align-items-center">
+                        <div class="avatar-circle mr-3" style="width:35px;height:35px;background:#007bff;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;">
+                            {{ staff.first_name|slice:":1" }}{{ staff.last_name|slice:":1" }}
+                        </div>
+                        <div>
+                            <strong>{{ staff.first_name }} {{ staff.last_name }}</strong>
+                            <br><small class="text-muted">{{ staff.email }}</small>
+                        </div>
+                    </a>
+                    {% empty %}
+                    <p class="text-muted">No other staff in your branch</p>
+                    {% endfor %}
+                </div>
+                
+                {% if company_staff %}
+                <h6 class="mb-3">Other Company Staff</h6>
+                <div class="list-group" style="max-height: 300px; overflow-y: auto;">
+                    {% for staff in company_staff %}
+                    {% if staff not in branch_staff %}
+                    <a href="{% url 'start_chat' staff.id %}" class="list-group-item list-group-item-action d-flex align-items-center">
+                        <div class="avatar-circle mr-3" style="width:35px;height:35px;background:#6c757d;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;">
+                            {{ staff.first_name|slice:":1" }}{{ staff.last_name|slice:":1" }}
+                        </div>
+                        <div>
+                            <strong>{{ staff.first_name }} {{ staff.last_name }}</strong>
+                            <br><small class="text-muted">{{ staff.branch.branch_name|default:"Unknown Branch" }}</small>
+                        </div>
+                    </a>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.chat-item:hover {
+    background-color: #f8f9fa;
+}
+.chat-list .chat-item {
+    transition: background-color 0.2s;
+}
+.search-results {
+    position: absolute;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    z-index: 100;
+    width: calc(100% - 1rem);
+    max-height: 300px;
+    overflow-y: auto;
+}
+.search-results .search-item {
+    padding: 10px;
+    cursor: pointer;
+    border-bottom: 1px solid #eee;
+}
+.search-results .search-item:hover {
+    background-color: #f8f9fa;
+}
+</style>
+
+<script>
+$(document).ready(function() {
+    var searchTimeout;
+    $('#searchStaff').on('input', function() {
+        var query = $(this).val();
+        clearTimeout(searchTimeout);
+        
+        if (query.length < 2) {
+            $('#searchResults').hide();
+            return;
+        }
+        
+        searchTimeout = setTimeout(function() {
+            $.get("{% url 'search_staff' %}", {q: query}, function(data) {
+                var html = '';
+                if (data.results.length > 0) {
+                    data.results.forEach(function(staff) {
+                        html += '<a href="/chat/start/' + staff.id + '/" class="search-item d-block text-decoration-none text-dark">';
+                        html += '<strong>' + staff.name + '</strong><br>';
+                        html += '<small class="text-muted">' + staff.branch + ' - ' + staff.role + '</small>';
+                        html += '</a>';
+                    });
+                } else {
+                    html = '<div class="p-3 text-muted">No results found</div>';
+                }
+                $('#searchResults').html(html).show();
+            });
+        }, 300);
+    });
+    
+    $(document).click(function(e) {
+        if (!$(e.target).closest('.chat-search').length) {
+            $('#searchResults').hide();
+        }
+    });
+});
+</script>
+{% endblock %}

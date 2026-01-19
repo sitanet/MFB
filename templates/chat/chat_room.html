@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="midde_cont">
+    <div class="container-fluid">
+        <div class="row column_title">
+            <div class="col-md-12">
+                <div class="page_title">
+                    <h2>
+                        <a href="{% url 'chat_home' %}" class="btn btn-sm btn-outline-secondary mr-2">
+                            <i class="fas fa-arrow-left"></i>
+                        </a>
+                        {% if room.room_type == 'direct' and other_user %}
+                            Chat with {{ other_user.first_name }} {{ other_user.last_name }}
+                        {% else %}
+                            {{ room.name|default:"Group Chat" }}
+                        {% endif %}
+                    </h2>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-12">
+                <div class="white_shd full margin_bottom_30">
+                    <div class="full progress_bar_inner">
+                        <div class="chat-container">
+                            <div id="messageContainer" class="messages-area p-3" style="height: 450px; overflow-y: auto; background: #f8f9fa;">
+                                {% for message in messages %}
+                                <div class="message mb-3 {% if message.sender.id == request.user.id %}text-right{% endif %}" data-uuid="{{ message.uuid }}">
+                                    <div class="d-inline-block p-2 px-3 rounded {% if message.sender.id == request.user.id %}bg-primary text-white{% else %}bg-white border{% endif %}" style="max-width: 70%;">
+                                        {% if room.room_type != 'direct' and message.sender.id != request.user.id %}
+                                        <small class="d-block mb-1" style="color: {% if message.sender.id == request.user.id %}rgba(255,255,255,0.7){% else %}#6c757d{% endif %};">
+                                            <strong>{{ message.sender.first_name }}</strong>
+                                        </small>
+                                        {% endif %}
+                                        <p class="mb-1">{{ message.content }}</p>
+                                        <small style="font-size: 0.7rem; opacity: 0.7;">{{ message.created_at|time:"H:i" }}</small>
+                                    </div>
+                                </div>
+                                {% empty %}
+                                <div class="text-center text-muted py-5" id="noMessages">
+                                    <i class="fas fa-comments fa-3x mb-3"></i>
+                                    <p>No messages yet. Start the conversation!</p>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            
+                            <div class="message-input p-3 border-top bg-white">
+                                <form id="messageForm" class="d-flex">
+                                    <input type="text" id="messageInput" class="form-control mr-2" placeholder="Type a message..." autocomplete="off" required>
+                                    <button type="submit" class="btn btn-primary" id="sendBtn">
+                                        <i class="fas fa-paper-plane"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.messages-area {
+    display: flex;
+    flex-direction: column;
+}
+.message {
+    animation: fadeIn 0.3s ease-in;
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.message p {
+    word-wrap: break-word;
+    white-space: pre-wrap;
+}
+</style>
+
+<script>
+$(document).ready(function() {
+    var roomUuid = "{{ room.uuid }}";
+    var currentUserId = {{ request.user.id }};
+    var lastMessageUuid = null;
+    var messageContainer = $('#messageContainer');
+    
+    // Scroll to bottom
+    function scrollToBottom() {
+        messageContainer.scrollTop(messageContainer[0].scrollHeight);
+    }
+    scrollToBottom();
+    
+    // Get last message UUID
+    var lastMsg = messageContainer.find('.message:last');
+    if (lastMsg.length) {
+        lastMessageUuid = lastMsg.data('uuid');
+    }
+    
+    // Send message
+    $('#messageForm').on('submit', function(e) {
+        e.preventDefault();
+        var content = $('#messageInput').val().trim();
+        if (!content) return;
+        
+        $('#sendBtn').prop('disabled', true);
+        
+        $.ajax({
+            url: "{% url 'send_message' %}",
+            method: 'POST',
+            contentType: 'application/json',
+            headers: {'X-CSRFToken': '{{ csrf_token }}'},
+            data: JSON.stringify({
+                room_uuid: roomUuid,
+                content: content
+            }),
+            success: function(data) {
+                if (data.success) {
+                    $('#noMessages').remove();
+                    appendMessage(data.message, true);
+                    lastMessageUuid = data.message.uuid;
+                    $('#messageInput').val('');
+                    scrollToBottom();
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            },
+            error: function() {
+                alert('Failed to send message');
+            },
+            complete: function() {
+                $('#sendBtn').prop('disabled', false);
+                $('#messageInput').focus();
+            }
+        });
+    });
+    
+    // Append message to UI
+    function appendMessage(msg, isOwn) {
+        var html = '<div class="message mb-3 ' + (isOwn ? 'text-right' : '') + '" data-uuid="' + msg.uuid + '">';
+        html += '<div class="d-inline-block p-2 px-3 rounded ' + (isOwn ? 'bg-primary text-white' : 'bg-white border') + '" style="max-width: 70%;">';
+        html += '<p class="mb-1">' + escapeHtml(msg.content) + '</p>';
+        html += '<small style="font-size: 0.7rem; opacity: 0.7;">' + msg.created_at + '</small>';
+        html += '</div></div>';
+        messageContainer.append(html);
+    }
+    
+    function escapeHtml(text) {
+        var div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    // Poll for new messages
+    function pollMessages() {
+        var url = "/chat/messages/" + roomUuid + "/";
+        if (lastMessageUuid) {
+            url += "?last_message=" + lastMessageUuid;
+        }
+        
+        $.get(url, function(data) {
+            if (data.success && data.messages.length > 0) {
+                data.messages.forEach(function(msg) {
+                    if (msg.sender_id != currentUserId) {
+                        $('#noMessages').remove();
+                        appendMessage(msg, false);
+                        lastMessageUuid = msg.uuid;
+                    }
+                });
+                scrollToBottom();
+            }
+        });
+    }
+    
+    // Poll every 3 seconds
+    setInterval(pollMessages, 3000);
+    
+    // Focus input
+    $('#messageInput').focus();
+});
+</script>
+{% endblock %}

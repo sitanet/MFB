@@ -128,7 +128,7 @@ INSTALLED_APPS = [
     'ninepsb',
     'adverts',
     'audit_trail',
-   
+    'chat',
 ]
 
 
@@ -508,5 +508,14 @@ CACHES = {
 # CORS CONFIGURATION (for Flutter app)
 CORS_ALLOW_ALL_ORIGINS = True  # For development
 CORS_ALLOW_CREDENTIALS = True
+
+
+# =====================
+# 🔒 SESSION TIMEOUT CONFIG
+# =====================
+# Session expires after 30 minutes (1800 seconds) of inactivity
+SESSION_COOKIE_AGE = 1800  # 30 minutes in seconds
+SESSION_SAVE_EVERY_REQUEST = True  # Reset session expiry on every request (activity-based)
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True  # Session expires when browser is closed
 
 

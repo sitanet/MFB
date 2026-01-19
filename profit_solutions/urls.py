@@ -51,5 +51,5 @@ urlpatterns = [
     path("ninepsb/", include("ninepsb.urls")),
     path('adverts/', include('adverts.urls')),
     path('audit/', include('audit_trail.urls')), 
-    # path('audit/', include('audit_trail.urls')),
+    path('chat/', include('chat.urls')),
 ]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
