@@ -20,10 +20,27 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
 def customer_list(request):
-    from accounts.utils import get_company_branch_ids
-    branch_ids = get_company_branch_ids(request.user)
-    # Use all_objects to bypass TenantManager auto-filtering
-    customers = Customer.all_objects.filter(branch_id__in=branch_ids).exclude(ac_no='1')
+    from company.models import Branch
+    
+    # Get the user's branch and company
+    user_branch = request.user.branch
+    user_company = user_branch.company if user_branch else None
+    
+    if not user_company:
+        # If user has no company assigned, show no customers
+        customers = Customer.objects.none()
+    else:
+        # Check if user is admin (role=1) - admins see all branches in company
+        if request.user.role == 1:
+            # Admin sees all branches in company
+            branch_ids = list(Branch.objects.filter(company=user_company).values_list('id', flat=True))
+        else:
+            # Non-admin sees only their own branch
+            branch_ids = [user_branch.id]
+        
+        # Filter customers by branch IDs
+        customers = Customer.all_objects.filter(branch_id__in=branch_ids).exclude(ac_no='1')
+    
     return render(request, 'customer_list.html', {'customers': customers})
 
 # def customer_detail(request, ac_no):
