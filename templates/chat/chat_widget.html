@@ -37,6 +37,17 @@
                         <i class="fas fa-arrow-left"></i>
                     </button>
                     <span id="chat-room-title">Chat</span>
+                    <div class="widget-theme-toggle">
+                        <button class="widget-theme-btn active" data-theme="default" title="Blue">
+                            <span style="background: linear-gradient(135deg, #007bff, #0056b3);"></span>
+                        </button>
+                        <button class="widget-theme-btn" data-theme="dark" title="Dark">
+                            <span style="background: linear-gradient(135deg, #2d2d2d, #1a1a1a);"></span>
+                        </button>
+                        <button class="widget-theme-btn" data-theme="whatsapp" title="Green">
+                            <span style="background: linear-gradient(135deg, #25d366, #128c7e);"></span>
+                        </button>
+                    </div>
                 </div>
                 <div id="chat-messages-container">
                     <!-- Messages will be loaded here -->
@@ -385,6 +396,137 @@
         height: 400px;
         right: -10px;
     }
+}
+
+/* Widget Theme Toggle */
+.widget-theme-toggle {
+    display: flex;
+    gap: 5px;
+    margin-left: auto;
+}
+
+.widget-theme-btn {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    padding: 2px;
+    cursor: pointer;
+    background: white;
+    transition: all 0.2s;
+}
+
+.widget-theme-btn:hover {
+    transform: scale(1.15);
+}
+
+.widget-theme-btn.active {
+    border-color: #333;
+}
+
+.widget-theme-btn span {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+}
+
+/* Widget Dark Theme */
+#chat-room-view[data-theme="dark"] .chat-room-header {
+    background: #1a1a2e;
+    border-color: #333;
+}
+
+#chat-room-view[data-theme="dark"] .chat-room-header .btn-link {
+    color: #aaa;
+}
+
+#chat-room-view[data-theme="dark"] #chat-room-title {
+    color: #e0e0e0;
+}
+
+#chat-room-view[data-theme="dark"] #chat-messages-container {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+}
+
+#chat-room-view[data-theme="dark"] .chat-message.sent .message-bubble {
+    background: linear-gradient(135deg, #4a4a4a 0%, #2d2d2d 100%);
+    color: #fff;
+}
+
+#chat-room-view[data-theme="dark"] .chat-message.received .message-bubble {
+    background: #2d2d2d;
+    color: #e0e0e0;
+    border-color: #404040;
+}
+
+#chat-room-view[data-theme="dark"] .chat-message.received .message-time {
+    color: #888;
+}
+
+#chat-room-view[data-theme="dark"] .chat-input-area {
+    background: #1a1a2e;
+    border-color: #333;
+}
+
+#chat-room-view[data-theme="dark"] .chat-input-area input {
+    background: #2d2d2d;
+    border-color: #404040;
+    color: #e0e0e0;
+}
+
+#chat-room-view[data-theme="dark"] .chat-input-area input::placeholder {
+    color: #888;
+}
+
+#chat-room-view[data-theme="dark"] .chat-input-area .btn {
+    background: linear-gradient(135deg, #4a4a4a 0%, #333 100%);
+}
+
+#chat-room-view[data-theme="dark"] .widget-theme-btn {
+    background: #2d2d2d;
+}
+
+#chat-room-view[data-theme="dark"] .widget-theme-btn.active {
+    border-color: #fff;
+}
+
+/* Widget WhatsApp Theme */
+#chat-room-view[data-theme="whatsapp"] .chat-room-header {
+    background: #ededed;
+    border-color: #d0d0d0;
+}
+
+#chat-room-view[data-theme="whatsapp"] #chat-messages-container {
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23d4e5d4' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"), linear-gradient(135deg, #e5ddd5 0%, #d9d2c5 100%);
+}
+
+#chat-room-view[data-theme="whatsapp"] .chat-message.sent .message-bubble {
+    background: linear-gradient(135deg, #dcf8c6 0%, #c5e8a8 100%);
+    color: #303030;
+}
+
+#chat-room-view[data-theme="whatsapp"] .chat-message.sent .message-time {
+    color: rgba(0, 0, 0, 0.5);
+}
+
+#chat-room-view[data-theme="whatsapp"] .chat-message.received .message-bubble {
+    background: white;
+    color: #303030;
+}
+
+#chat-room-view[data-theme="whatsapp"] .chat-input-area {
+    background: #f0f0f0;
+    border-color: #d0d0d0;
+}
+
+#chat-room-view[data-theme="whatsapp"] .chat-input-area input:focus {
+    border-color: #25d366;
+    box-shadow: 0 0 0 2px rgba(37, 211, 102, 0.1);
+}
+
+#chat-room-view[data-theme="whatsapp"] .chat-input-area .btn {
+    background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
 }
 </style>
 

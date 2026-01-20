@@ -25,7 +25,22 @@
             <div class="col-md-12">
                 <div class="white_shd full margin_bottom_30">
                     <div class="full progress_bar_inner">
-                        <div class="chat-container">
+                        <div class="chat-container" id="chatContainer" data-theme="default">
+                            <!-- Theme Toggle -->
+                            <div class="theme-toggle-bar">
+                                <span class="theme-label"><i class="fas fa-palette"></i> Theme:</span>
+                                <div class="theme-buttons">
+                                    <button class="theme-btn active" data-theme="default" title="Default Blue">
+                                        <span class="theme-color" style="background: linear-gradient(135deg, #007bff, #0056b3);"></span>
+                                    </button>
+                                    <button class="theme-btn" data-theme="dark" title="Dark Mode">
+                                        <span class="theme-color" style="background: linear-gradient(135deg, #2d2d2d, #1a1a1a);"></span>
+                                    </button>
+                                    <button class="theme-btn" data-theme="whatsapp" title="WhatsApp Green">
+                                        <span class="theme-color" style="background: linear-gradient(135deg, #25d366, #128c7e);"></span>
+                                    </button>
+                                </div>
+                            </div>
                             <div id="messageContainer" class="messages-area">
                                 {% for message in messages %}
                                 <div class="message-wrapper {% if message.sender.id == request.user.id %}sent{% else %}received{% endif %}" data-uuid="{{ message.uuid }}">
@@ -188,6 +203,174 @@
     overflow: hidden;
     box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
 }
+
+/* Theme Toggle Bar */
+.theme-toggle-bar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 10px 15px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e0e0e0;
+    gap: 10px;
+}
+
+.theme-label {
+    font-size: 12px;
+    color: #666;
+    font-weight: 500;
+}
+
+.theme-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.theme-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    padding: 3px;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: white;
+}
+
+.theme-btn:hover {
+    transform: scale(1.1);
+}
+
+.theme-btn.active {
+    border-color: #333;
+    box-shadow: 0 0 0 2px rgba(0,0,0,0.1);
+}
+
+.theme-color {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+}
+
+/* Dark Theme */
+.chat-container[data-theme="dark"] .messages-area {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+}
+
+.chat-container[data-theme="dark"] .message-wrapper.sent .message-bubble {
+    background: linear-gradient(135deg, #4a4a4a 0%, #2d2d2d 100%);
+    color: #fff;
+}
+
+.chat-container[data-theme="dark"] .message-wrapper.received .message-bubble {
+    background: #2d2d2d;
+    color: #e0e0e0;
+    border-color: #404040;
+}
+
+.chat-container[data-theme="dark"] .message-wrapper.received .message-time {
+    color: #888;
+}
+
+.chat-container[data-theme="dark"] .message-sender {
+    color: #7c7cff;
+}
+
+.chat-container[data-theme="dark"] .message-input {
+    background: #1a1a2e;
+    border-color: #333;
+}
+
+.chat-container[data-theme="dark"] .message-input .form-control {
+    background: #2d2d2d;
+    border-color: #404040;
+    color: #e0e0e0;
+}
+
+.chat-container[data-theme="dark"] .message-input .form-control::placeholder {
+    color: #888;
+}
+
+.chat-container[data-theme="dark"] .message-input .form-control:focus {
+    border-color: #666;
+    box-shadow: 0 0 0 3px rgba(100, 100, 100, 0.2);
+}
+
+.chat-container[data-theme="dark"] .message-input .btn-primary {
+    background: linear-gradient(135deg, #4a4a4a 0%, #333 100%);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.chat-container[data-theme="dark"] .theme-toggle-bar {
+    background: #1a1a2e;
+    border-color: #333;
+}
+
+.chat-container[data-theme="dark"] .theme-label {
+    color: #aaa;
+}
+
+.chat-container[data-theme="dark"] .theme-btn {
+    background: #2d2d2d;
+}
+
+.chat-container[data-theme="dark"] .theme-btn.active {
+    border-color: #fff;
+}
+
+.chat-container[data-theme="dark"] #noMessages {
+    color: #888 !important;
+}
+
+/* WhatsApp Theme */
+.chat-container[data-theme="whatsapp"] .messages-area {
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23d4e5d4' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"), linear-gradient(135deg, #e5ddd5 0%, #d9d2c5 100%);
+}
+
+.chat-container[data-theme="whatsapp"] .message-wrapper.sent .message-bubble {
+    background: linear-gradient(135deg, #dcf8c6 0%, #c5e8a8 100%);
+    color: #303030;
+}
+
+.chat-container[data-theme="whatsapp"] .message-wrapper.sent .message-time {
+    color: rgba(0, 0, 0, 0.5);
+}
+
+.chat-container[data-theme="whatsapp"] .message-wrapper.received .message-bubble {
+    background: white;
+    color: #303030;
+    border-color: #e0e0e0;
+}
+
+.chat-container[data-theme="whatsapp"] .message-sender {
+    color: #128c7e;
+}
+
+.chat-container[data-theme="whatsapp"] .message-input {
+    background: #f0f0f0;
+    border-color: #d0d0d0;
+}
+
+.chat-container[data-theme="whatsapp"] .message-input .form-control {
+    background: white;
+    border-color: #e0e0e0;
+}
+
+.chat-container[data-theme="whatsapp"] .message-input .form-control:focus {
+    border-color: #25d366;
+    box-shadow: 0 0 0 3px rgba(37, 211, 102, 0.15);
+}
+
+.chat-container[data-theme="whatsapp"] .message-input .btn-primary {
+    background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+    box-shadow: 0 2px 8px rgba(37, 211, 102, 0.3);
+}
+
+.chat-container[data-theme="whatsapp"] .theme-toggle-bar {
+    background: #ededed;
+    border-color: #d0d0d0;
+}
 </style>
 
 <script>
@@ -289,6 +472,20 @@ $(document).ready(function() {
     
     // Focus input
     $('#messageInput').focus();
+    
+    // Theme toggle functionality
+    var savedTheme = localStorage.getItem('chatTheme') || 'default';
+    $('#chatContainer').attr('data-theme', savedTheme);
+    $('.theme-btn').removeClass('active');
+    $('.theme-btn[data-theme="' + savedTheme + '"]').addClass('active');
+    
+    $('.theme-btn').on('click', function() {
+        var theme = $(this).data('theme');
+        $('#chatContainer').attr('data-theme', theme);
+        $('.theme-btn').removeClass('active');
+        $(this).addClass('active');
+        localStorage.setItem('chatTheme', theme);
+    });
 });
 </script>
 {% endblock %}
