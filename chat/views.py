@@ -81,13 +81,19 @@ def start_chat(request, user_id):
     user_branch = user.branch
     other_branch = other_user.branch
     
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    
     if not user_branch or not other_branch:
+        if is_ajax:
+            return JsonResponse({'success': False, 'error': 'Invalid user'})
         return redirect('chat_home')
     
     user_company = user_branch.company
     other_company = other_branch.company
     
     if user_company != other_company:
+        if is_ajax:
+            return JsonResponse({'success': False, 'error': 'User not in same company'})
         return redirect('chat_home')
     
     # Find existing direct chat or create new one
@@ -97,12 +103,24 @@ def start_chat(request, user_id):
     ).filter(participants=other_user).first()
     
     if existing_room:
+        if is_ajax:
+            return JsonResponse({
+                'success': True,
+                'room_uuid': str(existing_room.uuid),
+                'room_name': f"{other_user.first_name} {other_user.last_name}"
+            })
         return redirect('chat_room', room_uuid=existing_room.uuid)
     
     # Create new chat room
     room = ChatRoom.objects.create(room_type='direct')
     room.participants.add(user, other_user)
     
+    if is_ajax:
+        return JsonResponse({
+            'success': True,
+            'room_uuid': str(room.uuid),
+            'room_name': f"{other_user.first_name} {other_user.last_name}"
+        })
     return redirect('chat_room', room_uuid=room.uuid)
 
 

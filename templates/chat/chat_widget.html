@@ -432,12 +432,13 @@ function loadChatMessages() {
         .then(data => {
             var container = document.getElementById('chat-messages-container');
             var html = '';
+            var messages = data.messages || [];
             
-            data.messages.forEach(function(msg) {
-                var isSent = msg.sender_id === currentUserId;
+            messages.forEach(function(msg) {
+                var isSent = msg.sender_id === currentUserId || msg.is_own;
                 html += '<div class="chat-message ' + (isSent ? 'sent' : 'received') + '">';
                 html += '<div class="message-bubble">' + escapeHtml(msg.content) + '</div>';
-                html += '<div class="message-time">' + msg.timestamp + '</div>';
+                html += '<div class="message-time">' + (msg.timestamp || msg.created_at) + '</div>';
                 html += '</div>';
             });
             
@@ -455,14 +456,14 @@ function sendChatMessage() {
     fetch('/chat/send/', {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
+            'Content-Type': 'application/json',
             'X-CSRFToken': getCookie('csrftoken')
         },
-        body: 'room_uuid=' + currentChatRoom + '&content=' + encodeURIComponent(content)
+        body: JSON.stringify({room_uuid: currentChatRoom, content: content})
     })
     .then(response => response.json())
     .then(data => {
-        if (data.status === 'success') {
+        if (data.success) {
             input.value = '';
             loadChatMessages();
         }
@@ -573,6 +574,27 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function startNewChat(userId) {
-    window.location.href = '/chat/start/' + userId + '/';
+    // Start chat via AJAX and open in widget instead of redirecting
+    fetch('/chat/start/' + userId + '/', {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Clear search input and results
+            document.getElementById('widget-search-staff').value = '';
+            document.getElementById('widget-search-results').style.display = 'none';
+            // Open chat in widget
+            openChatRoom(data.room_uuid, data.room_name);
+        } else {
+            loadChatConversations();
+        }
+    })
+    .catch(() => {
+        loadChatConversations();
+    });
 }
 </script>
