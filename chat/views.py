@@ -23,6 +23,12 @@ def chat_home(request):
         unread_count=Count('messages', filter=Q(messages__is_read=False) & ~Q(messages__sender=user))
     ).order_by('-last_message_time')
     
+    # Pre-process chat rooms to add other_participant for templates
+    chat_rooms_list = []
+    for room in chat_rooms:
+        room.other_participant = room.get_other_participant(user)
+        chat_rooms_list.append(room)
+    
     # Get staff from same branch for starting new chats
     branch_staff = []
     company_staff = []
@@ -40,7 +46,7 @@ def chat_home(request):
         ).exclude(id=user.id).exclude(role=13)
     
     context = {
-        'chat_rooms': chat_rooms,
+        'chat_rooms': chat_rooms_list,
         'branch_staff': branch_staff,
         'company_staff': company_staff,
     }

@@ -33,12 +33,10 @@
                             <a href="{% url 'chat_room' room.uuid %}" class="chat-item d-block p-3 border-bottom text-decoration-none {% if room.unread_count > 0 %}bg-light{% endif %}">
                                 <div class="d-flex align-items-center">
                                     <div class="chat-avatar mr-3">
-                                        {% if room.room_type == 'direct' %}
-                                            {% with other=room.get_other_participant %}
+                                        {% if room.room_type == 'direct' and room.other_participant %}
                                             <div class="avatar-circle" style="width:45px;height:45px;background:#007bff;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:bold;">
-                                                {{ other.first_name|slice:":1" }}{{ other.last_name|slice:":1" }}
+                                                {{ room.other_participant.first_name|slice:":1" }}{{ room.other_participant.last_name|slice:":1" }}
                                             </div>
-                                            {% endwith %}
                                         {% else %}
                                             <div class="avatar-circle" style="width:45px;height:45px;background:#28a745;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;">
                                                 <i class="fas fa-users"></i>
@@ -48,10 +46,8 @@
                                     <div class="chat-info flex-grow-1">
                                         <div class="d-flex justify-content-between">
                                             <h6 class="mb-0 text-dark">
-                                                {% if room.room_type == 'direct' %}
-                                                    {% with other=room.get_other_participant %}
-                                                        {{ other.first_name }} {{ other.last_name }}
-                                                    {% endwith %}
+                                                {% if room.room_type == 'direct' and room.other_participant %}
+                                                    {{ room.other_participant.first_name }} {{ room.other_participant.last_name }}
                                                 {% else %}
                                                     {{ room.name|default:"Group Chat" }}
                                                 {% endif %}
