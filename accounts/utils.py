@@ -189,7 +189,7 @@ def detectUser(user):
     elif user.role == 12:
         return 'dashboard_12'
     elif user.role == 13:
-        return 'customer_dashboard'
+        return 'dashboard'
     elif user.role is None and user.is_superadmin:
         return '/admin'
     # Default fallback to prevent None return
