@@ -165,44 +165,35 @@ def filter_by_company(queryset, user, branch_field='branch_id', admin_sees_all=T
 
 def detectUser(user):
     if user.role == 1:
-        redirectUrl = 'dashboard'
-        return redirectUrl
+        return 'dashboard'
     elif user.role == 2:
-        redirectUrl = 'dashboard_2'
-        return redirectUrl
+        return 'dashboard_2'
     elif user.role == 3:
-        redirectUrl = 'dashboard_3'
-        return redirectUrl
-    elif user.role == 3:
-        redirectUrl = 'dashboard_4'
-        return redirectUrl
-    elif user.role == 3:
-        redirectUrl = 'dashboard_5'
-        return redirectUrl
-    elif user.role == 3:
-        redirectUrl = 'dashboard_6'
-        return redirectUrl
-    elif user.role == 3:
-        redirectUrl = 'dashboard_7'
-        return redirectUrl
-    elif user.role == 3:
-        redirectUrl = 'dashboard_8'
-        return redirectUrl
-    elif user.role == 3:
-        redirectUrl = 'dashboard_9'
-        return redirectUrl
-    elif user.role == 3:
-        redirectUrl = 'dashboard_10'
-        return redirectUrl
-    elif user.role == 3:
-        redirectUrl = 'dashboard_11'
-        return redirectUrl
-    elif user.role == 3:
-        redirectUrl = 'dashboard_12'
-        return redirectUrl
-    elif user.role == None and user.is_superadmin:
-        redirectUrl = '/admin'
-        return redirectUrl
+        return 'dashboard_3'
+    elif user.role == 4:
+        return 'dashboard_4'
+    elif user.role == 5:
+        return 'dashboard_5'
+    elif user.role == 6:
+        return 'dashboard_6'
+    elif user.role == 7:
+        return 'dashboard_7'
+    elif user.role == 8:
+        return 'dashboard_8'
+    elif user.role == 9:
+        return 'dashboard_9'
+    elif user.role == 10:
+        return 'dashboard_10'
+    elif user.role == 11:
+        return 'dashboard_11'
+    elif user.role == 12:
+        return 'dashboard_12'
+    elif user.role == 13:
+        return 'customer_dashboard'
+    elif user.role is None and user.is_superadmin:
+        return '/admin'
+    # Default fallback to prevent None return
+    return 'dashboard'
 
     
 def send_verification_email(request, user, mail_subject, email_template):
