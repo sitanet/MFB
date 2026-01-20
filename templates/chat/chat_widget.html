@@ -38,13 +38,13 @@
                     </button>
                     <span id="chat-room-title">Chat</span>
                     <div class="widget-theme-toggle">
-                        <button class="widget-theme-btn active" data-theme="default" title="Blue">
+                        <button type="button" class="widget-theme-btn active" data-theme="default" title="Blue">
                             <span style="background: linear-gradient(135deg, #007bff, #0056b3);"></span>
                         </button>
-                        <button class="widget-theme-btn" data-theme="dark" title="Dark">
+                        <button type="button" class="widget-theme-btn" data-theme="dark" title="Dark">
                             <span style="background: linear-gradient(135deg, #2d2d2d, #1a1a1a);"></span>
                         </button>
-                        <button class="widget-theme-btn" data-theme="whatsapp" title="Green">
+                        <button type="button" class="widget-theme-btn" data-theme="whatsapp" title="Green">
                             <span style="background: linear-gradient(135deg, #25d366, #128c7e);"></span>
                         </button>
                     </div>
@@ -722,6 +722,28 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+    
+    // Widget Theme toggle functionality
+    var savedWidgetTheme = localStorage.getItem('chatWidgetTheme') || 'default';
+    document.getElementById('chat-room-view').setAttribute('data-theme', savedWidgetTheme);
+    document.querySelectorAll('.widget-theme-btn').forEach(function(btn) {
+        btn.classList.remove('active');
+        if (btn.getAttribute('data-theme') === savedWidgetTheme) {
+            btn.classList.add('active');
+        }
+    });
+    
+    document.querySelectorAll('.widget-theme-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var theme = this.getAttribute('data-theme');
+            document.getElementById('chat-room-view').setAttribute('data-theme', theme);
+            document.querySelectorAll('.widget-theme-btn').forEach(function(b) {
+                b.classList.remove('active');
+            });
+            this.classList.add('active');
+            localStorage.setItem('chatWidgetTheme', theme);
+        });
+    });
     
     // Search functionality
     var searchInput = document.getElementById('widget-search-staff');
