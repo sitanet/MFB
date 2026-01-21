@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Loan Auto Repayment Settings{% endblock %}
+
+{% block content %}
+<div class="midde_cont">
+    <div class="container-fluid">
+        <div class="row column_title">
+            <div class="col-md-12">
+                <div class="page_title d-flex justify-content-between align-items-center">
+                    <div>
+                        <h2>Loan Auto Repayment Settings</h2>
+                        <p>Configure which loan accounts should automatically calculate repayments when session is closed</p>
+                    </div>
+                    <a href="{% url 'product_settings' %}" class="btn btn-outline-secondary">
+                        <i class="fa fa-arrow-left mr-2"></i> Back to Product Settings
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="row column1">
+            <div class="col-md-12">
+                <div class="white_shd full margin_bottom_30">
+                    <div class="full graph_head">
+                        <div class="heading1 margin_0">
+                            <h2><i class="fa fa-calculator text-primary mr-2"></i> Loan Accounts</h2>
+                        </div>
+                    </div>
+                    <div class="full price_table padding_infor_info">
+                        {% if messages %}
+                            {% for message in messages %}
+                                <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+
+                        <div class="alert alert-info">
+                            <i class="fa fa-info-circle mr-2"></i>
+                            <strong>Note:</strong> Only loan accounts with auto repayment <strong>enabled</strong> will have their repayments calculated automatically when the session is closed. 
+                            Each loan uses its own calculation method (Compound Interest, Decline Balance, Flat Rate, etc.) as configured during loan creation.
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead class="thead-dark">
+                                    <tr>
+                                        <th>#</th>
+                                        <th>GL No</th>
+                                        <th>GL Name</th>
+                                        <th>Auto Repayment</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% if settings %}
+                                        {% for setting in settings %}
+                                        <tr>
+                                            <td>{{ forloop.counter }}</td>
+                                            <td><strong>{{ setting.account.gl_no }}</strong></td>
+                                            <td>{{ setting.account.gl_name }}</td>
+                                            <td>
+                                                {% if setting.is_auto_repayment_enabled %}
+                                                    <span class="badge badge-success" style="font-size: 14px; padding: 8px 12px;">
+                                                        <i class="fa fa-check-circle mr-1"></i> Enabled
+                                                    </span>
+                                                {% else %}
+                                                    <span class="badge badge-secondary" style="font-size: 14px; padding: 8px 12px;">
+                                                        <i class="fa fa-times-circle mr-1"></i> Disabled
+                                                    </span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <form method="POST" action="{% url 'loan_auto_repayment_toggle' setting.uuid %}" style="display: inline;">
+                                                    {% csrf_token %}
+                                                    <button type="submit" 
+                                                            class="btn btn-sm {% if setting.is_auto_repayment_enabled %}btn-warning{% else %}btn-success{% endif %}"
+                                                            title="{% if setting.is_auto_repayment_enabled %}Disable Auto Repayment{% else %}Enable Auto Repayment{% endif %}">
+                                                        {% if setting.is_auto_repayment_enabled %}
+                                                            <i class="fa fa-toggle-on mr-1"></i> Disable
+                                                        {% else %}
+                                                            <i class="fa fa-toggle-off mr-1"></i> Enable
+                                                        {% endif %}
+                                                    </button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    {% else %}
+                                        <tr>
+                                            <td colspan="5" class="text-center">
+                                                <p class="text-muted my-4">
+                                                    <i class="fa fa-info-circle fa-2x"></i><br>
+                                                    No loan accounts found.<br>
+                                                    Please ensure loan accounts (GL codes starting with 104) are set up in the Chart of Accounts.
+                                                </p>
+                                            </td>
+                                        </tr>
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="mt-4">
+                            <h5><i class="fa fa-question-circle text-info mr-2"></i> How it works:</h5>
+                            <ul class="list-unstyled ml-4">
+                                <li><i class="fa fa-check text-success mr-2"></i> When a loan GL is <strong>enabled</strong>, the system will automatically calculate due repayments for all loans under that GL when the session is closed.</li>
+                                <li><i class="fa fa-times text-danger mr-2"></i> When <strong>disabled</strong>, loans under that GL will not be processed automatically - repayments must be entered manually.</li>
+                                <li><i class="fa fa-cog text-primary mr-2"></i> Each loan's calculation method (Compound Interest, Decline Balance, Flat Rate, etc.) is respected during auto-calculation.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

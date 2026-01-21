@@ -958,3 +958,60 @@ def customer_account_type_toggle(request, uuid):
     status = "activated" if account_type.is_active else "deactivated"
     messages.success(request, f'Account Type {status} successfully!')
     return redirect('customer_account_type_list')
+
+
+# ==================== LOAN AUTO REPAYMENT SETTINGS ====================
+from .models import LoanAutoRepaymentSetting
+
+
+@login_required(login_url='login')
+@user_passes_test(check_role_admin)
+def loan_auto_repayment_list(request):
+    """List all loan accounts with auto repayment settings"""
+    from accounts.utils import get_company_branch_ids_all, get_branch_from_vendor_db
+    
+    user_branch = get_branch_from_vendor_db(request.user.branch_id)
+    branch_ids = get_company_branch_ids_all(request.user)
+    
+    # Get all loan accounts (gl_no starting with 104 for loan portfolio)
+    loan_accounts = Account.all_objects.filter(
+        branch_id__in=branch_ids,
+        gl_no__startswith='104'
+    ).exclude(gl_no='10400').order_by('gl_no')
+    
+    # Get existing settings
+    existing_settings = {
+        setting.account_id: setting 
+        for setting in LoanAutoRepaymentSetting.all_objects.filter(branch_id__in=branch_ids)
+    }
+    
+    # Create settings for accounts that don't have one yet
+    for account in loan_accounts:
+        if account.id not in existing_settings:
+            LoanAutoRepaymentSetting.all_objects.create(
+                branch=user_branch,
+                account=account,
+                is_auto_repayment_enabled=False
+            )
+    
+    # Refresh settings after creation
+    settings = LoanAutoRepaymentSetting.all_objects.filter(
+        branch_id__in=branch_ids
+    ).select_related('account').order_by('account__gl_no')
+    
+    return render(request, 'accounts_admin/loan_auto_repayment/list.html', {
+        'settings': settings
+    })
+
+
+@login_required(login_url='login')
+@user_passes_test(check_role_admin)
+def loan_auto_repayment_toggle(request, uuid):
+    """Toggle auto repayment status for a loan account"""
+    setting = get_object_or_404(LoanAutoRepaymentSetting, uuid=uuid)
+    setting.is_auto_repayment_enabled = not setting.is_auto_repayment_enabled
+    setting.save()
+    
+    status = "enabled" if setting.is_auto_repayment_enabled else "disabled"
+    messages.success(request, f'Auto repayment {status} for {setting.account.gl_name}!')
+    return redirect('loan_auto_repayment_list')

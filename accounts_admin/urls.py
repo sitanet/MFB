@@ -69,4 +69,8 @@ urlpatterns = [
     path('customer-account-types/edit/<uuid:uuid>/', views.customer_account_type_edit, name='customer_account_type_edit'),
     path('customer-account-types/delete/<uuid:uuid>/', views.customer_account_type_delete, name='customer_account_type_delete'),
     path('customer-account-types/toggle/<uuid:uuid>/', views.customer_account_type_toggle, name='customer_account_type_toggle'),
+    
+    # Loan Auto Repayment Settings
+    path('loan-auto-repayment/', views.loan_auto_repayment_list, name='loan_auto_repayment_list'),
+    path('loan-auto-repayment/toggle/<uuid:uuid>/', views.loan_auto_repayment_toggle, name='loan_auto_repayment_toggle'),
 ]

@@ -287,3 +287,38 @@ class CustomerAccountType(models.Model):
 
     def get_gl_no(self):
         return self.account.gl_no
+
+
+class LoanAutoRepaymentSetting(models.Model):
+    """
+    Model to manage which loan GL accounts should automatically 
+    calculate loan repayments when session is closed.
+    """
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    branch = models.ForeignKey(
+        Branch, on_delete=models.CASCADE, related_name="loan_auto_repayment_settings",
+        null=True, blank=True
+    )
+    account = models.ForeignKey(
+        Account, on_delete=models.CASCADE, related_name="loan_auto_repayment_settings",
+        help_text="Select loan account from Chart of Accounts"
+    )
+    is_auto_repayment_enabled = models.BooleanField(
+        default=False,
+        help_text="Enable automatic loan repayment calculation on session close"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    objects = TenantManager()
+    all_objects = models.Manager()
+
+    class Meta:
+        verbose_name = "Loan Auto Repayment Setting"
+        verbose_name_plural = "Loan Auto Repayment Settings"
+        ordering = ['account__gl_no']
+        unique_together = ['branch', 'account']
+
+    def __str__(self):
+        status = "Enabled" if self.is_auto_repayment_enabled else "Disabled"
+        return f"{self.account.gl_name} ({self.account.gl_no}) - {status}"
