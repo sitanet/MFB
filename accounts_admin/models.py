@@ -307,6 +307,10 @@ class LoanAutoRepaymentSetting(models.Model):
         default=False,
         help_text="Enable automatic loan repayment calculation on session close"
     )
+    interest_income_gl_no = models.CharField(
+        max_length=10, blank=True, null=True,
+        help_text="GL number where interest income will be credited (e.g., 40101)"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

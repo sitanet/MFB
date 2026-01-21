@@ -290,7 +290,9 @@ def process_auto_loan_repayments(branch):
         logger.info(f"No auto repayment settings enabled for branch {branch.branch_name}")
         return
     
-    enabled_gl_numbers = [setting.account.gl_no for setting in enabled_settings]
+    # Build a map of GL number to setting (for interest_income_gl_no)
+    gl_to_setting = {setting.account.gl_no: setting for setting in enabled_settings}
+    enabled_gl_numbers = list(gl_to_setting.keys())
     logger.info(f"Processing auto repayments for GL numbers: {enabled_gl_numbers}")
     
     # Get all active loans with enabled GL numbers that have outstanding balance
@@ -307,7 +309,9 @@ def process_auto_loan_repayments(branch):
     for loan in loans:
         try:
             with transaction.atomic():
-                result = process_single_loan_repayment(loan, branch, session_date)
+                # Get the setting for this loan's GL to access interest_income_gl_no
+                setting = gl_to_setting.get(loan.gl_no)
+                result = process_single_loan_repayment(loan, branch, session_date, setting)
                 if result:
                     processed_count += 1
                 else:
@@ -319,10 +323,16 @@ def process_auto_loan_repayments(branch):
     logger.info(f"Auto loan repayment completed: {processed_count} processed, {skipped_count} skipped")
 
 
-def process_single_loan_repayment(loan, branch, session_date):
+def process_single_loan_repayment(loan, branch, session_date, setting=None):
     """
     Process repayment for a single loan.
     Returns True if processed, False if skipped.
+    
+    Args:
+        loan: The loan object to process
+        branch: The branch object
+        session_date: The session date
+        setting: LoanAutoRepaymentSetting object containing interest_income_gl_no
     """
     from django.db.models import Sum
     from accounts_admin.models import Account
@@ -335,17 +345,16 @@ def process_single_loan_repayment(loan, branch, session_date):
         logger.warning(f"Loan {loan.gl_no}-{loan.ac_no} has no customer")
         return False
     
+    # Check if interest income GL is configured in the setting
+    if not setting or not setting.interest_income_gl_no:
+        logger.warning(f"Loan {loan.gl_no}-{loan.ac_no} has no interest income GL configured in auto repayment settings")
+        return False
+    
     # Get the loan account settings
     try:
         account = Account.all_objects.get(gl_no=loan.gl_no, branch=loan.branch)
     except Account.DoesNotExist:
         logger.warning(f"Account not found for GL {loan.gl_no}")
-        return False
-    
-    # Check if all required loan parameters are set
-    if not all([account.int_to_recev_gl_dr, account.int_to_recev_ac_dr, 
-                account.unearned_int_inc_gl, account.unearned_int_inc_ac]):
-        logger.warning(f"Loan {loan.gl_no}-{loan.ac_no} missing required account parameters")
         return False
     
     # Calculate outstanding principal and interest due up to session date
@@ -486,12 +495,12 @@ def process_single_loan_repayment(loan, branch, session_date):
             trx_type='AUTO_LP'
         )
         
-        # 4. Credit interest income account
+        # 4. Credit interest income account (using interest_income_gl_no from setting)
         Memtrans.all_objects.create(
             branch=branch,
             cust_branch=loan.branch,
-            gl_no=account.interest_gl or account.int_to_recev_gl_dr,
-            ac_no=account.interest_ac or account.int_to_recev_ac_dr,
+            gl_no=setting.interest_income_gl_no,
+            ac_no='00000',  # Default account number for income GL
             cycle=loan.cycle,
             amount=interest_to_pay,
             description=f'Auto Loan Repayment Interest - {customer.first_name} {customer.last_name}',

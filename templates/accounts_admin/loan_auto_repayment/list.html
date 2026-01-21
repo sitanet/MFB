@@ -53,6 +53,7 @@
                                         <th>#</th>
                                         <th>GL No</th>
                                         <th>GL Name</th>
+                                        <th>Interest Income GL</th>
                                         <th>Auto Repayment</th>
                                         <th>Action</th>
                                     </tr>
@@ -64,6 +65,26 @@
                                             <td>{{ forloop.counter }}</td>
                                             <td><strong>{{ setting.account.gl_no }}</strong></td>
                                             <td>{{ setting.account.gl_name }}</td>
+                                            <td>
+                                                <form method="POST" action="{% url 'loan_auto_repayment_update_interest_gl' setting.uuid %}" class="form-inline">
+                                                    {% csrf_token %}
+                                                    <div class="input-group input-group-sm">
+                                                        <input type="text" name="interest_income_gl_no" 
+                                                               class="form-control" 
+                                                               value="{{ setting.interest_income_gl_no|default:'' }}" 
+                                                               placeholder="e.g., 40101"
+                                                               style="width: 100px;"
+                                                               {% if not setting.is_auto_repayment_enabled %}disabled{% endif %}>
+                                                        <div class="input-group-append">
+                                                            <button type="submit" class="btn btn-primary btn-sm" 
+                                                                    {% if not setting.is_auto_repayment_enabled %}disabled{% endif %}
+                                                                    title="Save Interest GL">
+                                                                <i class="fa fa-save"></i>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </form>
+                                            </td>
                                             <td>
                                                 {% if setting.is_auto_repayment_enabled %}
                                                     <span class="badge badge-success" style="font-size: 14px; padding: 8px 12px;">
@@ -93,7 +114,7 @@
                                         {% endfor %}
                                     {% else %}
                                         <tr>
-                                            <td colspan="5" class="text-center">
+                                            <td colspan="6" class="text-center">
                                                 <p class="text-muted my-4">
                                                     <i class="fa fa-info-circle fa-2x"></i><br>
                                                     No loan accounts found.<br>

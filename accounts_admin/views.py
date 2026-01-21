@@ -1015,3 +1015,29 @@ def loan_auto_repayment_toggle(request, uuid):
     status = "enabled" if setting.is_auto_repayment_enabled else "disabled"
     messages.success(request, f'Auto repayment {status} for {setting.account.gl_name}!')
     return redirect('loan_auto_repayment_list')
+
+
+@login_required(login_url='login')
+@user_passes_test(check_role_admin)
+def loan_auto_repayment_update_interest_gl(request, uuid):
+    """Update the interest income GL number for a loan auto repayment setting"""
+    setting = get_object_or_404(LoanAutoRepaymentSetting, uuid=uuid)
+    
+    if request.method == 'POST':
+        interest_income_gl_no = request.POST.get('interest_income_gl_no', '').strip()
+        
+        # Validate that the GL number exists if provided
+        if interest_income_gl_no:
+            from accounts.utils import get_company_branch_ids_all
+            branch_ids = get_company_branch_ids_all(request.user)
+            
+            # Check if the GL number exists in the chart of accounts
+            if not Account.all_objects.filter(branch_id__in=branch_ids, gl_no=interest_income_gl_no).exists():
+                messages.error(request, f'GL number {interest_income_gl_no} does not exist in the Chart of Accounts!')
+                return redirect('loan_auto_repayment_list')
+        
+        setting.interest_income_gl_no = interest_income_gl_no if interest_income_gl_no else None
+        setting.save()
+        messages.success(request, f'Interest income GL updated for {setting.account.gl_name}!')
+    
+    return redirect('loan_auto_repayment_list')
