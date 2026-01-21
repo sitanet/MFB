@@ -1041,3 +1041,36 @@ def loan_auto_repayment_update_interest_gl(request, uuid):
         messages.success(request, f'Interest income GL updated for {setting.account.gl_name}!')
     
     return redirect('loan_auto_repayment_list')
+
+
+@login_required(login_url='login')
+@user_passes_test(check_role_admin)
+def loan_auto_repayment_update_balance_sheet_gl(request, uuid):
+    """Update the interest receivable and unearned interest income GL numbers"""
+    setting = get_object_or_404(LoanAutoRepaymentSetting, uuid=uuid)
+    
+    if request.method == 'POST':
+        int_receivable_gl_no = request.POST.get('int_receivable_gl_no', '').strip()
+        unearned_int_income_gl_no = request.POST.get('unearned_int_income_gl_no', '').strip()
+        
+        from accounts.utils import get_company_branch_ids_all
+        branch_ids = get_company_branch_ids_all(request.user)
+        
+        # Validate interest receivable GL
+        if int_receivable_gl_no:
+            if not Account.all_objects.filter(branch_id__in=branch_ids, gl_no=int_receivable_gl_no).exists():
+                messages.error(request, f'Interest Receivable GL {int_receivable_gl_no} does not exist in the Chart of Accounts!')
+                return redirect('loan_auto_repayment_list')
+        
+        # Validate unearned interest income GL
+        if unearned_int_income_gl_no:
+            if not Account.all_objects.filter(branch_id__in=branch_ids, gl_no=unearned_int_income_gl_no).exists():
+                messages.error(request, f'Unearned Interest Income GL {unearned_int_income_gl_no} does not exist in the Chart of Accounts!')
+                return redirect('loan_auto_repayment_list')
+        
+        setting.int_receivable_gl_no = int_receivable_gl_no if int_receivable_gl_no else None
+        setting.unearned_int_income_gl_no = unearned_int_income_gl_no if unearned_int_income_gl_no else None
+        setting.save()
+        messages.success(request, f'Balance sheet GLs updated for {setting.account.gl_name}!')
+    
+    return redirect('loan_auto_repayment_list')

@@ -311,6 +311,14 @@ class LoanAutoRepaymentSetting(models.Model):
         max_length=10, blank=True, null=True,
         help_text="GL number where interest income will be credited (e.g., 40101)"
     )
+    int_receivable_gl_no = models.CharField(
+        max_length=10, blank=True, null=True,
+        help_text="Interest Receivable GL to debit (reduces balance sheet asset)"
+    )
+    unearned_int_income_gl_no = models.CharField(
+        max_length=10, blank=True, null=True,
+        help_text="Unearned Interest Income GL to credit (reduces balance sheet liability)"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

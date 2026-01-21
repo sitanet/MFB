@@ -513,8 +513,49 @@ def process_single_loan_repayment(loan, branch, session_date, setting=None):
             code='ALI',
             trx_type='AUTO_LP'
         )
+        
+        # 5. Interest Accounting Adjustment (reduce balance sheet)
+        # Debit Interest Receivable (reduce asset) and Credit Unearned Interest Income (reduce liability)
+        if setting.int_receivable_gl_no and setting.unearned_int_income_gl_no:
+            # Debit Interest Receivable GL (reduce the asset)
+            Memtrans.all_objects.create(
+                branch=branch,
+                cust_branch=loan.branch,
+                gl_no=setting.int_receivable_gl_no,
+                ac_no='00000',
+                cycle=loan.cycle,
+                amount=-interest_to_pay,
+                description=f'Auto Loan Interest Accounting - {customer.first_name} {customer.last_name}',
+                error='A',
+                type='D',
+                account_type='I',
+                ses_date=session_date,
+                app_date=session_date,
+                trx_no=unique_id,
+                code='ALI',
+                trx_type='AUTO_LP'
+            )
+            
+            # Credit Unearned Interest Income GL (reduce the liability)
+            Memtrans.all_objects.create(
+                branch=branch,
+                cust_branch=loan.branch,
+                gl_no=setting.unearned_int_income_gl_no,
+                ac_no='00000',
+                cycle=loan.cycle,
+                amount=interest_to_pay,
+                description=f'Auto Loan Interest Accounting - {customer.first_name} {customer.last_name}',
+                error='A',
+                type='C',
+                account_type='I',
+                ses_date=session_date,
+                app_date=session_date,
+                trx_no=unique_id,
+                code='ALI',
+                trx_type='AUTO_LP'
+            )
     
-    # 5. Create LoanHist entry
+    # 6. Create LoanHist entry
     lp_count = LoanHist.all_objects.filter(
         gl_no=loan.gl_no,
         ac_no=loan.ac_no,
@@ -537,7 +578,7 @@ def process_single_loan_repayment(loan, branch, session_date, setting=None):
         trx_no=unique_id
     )
     
-    # 6. Update loan totals
+    # 7. Update loan totals
     total_interest = LoanHist.all_objects.filter(
         gl_no=loan.gl_no,
         ac_no=loan.ac_no,

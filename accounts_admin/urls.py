@@ -74,4 +74,5 @@ urlpatterns = [
     path('loan-auto-repayment/', views.loan_auto_repayment_list, name='loan_auto_repayment_list'),
     path('loan-auto-repayment/toggle/<uuid:uuid>/', views.loan_auto_repayment_toggle, name='loan_auto_repayment_toggle'),
     path('loan-auto-repayment/update-interest-gl/<uuid:uuid>/', views.loan_auto_repayment_update_interest_gl, name='loan_auto_repayment_update_interest_gl'),
+    path('loan-auto-repayment/update-balance-sheet-gl/<uuid:uuid>/', views.loan_auto_repayment_update_balance_sheet_gl, name='loan_auto_repayment_update_balance_sheet_gl'),
 ]
