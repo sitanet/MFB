@@ -840,13 +840,207 @@ def session_mgt(request, uuid=None):
     else:
         form = EndSession(instance=branch)
 
+    # Check if there are any auto-repayment enabled settings
+    from accounts_admin.models import LoanAutoRepaymentSetting
+    company_branches = Branch.objects.filter(company=branch.company)
+    branch_ids = list(company_branches.values_list('id', flat=True))
+    has_auto_repayment = LoanAutoRepaymentSetting.all_objects.filter(
+        branch_id__in=branch_ids,
+        is_auto_repayment_enabled=True
+    ).exists()
+
     return render(request, 'company/session_mgt.html', {
         'form': form,
-        'branch': branch
+        'branch': branch,
+        'has_auto_repayment': has_auto_repayment
     })
 
 
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+from decimal import Decimal
+import json
 
+
+@login_required(login_url='login')
+@require_http_methods(["GET"])
+def get_pending_loan_repayments(request, uuid):
+    """
+    API endpoint to get pending loan repayments for review before session close.
+    Returns loans with their balances and customer savings balances.
+    """
+    from django.db.models import Sum
+    from accounts_admin.models import Account, LoanAutoRepaymentSetting
+    from loans.models import Loans, LoanHist
+    from transactions.models import Memtrans
+    
+    branch = get_object_or_404(Branch, uuid=uuid)
+    session_date = branch.session_date
+    
+    if not session_date:
+        return JsonResponse({'error': 'No session date set'}, status=400)
+    
+    # Get all enabled auto repayment settings for this branch's company
+    company_branches = Branch.objects.filter(company=branch.company)
+    branch_ids = list(company_branches.values_list('id', flat=True))
+    
+    enabled_settings = LoanAutoRepaymentSetting.all_objects.filter(
+        branch_id__in=branch_ids,
+        is_auto_repayment_enabled=True
+    ).select_related('account')
+    
+    if not enabled_settings.exists():
+        return JsonResponse({'loans': [], 'totals': {'total_principal': 0, 'total_interest': 0, 'total_repayment': 0, 'eligible_count': 0, 'ineligible_count': 0}})
+    
+    gl_to_setting = {setting.account.gl_no: setting for setting in enabled_settings}
+    enabled_gl_numbers = list(gl_to_setting.keys())
+    
+    # Get all active loans with enabled GL numbers that have outstanding balance
+    loans = Loans.all_objects.filter(
+        branch_id__in=branch_ids,
+        gl_no__in=enabled_gl_numbers,
+        disb_status='T',
+        total_loan__gt=0
+    ).select_related('customer')
+    
+    loan_data = []
+    total_principal = Decimal('0.00')
+    total_interest = Decimal('0.00')
+    total_repayment = Decimal('0.00')
+    eligible_count = 0
+    ineligible_count = 0
+    
+    for loan in loans:
+        customer = loan.customer
+        if not customer:
+            continue
+        
+        setting = gl_to_setting.get(loan.gl_no)
+        if not setting or not setting.interest_income_gl_no:
+            continue
+        
+        disbursement_date = loan.disbursement_date
+        if not disbursement_date:
+            continue
+        
+        # Calculate outstanding dues (filtered by branch for multi-tenancy)
+        outstanding_principal = LoanHist.all_objects.filter(
+            branch=loan.branch,
+            gl_no=loan.gl_no,
+            ac_no=loan.ac_no,
+            cycle=loan.cycle,
+            trx_date__gte=disbursement_date,
+            trx_date__lte=session_date,
+            trx_type='LD'
+        ).aggregate(total=Sum('principal'))['total'] or Decimal('0.00')
+        
+        outstanding_interest = LoanHist.all_objects.filter(
+            branch=loan.branch,
+            gl_no=loan.gl_no,
+            ac_no=loan.ac_no,
+            cycle=loan.cycle,
+            trx_date__gte=disbursement_date,
+            trx_date__lte=session_date,
+            trx_type='LD'
+        ).aggregate(total=Sum('interest'))['total'] or Decimal('0.00')
+        
+        # Subtract already paid amounts (filtered by branch for multi-tenancy)
+        paid_principal = LoanHist.all_objects.filter(
+            branch=loan.branch,
+            gl_no=loan.gl_no,
+            ac_no=loan.ac_no,
+            cycle=loan.cycle,
+            trx_type='LP'
+        ).aggregate(total=Sum('principal'))['total'] or Decimal('0.00')
+        
+        paid_interest = LoanHist.all_objects.filter(
+            branch=loan.branch,
+            gl_no=loan.gl_no,
+            ac_no=loan.ac_no,
+            cycle=loan.cycle,
+            trx_type='LP'
+        ).aggregate(total=Sum('interest'))['total'] or Decimal('0.00')
+        
+        net_principal_due = outstanding_principal + paid_principal
+        net_interest_due = outstanding_interest + paid_interest
+        
+        if net_principal_due <= 0 and net_interest_due <= 0:
+            continue
+        
+        # Get customer's savings account balance (filtered by branch for multi-tenancy)
+        customer_balance = Memtrans.all_objects.filter(
+            branch_id__in=branch_ids,
+            gl_no=loan.cust_gl_no,
+            ac_no=customer.ac_no,
+            error='A'
+        ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        
+        loan_due = net_principal_due + net_interest_due
+        is_eligible = customer_balance >= loan_due and customer_balance > 0
+        
+        loan_info = {
+            'loan_id': str(loan.uuid),
+            'customer_name': f"{customer.first_name} {customer.last_name}",
+            'gl_no': loan.gl_no,
+            'ac_no': loan.ac_no,
+            'principal_due': float(net_principal_due),
+            'interest_due': float(net_interest_due),
+            'total_due': float(loan_due),
+            'savings_balance': float(customer_balance),
+            'is_eligible': is_eligible
+        }
+        loan_data.append(loan_info)
+        
+        if is_eligible:
+            total_principal += net_principal_due
+            total_interest += net_interest_due
+            total_repayment += loan_due
+            eligible_count += 1
+        else:
+            ineligible_count += 1
+    
+    return JsonResponse({
+        'loans': loan_data,
+        'totals': {
+            'total_principal': float(total_principal),
+            'total_interest': float(total_interest),
+            'total_repayment': float(total_repayment),
+            'eligible_count': eligible_count,
+            'ineligible_count': ineligible_count
+        }
+    })
+
+
+@login_required(login_url='login')
+@require_http_methods(["POST"])
+def process_loan_repayments(request, uuid):
+    """
+    API endpoint to process loan repayments after user review.
+    Only processes eligible loans (sufficient savings balance).
+    """
+    from django.db import transaction
+    from .signals import process_auto_loan_repayments
+    
+    branch = get_object_or_404(Branch, uuid=uuid)
+    
+    try:
+        with transaction.atomic():
+            # Process the repayments using existing function
+            process_auto_loan_repayments(branch)
+            
+            # Update session status to Closed
+            branch.session_status = 'Closed'
+            branch.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Loan repayments processed and session closed successfully!'
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
 
 
 from django.contrib.auth import get_user_model

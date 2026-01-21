@@ -34,6 +34,8 @@ urlpatterns = [
     # Session Management (client-side, requires client login)
     path('company/session_mgt/', views.session_mgt, name='session_mgt'),
     path('session_mgt/<uuid:uuid>/update/', views.session_mgt, name='session_mgt'),
+    path('session_mgt/<uuid:uuid>/pending-repayments/', views.get_pending_loan_repayments, name='get_pending_loan_repayments'),
+    path('session_mgt/<uuid:uuid>/process-repayments/', views.process_loan_repayments, name='process_loan_repayments'),
     
     # Other URLs
     path('users/', views.display_users_and_branches, name='display_users_and_branches'),

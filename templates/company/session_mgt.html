@@ -8,7 +8,7 @@
                 </div>
           </div>
           <!-- form -->
-          <form method="POST" class="chart_of_account p-5 shadow-lg rounded rounded-5">
+          <form method="POST" class="chart_of_account p-5 shadow-lg rounded rounded-5" id="sessionForm">
             {% csrf_token %}
             {% if messages %}
     <ul class="messages">
@@ -25,7 +25,7 @@
                     </div>
                     <div class="form-group col-md-4">
                           <label for="general_ledger_accout_name">Session Status </label>
-                          <select class="form-control bg-light" name="session_status">
+                          <select class="form-control bg-light" name="session_status" id="sessionStatus">
                             <option value="Open" {% if form.instance.session_status == 'Open' %}selected{% endif %}>Open</option>
                             <option value="Closed" {% if form.instance.session_status == 'Closed' %}selected{% endif %}>Closed</option>
                         </select>
@@ -41,7 +41,7 @@
                     <button type="submit"
                           class="btn w- btn-success mt-4 shadow-sm">Open</button>
                     {% else %}
-                    <button type="submit"
+                    <button type="button" id="closeSessionBtn"
                           class="btn w- btn-success mt-4 shadow-sm">Closed</button>
                     {% endif %}
 
@@ -63,6 +63,243 @@
   
   
     </div>
-  
+
+<!-- Loan Repayment Modal -->
+<div class="modal fade" id="loanRepaymentModal" tabindex="-1" role="dialog" aria-labelledby="loanRepaymentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="loanRepaymentModalLabel">
+                    <i class="fa fa-calculator mr-2"></i>Auto Loan Repayment Preview
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="loadingSpinner" class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="sr-only">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading loan repayments...</p>
+                </div>
+                
+                <div id="repaymentContent" style="display: none;">
+                    <!-- Summary Cards -->
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="card bg-success text-white">
+                                <div class="card-body text-center">
+                                    <h6>Eligible Loans</h6>
+                                    <h3 id="eligibleCount">0</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-danger text-white">
+                                <div class="card-body text-center">
+                                    <h6>Ineligible (Low Balance)</h6>
+                                    <h3 id="ineligibleCount">0</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-info text-white">
+                                <div class="card-body text-center">
+                                    <h6>Total Principal</h6>
+                                    <h4 id="totalPrincipal">0.00</h4>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-warning text-dark">
+                                <div class="card-body text-center">
+                                    <h6>Total Interest</h6>
+                                    <h4 id="totalInterest">0.00</h4>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <div class="card bg-primary text-white">
+                                <div class="card-body text-center">
+                                    <h5>Total Repayment Amount</h5>
+                                    <h2 id="totalRepayment">0.00</h2>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="fa fa-info-circle mr-2"></i>
+                        <strong>Note:</strong> Only loans with sufficient savings balance (marked in green) will be processed. 
+                        Loans with insufficient balance (marked in red) will be automatically skipped.
+                    </div>
+                    
+                    <!-- Loans Table -->
+                    <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                        <table class="table table-striped table-bordered table-sm">
+                            <thead class="thead-dark" style="position: sticky; top: 0;">
+                                <tr>
+                                    <th>#</th>
+                                    <th>Customer Name</th>
+                                    <th>GL No</th>
+                                    <th>A/C No</th>
+                                    <th class="text-right">Principal Due</th>
+                                    <th class="text-right">Interest Due</th>
+                                    <th class="text-right">Total Due</th>
+                                    <th class="text-right">Savings Balance</th>
+                                    <th class="text-center">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="loansTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div id="noLoansMessage" class="text-center py-4" style="display: none;">
+                        <i class="fa fa-check-circle fa-3x text-success mb-3"></i>
+                        <h5>No pending loan repayments found</h5>
+                        <p class="text-muted">All loans are up to date or no auto-repayment is enabled.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                    <i class="fa fa-times mr-1"></i>Cancel
+                </button>
+                <button type="button" class="btn btn-primary" id="processRepaymentBtn">
+                    <i class="fa fa-save mr-1"></i>Process Repayments & Close Session
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const closeSessionBtn = document.getElementById('closeSessionBtn');
+    const sessionForm = document.getElementById('sessionForm');
+    const hasAutoRepayment = {{ has_auto_repayment|yesno:"true,false" }};
+    const branchUuid = '{{ branch.uuid }}';
+    
+    if (closeSessionBtn) {
+        closeSessionBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            if (hasAutoRepayment) {
+                // Show modal and load repayment data
+                $('#loanRepaymentModal').modal('show');
+                loadPendingRepayments();
+            } else {
+                // No auto repayment configured, submit form directly
+                document.getElementById('sessionStatus').value = 'Closed';
+                sessionForm.submit();
+            }
+        });
+    }
+    
+    function loadPendingRepayments() {
+        document.getElementById('loadingSpinner').style.display = 'block';
+        document.getElementById('repaymentContent').style.display = 'none';
+        
+        fetch(`/company/session_mgt/${branchUuid}/pending-repayments/`)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('loadingSpinner').style.display = 'none';
+                document.getElementById('repaymentContent').style.display = 'block';
+                
+                if (data.error) {
+                    alert('Error: ' + data.error);
+                    return;
+                }
+                
+                // Update totals
+                document.getElementById('eligibleCount').textContent = data.totals.eligible_count;
+                document.getElementById('ineligibleCount').textContent = data.totals.ineligible_count;
+                document.getElementById('totalPrincipal').textContent = formatNumber(data.totals.total_principal);
+                document.getElementById('totalInterest').textContent = formatNumber(data.totals.total_interest);
+                document.getElementById('totalRepayment').textContent = formatNumber(data.totals.total_repayment);
+                
+                // Populate table
+                const tbody = document.getElementById('loansTableBody');
+                tbody.innerHTML = '';
+                
+                if (data.loans.length === 0) {
+                    document.getElementById('noLoansMessage').style.display = 'block';
+                    document.querySelector('.table-responsive').style.display = 'none';
+                } else {
+                    document.getElementById('noLoansMessage').style.display = 'none';
+                    document.querySelector('.table-responsive').style.display = 'block';
+                    
+                    data.loans.forEach((loan, index) => {
+                        const row = document.createElement('tr');
+                        row.className = loan.is_eligible ? 'table-success' : 'table-danger';
+                        row.innerHTML = `
+                            <td>${index + 1}</td>
+                            <td>${loan.customer_name}</td>
+                            <td>${loan.gl_no}</td>
+                            <td>${loan.ac_no}</td>
+                            <td class="text-right">${formatNumber(loan.principal_due)}</td>
+                            <td class="text-right">${formatNumber(loan.interest_due)}</td>
+                            <td class="text-right"><strong>${formatNumber(loan.total_due)}</strong></td>
+                            <td class="text-right">${formatNumber(loan.savings_balance)}</td>
+                            <td class="text-center">
+                                ${loan.is_eligible 
+                                    ? '<span class="badge badge-success"><i class="fa fa-check"></i> Eligible</span>' 
+                                    : '<span class="badge badge-danger"><i class="fa fa-times"></i> Insufficient</span>'}
+                            </td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                }
+            })
+            .catch(error => {
+                document.getElementById('loadingSpinner').style.display = 'none';
+                alert('Error loading repayment data: ' + error);
+            });
+    }
+    
+    function formatNumber(num) {
+        return new Intl.NumberFormat('en-NG', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        }).format(num);
+    }
+    
+    // Process repayments button
+    document.getElementById('processRepaymentBtn').addEventListener('click', function() {
+        const btn = this;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa fa-spinner fa-spin mr-1"></i>Processing...';
+        
+        fetch(`/company/session_mgt/${branchUuid}/process-repayments/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                window.location.reload();
+            } else {
+                alert('Error: ' + (data.error || 'Failed to process repayments'));
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa fa-save mr-1"></i>Process Repayments & Close Session';
+            }
+        })
+        .catch(error => {
+            alert('Error: ' + error);
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa fa-save mr-1"></i>Process Repayments & Close Session';
+        });
+    });
+});
+</script>
 
 {% endblock %}

@@ -243,21 +243,11 @@ def track_session_status_change(sender, instance, **kwargs):
 @receiver(post_save, sender=Branch)
 def process_auto_loan_repayments_on_session_close(sender, instance, created, **kwargs):
     """
-    Process automatic loan repayments when session is closed.
-    Only processes loans with GL numbers that have auto repayment enabled.
+    Previously processed automatic loan repayments when session is closed.
+    Now disabled - repayments are processed via modal review in session_mgt view.
     """
-    if created:
-        return
-    
-    old_status = getattr(instance, '_old_session_status', None)
-    new_status = instance.session_status
-    
-    # Only trigger when session changes from Open to Closed
-    if old_status == 'Open' and new_status == 'Closed':
-        try:
-            process_auto_loan_repayments(instance)
-        except Exception as e:
-            logger.error(f"Error processing auto loan repayments for branch {instance.branch_name}: {str(e)}")
+    # Auto-processing disabled - now handled via modal review before session close
+    pass
 
 
 def process_auto_loan_repayments(branch):
@@ -363,8 +353,9 @@ def process_single_loan_repayment(loan, branch, session_date, setting=None):
         logger.warning(f"Loan {loan.gl_no}-{loan.ac_no} has no disbursement date")
         return False
     
-    # Get total due from LoanHist (scheduled repayments)
+    # Get total due from LoanHist (scheduled repayments) - filtered by branch for multi-tenancy
     outstanding_principal = LoanHist.all_objects.filter(
+        branch=loan.branch,
         gl_no=loan.gl_no,
         ac_no=loan.ac_no,
         cycle=loan.cycle,
@@ -374,6 +365,7 @@ def process_single_loan_repayment(loan, branch, session_date, setting=None):
     ).aggregate(total=Sum('principal'))['total'] or Decimal('0.00')
     
     outstanding_interest = LoanHist.all_objects.filter(
+        branch=loan.branch,
         gl_no=loan.gl_no,
         ac_no=loan.ac_no,
         cycle=loan.cycle,
@@ -382,8 +374,9 @@ def process_single_loan_repayment(loan, branch, session_date, setting=None):
         trx_type='LD'
     ).aggregate(total=Sum('interest'))['total'] or Decimal('0.00')
     
-    # Subtract already paid amounts (LP entries)
+    # Subtract already paid amounts (LP entries) - filtered by branch for multi-tenancy
     paid_principal = LoanHist.all_objects.filter(
+        branch=loan.branch,
         gl_no=loan.gl_no,
         ac_no=loan.ac_no,
         cycle=loan.cycle,
@@ -391,6 +384,7 @@ def process_single_loan_repayment(loan, branch, session_date, setting=None):
     ).aggregate(total=Sum('principal'))['total'] or Decimal('0.00')
     
     paid_interest = LoanHist.all_objects.filter(
+        branch=loan.branch,
         gl_no=loan.gl_no,
         ac_no=loan.ac_no,
         cycle=loan.cycle,
@@ -405,8 +399,9 @@ def process_single_loan_repayment(loan, branch, session_date, setting=None):
         logger.info(f"Loan {loan.gl_no}-{loan.ac_no} has no outstanding dues")
         return False
     
-    # Get customer's savings account balance (GL starting with 2)
+    # Get customer's savings account balance - filtered by branch for multi-tenancy
     customer_balance = Memtrans.all_objects.filter(
+        branch=loan.branch,
         gl_no=loan.cust_gl_no,
         ac_no=customer.ac_no,
         error='A'
@@ -555,8 +550,9 @@ def process_single_loan_repayment(loan, branch, session_date, setting=None):
                 trx_type='AUTO_LP'
             )
     
-    # 6. Create LoanHist entry
+    # 6. Create LoanHist entry - filtered by branch for multi-tenancy
     lp_count = LoanHist.all_objects.filter(
+        branch=loan.branch,
         gl_no=loan.gl_no,
         ac_no=loan.ac_no,
         cycle=loan.cycle,
@@ -578,14 +574,16 @@ def process_single_loan_repayment(loan, branch, session_date, setting=None):
         trx_no=unique_id
     )
     
-    # 7. Update loan totals
+    # 7. Update loan totals - filtered by branch for multi-tenancy
     total_interest = LoanHist.all_objects.filter(
+        branch=loan.branch,
         gl_no=loan.gl_no,
         ac_no=loan.ac_no,
         cycle=loan.cycle
     ).aggregate(total=Sum('interest'))['total'] or Decimal('0.00')
     
     total_principal = LoanHist.all_objects.filter(
+        branch=loan.branch,
         gl_no=loan.gl_no,
         ac_no=loan.ac_no,
         cycle=loan.cycle
