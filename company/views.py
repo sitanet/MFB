@@ -786,8 +786,13 @@ def update_branch(request, uuid):
 def company_delete(request, uuid):
     company = get_object_or_404(Company, uuid=uuid)
     if request.method == 'POST':
-        company.delete()
-        return redirect('company_list')
+        try:
+            company.delete()
+            messages.success(request, f"Company '{company.company_name}' deleted successfully.")
+            return redirect('company_list')
+        except ValueError as e:
+            messages.error(request, str(e))
+            return redirect('company_list')
     return render(request, 'company/company_confirm_delete.html', {'company': company})
 
 
@@ -795,8 +800,13 @@ def company_delete(request, uuid):
 def branch_delete(request, uuid):
     branch = get_object_or_404(Branch, uuid=uuid)
     if request.method == 'POST':
-        branch.delete()
-        return redirect('branch_list')
+        try:
+            branch.delete()
+            messages.success(request, f"Branch '{branch.branch_name}' deleted successfully.")
+            return redirect('branch_list')
+        except ValueError as e:
+            messages.error(request, str(e))
+            return redirect('branch_list')
     return render(request, 'branch/branch_confirm_delete.html', {'branch': branch})
 
 from .forms import EndSession

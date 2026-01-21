@@ -300,6 +300,17 @@
     </nav>
 
     <div class="container">
+        <!-- Messages Display -->
+        {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert" style="border-radius: var(--border-radius); margin-bottom: 1rem; {% if message.tags == 'error' %}background-color: #fef2f2; border-color: #fecaca; color: #dc2626;{% elif message.tags == 'success' %}background-color: #f0fdf4; border-color: #bbf7d0; color: #16a34a;{% endif %}">
+            <i class="fas {% if message.tags == 'error' %}fa-exclamation-circle{% elif message.tags == 'success' %}fa-check-circle{% else %}fa-info-circle{% endif %} me-2"></i>
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+        {% endif %}
+
         <div class="page-header">
             <h1>Branch Locations</h1>
             <a href="{% url 'create_branch' %}" class="btn-create">
