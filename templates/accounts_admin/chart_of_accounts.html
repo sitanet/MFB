@@ -86,7 +86,7 @@
             <ul id="account-tree">
                 {% for account in accounts %}
                 <li>
-                    {% if account.account_set.all %}
+                    {% if account.get_children_ordered %}
                     <span class="toggle" onclick="toggleChildren(this)">+</span>
                     {% endif %}
                     <span class="gl-name" 
@@ -102,9 +102,9 @@
                     <a href="{% url 'update_chart_of_account' account.uuid %}">Edit</a>
                     <a href="{% url 'delete_chart_of_account' account.uuid %}">Delete</a>
                     <ul class="children" style="display:none;">
-                        {% for child in account.account_set.all %}
+                        {% for child in account.get_children_ordered %}
                         <li class="child">
-                            {% if child.account_set.all %}
+                            {% if child.get_children_ordered %}
                             <span class="toggle" onclick="toggleChildren(this)">+</span>
                             {% endif %}
                             <span class="gl-name" 
@@ -120,9 +120,9 @@
                             <a href="{% url 'update_chart_of_account' child.uuid %}">Edit</a>
                             <a href="{% url 'delete_chart_of_account' child.uuid %}">Delete</a>
                             <ul class="children" style="display:none;">
-                                {% for grandchild in child.account_set.all %}
+                                {% for grandchild in child.get_children_ordered %}
                                 <li class="grandchild">
-                                    {% if grandchild.account_set.all %}
+                                    {% if grandchild.get_children_ordered %}
                                     <span class="toggle" onclick="toggleChildren(this)">+</span>
                                     {% endif %}
                                     <span class="gl-name" 
@@ -138,9 +138,9 @@
                                     <a href="{% url 'update_chart_of_account' grandchild.uuid %}">Edit</a>
                                     <a class="submit" href="{% url 'delete_chart_of_account' grandchild.uuid %}">Delete</a>
                                     <ul class="children" style="display:none;">
-                                        {% for greatgrandchild in grandchild.account_set.all %}
+                                        {% for greatgrandchild in grandchild.get_children_ordered %}
                                     <li class="greatgrandchild">
-    {% if greatgrandchild.account_set.all %}
+    {% if greatgrandchild.get_children_ordered %}
     <span class="toggle" onclick="toggleChildren(this)">+</span>
     {% endif %}
     <span class="gl-name" 
@@ -158,9 +158,9 @@
 
     <!-- 🔽 New nested level -->
     <ul class="children" style="display:none;">
-        {% for gggrandchild in greatgrandchild.account_set.all %}
+        {% for gggrandchild in greatgrandchild.get_children_ordered %}
         <li class="greatgreatgrandchild">
-            {% if gggrandchild.account_set.all %}
+            {% if gggrandchild.get_children_ordered %}
             <span class="toggle" onclick="toggleChildren(this)">+</span>
             {% endif %}
             <span class="gl-name" 

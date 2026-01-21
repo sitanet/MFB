@@ -105,9 +105,14 @@ class Account(models.Model):
             ['branch', 'gl_name'],
             ['branch', 'gl_no'],
         ]
+        ordering = ['gl_no']
 
     def has_related_child_accounts(self):
         return Account.all_objects.filter(header=self).exists()
+
+    def get_children_ordered(self):
+        """Get child accounts ordered by gl_no"""
+        return Account.all_objects.filter(header=self).order_by('gl_no')
 
     def __str__(self):
         return f"{self.gl_name} ({self.gl_no})"
