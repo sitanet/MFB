@@ -1,6 +1,10 @@
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 from .models import Branch
+from decimal import Decimal
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 # Default Chart of Accounts data - inserted when a new branch is created
@@ -219,3 +223,327 @@ def create_default_accounts(sender, instance, created, **kwargs):
             if parent_gl_no and parent_gl_no in created_accounts:
                 account.header = created_accounts[parent_gl_no]
                 account.save()
+
+
+# ==================== AUTO LOAN REPAYMENT ON SESSION CLOSE ====================
+
+@receiver(pre_save, sender=Branch)
+def track_session_status_change(sender, instance, **kwargs):
+    """Track if session_status is changing from Open to Closed"""
+    if instance.pk:
+        try:
+            old_instance = Branch.objects.get(pk=instance.pk)
+            instance._old_session_status = old_instance.session_status
+        except Branch.DoesNotExist:
+            instance._old_session_status = None
+    else:
+        instance._old_session_status = None
+
+
+@receiver(post_save, sender=Branch)
+def process_auto_loan_repayments_on_session_close(sender, instance, created, **kwargs):
+    """
+    Process automatic loan repayments when session is closed.
+    Only processes loans with GL numbers that have auto repayment enabled.
+    """
+    if created:
+        return
+    
+    old_status = getattr(instance, '_old_session_status', None)
+    new_status = instance.session_status
+    
+    # Only trigger when session changes from Open to Closed
+    if old_status == 'Open' and new_status == 'Closed':
+        try:
+            process_auto_loan_repayments(instance)
+        except Exception as e:
+            logger.error(f"Error processing auto loan repayments for branch {instance.branch_name}: {str(e)}")
+
+
+def process_auto_loan_repayments(branch):
+    """
+    Process automatic loan repayments for all enabled loan GL accounts.
+    Debits customer savings account (starting with 2) and credits loan account.
+    """
+    from django.db import transaction
+    from django.db.models import Sum
+    from accounts_admin.models import Account, LoanAutoRepaymentSetting
+    from loans.models import Loans, LoanHist
+    from transactions.models import Memtrans
+    from transactions.utils import generate_loan_repayment_id
+    
+    session_date = branch.session_date
+    if not session_date:
+        logger.warning(f"Branch {branch.branch_name} has no session date set")
+        return
+    
+    # Get all enabled auto repayment settings for this branch's company
+    company_branches = Branch.objects.filter(company=branch.company)
+    branch_ids = list(company_branches.values_list('id', flat=True))
+    
+    enabled_settings = LoanAutoRepaymentSetting.all_objects.filter(
+        branch_id__in=branch_ids,
+        is_auto_repayment_enabled=True
+    ).select_related('account')
+    
+    if not enabled_settings.exists():
+        logger.info(f"No auto repayment settings enabled for branch {branch.branch_name}")
+        return
+    
+    enabled_gl_numbers = [setting.account.gl_no for setting in enabled_settings]
+    logger.info(f"Processing auto repayments for GL numbers: {enabled_gl_numbers}")
+    
+    # Get all active loans with enabled GL numbers that have outstanding balance
+    loans = Loans.all_objects.filter(
+        branch_id__in=branch_ids,
+        gl_no__in=enabled_gl_numbers,
+        disb_status='T',
+        total_loan__gt=0
+    ).select_related('customer')
+    
+    processed_count = 0
+    skipped_count = 0
+    
+    for loan in loans:
+        try:
+            with transaction.atomic():
+                result = process_single_loan_repayment(loan, branch, session_date)
+                if result:
+                    processed_count += 1
+                else:
+                    skipped_count += 1
+        except Exception as e:
+            logger.error(f"Error processing loan {loan.gl_no}-{loan.ac_no}: {str(e)}")
+            skipped_count += 1
+    
+    logger.info(f"Auto loan repayment completed: {processed_count} processed, {skipped_count} skipped")
+
+
+def process_single_loan_repayment(loan, branch, session_date):
+    """
+    Process repayment for a single loan.
+    Returns True if processed, False if skipped.
+    """
+    from django.db.models import Sum
+    from accounts_admin.models import Account
+    from loans.models import LoanHist
+    from transactions.models import Memtrans
+    from transactions.utils import generate_loan_repayment_id
+    
+    customer = loan.customer
+    if not customer:
+        logger.warning(f"Loan {loan.gl_no}-{loan.ac_no} has no customer")
+        return False
+    
+    # Get the loan account settings
+    try:
+        account = Account.all_objects.get(gl_no=loan.gl_no, branch=loan.branch)
+    except Account.DoesNotExist:
+        logger.warning(f"Account not found for GL {loan.gl_no}")
+        return False
+    
+    # Check if all required loan parameters are set
+    if not all([account.int_to_recev_gl_dr, account.int_to_recev_ac_dr, 
+                account.unearned_int_inc_gl, account.unearned_int_inc_ac]):
+        logger.warning(f"Loan {loan.gl_no}-{loan.ac_no} missing required account parameters")
+        return False
+    
+    # Calculate outstanding principal and interest due up to session date
+    disbursement_date = loan.disbursement_date
+    if not disbursement_date:
+        logger.warning(f"Loan {loan.gl_no}-{loan.ac_no} has no disbursement date")
+        return False
+    
+    # Get total due from LoanHist (scheduled repayments)
+    outstanding_principal = LoanHist.all_objects.filter(
+        gl_no=loan.gl_no,
+        ac_no=loan.ac_no,
+        cycle=loan.cycle,
+        trx_date__gte=disbursement_date,
+        trx_date__lte=session_date,
+        trx_type='LD'  # Loan Due entries
+    ).aggregate(total=Sum('principal'))['total'] or Decimal('0.00')
+    
+    outstanding_interest = LoanHist.all_objects.filter(
+        gl_no=loan.gl_no,
+        ac_no=loan.ac_no,
+        cycle=loan.cycle,
+        trx_date__gte=disbursement_date,
+        trx_date__lte=session_date,
+        trx_type='LD'
+    ).aggregate(total=Sum('interest'))['total'] or Decimal('0.00')
+    
+    # Subtract already paid amounts (LP entries)
+    paid_principal = LoanHist.all_objects.filter(
+        gl_no=loan.gl_no,
+        ac_no=loan.ac_no,
+        cycle=loan.cycle,
+        trx_type='LP'  # Loan Payment entries (negative values)
+    ).aggregate(total=Sum('principal'))['total'] or Decimal('0.00')
+    
+    paid_interest = LoanHist.all_objects.filter(
+        gl_no=loan.gl_no,
+        ac_no=loan.ac_no,
+        cycle=loan.cycle,
+        trx_type='LP'
+    ).aggregate(total=Sum('interest'))['total'] or Decimal('0.00')
+    
+    # Calculate net due (LP entries are negative so we add them)
+    net_principal_due = outstanding_principal + paid_principal
+    net_interest_due = outstanding_interest + paid_interest
+    
+    if net_principal_due <= 0 and net_interest_due <= 0:
+        logger.info(f"Loan {loan.gl_no}-{loan.ac_no} has no outstanding dues")
+        return False
+    
+    # Get customer's savings account balance (GL starting with 2)
+    customer_balance = Memtrans.all_objects.filter(
+        gl_no=loan.cust_gl_no,
+        ac_no=customer.ac_no,
+        error='A'
+    ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+    
+    total_due = net_principal_due + net_interest_due
+    
+    if customer_balance <= 0:
+        logger.info(f"Customer {customer.ac_no} has insufficient balance ({customer_balance}) for loan repayment")
+        return False
+    
+    # Determine how much can be paid (up to available balance)
+    amount_to_pay = min(customer_balance, total_due)
+    
+    if amount_to_pay <= 0:
+        return False
+    
+    # Proportionally split between principal and interest
+    if total_due > 0:
+        principal_ratio = net_principal_due / total_due if total_due > 0 else Decimal('0')
+        principal_to_pay = (amount_to_pay * principal_ratio).quantize(Decimal('0.01'))
+        interest_to_pay = amount_to_pay - principal_to_pay
+    else:
+        principal_to_pay = Decimal('0.00')
+        interest_to_pay = Decimal('0.00')
+    
+    # Generate unique transaction ID
+    unique_id = generate_loan_repayment_id()
+    
+    # Create transactions
+    # 1. Debit customer savings account (principal)
+    Memtrans.all_objects.create(
+        branch=branch,
+        cust_branch=loan.branch,
+        gl_no=loan.cust_gl_no,
+        ac_no=customer.ac_no,
+        cycle=loan.cycle,
+        amount=-principal_to_pay,
+        description=f'Auto Loan Repayment Principal - {customer.first_name} {customer.last_name}',
+        error='A',
+        type='C',
+        account_type='S',
+        ses_date=session_date,
+        app_date=session_date,
+        trx_no=unique_id,
+        code='ALP',
+        trx_type='AUTO_LP'
+    )
+    
+    # 2. Credit loan account (principal)
+    Memtrans.all_objects.create(
+        branch=branch,
+        cust_branch=loan.branch,
+        gl_no=loan.gl_no,
+        ac_no=loan.ac_no,
+        cycle=loan.cycle,
+        amount=principal_to_pay,
+        description=f'Auto Loan Repayment Principal - {customer.first_name} {customer.last_name}',
+        error='A',
+        type='D',
+        account_type='L',
+        ses_date=session_date,
+        app_date=session_date,
+        trx_no=unique_id,
+        code='ALP',
+        trx_type='AUTO_LP'
+    )
+    
+    # 3. Debit customer savings account (interest)
+    if interest_to_pay > 0:
+        Memtrans.all_objects.create(
+            branch=branch,
+            cust_branch=loan.branch,
+            gl_no=loan.cust_gl_no,
+            ac_no=customer.ac_no,
+            cycle=loan.cycle,
+            amount=-interest_to_pay,
+            description=f'Auto Loan Repayment Interest - {customer.first_name} {customer.last_name}',
+            error='A',
+            type='C',
+            account_type='S',
+            ses_date=session_date,
+            app_date=session_date,
+            trx_no=unique_id,
+            code='ALI',
+            trx_type='AUTO_LP'
+        )
+        
+        # 4. Credit interest income account
+        Memtrans.all_objects.create(
+            branch=branch,
+            cust_branch=loan.branch,
+            gl_no=account.interest_gl or account.int_to_recev_gl_dr,
+            ac_no=account.interest_ac or account.int_to_recev_ac_dr,
+            cycle=loan.cycle,
+            amount=interest_to_pay,
+            description=f'Auto Loan Repayment Interest - {customer.first_name} {customer.last_name}',
+            error='A',
+            type='D',
+            account_type='I',
+            ses_date=session_date,
+            app_date=session_date,
+            trx_no=unique_id,
+            code='ALI',
+            trx_type='AUTO_LP'
+        )
+    
+    # 5. Create LoanHist entry
+    lp_count = LoanHist.all_objects.filter(
+        gl_no=loan.gl_no,
+        ac_no=loan.ac_no,
+        cycle=loan.cycle,
+        trx_type='LP'
+    ).count()
+    
+    LoanHist.all_objects.create(
+        branch=loan.branch,
+        gl_no=loan.gl_no,
+        ac_no=loan.ac_no,
+        cycle=loan.cycle,
+        period=lp_count + 1,
+        trx_date=session_date,
+        trx_type='LP',
+        trx_naration='Auto Loan Repayment',
+        principal=-principal_to_pay,
+        interest=-interest_to_pay,
+        penalty=Decimal('0.00'),
+        trx_no=unique_id
+    )
+    
+    # 6. Update loan totals
+    total_interest = LoanHist.all_objects.filter(
+        gl_no=loan.gl_no,
+        ac_no=loan.ac_no,
+        cycle=loan.cycle
+    ).aggregate(total=Sum('interest'))['total'] or Decimal('0.00')
+    
+    total_principal = LoanHist.all_objects.filter(
+        gl_no=loan.gl_no,
+        ac_no=loan.ac_no,
+        cycle=loan.cycle
+    ).aggregate(total=Sum('principal'))['total'] or Decimal('0.00')
+    
+    loan.total_loan = total_principal + total_interest
+    loan.total_interest = total_interest
+    loan.save()
+    
+    logger.info(f"Auto repayment processed for loan {loan.gl_no}-{loan.ac_no}: Principal={principal_to_pay}, Interest={interest_to_pay}")
+    return True
