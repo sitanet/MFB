@@ -263,12 +263,14 @@ def deposit(request, uuid):
         'last_transactions': Memtrans.all_objects.filter(
             gl_no=customer.gl_no,
             ac_no=customer.ac_no,
-            error='A'
+            error='A',
+            branch=user_branch
         ).order_by('-sys_date')[:50],
         'cashier_transactions': Memtrans.all_objects.filter(
             gl_no=cashier_customer.gl_no if cashier_customer else None,
             ac_no=cashier_customer.ac_no if cashier_customer else None,
-            error='A'
+            error='A',
+            branch=user_branch
         ).order_by('-sys_date')[:50] if cashier_customer else [],
     })
 
@@ -472,12 +474,14 @@ def withdraw(request, uuid):
         'last_transactions': Memtrans.all_objects.filter(
             gl_no=customer.gl_no,
             ac_no=customer.ac_no,
-            error='A'
+            error='A',
+            branch=user_branch
         ).order_by('-sys_date')[:50],
         'cashier_transactions': Memtrans.all_objects.filter(
             gl_no=cashier_customer.gl_no if cashier_customer else None,
             ac_no=cashier_customer.ac_no if cashier_customer else None,
-            error='A'
+            error='A',
+            branch=user_branch
         ).order_by('-sys_date')[:50] if cashier_customer else [],
     })
 
