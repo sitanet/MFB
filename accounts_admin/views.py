@@ -180,7 +180,7 @@ def create_account_officer(request):
     user_company = user_branch.company if user_branch else None
 
     # Filter Region based on company
-    officer = Region.objects.filter(branch__company=user_company) if user_company else []
+    region_queryset = Region.objects.filter(branch__company=user_company) if user_company else Region.objects.none()
 
     # Filter Users who are associated with branches having the same company
     from accounts.utils import get_company_branch_ids_all
@@ -189,6 +189,7 @@ def create_account_officer(request):
 
     if request.method == "POST":
         form = CreditOfficerForm(request.POST)
+        form.fields['region'].queryset = region_queryset
         if form.is_valid():
             user_value = form.cleaned_data.get('user')
             if Account_Officer.objects.filter(user=user_value).exists():
@@ -200,10 +201,11 @@ def create_account_officer(request):
                 return redirect('account_officer_list')
     else:
         form = CreditOfficerForm()
+        form.fields['region'].queryset = region_queryset
 
     return render(request, 'accounts_admin/account_officer/create_account_officer.html', {
         'form': form,
-        'officer': officer,
+        'officer': region_queryset,
         'user_officer': user_officer,
     })
 
