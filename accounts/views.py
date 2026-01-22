@@ -157,13 +157,19 @@ def registerUser(request):
             user.cashier_gl = form.cleaned_data.get('cashier_gl') or None
             user.cashier_ac = form.cleaned_data.get('cashier_ac') or None
 
+            # Set user as inactive until email is verified
+            user.is_active = False
             user.save()
             
-            # Get branch name for success message
-            user_branch = get_branch_from_vendor_db(user.branch_id)
-            branch_name = user_branch.branch_name if user_branch else "Unknown Branch"
+            # Send verification email
+            mail_subject = 'Please activate your account'
+            email_template = 'accounts/email/accounts_verification_email.html'
+            try:
+                send_verification_email(request, user, mail_subject, email_template)
+                messages.success(request, f'User {user.username} registered successfully! A verification email has been sent to {user.email}.')
+            except Exception as e:
+                messages.warning(request, f'User {user.username} registered but failed to send verification email: {str(e)}')
             
-            messages.success(request, f'User {user.username} registered successfully in {branch_name}!')
             return redirect('display_all_user')
         else:
             messages.error(request, 'There were errors in the form.')
@@ -1099,6 +1105,7 @@ def activate(request, uidb64, token):
         user = None
 
     if user is not None and default_token_generator.check_token(user, token):
+        user.is_active = True
         user.verified = True
         user.save()
         auth.login(request, user)
