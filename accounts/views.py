@@ -180,7 +180,7 @@ def registerUser(request):
         'form': form,
         'branches': allowed_branches,
     }
-    return render(request, 'accounts/registerUser.html', context)
+    return render(request, 'accounts/registeruser.html', context)
 
 
 # Alias for compatibility
