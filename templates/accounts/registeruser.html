@@ -34,18 +34,19 @@
                               <input type="text" name="branch" class="form-control bg-light" value="{{form.branch.value}}">
                               
                            </div> -->
-<select class="form-control bg-light" id="branch_display" disabled>
-    {% for branch in branches %}
-        <option value="{{ branch.id }}" 
-            {% if branch.id == form.branch.value %}selected{% endif %}>
-            {{ branch.branch_name }}
-        </option>
-    {% endfor %}
-</select>
-
-<!-- hidden field for actual form submission -->
-<input type="hidden" name="branch" 
-       value="{% for branch in branches %}{% if branch.id == form.branch.value %}{{ branch.id }}{% endif %}{% endfor %}">
+<div class="form-group col-md-6">
+    <label for="branch">Branch</label>
+    <select class="form-control bg-light" name="branch" id="branch" required>
+        <option value="">Select Branch</option>
+        {% for branch in branches %}
+            <option value="{{ branch.id }}" 
+                {% if form.branch.value|stringformat:"s" == branch.id|stringformat:"s" %}selected{% endif %}
+                {% if branches|length == 1 %}selected{% endif %}>
+                {{ branch.branch_name }}
+            </option>
+        {% endfor %}
+    </select>
+</div>
 
 
 
