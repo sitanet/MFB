@@ -8,6 +8,9 @@ class MemtransForm(forms.ModelForm):
     gl_no = forms.CharField(max_length=100, widget=forms.TextInput(attrs={'readonly': 'readonly'}))
     ac_no = forms.CharField(max_length=100, widget=forms.TextInput(attrs={'readonly': 'readonly'}))
     
+    app_date = forms.DateField(required=True, widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}))
+    ses_date = forms.DateField(required=True, widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}))
+    
     disbursement_date = forms.DateField(required=False)
     label_select = forms.CharField(max_length=100, required=False, widget=forms.TextInput(attrs={'readonly': 'readonly'}))
     label_there = forms.CharField(max_length=100, required=False, widget=forms.TextInput(attrs={'readonly': 'readonly'}))

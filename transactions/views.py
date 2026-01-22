@@ -403,8 +403,7 @@ def withdraw(request, uuid):
                     if sum_of_amounts is not None:
                         Customer.all_objects.filter(
                             gl_no=customer.gl_no, 
-                            ac_no=customer.ac_no,
-                            branch=customer_branch
+                            ac_no=customer.ac_no
                         ).update(balance=sum_of_amounts)
                         customer.balance = sum_of_amounts
 
@@ -418,8 +417,7 @@ def withdraw(request, uuid):
                     if sum_of_amounts is not None:
                         Customer.all_objects.filter(
                             gl_no=cashier_customer.gl_no,
-                            ac_no=cashier_customer.ac_no,
-                            branch=user_branch
+                            ac_no=cashier_customer.ac_no
                         ).update(balance=sum_of_amounts)
 
                     # Send SMS if enabled
@@ -1270,14 +1268,15 @@ def seek_and_update(request):
                 messages.error(request, 'No transactions found with the given transaction number.')
                 return render(request, 'transactions/non_cash/reverse_trans.html', {'form': form, 'updated_records': updated_records})
 
-            # Fetch the branch code from the first Memtrans record
-            branch_code = transactions.first().branch  # Assuming 'branch' stores the branch code as a string
+            # Fetch the branch from the first Memtrans record (branch is a ForeignKey)
+            company = transactions.first().branch
 
-            # Get the Branch object using branch_code
-            company = get_object_or_404(Branch, branch_code=branch_code)  # Corrected lookup
+            if not company:
+                messages.error(request, 'No branch found for this transaction.')
+                return render(request, 'transactions/non_cash/reverse_trans.html', {'form': form, 'updated_records': updated_records})
 
-            # Check if the company's system date is less than the current system date
-            if company.system_date_date < system_date:
+            # Check if the company's session date is less than the current system date
+            if company.session_date and company.session_date < system_date:
                 messages.error(request, 'You cannot reverse this transaction because the branch has closed for this transaction.')
                 return render(request, 'transactions/non_cash/reverse_trans.html', {'form': form, 'updated_records': updated_records})
 
