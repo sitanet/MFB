@@ -401,12 +401,12 @@ def withdraw(request, uuid):
                     ).aggregate(total_amount=Sum('amount'))['total_amount']
 
                     if sum_of_amounts is not None:
-                        customer_to_update = Customer.all_objects.get(
+                        Customer.all_objects.filter(
                             gl_no=customer.gl_no, 
-                            ac_no=customer.ac_no
-                        )
-                        customer_to_update.balance = sum_of_amounts
-                        customer_to_update.save()
+                            ac_no=customer.ac_no,
+                            branch=customer_branch
+                        ).update(balance=sum_of_amounts)
+                        customer.balance = sum_of_amounts
 
                     sum_of_amounts = Memtrans.objects.filter(
                         gl_no=cashier_customer.gl_no,
@@ -416,28 +416,21 @@ def withdraw(request, uuid):
                     ).aggregate(total_amount=Sum('amount'))['total_amount']
 
                     if sum_of_amounts is not None:
-                        cashier_to_update = Customer.all_objects.get(
+                        Customer.all_objects.filter(
                             gl_no=cashier_customer.gl_no,
-                            ac_no=cashier_customer.ac_no
-                        )
-                        cashier_to_update.balance = sum_of_amounts
-                        cashier_to_update.save()
+                            ac_no=cashier_customer.ac_no,
+                            branch=user_branch
+                        ).update(balance=sum_of_amounts)
 
                     # Send SMS if enabled
                     if customer.sms:
-                        current_balance = Customer.all_objects.get(
-                            gl_no=customer.gl_no,
-                            ac_no=customer.ac_no
-                        ).balance
+                        current_balance = customer.balance
                         sms_message = f"Dear {customer.first_name}, Debit of {amount} with A/C XXXXX{customer.ac_no} has been successful. Bal:NGN{current_balance}."
                         send_sms(customer.phone_no, sms_message)
                     
                     # Send email notification if email_alert is True and email exists
                     if customer.email_alert and customer.email:
-                        current_balance = Customer.all_objects.get(
-                            gl_no=customer.gl_no,
-                            ac_no=customer.ac_no
-                        ).balance
+                        current_balance = customer.balance
                         
                         email_context = {
                             'customer_name': customer.first_name,
