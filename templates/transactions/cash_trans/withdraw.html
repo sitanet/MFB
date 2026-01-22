@@ -463,25 +463,39 @@
         var appDate = document.getElementById('app_date');
         var amount = document.getElementById('amount_hidden');
         var amountDisplay = document.getElementById('amount_display');
-        var isValid = true;
+        var description = document.querySelector('textarea[name="description"]');
+        var errors = [];
 
         // Clear previous errors
         clearError(appDate);
         clearError(amountDisplay);
+        if (description) clearError(description);
 
         // Validate TRX Date
         if (!appDate.value) {
             showError(appDate, 'Transaction date is required');
-            isValid = false;
+            errors.push('Transaction date is required');
         }
 
         // Validate Amount
         if (!amount.value || parseFloat(amount.value) <= 0) {
             showError(amountDisplay, 'Please enter a valid amount');
-            isValid = false;
+            errors.push('Please enter a valid amount');
         }
 
-        return isValid;
+        // Validate Description
+        if (description && !description.value.trim()) {
+            showError(description, 'Description is required');
+            errors.push('Description is required');
+        }
+
+        // Show alert if there are errors
+        if (errors.length > 0) {
+            alert('Please fix the following errors:\n\n- ' + errors.join('\n- '));
+            return false;
+        }
+
+        return true;
     }
 
     function showError(element, message) {
