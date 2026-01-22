@@ -104,7 +104,8 @@
                                 <label class="form-label fw-semibold text-muted small">AMOUNT</label>
                                 <div class="input-group input-group-lg">
                                     <span class="input-group-text bg-success text-white border-0">&#8358;</span>
-                                    <input type="number" class="form-control form-control-lg border-success" placeholder="0.00" name="amount" step="0.01">
+                                    <input type="text" class="form-control form-control-lg border-success" placeholder="0.00" id="amount_display" autocomplete="off">
+                                    <input type="hidden" name="amount" id="amount_hidden">
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -187,7 +188,7 @@
                                     <i class="fas fa-signature"></i>
                                 </button>
                             </div>
-                            <button type="submit" class="btn btn-success btn-lg px-5">
+                            <button type="submit" class="btn btn-success btn-lg px-5" onclick="return validateForm()">
                                 <i class="fas fa-check-circle me-2"></i>Process Deposit
                             </button>
                         </div>
@@ -408,7 +409,101 @@
                 }
             });
         }
+
+        // Amount formatting with commas and decimals
+        var amountDisplay = document.getElementById('amount_display');
+        var amountHidden = document.getElementById('amount_hidden');
+
+        function formatNumber(num) {
+            if (!num) return '';
+            var parts = num.toString().split('.');
+            parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+            return parts.join('.');
+        }
+
+        function unformatNumber(str) {
+            return str.replace(/,/g, '');
+        }
+
+        amountDisplay.addEventListener('input', function(e) {
+            var cursorPos = this.selectionStart;
+            var oldLength = this.value.length;
+            var rawValue = unformatNumber(this.value).replace(/[^0-9.]/g, '');
+            
+            // Ensure only one decimal point
+            var parts = rawValue.split('.');
+            if (parts.length > 2) {
+                rawValue = parts[0] + '.' + parts.slice(1).join('');
+            }
+            
+            // Limit decimal places to 2
+            if (parts.length === 2 && parts[1].length > 2) {
+                rawValue = parts[0] + '.' + parts[1].substring(0, 2);
+            }
+
+            amountHidden.value = rawValue;
+            this.value = formatNumber(rawValue);
+            
+            // Adjust cursor position
+            var newLength = this.value.length;
+            cursorPos = cursorPos + (newLength - oldLength);
+            this.setSelectionRange(cursorPos, cursorPos);
+        });
+
+        amountDisplay.addEventListener('blur', function() {
+            var rawValue = unformatNumber(this.value);
+            if (rawValue && !isNaN(rawValue)) {
+                var num = parseFloat(rawValue).toFixed(2);
+                amountHidden.value = num;
+                this.value = formatNumber(num);
+            }
+        });
     });
+
+    function validateForm() {
+        var appDate = document.getElementById('app_date');
+        var amount = document.getElementById('amount_hidden');
+        var amountDisplay = document.getElementById('amount_display');
+        var isValid = true;
+
+        // Clear previous errors
+        clearError(appDate);
+        clearError(amountDisplay);
+
+        // Validate TRX Date
+        if (!appDate.value) {
+            showError(appDate, 'Transaction date is required');
+            isValid = false;
+        }
+
+        // Validate Amount
+        if (!amount.value || parseFloat(amount.value) <= 0) {
+            showError(amountDisplay, 'Please enter a valid amount');
+            isValid = false;
+        }
+
+        return isValid;
+    }
+
+    function showError(element, message) {
+        element.classList.add('is-invalid', 'border-danger');
+        var errorDiv = element.parentElement.querySelector('.invalid-feedback');
+        if (!errorDiv) {
+            errorDiv = document.createElement('div');
+            errorDiv.className = 'invalid-feedback';
+            element.parentElement.appendChild(errorDiv);
+        }
+        errorDiv.textContent = message;
+        errorDiv.style.display = 'block';
+    }
+
+    function clearError(element) {
+        element.classList.remove('is-invalid', 'border-danger');
+        var errorDiv = element.parentElement.querySelector('.invalid-feedback');
+        if (errorDiv) {
+            errorDiv.style.display = 'none';
+        }
+    }
 </script>
 
 <style>
