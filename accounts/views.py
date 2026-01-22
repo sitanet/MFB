@@ -324,7 +324,7 @@ def registerusermasterintelligent(request):
             
             user.save()
             messages.success(request, 'You have successfully registered User')
-            return redirect('users')
+            return redirect('display_all_user')
         else:
             print('invalid form')
             print(form.errors)
@@ -784,7 +784,7 @@ def deleteUser(request, uuid=None):
     user = get_object_or_404(User, uuid=uuid)
     user.delete()
     messages.success(request, 'User deleted successfully!')
-    return redirect('users')
+    return redirect('display_all_user')
 
 
 # Alias for compatibility
@@ -793,7 +793,7 @@ def delete_user(request, uuid):
     user = User.objects.get(uuid=uuid)
     user.delete()
     messages.success(request, 'User deleted successfully!')
-    return redirect('users')
+    return redirect('display_all_user')
 
 
 # ==================== DASHBOARD VIEW ====================
