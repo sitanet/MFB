@@ -164,7 +164,7 @@ def registerUser(request):
             branch_name = user_branch.branch_name if user_branch else "Unknown Branch"
             
             messages.success(request, f'User {user.username} registered successfully in {branch_name}!')
-            return redirect('users')
+            return redirect('display_all_user')
         else:
             messages.error(request, 'There were errors in the form.')
             print(form.errors)
