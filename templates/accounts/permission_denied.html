@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="midde_cont">
+    <div class="container-fluid">
+        <div class="row" style="min-height: 70vh; align-items: center;">
+            <div class="col-md-8 offset-md-2">
+                <div class="white_shd full margin_bottom_30" style="border-radius: 15px; overflow: hidden;">
+                    <!-- Header -->
+                    <div style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); padding: 40px; text-align: center;">
+                        <i class="fa fa-ban fa-5x" style="color: #fff;"></i>
+                        <h1 style="color: #fff; margin-top: 20px; font-weight: bold;">Access Denied</h1>
+                    </div>
+                    
+                    <!-- Content -->
+                    <div style="padding: 40px; text-align: center;">
+                        <div class="alert alert-danger" style="font-size: 18px; border-radius: 10px;">
+                            <i class="fa fa-exclamation-triangle"></i>
+                            <strong>Permission Error:</strong> You do not have permission to access this feature.
+                        </div>
+                        
+                        <div class="mt-4 p-4" style="background-color: #f8f9fa; border-radius: 10px;">
+                            <h4 class="text-dark">
+                                <i class="fa fa-lock" style="color: #FF4500;"></i>
+                                Feature: <strong style="color: #FF4500;">{{ feature_name }}</strong>
+                            </h4>
+                            <p class="text-muted mt-3" style="font-size: 16px;">
+                                Your current role does not have the required permissions to access this feature.
+                            </p>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <div class="row mt-4">
+                            <div class="col-md-6">
+                                <div class="p-3" style="background-color: #fff3cd; border-radius: 10px;">
+                                    <h5><i class="fa fa-question-circle text-warning"></i> What can I do?</h5>
+                                    <ul class="text-left mt-3" style="list-style: none; padding-left: 0;">
+                                        <li class="mb-2"><i class="fa fa-arrow-right text-warning"></i> Contact your System Administrator</li>
+                                        <li class="mb-2"><i class="fa fa-arrow-right text-warning"></i> Request access to this feature</li>
+                                        <li class="mb-2"><i class="fa fa-arrow-right text-warning"></i> Provide justification for access</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="p-3" style="background-color: #d4edda; border-radius: 10px;">
+                                    <h5><i class="fa fa-info-circle text-success"></i> Contact Information</h5>
+                                    <ul class="text-left mt-3" style="list-style: none; padding-left: 0;">
+                                        <li class="mb-2"><i class="fa fa-envelope text-success"></i> Email: admin@financeflex.com</li>
+                                        <li class="mb-2"><i class="fa fa-phone text-success"></i> Support: Contact IT Support</li>
+                                        <li class="mb-2"><i class="fa fa-clock-o text-success"></i> Response: Within 24 hours</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-5">
+                            <a href="{% url 'dashboard' %}" class="btn btn-lg" style="background: linear-gradient(135deg, #FF4500 0%, #FF6B35 100%); color: #fff; margin-right: 10px;">
+                                <i class="fa fa-home"></i> Go to Dashboard
+                            </a>
+                            <a href="javascript:history.back()" class="btn btn-lg btn-secondary">
+                                <i class="fa fa-arrow-left"></i> Go Back
+                            </a>
+                        </div>
+
+                        <div class="mt-4">
+                            <small class="text-muted">
+                                <i class="fa fa-shield"></i> 
+                                This is a security feature to protect your organization's data.
+                                <br>
+                                Permission Code: <code>{{ permission_code }}</code>
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.fa-ban {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+</style>
+{% endblock %}

@@ -1,0 +1,234 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="midde_cont">
+    <div class="container-fluid">
+        <div class="row column_title">
+            <div class="col-md-12">
+                <div class="page_title">
+                    <h2><i class="fa fa-shield"></i> Manage Role Permissions</h2>
+                </div>
+            </div>
+        </div>
+
+        {% include 'includes/alerts.html' %}
+
+        <div class="row">
+            <!-- Role Selection -->
+            <div class="col-md-4">
+                <div class="white_shd full margin_bottom_30">
+                    <div class="full graph_head" style="background: linear-gradient(135deg, #FF4500 0%, #FF6B35 100%);">
+                        <div class="heading1 margin_0">
+                            <h2 style="color: #fff;"><i class="fa fa-users"></i> Select Role</h2>
+                        </div>
+                    </div>
+                    <div class="full inner_bt">
+                        <div class="padding_infor_info" style="padding: 20px;">
+                            <p class="text-muted mb-3">Select a role to configure its permissions. System Administrator has full access to all features by default.</p>
+                            <div class="list-group">
+                                {% for role_id, role_name in roles %}
+                                    <a href="?role={{ role_id }}" 
+                                       class="list-group-item list-group-item-action {% if selected_role == role_id %}active{% endif %}"
+                                       style="{% if selected_role == role_id %}background-color: #FF4500; border-color: #FF4500;{% endif %}">
+                                        <i class="fa fa-user-circle"></i> {{ role_name }}
+                                        {% if role_id == 1 %}
+                                            <span class="badge badge-success float-right" style="background-color: #28a745;">Full Access</span>
+                                        {% endif %}
+                                    </a>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Permissions Configuration -->
+            <div class="col-md-8">
+                <div class="white_shd full margin_bottom_30">
+                    <div class="full graph_head" style="background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);">
+                        <div class="heading1 margin_0">
+                            <h2 style="color: #fff;">
+                                <i class="fa fa-check-square"></i> 
+                                {% if selected_role %}
+                                    Permissions for: {{ roles|dictsort:0|slice:":"|first }}
+                                    {% for role_id, role_name in roles %}
+                                        {% if role_id == selected_role %}{{ role_name }}{% endif %}
+                                    {% endfor %}
+                                {% else %}
+                                    Select a Role to Configure
+                                {% endif %}
+                            </h2>
+                        </div>
+                    </div>
+                    <div class="full inner_bt">
+                        <div class="padding_infor_info" style="padding: 20px;">
+                            {% if selected_role %}
+                                {% if selected_role == 1 %}
+                                    <div class="alert alert-success">
+                                        <i class="fa fa-info-circle"></i> 
+                                        <strong>System Administrator</strong> has full access to all features. No configuration needed.
+                                    </div>
+                                {% else %}
+                                    <form method="post" id="permissionForm">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="role_id" value="{{ selected_role }}">
+                                        
+                                        <!-- Select/Deselect All -->
+                                        <div class="mb-4">
+                                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="selectAll()">
+                                                <i class="fa fa-check-square"></i> Select All
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="deselectAll()">
+                                                <i class="fa fa-square"></i> Deselect All
+                                            </button>
+                                            <span class="ml-3 text-muted" id="permissionCount">0 permissions selected</span>
+                                        </div>
+
+                                        <!-- Feature Categories -->
+                                        <div class="accordion" id="permissionAccordion">
+                                            {% for category, features in feature_categories.items %}
+                                                <div class="card mb-2" style="border: 1px solid #ddd;">
+                                                    <div class="card-header" id="heading{{ forloop.counter }}" style="background-color: #f8f9fa; cursor: pointer;" 
+                                                         data-toggle="collapse" data-target="#collapse{{ forloop.counter }}">
+                                                        <h5 class="mb-0 d-flex justify-content-between align-items-center">
+                                                            <span>
+                                                                <i class="fa fa-folder"></i> {{ category }}
+                                                            </span>
+                                                            <span class="badge badge-primary category-count" data-category="{{ forloop.counter }}">
+                                                                0/{{ features|length }}
+                                                            </span>
+                                                        </h5>
+                                                    </div>
+                                                    <div id="collapse{{ forloop.counter }}" class="collapse {% if forloop.first %}show{% endif %}" 
+                                                         data-parent="#permissionAccordion">
+                                                        <div class="card-body">
+                                                            <div class="row">
+                                                                {% for code, name in features.items %}
+                                                                    <div class="col-md-6 mb-2">
+                                                                        <div class="custom-control custom-checkbox">
+                                                                            <input type="checkbox" 
+                                                                                   class="custom-control-input permission-checkbox" 
+                                                                                   id="perm_{{ code }}" 
+                                                                                   name="permissions" 
+                                                                                   value="{{ code }}"
+                                                                                   data-category="{{ forloop.parentloop.counter }}"
+                                                                                   {% if code in current_permissions %}checked{% endif %}>
+                                                                            <label class="custom-control-label" for="perm_{{ code }}">
+                                                                                {{ name }}
+                                                                            </label>
+                                                                        </div>
+                                                                    </div>
+                                                                {% endfor %}
+                                                            </div>
+                                                            <div class="mt-2">
+                                                                <button type="button" class="btn btn-xs btn-outline-success" 
+                                                                        onclick="selectCategory({{ forloop.counter }})">
+                                                                    Select All in Category
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+
+                                        <div class="mt-4">
+                                            <button type="submit" class="btn btn-lg" style="background: linear-gradient(135deg, #FF4500 0%, #FF6B35 100%); color: #fff;">
+                                                <i class="fa fa-save"></i> Save Permissions
+                                            </button>
+                                            <a href="{% url 'view_role_permissions' %}" class="btn btn-secondary btn-lg">
+                                                <i class="fa fa-list"></i> View All Roles
+                                            </a>
+                                        </div>
+                                    </form>
+                                {% endif %}
+                            {% else %}
+                                <div class="text-center py-5">
+                                    <i class="fa fa-hand-pointer-o fa-4x text-muted"></i>
+                                    <h4 class="mt-3 text-muted">Please select a role from the left panel</h4>
+                                    <p class="text-muted">You can configure which features each role can access.</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.custom-control-label {
+    cursor: pointer;
+}
+.custom-control-input:checked ~ .custom-control-label::before {
+    background-color: #FF4500;
+    border-color: #FF4500;
+}
+.list-group-item.active {
+    z-index: 2;
+}
+.card-header:hover {
+    background-color: #e9ecef !important;
+}
+.badge-primary {
+    background-color: #FF4500;
+}
+</style>
+
+<script>
+function updatePermissionCount() {
+    var total = document.querySelectorAll('.permission-checkbox:checked').length;
+    document.getElementById('permissionCount').textContent = total + ' permissions selected';
+    
+    // Update category counts
+    var categories = {};
+    document.querySelectorAll('.permission-checkbox').forEach(function(cb) {
+        var cat = cb.dataset.category;
+        if (!categories[cat]) {
+            categories[cat] = {checked: 0, total: 0};
+        }
+        categories[cat].total++;
+        if (cb.checked) {
+            categories[cat].checked++;
+        }
+    });
+    
+    for (var cat in categories) {
+        var badge = document.querySelector('.category-count[data-category="' + cat + '"]');
+        if (badge) {
+            badge.textContent = categories[cat].checked + '/' + categories[cat].total;
+        }
+    }
+}
+
+function selectAll() {
+    document.querySelectorAll('.permission-checkbox').forEach(function(cb) {
+        cb.checked = true;
+    });
+    updatePermissionCount();
+}
+
+function deselectAll() {
+    document.querySelectorAll('.permission-checkbox').forEach(function(cb) {
+        cb.checked = false;
+    });
+    updatePermissionCount();
+}
+
+function selectCategory(categoryId) {
+    document.querySelectorAll('.permission-checkbox[data-category="' + categoryId + '"]').forEach(function(cb) {
+        cb.checked = true;
+    });
+    updatePermissionCount();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    updatePermissionCount();
+    document.querySelectorAll('.permission-checkbox').forEach(function(cb) {
+        cb.addEventListener('change', updatePermissionCount);
+    });
+});
+</script>
+{% endblock %}

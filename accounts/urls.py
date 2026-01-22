@@ -26,6 +26,7 @@ urlpatterns = [
     path('display_all_user/', views.display_all_user, name='display_all_user'),
     path('edit_user/<uuid:uuid>/', views.edit_user, name='edit_user'),
     path('delete_user/<uuid:uuid>/', views.delete_user, name='delete_user'),
+    path('verify_user/<uuid:uuid>/', views.verify_user, name='verify_user'),
 
 
     path('register/', views.register, name='register'),
@@ -34,4 +35,8 @@ urlpatterns = [
     path('contact-support/', views.contact_support, name='contact_support'),
 
     path('auto-logout/', views.auto_logout_settings, name='auto_logout_settings'),
+    
+    # Role Permission Management
+    path('manage_permissions/', views.manage_role_permissions, name='manage_role_permissions'),
+    path('view_role_permissions/', views.view_role_permissions, name='view_role_permissions'),
 ]

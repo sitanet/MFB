@@ -65,3 +65,31 @@ def soon_to_expire(request):
         soon_expire_message = "System error occurred"
 
     return {'soon_expire_message': soon_expire_message}
+
+
+def user_permissions(request):
+    """Context processor to make permission checking available in templates"""
+    from accounts.models import RolePermission
+    
+    def has_permission(permission_code):
+        if not request.user.is_authenticated:
+            return False
+        
+        # System Administrator has all permissions
+        if request.user.role == 1 or request.user.is_superadmin or request.user.is_admin:
+            return True
+        
+        try:
+            role_perm = RolePermission.objects.get(role=request.user.role)
+            return permission_code in role_perm.permissions
+        except RolePermission.DoesNotExist:
+            return False
+    
+    return {
+        'has_permission': has_permission,
+        'is_admin_user': request.user.is_authenticated and (
+            request.user.role == 1 or 
+            request.user.is_superadmin or 
+            request.user.is_admin
+        ) if hasattr(request, 'user') else False,
+    }

@@ -404,3 +404,41 @@ class Clients(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class RolePermission(models.Model):
+    """Store permissions for each role"""
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    role = models.PositiveSmallIntegerField(unique=True)
+    permissions = models.JSONField(default=list, help_text="List of permission codes")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Role Permission'
+        verbose_name_plural = 'Role Permissions'
+
+    def __str__(self):
+        role_dict = dict(User.ROLE_CHOICE)
+        return f"Permissions for {role_dict.get(self.role, 'Unknown Role')}"
+
+    def has_permission(self, permission_code):
+        """Check if this role has a specific permission"""
+        return permission_code in self.permissions
+
+    def add_permission(self, permission_code):
+        """Add a permission to this role"""
+        if permission_code not in self.permissions:
+            self.permissions.append(permission_code)
+            self.save()
+
+    def remove_permission(self, permission_code):
+        """Remove a permission from this role"""
+        if permission_code in self.permissions:
+            self.permissions.remove(permission_code)
+            self.save()
+
+    def set_permissions(self, permission_codes):
+        """Set all permissions for this role"""
+        self.permissions = list(permission_codes)
+        self.save()

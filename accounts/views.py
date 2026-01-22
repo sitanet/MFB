@@ -29,11 +29,12 @@ from django.conf import settings
 from django.core.cache import cache
 from django.db.models import Sum, Count
 from decimal import Decimal
+from functools import wraps
 
 # Import models from correct locations for multi-database architecture
 from company.models import Company, Branch  # Vendor database
 from .forms import UserForm, UserProfileForm, UserProfilePictureForm, EdituserForm
-from .models import Role, User, UserProfile  # Client database
+from .models import Role, User, UserProfile, RolePermission  # Client database
 from accounts_admin.models import Account, Category  # Client database
 from customers.models import Customer  # Client database
 from transactions.models import Memtrans  # Client database
@@ -793,6 +794,18 @@ def deleteUser(request, uuid=None):
     return redirect('display_all_user')
 
 
+@login_required(login_url='login')
+@user_passes_test(check_role_admin)
+def verify_user(request, uuid=None):
+    """Admin verifies a user account"""
+    user = get_object_or_404(User, uuid=uuid)
+    user.verified = True
+    user.is_active = True
+    user.save()
+    messages.success(request, f'User {user.username} has been verified successfully!')
+    return redirect('display_all_user')
+
+
 # Alias for compatibility
 def delete_user(request, uuid):
     """Delete user by UUID (compatibility function)"""
@@ -1320,3 +1333,250 @@ def auto_logout_settings(request):
         'current_timeout': request.session.get('auto_logout_timeout', 30),
     }
     return render(request, 'accounts/auto_logout_settings.html', context)
+
+
+# ==================== ROLE PERMISSION MANAGEMENT ====================
+
+# Feature categories and permissions
+FEATURE_CATEGORIES = {
+    'Dashboard': {
+        'view_dashboard': 'View Dashboard',
+    },
+    'User Management': {
+        'view_users': 'View Users',
+        'create_user': 'Create User',
+        'edit_user': 'Edit User',
+        'delete_user': 'Delete User',
+        'verify_user': 'Verify User',
+        'manage_permissions': 'Manage Role Permissions',
+    },
+    'Customer Management': {
+        'view_customers': 'View Customers',
+        'create_customer': 'Create Customer',
+        'edit_customer': 'Edit Customer',
+        'delete_customer': 'Delete Customer',
+        'view_customer_detail': 'View Customer Detail',
+        'manage_customer_groups': 'Manage Customer Groups',
+        'register_company': 'Register Company/Business Customer',
+    },
+    'Transactions': {
+        'make_deposit': 'Make Deposit',
+        'make_withdrawal': 'Make Withdrawal',
+        'record_income': 'Record Income',
+        'record_expense': 'Record Expense',
+        'general_journal': 'General Journal Entry',
+        'view_transactions': 'View Transactions',
+        'delete_transaction': 'Delete Transaction',
+        'seek_and_update': 'Seek and Update Transactions',
+        'upload_transactions': 'Upload Transactions (Bulk)',
+    },
+    'Loan Management': {
+        'view_loans': 'View Loans',
+        'apply_loan': 'Apply for Loan',
+        'modify_loan': 'Modify Loan Application',
+        'approve_loan': 'Approve Loan',
+        'reject_loan': 'Reject Loan',
+        'reverse_loan_approval': 'Reverse Loan Approval',
+        'disburse_loan': 'Disburse Loan',
+        'reverse_disbursement': 'Reverse Loan Disbursement',
+        'loan_repayment': 'Record Loan Repayment',
+        'write_off_loan': 'Write Off Loan',
+        'view_loan_schedule': 'View Loan Schedule',
+        'view_loan_history': 'View Loan History',
+        'delete_loan': 'Delete Loan',
+        'simple_loan': 'Simple Loan (Application & Approval)',
+    },
+    'Fixed Deposit': {
+        'view_fixed_deposits': 'View Fixed Deposits',
+        'register_fixed_deposit': 'Register Fixed Deposit',
+        'withdraw_fixed_deposit': 'Withdraw Fixed Deposit',
+        'reverse_fixed_deposit': 'Reverse Fixed Deposit',
+        'renew_fixed_deposit': 'Renew Fixed Deposit',
+        'premature_withdrawal': 'Premature Withdrawal',
+        'generate_fd_certificate': 'Generate FD Certificate',
+        'mark_lien': 'Mark Lien on Fixed Deposit',
+        'manage_fd_products': 'Manage FD Products',
+        'fd_interest_accrual': 'Run FD Interest Accrual',
+    },
+    'Fixed Assets': {
+        'view_fixed_assets': 'View Fixed Assets',
+        'create_fixed_asset': 'Create Fixed Asset',
+        'edit_fixed_asset': 'Edit Fixed Asset',
+        'delete_fixed_asset': 'Delete Fixed Asset',
+        'post_depreciation': 'Post Depreciation',
+        'dispose_asset': 'Dispose Asset',
+        'revalue_asset': 'Revalue Asset',
+        'transfer_asset': 'Transfer Asset',
+        'impair_asset': 'Record Asset Impairment',
+        'manage_asset_insurance': 'Manage Asset Insurance',
+        'manage_asset_maintenance': 'Manage Asset Maintenance',
+        'manage_asset_warranty': 'Manage Asset Warranty',
+        'asset_verification': 'Asset Verification',
+        'manage_asset_settings': 'Manage Asset Settings (Types/Groups/Locations)',
+    },
+    'Reports': {
+        'view_reports': 'View Reports',
+        'generate_statement': 'Generate Account Statement',
+        'front_office_report': 'Front Office Reports',
+        'back_office_report': 'Back Office Reports',
+        'trial_balance': 'Trial Balance Report',
+        'financial_report': 'Financial Reports',
+        'balance_sheet': 'Balance Sheet',
+        'profit_and_loss': 'Profit & Loss Statement',
+        'loan_reports': 'Loan Reports',
+        'savings_reports': 'Savings Reports',
+        'transaction_reports': 'Transaction Reports',
+        'cbn_returns': 'CBN Returns',
+        'fd_reports': 'Fixed Deposit Reports',
+        'asset_reports': 'Fixed Asset Reports',
+        'export_reports': 'Export Reports (PDF/Excel/CSV)',
+    },
+    'Chart of Accounts': {
+        'view_chart_of_accounts': 'View Chart of Accounts',
+        'create_account': 'Create Account',
+        'edit_account': 'Edit Account',
+        'delete_account': 'Delete Account',
+    },
+    'Settings & Configuration': {
+        'account_settings': 'Account Settings',
+        'product_settings': 'Product Settings',
+        'manage_account_officers': 'Manage Account Officers',
+        'manage_regions': 'Manage Regions',
+        'manage_categories': 'Manage Categories',
+        'manage_id_types': 'Manage ID Types',
+        'manage_business_sectors': 'Manage Business Sectors',
+        'manage_interest_rates': 'Manage Interest Rates',
+        'manage_loan_provisions': 'Manage Loan Provisions',
+        'manage_customer_account_types': 'Manage Customer Account Types',
+        'loan_auto_repayment_settings': 'Loan Auto Repayment Settings',
+        'utilities': 'System Utilities',
+    },
+    'End of Period': {
+        'end_of_period': 'Run End of Period',
+        'calculate_interest': 'Calculate Interest',
+    },
+    'Company & Branch': {
+        'session_management': 'Session Management',
+        'view_branch_info': 'View Branch Information',
+    },
+    'Audit Trail': {
+        'view_audit_trail': 'View Audit Trail',
+        'audit_statistics': 'Audit Statistics',
+        'audit_configuration': 'Audit Configuration',
+        'export_audit': 'Export Audit Trail',
+        'manage_alerts': 'Manage Audit Alerts',
+    },
+}
+
+# Flatten all features
+ALL_FEATURES = {}
+for category, features in FEATURE_CATEGORIES.items():
+    ALL_FEATURES.update(features)
+
+
+def user_has_permission(user, permission_code):
+    """Check if a user has a specific permission"""
+    if not user or not user.is_authenticated:
+        return False
+    
+    # System Administrator (role=1) has all permissions
+    if user.role == 1 or user.is_superadmin or user.is_admin:
+        return True
+    
+    # Check role-based permissions
+    try:
+        role_perm = RolePermission.objects.get(role=user.role)
+        return permission_code in role_perm.permissions
+    except RolePermission.DoesNotExist:
+        return False
+
+
+def permission_required_view(permission_code):
+    """Decorator to check if user has the required permission"""
+    def decorator(view_func):
+        @wraps(view_func)
+        def wrapper(request, *args, **kwargs):
+            if not request.user.is_authenticated:
+                messages.error(request, 'Please login to access this feature.')
+                return redirect('login')
+            
+            if not user_has_permission(request.user, permission_code):
+                feature_name = ALL_FEATURES.get(permission_code, permission_code)
+                messages.error(
+                    request, 
+                    f'Access Denied: You do not have permission to access "{feature_name}". '
+                    f'Please contact your administrator to request access to this feature.'
+                )
+                return render(request, 'accounts/permission_denied.html', {
+                    'feature_name': feature_name,
+                    'permission_code': permission_code,
+                })
+            
+            return view_func(request, *args, **kwargs)
+        return wrapper
+    return decorator
+
+
+@login_required(login_url='login')
+@user_passes_test(check_role_admin)
+def manage_role_permissions(request):
+    """View to manage role permissions"""
+    roles = User.ROLE_CHOICE
+    selected_role = request.GET.get('role')
+    current_permissions = []
+    
+    if selected_role:
+        selected_role = int(selected_role)
+        try:
+            role_perm = RolePermission.objects.get(role=selected_role)
+            current_permissions = role_perm.permissions
+        except RolePermission.DoesNotExist:
+            current_permissions = []
+    
+    if request.method == 'POST':
+        role_id = int(request.POST.get('role_id'))
+        selected_permissions = request.POST.getlist('permissions')
+        
+        role_perm, created = RolePermission.objects.get_or_create(role=role_id)
+        role_perm.permissions = selected_permissions
+        role_perm.save()
+        
+        role_name = dict(User.ROLE_CHOICE).get(role_id, 'Unknown')
+        messages.success(request, f'Permissions for "{role_name}" have been updated successfully!')
+        return redirect(f'/accounts/manage_permissions/?role={role_id}')
+    
+    context = {
+        'roles': roles,
+        'selected_role': selected_role,
+        'current_permissions': current_permissions,
+        'feature_categories': FEATURE_CATEGORIES,
+        'all_features': ALL_FEATURES,
+    }
+    return render(request, 'accounts/manage_permissions.html', context)
+
+
+@login_required(login_url='login')
+@user_passes_test(check_role_admin)
+def view_role_permissions(request):
+    """View all role permissions summary"""
+    roles = User.ROLE_CHOICE
+    role_permissions_list = []
+    
+    for role_id, role_name in roles:
+        try:
+            role_perm = RolePermission.objects.get(role=role_id)
+            perm_count = len(role_perm.permissions)
+        except RolePermission.DoesNotExist:
+            perm_count = 0
+        
+        role_permissions_list.append({
+            'role_id': role_id,
+            'role_name': role_name,
+            'permission_count': perm_count,
+            'total_features': len(ALL_FEATURES),
+        })
+    
+    context = {
+        'role_permissions_list': role_permissions_list,
+    }
+    return render(request, 'accounts/view_role_permissions.html', context)

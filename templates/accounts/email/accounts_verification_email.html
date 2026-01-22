@@ -1,59 +1,94 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional //EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:v="urn:schemas-microsoft-com:vml" lang="en">
-
-<head><link rel="stylesheet" type="text/css" hs-webfonts="true" href="https://fonts.googleapis.com/css?family=Lato|Lato:i,b,bi">
-    <meta property="og:title" content="Email template">  
-<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-<meta http-equiv="X-UA-Compatible" content="IE=edge">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">    
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional //EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+<head>
+    <link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css?family=Poppins:400,600,700">
+    <meta property="og:title" content="FinanceFlex - Account Verification">  
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">    
     <style type="text/css">
       #email {
         margin: auto;
-        width: 600px;
+        max-width: 600px;
         background-color: white;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
       }  
-      .activate-btn{
+      .activate-btn {
         font: inherit;
-        background-color: #C33332;
+        background: linear-gradient(135deg, #FF4500 0%, #FF6B35 100%);
         border: none;
-        padding: 10px;
+        padding: 15px 40px;
         text-transform: uppercase;
         letter-spacing: 2px;
-        font-weight: 900;
-        border-radius: 5px; 
+        font-weight: 700;
+        border-radius: 50px; 
         text-decoration: none;
-      }      
+        display: inline-block;
+        transition: all 0.3s ease;
+      }
+      .activate-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 20px rgba(255, 69, 0, 0.4);
+      }
     </style>    
-  </head>    
-<body bgcolor="#F5F8FA" style="width: 60%; margin: auto 0; padding:0; font-family:Lato, sans-serif; font-size:16px; color:#33475B; word-break:break-word">
-  <p>Hi, <h3>{{user.first_name}}</h3></p> 
-<div id="email">
-  <table role="presentation" width="60%">
+</head>    
+<body bgcolor="#f8f9fa" style="width: 100%; margin: 0; padding: 40px 0; font-family: 'Poppins', sans-serif; font-size: 16px; color: #333; word-break: break-word;">
+<div id="email" style="margin: auto; max-width: 600px;">
+  
+  <!-- Header with FinanceFlex Branding -->
+  <table role="presentation" width="100%" style="background: linear-gradient(135deg, #FF4500 0%, #FF6B35 100%);">
     <tr>
-    <!-- <td  align="center" style="color: white;">
-     <img alt="Logo" src="https://thecitygatechurch.org/static/images2/logo-red.png" width="300px" align="middle">
-      </td> -->
+      <td align="center" style="padding: 30px 20px;">
+        <h1 style="color: #ffffff; margin: 0; font-size: 32px; font-weight: 700; letter-spacing: 1px;">FinanceFlex</h1>
+        <p style="color: rgba(255,255,255,0.9); margin: 5px 0 0 0; font-size: 14px;">Your Trusted Financial Partner</p>
+      </td>
+    </tr>
   </table>
 
-  <table bgcolor="#EAF0F6" width="60%" role="presentation" border="0" cellpadding="0" cellspacing="10px" style="padding: 30px 30px 60px 60px;">
+  <!-- Main Content -->
+  <table bgcolor="#ffffff" width="100%" role="presentation" border="0" cellpadding="0" cellspacing="0" style="padding: 40px 30px;">
     <tr>
       <td>
-        <h2 style="text-align: center;">Activate Your Account</h2>
-        <p style="text-align: center;">Please click on below link to verify your email address to activate your account.</p>
-        <div style="text-align: center;">
-          <a href="http://{{domain}}{% url 'activate' uidb64=uid token=token %}" class="activate-btn" style="color: #fff;">Activate Now</a>
+        <p style="margin: 0 0 20px 0; font-size: 18px;">Hello, <strong style="color: #FF4500;">{{user.first_name}}</strong></p>
+        
+        <h2 style="text-align: center; color: #2c3e50; margin: 30px 0 15px 0; font-size: 24px;">Welcome to FinanceFlex!</h2>
+        
+        <p style="text-align: center; color: #666; line-height: 1.6; margin-bottom: 30px;">
+          Thank you for joining FinanceFlex. To complete your registration and start using our financial services, please verify your email address by clicking the button below.
+        </p>
+        
+        <div style="text-align: center; margin: 40px 0;">
+          <a href="http://{{domain}}{% url 'activate' uidb64=uid token=token %}" class="activate-btn" style="color: #fff;">Activate My Account</a>
         </div>
+        
+        <p style="text-align: center; color: #999; font-size: 13px; margin-top: 30px;">
+          If you did not create an account with FinanceFlex, please ignore this email.
+        </p>
+        
+        <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+        
+        <p style="text-align: center; color: #666; font-size: 14px;">
+          Need help? Contact our support team at<br>
+          <a href="mailto:support@financeflex.com" style="color: #FF4500; text-decoration: none;">support@financeflex.com</a>
+        </p>
       </td> 
     </tr>
   </table>
 
-  <table role="presentation" bgcolor="#FF5F1F" width="60%">
-      <tr>
-        <td align="center" style="padding: 15px 15px; color: #fff;">
-          <p>© {% now "Y" %} FinanceFlex Team, All Rights Reserved.</p>
-          <a href="https://sitanetorbit.com/" style="color:#fff;">Visit Website</a>      
-        </td>
-      </tr>
-  </table> 
+  <!-- Footer -->
+  <table role="presentation" width="100%" style="background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);">
+    <tr>
+      <td align="center" style="padding: 25px 20px; color: #fff;">
+        <p style="margin: 0 0 10px 0; font-size: 14px;">© {% now "Y" %} <strong>FinanceFlex</strong>. All Rights Reserved.</p>
+        <p style="margin: 0; font-size: 12px; color: rgba(255,255,255,0.7);">
+          Empowering your financial journey with secure and reliable solutions.
+        </p>
+      </td>
+    </tr>
+  </table>
+  
 </div>
 </body>
 </html>
