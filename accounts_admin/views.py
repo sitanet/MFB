@@ -70,11 +70,11 @@ def chart_of_accounts(request):
     user_company = user_branch.company if user_branch else None
     
     # Retrieve accounts for the entire company (visible to all branches)
-    # Query by branch_ids to support existing data without company field
+    # Query by branch_ids and get distinct by gl_no to avoid duplicates
     accounts = Account.all_objects.filter(
         header=None,
         branch_id__in=branch_ids
-    ).order_by('gl_no')
+    ).order_by('gl_no').distinct('gl_no')
     
     if request.method == 'POST':
         form = AccountForm(request.POST)
@@ -94,10 +94,10 @@ def chart_of_accounts(request):
     else:
         form = AccountForm()
 
-    # Retrieve all accounts within the company (by branch_ids for backward compatibility)
+    # Retrieve all accounts within the company (distinct by gl_no to avoid duplicates)
     account = Account.all_objects.filter(
         branch_id__in=branch_ids
-    ).order_by('gl_no')
+    ).order_by('gl_no').distinct('gl_no')
 
     return render(request, 'accounts_admin/chart_of_accounts.html', {
         'account': account,
