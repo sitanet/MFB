@@ -76,10 +76,11 @@ class AccountOfficerRegisterView(APIView):
                     'error': 'Username already exists'
                 }, status=status.HTTP_400_BAD_REQUEST)
                 
-            if User.objects.filter(email=email).exists():
-                return Response({
-                    'error': 'Email already exists'
-                }, status=status.HTTP_400_BAD_REQUEST)
+            # Email can be shared across Company, Branch, and User - removed strict uniqueness check
+            # if User.objects.filter(email=email).exists():
+            #     return Response({
+            #         'error': 'Email already exists'
+            #     }, status=status.HTTP_400_BAD_REQUEST)
             
             # For demo purposes, we'll validate activation keys against a pattern
             # In production, you'd validate against a pre-generated key in the database

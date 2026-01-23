@@ -412,7 +412,7 @@
                     <div class="form-group">
                         <label for="email">Email *</label>
                         <input type="email" id="email" name="email" 
-                               value="{{ edit_user.email }}" required>
+                               value="{{ edit_user.email }}" required oninput="this.value = this.value.toLowerCase()">
                     </div>
 
                     <div class="form-group">

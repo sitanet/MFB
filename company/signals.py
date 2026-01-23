@@ -178,9 +178,26 @@ def get_parent_gl_no(gl_no):
 
 @receiver(post_save, sender=Branch)
 def create_default_accounts(sender, instance, created, **kwargs):
-    """Create default chart of accounts when a new branch is created"""
+    """
+    Create default chart of accounts when the FIRST branch of a company is created.
+    All branches of the same company share the same chart of accounts.
+    """
     if created:
         from accounts_admin.models import Account
+        
+        # Check if this company already has a chart of accounts
+        company = instance.company
+        if not company:
+            logger.warning(f"Branch {instance.branch_name} has no company assigned")
+            return
+        
+        # Check if chart of accounts already exists for this company
+        existing_accounts = Account.all_objects.filter(company=company).exists()
+        if existing_accounts:
+            logger.info(f"Chart of accounts already exists for company {company.company_name}. Skipping creation for branch {instance.branch_name}")
+            return
+        
+        logger.info(f"Creating chart of accounts for company {company.company_name} (first branch: {instance.branch_name})")
         
         # Maps for converting string types to model constants
         account_type_map = {
@@ -205,10 +222,11 @@ def create_default_accounts(sender, instance, created, **kwargs):
         # Dictionary to track created accounts by gl_no for setting headers
         created_accounts = {}
         
-        # First pass: create all accounts without headers
+        # First pass: create all accounts linked to COMPANY (not branch)
         for acc_data in DEFAULT_CHART_OF_ACCOUNTS:
             account = Account.all_objects.create(
-                branch=instance,
+                company=company,  # Link to company instead of branch
+                branch=instance,  # Keep branch reference for backward compatibility
                 gl_no=acc_data['gl_no'],
                 gl_name=acc_data['gl_name'],
                 account_type=account_type_map.get(acc_data['account_type'], Account.ASSETS),
@@ -223,6 +241,8 @@ def create_default_accounts(sender, instance, created, **kwargs):
             if parent_gl_no and parent_gl_no in created_accounts:
                 account.header = created_accounts[parent_gl_no]
                 account.save()
+        
+        logger.info(f"Created {len(created_accounts)} chart of account entries for company {company.company_name}")
 
 
 # ==================== AUTO LOAN REPAYMENT ON SESSION CLOSE ====================

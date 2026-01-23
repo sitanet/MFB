@@ -6,8 +6,11 @@
 <div class="container-fluid">
     <div class="row column_title">
         <div class="col-md-12">
-            <div class="page_title">
+            <div class="page_title d-flex justify-content-between align-items-center">
                 <h2>Loan Approval</h2>
+                <a href="javascript:history.back()" class="btn btn-outline-secondary">
+                    <i class="fa fa-arrow-left mr-2"></i> Back
+                </a>
             </div>
         </div>
     </div>
@@ -108,6 +111,11 @@
                         <div class="input-field">
                             <label for="numInstall">No of Installment:</label>
                             {{ form.num_install }}
+                        </div>
+
+                        <div class="input-field" style="display: flex; align-items: center; gap: 10px;">
+                            <input type="checkbox" name="send_email_notification" id="send_email_notification" style="width: auto;">
+                            <label for="send_email_notification" style="margin: 0;">Send email notification to customer</label>
                         </div>
 
                         <button class="submit">

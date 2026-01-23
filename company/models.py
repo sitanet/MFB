@@ -31,7 +31,7 @@ class Company(models.Model):
     expiration_date = models.DateField()
     license_key = models.CharField(max_length=50)
     session_status = models.CharField(max_length=12, null=True, blank=True)
-    email = models.EmailField(max_length=255, unique=True, null=True, blank=True)
+    email = models.EmailField(max_length=255, null=True, blank=True)  # unique=True removed to allow shared emails
     float_account_number = models.CharField(
         max_length=25,
         null=True,
@@ -301,7 +301,7 @@ class VendorUser(AbstractBaseUser):
     Vendor users can manage all companies and branches.
     """
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
-    email = models.EmailField(max_length=255, unique=True)
+    email = models.EmailField(max_length=255)  # unique=True removed to allow shared emails
     username = models.CharField(max_length=50, unique=True)
     first_name = models.CharField(max_length=50)
     last_name = models.CharField(max_length=50)

@@ -137,9 +137,10 @@ def vendor_user_create(request):
             messages.error(request, 'Passwords do not match.')
             return render(request, 'company/vendor_user_create.html', {'vendor_user': request.vendor_user})
         
-        if VendorUser.objects.filter(email=email).exists():
-            messages.error(request, 'A user with this email already exists.')
-            return render(request, 'company/vendor_user_create.html', {'vendor_user': request.vendor_user})
+        # Email can be shared across Company, Branch, and User - only check within VendorUser model
+        # if VendorUser.objects.filter(email=email).exists():
+        #     messages.error(request, 'A user with this email already exists.')
+        #     return render(request, 'company/vendor_user_create.html', {'vendor_user': request.vendor_user})
         
         if VendorUser.objects.filter(username=username).exists():
             messages.error(request, 'A user with this username already exists.')
@@ -1086,9 +1087,10 @@ def create_branch_admin(request, uuid):
             messages.error(request, 'Username already exists.')
             return redirect('create_branch_admin', uuid=uuid)
         
-        if User.objects.filter(email=email).exists():
-            messages.error(request, 'Email already exists.')
-            return redirect('create_branch_admin', uuid=uuid)
+        # Email can be shared across Company, Branch, and User - only check within User model
+        # if User.objects.filter(email=email).exists():
+        #     messages.error(request, 'Email already exists.')
+        #     return redirect('create_branch_admin', uuid=uuid)
         
         try:
             # Create admin user for this branch
@@ -1148,10 +1150,10 @@ def edit_branch_admin(request, uuid):
         new_password = request.POST.get('new_password', '').strip()
         confirm_password = request.POST.get('confirm_password', '').strip()
         
-        # Validate email uniqueness (excluding current user)
-        if User.objects.filter(email=email).exclude(id=branch_admin.id).exists():
-            messages.error(request, 'Email already exists for another user.')
-            return redirect('edit_branch_admin', uuid=uuid)
+        # Email can be shared across Company, Branch, and User - removed strict uniqueness check
+        # if User.objects.filter(email=email).exclude(id=branch_admin.id).exists():
+        #     messages.error(request, 'Email already exists for another user.')
+        #     return redirect('edit_branch_admin', uuid=uuid)
         
         # Validate password if provided
         if new_password:

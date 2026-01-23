@@ -887,6 +887,45 @@ def expense(request, uuid):
 
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
+def choose_transaction(request):
+    """Combined view for deposit and withdrawal - single page with both actions"""
+    from accounts.utils import get_branch_from_vendor_db
+    user_branch = get_branch_from_vendor_db(request.user.branch_id)
+    
+    if user_branch:
+        if user_branch.head_office:
+            customers = Customer.objects.filter(
+                label='C',
+                branch__company=user_branch.company
+            ).order_by('-id')
+        else:
+            customers = Customer.objects.filter(
+                label='C',
+                branch=user_branch
+            ).order_by('-id')
+    else:
+        customers = Customer.objects.filter(label='C').order_by('-id')
+    
+    total_amounts = []
+    for customer in customers:
+        total_amount = Memtrans.objects.filter(
+            gl_no=customer.gl_no,
+            ac_no=customer.ac_no,
+            error='A',
+        ).aggregate(total_amount=Sum('amount'))['total_amount']
+
+        total_amounts.append({
+            'customer': customer,
+            'total_amount': total_amount or 0.0,
+        })
+
+    return render(request, 'transactions/cash_trans/choose_transaction.html', {
+        'total_amounts': total_amounts,
+    })
+
+
+@login_required(login_url='login')
+@user_passes_test(check_role_admin)
 def choose_deposit(request):
     data = Memtrans.objects.all().order_by('-id').first()
 

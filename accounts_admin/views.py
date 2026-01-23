@@ -64,11 +64,16 @@ def chart_of_accounts(request):
         messages.error(request, 'No branch assigned to your account. Please contact administrator to assign you to a branch.')
         return redirect('dashboard')
     
-    # Get all branch IDs for this company (chart of accounts is always company-wide)
+    # Get company for this user (chart of accounts is company-wide)
     branch_ids = get_company_branch_ids_all(request.user)
+    user_company = user_branch.company if user_branch else None
     
     # Retrieve accounts for the entire company (visible to all branches)
+    # Use company field if available, fallback to branch_ids for backward compatibility
     accounts = Account.all_objects.filter(
+        header=None,
+        company=user_company
+    ).order_by('gl_no') if user_company else Account.all_objects.filter(
         header=None,
         branch_id__in=branch_ids
     ).order_by('gl_no')
@@ -77,11 +82,12 @@ def chart_of_accounts(request):
         form = AccountForm(request.POST)
         if form.is_valid():
             account = form.save(commit=False)
-            # Assign the logged-in user's branch to the new account
+            # Assign company and branch to the new account
+            account.company = user_company
             account.branch = user_branch
 
-            # Check for duplicate gl_no within the same COMPANY (not just branch)
-            if Account.all_objects.filter(gl_no=account.gl_no, branch_id__in=branch_ids).exists():
+            # Check for duplicate gl_no within the same COMPANY
+            if Account.all_objects.filter(gl_no=account.gl_no, company=user_company).exists():
                 form.add_error('gl_no', 'An account with this GL number already exists in your company.')
             else:
                 account.save()
@@ -92,6 +98,8 @@ def chart_of_accounts(request):
 
     # Retrieve all accounts within the company
     account = Account.all_objects.filter(
+        company=user_company
+    ).order_by('gl_no') if user_company else Account.all_objects.filter(
         branch_id__in=branch_ids
     ).order_by('gl_no')
 

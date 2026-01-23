@@ -1,4 +1,4 @@
-from datetime import timedelta, timezone
+from datetime import timedelta, timezone as dt_timezone, datetime
 from decimal import Decimal
 import json
 from django.http import HttpResponse
@@ -16,11 +16,34 @@ from transactions.models import Memtrans
 from django.db.models import Sum, Max
 from django.contrib import messages
 from django.utils import timezone
+from django.core.mail import EmailMessage
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
+from django.conf import settings
 
 
 
 from transactions.utils import generate_loan_disbursement_id, generate_loan_repayment_id, generate_loan_written_off_id
 from django.contrib.auth.decorators import login_required, user_passes_test
+
+
+def send_loan_email(to_email, subject, template_name, context):
+    """Helper function to send loan-related emails."""
+    try:
+        context['year'] = datetime.now().year
+        html_message = render_to_string(template_name, context)
+        email = EmailMessage(
+            subject,
+            html_message,
+            settings.DEFAULT_FROM_EMAIL,
+            [to_email],
+        )
+        email.content_subtype = "html"
+        email.send()
+        return True
+    except Exception as e:
+        print(f"Failed to send loan email: {str(e)}")
+        return False
 # Create your views here.
 
 @login_required(login_url='login')
@@ -141,6 +164,24 @@ def loan_application(request, uuid):
                 # Update customer's loan status
                 customer.loan = 'T'
                 customer.save()
+
+                # Send email notification if checkbox is checked and customer has email
+                send_email = request.POST.get('send_email_notification')
+                if send_email and customer.email:
+                    email_context = {
+                        'customer_name': customer.first_name or customer.get_full_name(),
+                        'application_date': appli_date.strftime('%Y-%m-%d') if appli_date else '',
+                        'loan_amount': form.cleaned_data.get('loan_amount', 0),
+                        'interest_rate': form.cleaned_data.get('interest_rate', 0),
+                        'tenure': form.cleaned_data.get('num_install', 0),
+                        'account_number': f"{gl_no}{ac_no}",
+                    }
+                    send_loan_email(
+                        to_email=customer.email,
+                        subject="Loan Application Received",
+                        template_name='loans/emails/loan_application_email.html',
+                        context=email_context
+                    )
 
                 messages.success(request, 'Loan applied successfully!')
                 return redirect('choose_to_apply_loan')
@@ -287,6 +328,25 @@ def loan_approval(request, uuid):
             customer.approval_status = 'T'
             customer.save()
             form.save()
+
+            # Send email notification if checkbox is checked and customer has email
+            send_email = request.POST.get('send_email_notification')
+            if send_email and customers and customers.email:
+                email_context = {
+                    'customer_name': customers.first_name or customers.get_full_name(),
+                    'application_date': appli_date,
+                    'approval_date': approval_date.strftime('%Y-%m-%d') if approval_date else '',
+                    'loan_amount': customer.loan_amount,
+                    'interest_rate': customer.interest_rate,
+                    'tenure': customer.num_install,
+                    'account_number': f"{customer.gl_no}{customer.ac_no}",
+                }
+                send_loan_email(
+                    to_email=customers.email,
+                    subject="Your Loan Has Been Approved!",
+                    template_name='loans/emails/loan_approval_email.html',
+                    context=email_context
+                )
 
             messages.success(request, 'Loan Approved successfully!')
             return redirect('choose_loan_approval')
@@ -934,6 +994,27 @@ def loan_disbursement(request, uuid):
                         trx_no=unique_trx_no,
                         user=request.user
                     )
+
+                    # Send email notification if checkbox is checked and customer has email
+                    send_email_notif = request.POST.get('send_email_notification')
+                    if send_email_notif and customer and customer.email:
+                        email_context = {
+                            'customer_name': customer.first_name or customer.get_full_name(),
+                            'disbursement_date': ses_date.strftime('%Y-%m-%d') if ses_date else '',
+                            'disbursed_amount': loan.loan_amount,
+                            'loan_account': f"{loan.gl_no}{loan.ac_no}",
+                            'customer_account': f"{customer.gl_no}{customer.ac_no}",
+                            'interest_rate': loan.interest_rate,
+                            'monthly_installment': loan.install_amount or 0,
+                            'first_payment_date': loan.first_due_date.strftime('%Y-%m-%d') if loan.first_due_date else '',
+                            'total_repayment': (loan.loan_amount or 0) + (loan.total_interest or 0),
+                        }
+                        send_loan_email(
+                            to_email=customer.email,
+                            subject="Your Loan Has Been Disbursed!",
+                            template_name='loans/emails/loan_disbursement_email.html',
+                            context=email_context
+                        )
 
                     success_msg = 'Loan disbursed successfully'
                     if application_fee > 0:

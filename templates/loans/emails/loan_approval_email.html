@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Loan Approved</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <div style="background: linear-gradient(135deg, #22c55e, #16a34a); padding: 20px; text-align: center; border-radius: 10px 10px 0 0;">
+        <h1 style="color: white; margin: 0;">🎉 Loan Approved!</h1>
+    </div>
+    
+    <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
+        <p>Dear <strong>{{ customer_name }}</strong>,</p>
+        
+        <p>Congratulations! Your loan application has been <strong style="color: #22c55e;">APPROVED</strong>.</p>
+        
+        <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #22c55e;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                    <td style="padding: 8px 0; color: #666;">Application Date:</td>
+                    <td style="padding: 8px 0; font-weight: bold;">{{ application_date }}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; color: #666;">Approval Date:</td>
+                    <td style="padding: 8px 0; font-weight: bold;">{{ approval_date }}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; color: #666;">Approved Amount:</td>
+                    <td style="padding: 8px 0; font-weight: bold; color: #22c55e;">₦{{ loan_amount|floatformat:2 }}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; color: #666;">Interest Rate:</td>
+                    <td style="padding: 8px 0; font-weight: bold;">{{ interest_rate }}%</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; color: #666;">Number of Installments:</td>
+                    <td style="padding: 8px 0; font-weight: bold;">{{ tenure }}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; color: #666;">Account Number:</td>
+                    <td style="padding: 8px 0; font-weight: bold;">{{ account_number }}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; color: #666;">Status:</td>
+                    <td style="padding: 8px 0;"><span style="background: #dcfce7; color: #16a34a; padding: 4px 12px; border-radius: 20px; font-size: 12px;">Approved</span></td>
+                </tr>
+            </table>
+        </div>
+        
+        <p>Your loan will be disbursed shortly. You will receive a confirmation email once the funds have been credited to your account.</p>
+        
+        <p style="color: #666; font-size: 14px;">If you have any questions, please contact your branch or account officer.</p>
+        
+        <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+        
+        <p style="color: #999; font-size: 12px; text-align: center;">
+            This is an automated message. Please do not reply to this email.<br>
+            © {{ year }} FinanceFlex. All rights reserved.
+        </p>
+    </div>
+</body>
+</html>

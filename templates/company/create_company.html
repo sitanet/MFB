@@ -360,7 +360,7 @@
                         </div>
                         <div class="form-group required">
                             <label for="email"><i class="fas fa-envelope"></i> Email Address</label>
-                            <input type="email" id="email" name="email" class="form-control" required>
+                            <input type="email" id="email" name="email" class="form-control" required oninput="this.value = this.value.toLowerCase()">
                         </div>
                         <div class="form-group required">
                             <label for="float_account_number"><i class="fas fa-university"></i> 9PSB Float Account</label>
@@ -442,6 +442,15 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // Auto-fill date fields with today's date
+            var today = new Date().toISOString().split('T')[0];
+            var dateInputs = document.querySelectorAll('input[type="date"]');
+            dateInputs.forEach(function(input) {
+                if (!input.value && !input.readOnly && !input.disabled) {
+                    input.value = today;
+                }
+            });
+
             const form = document.getElementById('company-form');
             if (form) {
                 form.addEventListener('submit', function() {

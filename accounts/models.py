@@ -187,7 +187,7 @@ class User(AbstractBaseUser):
     first_name = models.CharField(max_length=50)
     last_name = models.CharField(max_length=50)
     username = models.CharField(max_length=50, unique=True)
-    email = models.EmailField(max_length=100, unique=True)
+    email = models.EmailField(max_length=100)  # unique=True removed to allow shared emails across Company, Branch, User
     phone_number = models.CharField(max_length=16, blank=True, null=True)
     role = models.PositiveSmallIntegerField(choices=ROLE_CHOICE, blank=True, null=True)
     
@@ -399,7 +399,7 @@ class Clients(models.Model):
     """Client information model - Stored in CLIENT database"""
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     name = models.CharField(max_length=100)
-    email = models.EmailField(unique=True)
+    email = models.EmailField()  # unique=True removed to allow shared emails
     date_of_birth = models.DateField()
 
     def __str__(self):

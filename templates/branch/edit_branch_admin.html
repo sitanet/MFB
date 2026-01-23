@@ -263,7 +263,7 @@
 
             <div class="form-group">
                 <label for="email">Email Address *</label>
-                <input type="email" id="email" name="email" required placeholder="Enter email address" value="{{ branch_admin.email }}">
+                <input type="email" id="email" name="email" required placeholder="Enter email address" value="{{ branch_admin.email }}" oninput="this.value = this.value.toLowerCase()">
             </div>
 
             <div class="form-group">

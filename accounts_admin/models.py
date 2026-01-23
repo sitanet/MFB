@@ -51,8 +51,13 @@ class Account(models.Model):
     )
 
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    company = models.ForeignKey(
+        Company, on_delete=models.CASCADE, related_name="accounts", null=True, blank=True,
+        help_text="Company that owns this chart of account. Shared by all branches."
+    )
     branch = models.ForeignKey(
-        Branch, on_delete=models.CASCADE, related_name="accounts", null=True, blank=True
+        Branch, on_delete=models.CASCADE, related_name="branch_accounts", null=True, blank=True,
+        help_text="Deprecated: Use company instead. Kept for backward compatibility."
     )
     gl_name = models.CharField(max_length=80)
     gl_no = models.CharField(max_length=10)

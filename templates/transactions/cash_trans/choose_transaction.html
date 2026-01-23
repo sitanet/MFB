@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container-fluid">
+    {% include 'include/quick_nav.html' with active_module='transactions' %}
+
+    <div class="row">
+        <div class="col-md-12">
+            <div class="page_title">
+                <h2>Cash Transactions</h2>
+            </div>
+        </div>
+        <div class="container deposit p-5 shadow-lg rounded rounded-5">
+            
+            <div class="row mt-3 table-row1">
+                <div class="col-md-3 mb-3">
+                    <div class="account_setting py-5 fs-1 bg-white shadow-lg rounded rounded-5" style="border-left: 4px solid #8b5cf6;">
+                       <div class="couter_icon col-md-3">
+                          <i class="couter_icon fa fa-hand-holding-usd" style="color: #8b5cf6;"></i>
+                       </div>
+                       <a href="{% url 'loans' %}" class="text-center">
+                          <h5 class="my-2">Loans</h5>
+                       </a>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="account_setting py-5 fs-1 bg-white shadow-lg rounded rounded-5" style="border-left: 4px solid #14b8a6;">
+                       <div class="couter_icon col-md-3">
+                          <i class="couter_icon fa fa-piggy-bank" style="color: #14b8a6;"></i>
+                       </div>
+                       <a href="{% url 'fixed_dep' %}" class="text-center">
+                          <h5 class="my-2">Fixed Deposit</h5>
+                       </a>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="account_setting py-5 fs-1 bg-white shadow-lg rounded rounded-5" style="border-left: 4px solid #f59e0b;">
+                       <div class="couter_icon col-md-3">
+                          <i class="couter_icon fa fa-chart-bar" style="color: #f59e0b;"></i>
+                       </div>
+                       <a href="{% url 'back_office_report' %}" class="text-center">
+                          <h5 class="my-2">Reports</h5>
+                       </a>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="account_setting py-5 fs-1 bg-white shadow-lg rounded rounded-5" style="border-left: 4px solid #3b82f6;">
+                       <div class="couter_icon col-md-3">
+                          <i class="couter_icon fa fa-book" style="color: #3b82f6;"></i>
+                       </div>
+                       <a href="{% url 'choose_income' %}" class="text-center">
+                          <h5 class="my-2">Journal</h5>
+                       </a>
+                    </div>
+                </div>
+
+                <div class="col-md-12 justify-content-center text-center m-auto">
+                    <div class="input-group mb-3">
+                        <input type="text" class="form-control form-control-lg bg-white border"
+                            placeholder="Search by name, account number..." id="searchInput" onkeyup="searchTable()">
+                        <div class="">
+                            <button class="btn btn-success py-3" type="button" onclick="searchTable()">Search</button>
+                        </div>
+                    </div>
+                    <button class="btn btn-secondary mb-3" onclick="window.history.back()">Back</button>
+
+                    <table class="table table-responsive table-hover">
+                        <thead class="thead-dark">
+                            <tr>
+                                <th>Passport</th>
+                                <th>Full Name</th>
+                                <th>GL No.</th>
+                                <th>Account No.</th>
+                                <th>Balance</th>
+                                <th>Branch</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="customerTable">
+                            {% for item in total_amounts %}
+                                <tr>
+                                    <td>
+                                        {% if item.customer.photo %}
+                                            <img src="{{ item.customer.photo.url }}" class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover;" alt="">
+                                        {% else %}
+                                            <img src="/static/images/avatar.jpg" class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover;" alt="">
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ item.customer.first_name }} {{ item.customer.last_name }}</td>
+                                    <td>{{ item.customer.gl_no }}</td>
+                                    <td>{{ item.customer.ac_no }}</td>
+                                    <td>₦{{ item.total_amount|floatformat:2 }}</td>
+                                    <td>{{ item.customer.branch }}</td>
+                                    <td>
+                                        <a href="{% url 'deposit' item.customer.uuid %}" class="btn btn-success btn-sm" style="font-weight: bold;">
+                                            <i class="fa fa-arrow-down"></i> Deposit
+                                        </a>
+                                        <a href="{% url 'withdraw' item.customer.uuid %}" class="btn btn-danger btn-sm" style="font-weight: bold;">
+                                            <i class="fa fa-arrow-up"></i> Withdraw
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="7" class="text-center">No customers found</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function searchTable() {
+    var input = document.getElementById("searchInput");
+    var filter = input.value.toLowerCase();
+    var table = document.getElementById("customerTable");
+    var tr = table.getElementsByTagName("tr");
+
+    for (var i = 0; i < tr.length; i++) {
+        var tds = tr[i].getElementsByTagName("td");
+        var found = false;
+        for (var j = 0; j < tds.length; j++) {
+            if (tds[j].textContent.toLowerCase().indexOf(filter) > -1) {
+                found = true;
+                break;
+            }
+        }
+        tr[i].style.display = found ? "" : "none";
+    }
+}
+</script>
+{% endblock %}
