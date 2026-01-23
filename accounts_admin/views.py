@@ -70,11 +70,19 @@ def chart_of_accounts(request):
     user_company = user_branch.company if user_branch else None
     
     # Retrieve accounts for the entire company (visible to all branches)
-    # Query by branch_ids and get distinct by gl_no to avoid duplicates
-    accounts = Account.all_objects.filter(
+    # Get unique gl_no accounts - first get distinct gl_nos, then fetch accounts
+    all_accounts = Account.all_objects.filter(
         header=None,
         branch_id__in=branch_ids
-    ).order_by('gl_no').distinct('gl_no')
+    ).order_by('gl_no')
+    
+    # Remove duplicates by gl_no (keep first occurrence)
+    seen_gl = set()
+    accounts = []
+    for acc in all_accounts:
+        if acc.gl_no not in seen_gl:
+            seen_gl.add(acc.gl_no)
+            accounts.append(acc)
     
     if request.method == 'POST':
         form = AccountForm(request.POST)
@@ -94,10 +102,17 @@ def chart_of_accounts(request):
     else:
         form = AccountForm()
 
-    # Retrieve all accounts within the company (distinct by gl_no to avoid duplicates)
-    account = Account.all_objects.filter(
+    # Retrieve all accounts within the company (remove duplicates by gl_no)
+    all_account_list = Account.all_objects.filter(
         branch_id__in=branch_ids
-    ).order_by('gl_no').distinct('gl_no')
+    ).order_by('gl_no')
+    
+    seen_gl_account = set()
+    account = []
+    for acc in all_account_list:
+        if acc.gl_no not in seen_gl_account:
+            seen_gl_account.add(acc.gl_no)
+            account.append(acc)
 
     return render(request, 'accounts_admin/chart_of_accounts.html', {
         'account': account,
@@ -680,8 +695,15 @@ def account_list(request):
     # Get all branch IDs for this company (accounts list is always company-wide)
     branch_ids = get_company_branch_ids_all(request.user)
 
-    # Filter accounts by company branches, distinct by gl_no to avoid duplicates
-    accounts = Account.all_objects.filter(branch_id__in=branch_ids).order_by('gl_no').distinct('gl_no')
+    # Filter accounts by company branches, remove duplicates by gl_no
+    all_accounts = Account.all_objects.filter(branch_id__in=branch_ids).order_by('gl_no')
+    
+    seen_gl = set()
+    accounts = []
+    for acc in all_accounts:
+        if acc.gl_no not in seen_gl:
+            seen_gl.add(acc.gl_no)
+            accounts.append(acc)
 
     return render(request, 'account_list.html', {'accounts': accounts})
 

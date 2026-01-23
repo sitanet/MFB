@@ -82,14 +82,7 @@ class Company(models.Model):
         """Check if company can be safely deleted"""
         return not self.has_transactions()
 
-    def delete(self, *args, **kwargs):
-        """Override delete to prevent deletion if transactions exist"""
-        if self.has_transactions():
-            raise ValueError(
-                f"Cannot delete company '{self.company_name}' because it has associated transactions. "
-                "Please delete or transfer all transactions first."
-            )
-        super().delete(*args, **kwargs)
+
 
 
 class Branch(models.Model):
@@ -210,14 +203,7 @@ class Branch(models.Model):
         """Check if branch can be safely deleted"""
         return not self.has_transactions()
 
-    def delete(self, *args, **kwargs):
-        """Override delete to prevent deletion if transactions exist"""
-        if self.has_transactions():
-            raise ValueError(
-                f"Cannot delete branch '{self.branch_name}' because it has associated transactions. "
-                "Please delete or transfer all transactions first."
-            )
-        super().delete(*args, **kwargs)
+
 
 
 class SmsDelivery(models.Model):
