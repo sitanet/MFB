@@ -821,158 +821,139 @@ def delete_user(request, uuid):
 
 @login_required(login_url='login')
 def dashboard(request):
-    """Dashboard with statistics and branch information - Role-based data"""
-    # Date setup
+    """Role-based dashboard - each role sees only relevant data"""
     today = timezone.now()
     current_month = today.month
     current_year = today.year
 
-    # Get user's branch and company information
     user_branch = get_branch_from_vendor_db(request.user.branch_id)
     user_company = user_branch.company if user_branch else None
     user_role = request.user.role
+    user_branch_id = int(request.user.branch_id) if request.user.branch_id else None
 
-    # Role-based filtering:
-    # Role 1 (System Admin) sees company-wide data
-    # All other roles see only their own branch data
-    if user_role == 1 and user_company:
-        # System Admin sees company-wide data
+    # Role-based access levels:
+    # Level 1: Company-wide (System Admin=1, General Manager=2)
+    # Level 2: Branch-wide (Branch Manager=3, Assistant Manager=4, Accountant=5)
+    # Level 3: Department/Personal (Credit roles=7,8, Teller=11, CSU=10, etc.)
+    
+    if user_role in [1, 2] and user_company:
+        # System Admin & General Manager see company-wide data
         company_branches = Branch.objects.filter(company=user_company)
         branch_ids = [b.id for b in company_branches]
+        access_level = 'company'
+    elif user_role in [3, 4, 5, 6, 12]:
+        # Branch Manager, Asst Manager, Accountant, Accounts Asst, MIS - see branch data
+        branch_ids = [user_branch_id] if user_branch_id else []
+        access_level = 'branch'
     else:
-        # All other roles see only their branch data
-        branch_ids = [int(request.user.branch_id)] if request.user.branch_id else []
+        # Credit Officers, Tellers, CSU, Verification - see only their own data
+        branch_ids = [user_branch_id] if user_branch_id else []
+        access_level = 'personal'
 
-    # Filter base querysets by branch(es) (use all_objects to bypass TenantManager)
-    company_customers = Customer.all_objects.filter(branch_id__in=branch_ids)
-    company_loans = Loans.all_objects.filter(branch_id__in=branch_ids)
-    company_memtrans = Memtrans.all_objects.filter(branch_id__in=branch_ids)
+    # Base querysets filtered by accessible branches
+    branch_customers = Customer.all_objects.filter(branch_id__in=branch_ids)
+    branch_loans = Loans.all_objects.filter(branch_id__in=branch_ids)
+    branch_memtrans = Memtrans.all_objects.filter(branch_id__in=branch_ids)
 
-    # Current Month Deposits
+    # For personal level, further filter by user
+    if access_level == 'personal':
+        if user_role in [7, 8]:  # Credit Supervisor/Officer - their assigned loans
+            branch_loans = branch_loans.filter(user=request.user)
+            # Get customers linked to their loans
+            customer_ids = branch_loans.values_list('customer_id', flat=True)
+            branch_customers = branch_customers.filter(id__in=customer_ids)
+        elif user_role == 11:  # Teller - their transactions
+            branch_memtrans = branch_memtrans.filter(user=request.user)
+        elif user_role == 10:  # CSU - customers they serve (if tracked)
+            pass  # Show branch customers for CSU
+
+    # Calculate statistics based on filtered data
     current_month_deposits = (
-        company_memtrans.filter(
-            ses_date__month=current_month,
-            ses_date__year=current_year,
-            amount__gt=0,
-            account_type='C'
+        branch_memtrans.filter(
+            ses_date__month=current_month, ses_date__year=current_year,
+            amount__gt=0, account_type='C'
         ).aggregate(total=Sum('amount'))['total'] or 0
     )
 
-    # Current Month Loans (disbursed only)
     current_month_loans = (
-        company_loans.filter(
-            appli_date__month=current_month,
-            appli_date__year=current_year,
+        branch_loans.filter(
+            appli_date__month=current_month, appli_date__year=current_year,
             disb_status='T'
         ).aggregate(total=Sum('loan_amount'))['total'] or 0
     )
 
-    # Accumulated Deposits (YTD)
     total_deposits = (
-        company_memtrans.filter(
-            ses_date__year=current_year,
-            amount__gt=0,
-            account_type='C'
+        branch_memtrans.filter(
+            ses_date__year=current_year, amount__gt=0, account_type='C'
         ).aggregate(total=Sum('amount'))['total'] or 0
     )
 
-    # Accumulated Loans (YTD)
     total_loans = (
-        company_loans.filter(
-            disb_status='T',
-            disbursement_date__year=current_year
+        branch_loans.filter(
+            disb_status='T', disbursement_date__year=current_year
         ).aggregate(total=Sum('loan_amount'))['total'] or 0
     )
 
-    total_customers = company_customers.count()
+    total_customers = branch_customers.count()
 
     # NPL Ratio
     npl_ratio = 0
-    if company_loans.exists():
-        total_loans_count = company_loans.count()
-        defaulted_count = company_loans.filter(approval_status='Defaulted').count()
-        npl_ratio = (
-            round((defaulted_count / total_loans_count) * 100, 2)
-            if total_loans_count > 0 else 0
-        )
+    total_loans_count = branch_loans.count()
+    if total_loans_count > 0:
+        defaulted_count = branch_loans.filter(approval_status='Defaulted').count()
+        npl_ratio = round((defaulted_count / total_loans_count) * 100, 2)
 
     # Monthly trends
-    months = [
-        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
-    ]
+    months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
     deposits_trend = []
     loans_trend = []
 
     for m in range(1, 13):
-        deposits = (
-            company_memtrans.filter(
-                ses_date__month=m,
-                ses_date__year=current_year,
-                amount__gt=0,
-                account_type='C'
-            ).aggregate(total=Sum('amount'))['total'] or 0
-        )
+        dep = branch_memtrans.filter(
+            ses_date__month=m, ses_date__year=current_year,
+            amount__gt=0, account_type='C'
+        ).aggregate(total=Sum('amount'))['total'] or 0
 
-        loans = (
-            company_loans.filter(
-                appli_date__month=m,
-                appli_date__year=current_year,
-                disb_status='T'
-            ).aggregate(total=Sum('loan_amount'))['total'] or 0
-        )
+        loan = branch_loans.filter(
+            appli_date__month=m, appli_date__year=current_year,
+            disb_status='T'
+        ).aggregate(total=Sum('loan_amount'))['total'] or 0
 
-        deposits_trend.append(float(deposits) / 1_000_000_000)
-        loans_trend.append(float(loans) / 1_000_000_000)
+        deposits_trend.append(float(dep) / 1_000_000_000)
+        loans_trend.append(float(loan) / 1_000_000_000)
 
-    # Customer Segmentation (filtered by company)
+    # Customer Segmentation
     segmentation = {}
     for cat in Category.objects.all():
-        segmentation[cat.category_name] = company_customers.filter(cust_cat=cat).count()
+        segmentation[cat.category_name] = branch_customers.filter(cust_cat=cat).count()
 
-    # Branch Performance (role-based - show only accessible branches)
+    # Branch Performance - only for company/branch level access
     branch_data = []
-    # Get branches based on user's role
-    if user_role == 1 and user_company:
-        # System Admin sees all company branches
+    if access_level == 'company':
         branches_to_show = Branch.objects.filter(company=user_company)
+    elif access_level == 'branch':
+        branches_to_show = Branch.objects.filter(id=user_branch_id) if user_branch_id else []
     else:
-        # Other roles see only their own branch
-        branches_to_show = Branch.objects.filter(id=request.user.branch_id) if request.user.branch_id else []
-    
+        branches_to_show = []  # Personal level doesn't see branch performance
+
     for branch in branches_to_show:
-        # Count customers and loans for this branch (use all_objects to bypass TenantManager)
         cust_count = Customer.all_objects.filter(branch_id=branch.id).count()
         
-        branch_deposits = (
-            Memtrans.all_objects.filter(
-                branch_id=branch.id,
-                amount__gt=0,
-                account_type='C'
-            ).aggregate(total=Sum('amount'))['total'] or 0
-        )
+        b_deposits = Memtrans.all_objects.filter(
+            branch_id=branch.id, amount__gt=0, account_type='C'
+        ).aggregate(total=Sum('amount'))['total'] or 0
 
-        branch_loans = (
-            Loans.all_objects.filter(
-                branch_id=branch.id,
-                disb_status='T'
-            ).aggregate(total=Sum('loan_amount'))['total'] or 0
-        )
+        b_loans = Loans.all_objects.filter(
+            branch_id=branch.id, disb_status='T'
+        ).aggregate(total=Sum('loan_amount'))['total'] or 0
 
-        profit = Decimal(branch_loans) * Decimal('0.05')
+        profit = Decimal(b_loans) * Decimal('0.05')
         
-        npl = Loans.all_objects.filter(
-            branch_id=branch.id,
-            approval_status='Defaulted'
-        ).count()
-        total_loans_branch = Loans.all_objects.filter(branch_id=branch.id).count()
-        npl_ratio_branch = (
-            round((npl / total_loans_branch) * 100, 2)
-            if total_loans_branch > 0 else 0
-        )
+        npl_count = Loans.all_objects.filter(branch_id=branch.id, approval_status='Defaulted').count()
+        total_b_loans = Loans.all_objects.filter(branch_id=branch.id).count()
+        npl_ratio_branch = round((npl_count / total_b_loans) * 100, 2) if total_b_loans > 0 else 0
 
-        # Branch Status
-        if npl_ratio_branch < 5 and branch_deposits > 0:
+        if npl_ratio_branch < 5 and b_deposits > 0:
             status = "Excellent"
         elif npl_ratio_branch < 10:
             status = "Good"
@@ -985,34 +966,50 @@ def dashboard(request):
             "name": branch.branch_name,
             "location": branch.address,
             "customers": cust_count,
-            "deposits": branch_deposits,
-            "loans": branch_loans,
+            "deposits": b_deposits,
+            "loans": b_loans,
             "profit": profit,
             "npl_ratio": npl_ratio_branch,
             "status": status,
         })
 
+    # Role-specific extra data
+    pending_loans = None
+    today_transactions = None
+    my_customers = None
+
+    if user_role in [7, 8]:  # Credit roles - show pending loans
+        pending_loans = branch_loans.filter(approval_status='Pending').count()
+    
+    if user_role == 11:  # Teller - show today's transactions
+        today_transactions = branch_memtrans.filter(ses_date=today.date()).count()
+    
+    if user_role in [8, 10]:  # Credit Officer, CSU - show their customers
+        my_customers = branch_customers.count()
+
     context = {
-        # User information
         'user_branch': user_branch,
         'user_company': user_company,
+        'user_role': user_role,
+        'access_level': access_level,
         
-        # Current Month
         "current_month_deposits": current_month_deposits,
         "current_month_loans": current_month_loans,
-
-        # Accumulated (YTD)
         "total_deposits": total_deposits,
         "total_loans": total_loans,
         "total_customers": total_customers,
         "npl_ratio": npl_ratio,
 
-        # Charts & Lists
         "months": months,
         "deposits_trend": deposits_trend,
         "loans_trend": loans_trend,
         "segmentation": segmentation,
         "branch_data": branch_data,
+        
+        # Role-specific data
+        "pending_loans": pending_loans,
+        "today_transactions": today_transactions,
+        "my_customers": my_customers,
     }
 
     return render(request, 'accounts/dashboard.html', context)
