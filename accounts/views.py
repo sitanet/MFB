@@ -90,11 +90,10 @@ def get_user_branches_from_vendor_db(user):
 # ==================== ROLE CHECKING FUNCTIONS ====================
 
 def check_role_admin(user):
-    """Check if user has admin role"""
-    if user.role == 1:
+    """Check if user has admin role (System Administrator or any staff role 1-12)"""
+    if user.is_authenticated and user.role and user.role >= 1 and user.role <= 12:
         return True
-    else:
-        raise PermissionDenied
+    return False
 
 
 def check_role_coordinator(user):
