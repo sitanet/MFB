@@ -136,13 +136,23 @@ def update_chart_of_account(request, uuid):
     form = AccountForm(instance=chart_of_account)
 
     if request.method == 'POST':
+        # Store original branch and company before form processing
+        original_branch = chart_of_account.branch
+        original_branch_id = chart_of_account.branch_id
+        original_company = chart_of_account.company
+        
         form = AccountForm(request.POST, instance=chart_of_account)
         if form.is_valid():
             account = form.save(commit=False)
-            # Preserve original branch if it exists, otherwise assign user's branch
+            # Restore original branch and company (form doesn't include these fields)
+            account.branch = original_branch
+            account.branch_id = original_branch_id
+            account.company = original_company
+            # If still no branch, assign user's branch
             if not account.branch_id:
                 user_branch = get_branch_from_vendor_db(request.user.branch_id)
                 account.branch = user_branch
+                account.branch_id = user_branch.id if user_branch else None
             account.save()
             messages.success(request, 'Account updated successfully!')
             return redirect('chart_of_accounts')
