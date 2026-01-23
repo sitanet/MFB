@@ -829,7 +829,10 @@ def dashboard(request):
     user_branch = get_branch_from_vendor_db(request.user.branch_id)
     user_company = user_branch.company if user_branch else None
     user_role = request.user.role
-    user_branch_id = int(request.user.branch_id) if request.user.branch_id else None
+    try:
+        user_branch_id = int(request.user.branch_id) if request.user.branch_id else None
+    except (ValueError, TypeError):
+        user_branch_id = None
 
     # Role-based access levels:
     # Level 1: Company-wide (System Admin=1, General Manager=2)
