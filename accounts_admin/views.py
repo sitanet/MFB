@@ -665,8 +665,8 @@ def account_list(request):
     # Get all branch IDs for this company (accounts list is always company-wide)
     branch_ids = get_company_branch_ids_all(request.user)
 
-    # Filter accounts by company branches and order by GL number (company-wide visibility)
-    accounts = Account.all_objects.filter(branch_id__in=branch_ids).order_by('gl_no')
+    # Filter accounts by company branches, distinct by gl_no to avoid duplicates
+    accounts = Account.all_objects.filter(branch_id__in=branch_ids).order_by('gl_no').distinct('gl_no')
 
     return render(request, 'account_list.html', {'accounts': accounts})
 
