@@ -821,7 +821,7 @@ def delete_user(request, uuid):
 
 @login_required(login_url='login')
 def dashboard(request):
-    """Dashboard with statistics and branch information"""
+    """Dashboard with statistics and branch information - Role-based data"""
     # Date setup
     today = timezone.now()
     current_month = today.month
@@ -830,18 +830,23 @@ def dashboard(request):
     # Get user's branch and company information
     user_branch = get_branch_from_vendor_db(request.user.branch_id)
     user_company = user_branch.company if user_branch else None
+    user_role = request.user.role
 
-    # Get company branches for filtering
-    if user_company:
+    # Role-based filtering:
+    # Role 1 (System Admin) sees company-wide data
+    # All other roles see only their own branch data
+    if user_role == 1 and user_company:
+        # System Admin sees company-wide data
         company_branches = Branch.objects.filter(company=user_company)
-        company_branch_ids = [b.id for b in company_branches]  # Keep as integers for ForeignKey
+        branch_ids = [b.id for b in company_branches]
     else:
-        company_branch_ids = [int(request.user.branch_id)] if request.user.branch_id else []
+        # All other roles see only their branch data
+        branch_ids = [int(request.user.branch_id)] if request.user.branch_id else []
 
-    # Filter base querysets by company branches (use all_objects to bypass TenantManager)
-    company_customers = Customer.all_objects.filter(branch_id__in=company_branch_ids)
-    company_loans = Loans.all_objects.filter(branch_id__in=company_branch_ids)
-    company_memtrans = Memtrans.all_objects.filter(branch_id__in=company_branch_ids)
+    # Filter base querysets by branch(es) (use all_objects to bypass TenantManager)
+    company_customers = Customer.all_objects.filter(branch_id__in=branch_ids)
+    company_loans = Loans.all_objects.filter(branch_id__in=branch_ids)
+    company_memtrans = Memtrans.all_objects.filter(branch_id__in=branch_ids)
 
     # Current Month Deposits
     current_month_deposits = (
@@ -925,12 +930,14 @@ def dashboard(request):
     for cat in Category.objects.all():
         segmentation[cat.category_name] = company_customers.filter(cust_cat=cat).count()
 
-    # Branch Performance (only show company branches)
+    # Branch Performance (role-based - show only accessible branches)
     branch_data = []
-    # Get branches belonging to user's company only
-    if user_company:
+    # Get branches based on user's role
+    if user_role == 1 and user_company:
+        # System Admin sees all company branches
         branches_to_show = Branch.objects.filter(company=user_company)
     else:
+        # Other roles see only their own branch
         branches_to_show = Branch.objects.filter(id=request.user.branch_id) if request.user.branch_id else []
     
     for branch in branches_to_show:
