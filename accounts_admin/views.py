@@ -123,7 +123,7 @@ def success_view(request):
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
 def update_chart_of_account(request, uuid):
-    from accounts.utils import get_company_branch_ids_all
+    from accounts.utils import get_company_branch_ids_all, get_branch_from_vendor_db
     
     chart_of_account = Account.all_objects.get(uuid=uuid)
     
@@ -138,7 +138,12 @@ def update_chart_of_account(request, uuid):
     if request.method == 'POST':
         form = AccountForm(request.POST, instance=chart_of_account)
         if form.is_valid():
-            form.save()
+            account = form.save(commit=False)
+            # Preserve original branch if it exists, otherwise assign user's branch
+            if not account.branch_id:
+                user_branch = get_branch_from_vendor_db(request.user.branch_id)
+                account.branch = user_branch
+            account.save()
             messages.success(request, 'Account updated successfully!')
             return redirect('chart_of_accounts')
 
