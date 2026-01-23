@@ -54,6 +54,7 @@ from django.shortcuts import render
 
 
 @login_required
+@user_passes_test(check_role_admin)
 def chart_of_accounts(request):
     from accounts.utils import get_company_branch_ids_all, get_branch_from_vendor_db
     
