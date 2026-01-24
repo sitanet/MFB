@@ -3,185 +3,621 @@
 {% load humanize %}
 
 <style>
-    /* Container */
-    .report-container {
-        background: #f4f6f9;
+    :root {
+        --primary-color: #1a5f7a;
+        --secondary-color: #159895;
+        --accent-color: #57c5b6;
+        --light-bg: #f8fafc;
+        --dark-text: #1e293b;
+        --muted-text: #64748b;
+        --border-color: #e2e8f0;
+        --success-color: #10b981;
+        --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+        --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    }
+
+    .schedule-wrapper {
+        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
         min-height: 100vh;
-        padding: 30px 20px;
+        padding: 40px 20px;
     }
 
-    /* Page Title */
-    .page_title h2 {
+    .schedule-container {
+        max-width: 1100px;
+        margin: 0 auto;
+    }
+
+    /* Header Section */
+    .report-header {
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+        border-radius: 20px 20px 0 0;
+        padding: 35px 40px;
+        color: white;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .report-header::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -20%;
+        width: 400px;
+        height: 400px;
+        background: rgba(255,255,255,0.1);
+        border-radius: 50%;
+    }
+
+    .report-header::after {
+        content: '';
+        position: absolute;
+        bottom: -30%;
+        left: -10%;
+        width: 300px;
+        height: 300px;
+        background: rgba(255,255,255,0.05);
+        border-radius: 50%;
+    }
+
+    .company-brand {
+        position: relative;
+        z-index: 1;
+    }
+
+    .company-brand h2 {
+        font-size: 1.75rem;
         font-weight: 700;
-        font-size: 2rem;
-        color: #2c3e50;
-        text-align: center;
-        margin-bottom: 25px;
+        margin-bottom: 5px;
+        letter-spacing: -0.5px;
     }
 
-    /* Card */
-    .report-card {
-        background: #fff;
-        border-radius: 18px;
-        padding: 30px;
-        box-shadow: 0 6px 20px rgba(0,0,0,0.1);
-        transition: transform 0.2s ease;
-    }
-    .report-card:hover { transform: translateY(-3px); }
-
-    /* Company Info */
-    .company-info h4 { font-weight: 700; color: #2c3e50; }
-    .company-info h6 { color: #7f8c8d; margin: 2px 0; }
-
-    /* Buttons */
-    .action-buttons {
-        text-align: right;
-        margin-bottom: 15px;
-    }
-    .action-buttons .btn {
-        margin-left: 5px;
-        border-radius: 10px;
-        font-weight: 600;
-        padding: 8px 16px;
-    }
-    .action-buttons .dropdown-menu a {
+    .company-brand .branch-name {
+        font-size: 1.1rem;
+        opacity: 0.9;
         font-weight: 500;
     }
 
-    /* Loan Info */
-    .loan-details h6 {
-        font-size: 0.95rem;
-        margin: 5px 0;
-        color: #34495e;
+    .company-brand .contact-info {
+        margin-top: 10px;
+        font-size: 0.9rem;
+        opacity: 0.85;
     }
 
-    /* Table */
-    .table {
-        margin-top: 25px;
-        border-radius: 10px;
+    .report-title {
+        position: relative;
+        z-index: 1;
+        text-align: right;
+    }
+
+    .report-title h1 {
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin-bottom: 5px;
+    }
+
+    .report-title .report-date {
+        font-size: 0.85rem;
+        opacity: 0.8;
+    }
+
+    /* Main Card */
+    .report-card {
+        background: white;
+        border-radius: 0 0 20px 20px;
+        box-shadow: var(--shadow-lg);
         overflow: hidden;
     }
-    .table thead {
-        background: linear-gradient(90deg, #2c3e50, #34495e);
-        color: #fff;
+
+    /* Action Bar */
+    .action-bar {
+        background: var(--light-bg);
+        padding: 15px 30px;
+        border-bottom: 1px solid var(--border-color);
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .action-bar .btn {
+        border-radius: 8px;
+        font-weight: 500;
+        font-size: 0.875rem;
+        padding: 8px 16px;
+        border: none;
+        transition: all 0.2s ease;
+    }
+
+    .btn-download {
+        background: var(--success-color);
+        color: white;
+    }
+
+    .btn-download:hover {
+        background: #059669;
+        color: white;
+        transform: translateY(-1px);
+    }
+
+    .btn-print {
+        background: var(--primary-color);
+        color: white;
+    }
+
+    .btn-print:hover {
+        background: #134b5f;
+        color: white;
+        transform: translateY(-1px);
+    }
+
+    .btn-back {
+        background: white;
+        color: var(--dark-text);
+        border: 1px solid var(--border-color);
+    }
+
+    .btn-back:hover {
+        background: var(--light-bg);
+        color: var(--dark-text);
+    }
+
+    .dropdown-menu {
+        border-radius: 10px;
+        border: 1px solid var(--border-color);
+        box-shadow: var(--shadow-md);
+        padding: 8px;
+    }
+
+    .dropdown-item {
+        border-radius: 6px;
+        padding: 8px 16px;
+        font-size: 0.875rem;
+    }
+
+    .dropdown-item:hover {
+        background: var(--light-bg);
+    }
+
+    /* Loan Summary Section */
+    .loan-summary {
+        padding: 30px;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .borrower-section {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        margin-bottom: 25px;
+        padding-bottom: 20px;
+        border-bottom: 1px dashed var(--border-color);
+    }
+
+    .borrower-avatar {
+        width: 70px;
+        height: 70px;
+        background: linear-gradient(135deg, var(--secondary-color), var(--accent-color));
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.75rem;
+        color: white;
+        font-weight: 600;
+        flex-shrink: 0;
+    }
+
+    .borrower-info h3 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--dark-text);
+        margin-bottom: 5px;
+    }
+
+    .borrower-info p {
+        color: var(--muted-text);
+        font-size: 0.9rem;
+        margin: 0;
+    }
+
+    .loan-details-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 20px;
+    }
+
+    .detail-card {
+        background: var(--light-bg);
+        border-radius: 12px;
+        padding: 18px 20px;
+        border-left: 4px solid var(--secondary-color);
+    }
+
+    .detail-card.highlight {
+        background: linear-gradient(135deg, rgba(21,152,149,0.1) 0%, rgba(87,197,182,0.1) 100%);
+        border-left-color: var(--primary-color);
+    }
+
+    .detail-card label {
+        display: block;
+        font-size: 0.75rem;
         text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--muted-text);
+        font-weight: 600;
+        margin-bottom: 5px;
+    }
+
+    .detail-card .value {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--dark-text);
+    }
+
+    .detail-card .value.amount {
+        color: var(--primary-color);
+        font-size: 1.25rem;
+    }
+
+    /* Schedule Table */
+    .schedule-section {
+        padding: 30px;
+    }
+
+    .section-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--dark-text);
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .section-title::before {
+        content: '';
+        width: 4px;
+        height: 20px;
+        background: var(--secondary-color);
+        border-radius: 2px;
+    }
+
+    .table-wrapper {
+        border-radius: 12px;
+        overflow: hidden;
+        border: 1px solid var(--border-color);
+    }
+
+    .schedule-table {
+        width: 100%;
+        border-collapse: collapse;
         font-size: 0.9rem;
     }
-    .table th, .table td {
-        padding: 12px 14px;
-        vertical-align: middle;
+
+    .schedule-table thead {
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
     }
-    .table tbody tr:nth-child(even) { background: #f9fbfd; }
-    .table tbody tr:hover { background: #eef3f7; transition: background 0.2s; }
-    .table tfoot {
-        background: #e9ecef;
+
+    .schedule-table thead th {
+        color: white;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.5px;
+        padding: 16px 15px;
+        text-align: right;
+        border: none;
+    }
+
+    .schedule-table thead th:first-child,
+    .schedule-table thead th:nth-child(2) {
+        text-align: left;
+    }
+
+    .schedule-table tbody td {
+        padding: 14px 15px;
+        border-bottom: 1px solid var(--border-color);
+        text-align: right;
+        color: var(--dark-text);
+    }
+
+    .schedule-table tbody td:first-child,
+    .schedule-table tbody td:nth-child(2) {
+        text-align: left;
+    }
+
+    .schedule-table tbody tr:nth-child(even) {
+        background: var(--light-bg);
+    }
+
+    .schedule-table tbody tr:hover {
+        background: rgba(21,152,149,0.05);
+    }
+
+    .schedule-table tbody tr.initial-row {
+        background: rgba(21,152,149,0.1);
+        font-weight: 500;
+    }
+
+    .schedule-table tbody td:first-child {
+        font-weight: 600;
+        color: var(--secondary-color);
+    }
+
+    .schedule-table tfoot {
+        background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    }
+
+    .schedule-table tfoot td {
+        color: white;
+        font-weight: 600;
+        padding: 16px 15px;
+        text-align: right;
+        border: none;
+    }
+
+    .schedule-table tfoot td:first-child {
+        text-align: left;
+        color: white;
+    }
+
+    /* Summary Cards */
+    .summary-row {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+        margin-top: 25px;
+    }
+
+    .summary-card {
+        background: linear-gradient(135deg, var(--light-bg) 0%, white 100%);
+        border-radius: 12px;
+        padding: 20px;
+        text-align: center;
+        border: 1px solid var(--border-color);
+    }
+
+    .summary-card.total {
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+        border: none;
+    }
+
+    .summary-card label {
+        display: block;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--muted-text);
+        font-weight: 600;
+        margin-bottom: 8px;
+    }
+
+    .summary-card.total label {
+        color: rgba(255,255,255,0.8);
+    }
+
+    .summary-card .amount {
+        font-size: 1.35rem;
         font-weight: 700;
+        color: var(--dark-text);
+    }
+
+    .summary-card.total .amount {
+        color: white;
     }
 
     /* Print Styles */
     @media print {
         body * { visibility: hidden; }
-        .report-card, .report-card * { visibility: visible; }
-        .report-card { position: absolute; top: 0; left: 0; width: 100%; padding: 20px; }
-        .action-buttons { display: none; }
+        .schedule-wrapper, .schedule-wrapper * { visibility: visible; }
+        .schedule-wrapper { 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            padding: 0;
+            background: white;
+        }
+        .action-bar { display: none !important; }
+        .report-header {
+            background: var(--primary-color) !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        .schedule-table thead {
+            background: var(--primary-color) !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        .schedule-table tfoot {
+            background: #1e293b !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .report-header {
+            padding: 25px 20px;
+        }
+        .report-title {
+            text-align: left;
+            margin-top: 15px;
+        }
+        .loan-summary, .schedule-section {
+            padding: 20px;
+        }
+        .summary-row {
+            grid-template-columns: 1fr;
+        }
+        .borrower-section {
+            flex-direction: column;
+            text-align: center;
+        }
     }
 </style>
 
-<div class="report-container">
-    <div class="row">
-        <div class="col-md-12">
-            <div class="page_title">
-                <h2>📑 Loan Repayment Schedule</h2>
+<div class="schedule-wrapper">
+    <div class="schedule-container">
+        <!-- Header -->
+        <div class="report-header">
+            <div class="row align-items-center">
+                <div class="col-md-7">
+                    <div class="company-brand">
+                        <h2>{{ company.company_name }}</h2>
+                        <div class="branch-name">{{ branch.branch_name }}</div>
+                        <div class="contact-info">
+                            {{ branch.office_address }}<br>
+                            Tel: {{ company.contact_phone_no }}
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-5">
+                    <div class="report-title">
+                        <h1>Loan Repayment Schedule</h1>
+                        <div class="report-date">Generated: {% now "d M, Y" %}</div>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <!-- Report Card -->
-        <div class="col-md-12">
-            <div class="report-card">
-
-                <!-- Company Info -->
- <div class="company-info text-center mb-4">
-    <h4>{{ company.company_name }} — {{ branch.branch_name }}</h4>
-    <h6>{{ branch.office_address }}</h6>
-    <h6>📞 {{ company.contact_phone_no }}</h6>
-</div>
-
-
-
-                <!-- Action Buttons -->
-                <div class="action-buttons">
-                    <div class="btn-group">
-                        <button class="btn btn-success dropdown-toggle" type="button" id="downloadMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                            ⬇️ Download
-                        </button>
-                        <div class="dropdown-menu" aria-labelledby="downloadMenu">
-                            <a class="dropdown-item" href="{% url 'generate_pdf' uuid=loan_instance.uuid %}" target="_blank">PDF</a>
-                            <a class="dropdown-item" href="{% url 'generate_doc' uuid=loan_instance.uuid %}" target="_blank">Doc</a>
-                            <a class="dropdown-item" href="{% url 'generate_excel' uuid=loan_instance.uuid %}" target="_blank">Excel</a>
-                            <a class="dropdown-item" href="{% url 'generate_csv' uuid=loan_instance.uuid %}" target="_blank">CSV</a>
-                        </div>
+        <!-- Main Card -->
+        <div class="report-card">
+            <!-- Action Bar -->
+            <div class="action-bar">
+                <div class="btn-group">
+                    <button class="btn btn-download dropdown-toggle" type="button" data-toggle="dropdown" aria-expanded="false">
+                        <i class="fa fa-download mr-1"></i> Export
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-right">
+                        <a class="dropdown-item" href="{% url 'generate_pdf' uuid=loan_instance.uuid %}" target="_blank">
+                            <i class="fa fa-file-pdf-o mr-2 text-danger"></i> PDF Document
+                        </a>
+                        <a class="dropdown-item" href="{% url 'generate_doc' uuid=loan_instance.uuid %}" target="_blank">
+                            <i class="fa fa-file-word-o mr-2 text-primary"></i> Word Document
+                        </a>
+                        <a class="dropdown-item" href="{% url 'generate_excel' uuid=loan_instance.uuid %}" target="_blank">
+                            <i class="fa fa-file-excel-o mr-2 text-success"></i> Excel Spreadsheet
+                        </a>
+                        <a class="dropdown-item" href="{% url 'generate_csv' uuid=loan_instance.uuid %}" target="_blank">
+                            <i class="fa fa-file-text-o mr-2"></i> CSV File
+                        </a>
                     </div>
-                    <button class="btn btn-primary" onclick="window.print()">🖨 Print</button>
-                    <button class="btn btn-secondary" onclick="window.history.back()">⬅️ Back</button>
+                </div>
+                <button class="btn btn-print" onclick="window.print()">
+                    <i class="fa fa-print mr-1"></i> Print
+                </button>
+                <button class="btn btn-back" onclick="window.history.back()">
+                    <i class="fa fa-arrow-left mr-1"></i> Back
+                </button>
+            </div>
+
+            <!-- Loan Summary -->
+            <div class="loan-summary">
+                <div class="borrower-section">
+                    <div class="borrower-avatar">
+                        {{ customers.first_name|slice:":1" }}{{ customers.last_name|slice:":1" }}
+                    </div>
+                    <div class="borrower-info">
+                        <h3>{{ customers.first_name }} {{ customers.middle_name }} {{ customers.last_name }}</h3>
+                        <p>{{ customers.address }}</p>
+                    </div>
                 </div>
 
-                <!-- Loan Details -->
-                <div class="loan-details mb-3">
-                    <h6>👤 Borrower: {{ customers.first_name }} {{ customers.middle_name }} {{ customers.last_name }}</h6>
-                    <h6>📌 Loan No: {{ loan_instance.gl_no }} {{ loan_instance.ac_no }}</h6>
-                    <h6>💰 Loan Amount: ₦{{ loan_instance.loan_amount|floatformat:2|intcomma }}</h6>
-                    <h6>📊 Interest Rate: {{ loan_instance.interest_rate }}%</h6>
-                    <h6>🏠 Address: {{ customers.address }}</h6>
-                    <h6>✅ Approved Date: {{ loan_instance.approval_date }}</h6>
-                    <h6>📅 No. of Installments: {{ loan_instance.num_install }}</h6>
-                    <h6>⏳ Loan Period: {{ loan_instance.payment_freq }}</h6>
+                <div class="loan-details-grid">
+                    <div class="detail-card highlight">
+                        <label>Loan Amount</label>
+                        <div class="value amount">N{{ loan_instance.loan_amount|floatformat:2|intcomma }}</div>
+                    </div>
+                    <div class="detail-card">
+                        <label>Loan Account</label>
+                        <div class="value">{{ loan_instance.gl_no }}-{{ loan_instance.ac_no }}</div>
+                    </div>
+                    <div class="detail-card">
+                        <label>Interest Rate</label>
+                        <div class="value">{{ loan_instance.interest_rate }}% per annum</div>
+                    </div>
+                    <div class="detail-card">
+                        <label>No. of Installments</label>
+                        <div class="value">{{ loan_instance.num_install }} payments</div>
+                    </div>
+                    <div class="detail-card">
+                        <label>Payment Frequency</label>
+                        <div class="value">{{ loan_instance.get_payment_freq_display }}</div>
+                    </div>
+                    <div class="detail-card">
+                        <label>Approval Date</label>
+                        <div class="value">{{ loan_instance.approval_date|date:"d M, Y" }}</div>
+                    </div>
                 </div>
+            </div>
 
-                <!-- Schedule Table -->
-                <div class="table-responsive">
-                    <table class="table table-hover table-bordered">
-                        <thead>
-                            <tr>
-                                <th>Period</th>
-                                <th>Payment Date</th>
-                                <th>Principal Payment</th>
-                                <th>Interest Payment</th>
-                                <th>Total Payment</th>
-                                <th>Principal Remaining</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>0</td>
-                                <td>{{ loan_instance.appli_date|date:"d-m-Y" }}</td>
-                                <td>0.00</td>
-                                <td>0.00</td>
-                                <td>0.00</td>
-                                <td>{{ loan_instance.loan_amount|floatformat:2|intcomma }}</td>
-                            </tr>
-                            {% for payment in loan_schedule %}
+            <!-- Schedule Table -->
+            <div class="schedule-section">
+                <h4 class="section-title">Payment Schedule</h4>
+                
+                <div class="table-wrapper">
+                    <div class="table-responsive">
+                        <table class="schedule-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 80px;">Period</th>
+                                    <th style="width: 130px;">Payment Date</th>
+                                    <th>Principal</th>
+                                    <th>Interest</th>
+                                    <th>Total Payment</th>
+                                    <th>Balance</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="initial-row">
+                                    <td>0</td>
+                                    <td>{{ loan_instance.appli_date|date:"d M, Y" }}</td>
+                                    <td>0.00</td>
+                                    <td>0.00</td>
+                                    <td>0.00</td>
+                                    <td>{{ loan_instance.loan_amount|floatformat:2|intcomma }}</td>
+                                </tr>
+                                {% for payment in loan_schedule %}
                                 <tr>
                                     <td>{{ payment.period }}</td>
-                                    <td>{{ payment.payment_date|date:"d-m-Y" }}</td>
+                                    <td>{{ payment.payment_date|date:"d M, Y" }}</td>
                                     <td>{{ payment.principal_payment|floatformat:2|intcomma }}</td>
                                     <td>{{ payment.interest_payment|floatformat:2|intcomma }}</td>
                                     <td>{{ payment.total_payment|floatformat:2|intcomma }}</td>
                                     <td>{{ payment.principal_remaining|floatformat:2|intcomma }}</td>
                                 </tr>
-                            {% endfor %}
-                        </tbody>
-                        <tfoot>
-                            <tr>
-                                <td colspan="2"><strong>Total</strong></td>
-                                <td><strong>{{ total_principal_sum|floatformat:2|intcomma }}</strong></td>
-                                <td><strong>{{ total_interest_sum|floatformat:2|intcomma }}</strong></td>
-                                <td><strong>{{ total_payments_sum|floatformat:2|intcomma }}</strong></td>
-                                <td></td>
-                            </tr>
-                        </tfoot>
-                    </table>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="2">TOTAL</td>
+                                    <td>{{ total_principal_sum|floatformat:2|intcomma }}</td>
+                                    <td>{{ total_interest_sum|floatformat:2|intcomma }}</td>
+                                    <td>{{ total_payments_sum|floatformat:2|intcomma }}</td>
+                                    <td>-</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
                 </div>
 
+                <!-- Summary Cards -->
+                <div class="summary-row">
+                    <div class="summary-card">
+                        <label>Total Principal</label>
+                        <div class="amount">N{{ total_principal_sum|floatformat:2|intcomma }}</div>
+                    </div>
+                    <div class="summary-card">
+                        <label>Total Interest</label>
+                        <div class="amount">N{{ total_interest_sum|floatformat:2|intcomma }}</div>
+                    </div>
+                    <div class="summary-card total">
+                        <label>Total Repayment</label>
+                        <div class="amount">N{{ total_payments_sum|floatformat:2|intcomma }}</div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
