@@ -81,14 +81,20 @@ def vendor_logout(request):
 @vendor_login_required
 def vendor_dashboard(request):
     """Vendor dashboard - overview of all companies and branches"""
+    from accounts.models import User
+    
     companies = Company.objects.all()
     branches = Branch.objects.all()
+    
+    # Get all users from client database
+    all_users = User.objects.all().order_by('-date_joined')
     
     # Statistics
     total_companies = companies.count()
     total_branches = branches.count()
     active_branches = branches.filter(is_active=True).count()
     inactive_branches = branches.filter(is_active=False).count()
+    total_users = all_users.count()
     
     context = {
         'vendor_user': request.vendor_user,
@@ -96,10 +102,31 @@ def vendor_dashboard(request):
         'total_branches': total_branches,
         'active_branches': active_branches,
         'inactive_branches': inactive_branches,
+        'total_users': total_users,
         'recent_companies': companies.order_by('-id')[:5],
         'recent_branches': branches.order_by('-created_at')[:5],
+        'all_users': all_users,
     }
     return render(request, 'company/vendor_dashboard.html', context)
+
+
+# ==================== CLIENT USER MANAGEMENT VIEWS ====================
+
+@vendor_login_required
+def delete_client_user(request, user_id):
+    """Delete a client user from the database"""
+    from accounts.models import User
+    
+    if request.method == 'POST':
+        try:
+            user = User.objects.get(id=user_id)
+            user_name = f"{user.first_name} {user.last_name}"
+            user.delete()
+            messages.success(request, f'User "{user_name}" has been deleted successfully.')
+        except User.DoesNotExist:
+            messages.error(request, 'User not found.')
+    
+    return redirect('vendor_dashboard')
 
 
 # ==================== VENDOR USER MANAGEMENT VIEWS ====================

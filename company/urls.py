@@ -14,6 +14,9 @@ urlpatterns = [
     path('vendor-users/<uuid:uuid>/toggle-active/', views.vendor_user_toggle_active, name='vendor_user_toggle_active'),
     path('vendor-users/<uuid:uuid>/delete/', views.vendor_user_delete, name='vendor_user_delete'),
     
+    # Client User Management URLs
+    path('client-users/<int:user_id>/delete/', views.delete_client_user, name='delete_client_user'),
+    
     # Company Management URLs (require vendor login)
     path('company_list/', views.company_list, name='company_list'),
     path('update_company/<uuid:uuid>/', views.update_company, name='update_company'),
