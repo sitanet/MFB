@@ -366,6 +366,25 @@
                     </div>
                 </div>
 
+                <!-- Parent Branch Section -->
+                <div style="margin-top: 1.5rem; padding: 1rem; background: #fff3cd; border-radius: var(--border-radius); border: 1px solid #ffc107;">
+                    <h4 style="margin-bottom: 1rem; color: var(--dark);">
+                        <i class="fas fa-crown"></i> Parent Branch Setting
+                    </h4>
+                    <p style="font-size: 0.9rem; color: var(--gray); margin-bottom: 1rem;">
+                        Only admin users from the parent branch can create and edit chart of accounts:
+                    </p>
+                    <div class="form-group">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <input type="checkbox" name="is_parent_branch" id="is_parent_branch" 
+                                   style="width: 18px; height: 18px;" {% if branch.is_parent_branch %}checked{% endif %}>
+                            <label for="is_parent_branch" style="margin: 0;">
+                                <i class="fas fa-crown"></i> <strong>Parent Branch</strong> (Can manage Chart of Accounts)
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Feature Flags Section -->
                 <div style="margin-top: 1.5rem; padding: 1rem; background: #f8fafc; border-radius: var(--border-radius); border: 1px solid var(--light-gray);">
                     <h4 style="margin-bottom: 1rem; color: var(--dark);">

@@ -68,6 +68,11 @@ class BranchForm(forms.ModelForm):
         widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         help_text="Enable SMS Alerts feature"
     )
+    is_parent_branch = forms.BooleanField(
+        required=False, initial=False,
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        help_text="Only parent branch admins can create/edit chart of accounts"
+    )
 
     class Meta:
         model = Branch
@@ -75,7 +80,7 @@ class BranchForm(forms.ModelForm):
             'company', 'branch_code', 'branch_name', 'logo', 'address',
             'cac_number', 'license_number', 'company_type', 'bvn_number', 'plan',
             'session_date', 'system_date_date', 'session_status', 'phone_number',
-            'max_customers',
+            'max_customers', 'is_parent_branch',
             'can_fixed_deposit', 'can_loans', 'can_transfers', 
             'can_fixed_assets', 'can_mobile_banking', 'can_sms_alerts'
         ]

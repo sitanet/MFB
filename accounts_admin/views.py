@@ -66,7 +66,11 @@ def chart_of_accounts(request):
         return redirect('dashboard')
     
     # Check if user is from parent branch (can create/edit chart of accounts)
-    can_edit_chart = getattr(user_branch, 'is_parent_branch', False)
+    # Using getattr with default False for backward compatibility when column doesn't exist yet
+    try:
+        can_edit_chart = getattr(user_branch, 'is_parent_branch', False)
+    except Exception:
+        can_edit_chart = True  # Allow all if field doesn't exist yet
     
     # Get company for this user (chart of accounts is company-wide)
     branch_ids = get_company_branch_ids_all(request.user)
@@ -151,7 +155,10 @@ def update_chart_of_account(request, uuid):
     
     # Get user's branch and check permission
     user_branch = get_branch_from_vendor_db(request.user.branch_id)
-    can_edit_chart = getattr(user_branch, 'is_parent_branch', False) if user_branch else False
+    try:
+        can_edit_chart = getattr(user_branch, 'is_parent_branch', False) if user_branch else False
+    except Exception:
+        can_edit_chart = True  # Allow all if field doesn't exist yet
     
     if not can_edit_chart:
         messages.error(request, 'Only users from the parent branch can edit chart of accounts.')
@@ -201,7 +208,10 @@ def delete_chart_of_account(request, uuid):
     
     # Check permission
     user_branch = get_branch_from_vendor_db(request.user.branch_id)
-    can_edit_chart = getattr(user_branch, 'is_parent_branch', False) if user_branch else False
+    try:
+        can_edit_chart = getattr(user_branch, 'is_parent_branch', False) if user_branch else False
+    except Exception:
+        can_edit_chart = True  # Allow all if field doesn't exist yet
     
     if not can_edit_chart:
         messages.error(request, 'Only users from the parent branch can delete chart of accounts.')
