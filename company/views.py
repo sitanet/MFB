@@ -90,14 +90,14 @@ def vendor_dashboard(request):
     all_users = User.objects.all().order_by('-date_joined')
     
     # Create a mapping of branch_id to branch info for quick lookup
-    branch_map = {branch.id: branch for branch in branches}
+    branch_map = {str(branch.id): branch for branch in branches}
     
     # Add branch and company info to each user
     users_with_branch_info = []
     for user in all_users:
-        branch = branch_map.get(user.branch_id)
-        user.branch_name = branch.branch_name if branch else '-'
-        user.company_name = branch.company.company_name if branch and branch.company else '-'
+        branch = branch_map.get(str(user.branch_id)) if user.branch_id else None
+        user.display_branch_name = branch.branch_name if branch else '-'
+        user.display_company_name = branch.company.company_name if branch and branch.company else '-'
         users_with_branch_info.append(user)
     
     # Statistics

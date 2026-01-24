@@ -569,8 +569,8 @@
                             <td style="padding: 12px;">{{ user.first_name }} {{ user.last_name }}</td>
                             <td style="padding: 12px;">{{ user.email }}</td>
                             <td style="padding: 12px;">{{ user.username }}</td>
-                            <td style="padding: 12px;">{{ user.company_name }}</td>
-                            <td style="padding: 12px;">{{ user.branch_name }}</td>
+                            <td style="padding: 12px;">{{ user.display_company_name }}</td>
+                            <td style="padding: 12px;">{{ user.display_branch_name }}</td>
                             <td style="padding: 12px;">{{ user.get_role_display|default:"N/A" }}</td>
                             <td style="padding: 12px;">
                                 <span class="status-badge {% if user.is_active %}status-active{% else %}status-inactive{% endif %}">
