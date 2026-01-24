@@ -144,12 +144,22 @@ def check_role_vendor(user):
 @user_passes_test(check_role_system_admin)
 def registerUser(request):
     """Register a new user with multi-database support - Only System Administrator can access"""
-    # Get allowed branches based on user's company
-    allowed_branches = get_user_branches_from_vendor_db(request.user)
+    # Get user's branch info
+    user_branch = get_branch_from_vendor_db(request.user.branch_id)
+    
+    # Check if user is from parent branch
+    is_parent_branch = getattr(user_branch, 'is_parent_branch', False) if user_branch else False
+    
+    # Determine allowed branches based on parent branch status
+    if is_parent_branch and user_branch and user_branch.company:
+        # Parent branch admin can see all branches in the company
+        allowed_branches = Branch.objects.filter(company=user_branch.company)
+    else:
+        # Regular branch admin can only see their own branch
+        allowed_branches = Branch.objects.filter(id=user_branch.id) if user_branch else Branch.objects.none()
 
     if request.method == 'POST':
         form = UserForm(request.POST, request.FILES)
-        # Set queryset to use vendor database
         form.fields['branch'].queryset = allowed_branches
 
         if form.is_valid():
@@ -188,13 +198,14 @@ def registerUser(request):
         form = UserForm()
         form.fields['branch'].queryset = allowed_branches
 
-        # Auto-select branch if user has only one available
+        # Auto-select branch if user has only one available (non-parent branch admin)
         if allowed_branches.count() == 1:
             form.initial['branch'] = allowed_branches.first().id
 
     context = {
         'form': form,
         'branches': allowed_branches,
+        'is_parent_branch': is_parent_branch,
     }
     return render(request, 'accounts/registeruser.html', context)
 
@@ -721,14 +732,19 @@ def users(request):
     # Get user's branch and company information
     user_branch = get_branch_from_vendor_db(request.user.branch_id)
     
-    if user_branch and user_branch.company:
-        # Filter users by same company
+    # Check if user is from parent branch
+    is_parent_branch = getattr(user_branch, 'is_parent_branch', False) if user_branch else False
+    
+    if is_parent_branch and user_branch and user_branch.company:
+        # Parent branch admin can see users from all branches in the company
         company_branches = Branch.objects.filter(company=user_branch.company)
         branch_ids = [str(branch.id) for branch in company_branches]
         users_list = User.objects.filter(branch_id__in=branch_ids)
+    elif user_branch:
+        # Regular branch admin can only see users from their own branch
+        users_list = User.objects.filter(branch_id=str(user_branch.id))
     else:
-        # Admin can see all users
-        users_list = User.objects.all()
+        users_list = User.objects.none()
 
     # Add branch information to each user
     users_with_branch_info = []
@@ -740,6 +756,7 @@ def users(request):
 
     context = {
         'users': users_with_branch_info,
+        'is_parent_branch': is_parent_branch,
     }
     return render(request, 'accounts/display_all_user.html', context)
 
