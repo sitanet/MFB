@@ -168,10 +168,6 @@ class Branch(models.Model):
         app_label = 'company'
 
     def save(self, *args, **kwargs):
-        # Only set expire_date if not already set (e.g., on creation)
-        if not self.expire_date and not self.pk:  # only on first save
-            from datetime import timedelta
-            self.expire_date = timezone.now().date() + timedelta(days=30)
         super().save(*args, **kwargs)
 
     def __str__(self):
