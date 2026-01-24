@@ -1009,8 +1009,7 @@ def loan_disbursement(request, uuid):
                             'loan_account': f"{loan.gl_no}{loan.ac_no}",
                             'customer_account': f"{customer.gl_no}{customer.ac_no}",
                             'interest_rate': loan.interest_rate,
-                            'monthly_installment': loan.install_amount or 0,
-                            'first_payment_date': loan.first_due_date.strftime('%Y-%m-%d') if loan.first_due_date else '',
+                            'num_installments': loan.num_install or 0,
                             'total_repayment': (loan.loan_amount or 0) + (loan.total_interest or 0),
                         }
                         send_loan_email(
