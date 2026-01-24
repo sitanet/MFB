@@ -276,6 +276,23 @@ def create_default_accounts(sender, instance, created, **kwargs):
                 account.loan_commit_ac_vat = '40205'
                 account.save()
         
+        # Fourth pass: create system customer accounts for loan-related GL accounts
+        from customers.models import Customer
+        
+        SYSTEM_GL_ACCOUNTS = ['40101', '40203', '20405', '50501', '50503', '40205', '10303', '20507', '40201']
+        
+        for gl_no in SYSTEM_GL_ACCOUNTS:
+            if gl_no in created_accounts:
+                account = created_accounts[gl_no]
+                Customer.objects.create(
+                    branch=instance,
+                    gl_no=gl_no,
+                    ac_no='1',
+                    first_name=account.gl_name,
+                    internal=True
+                )
+        
+        logger.info(f"Created {len(SYSTEM_GL_ACCOUNTS)} system customer accounts for company {company.company_name}")
         logger.info(f"Created {len(created_accounts)} chart of account entries for company {company.company_name}")
 
 
