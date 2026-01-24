@@ -121,6 +121,8 @@ def loan_application(request, uuid):
 
     if request.method == 'POST':
         form = LoansForm(request.POST, request.FILES)
+        # Filter loan_officer to only show officers from user's branch
+        form.fields['loan_officer'].queryset = Account_Officer.objects.filter(branch=user.branch)
         if form.is_valid():
             # Validate dates
             appli_date = form.cleaned_data.get('appli_date')
@@ -190,6 +192,8 @@ def loan_application(request, uuid):
             messages.error(request, 'Form is not valid. Please check the entered data.')
     else:
         form = LoansForm(initial=initial_values)
+        # Filter loan_officer to only show officers from user's branch
+        form.fields['loan_officer'].queryset = Account_Officer.objects.filter(branch=user.branch)
 
     return render(request, 'loans/loans_application.html', {
         'form': form,
@@ -1068,7 +1072,7 @@ def loan_schedule_view(request, uuid):
     # ✅ Get the company from the branch
     company = branch.company  
 
-    print(f"Loan Instance: {loan_id}")
+    print(f"Loan Instance: {loan_instance}")
 
     total_interest_sum = sum(payment['interest_payment'] for payment in loan_schedule)
     total_principal_sum = sum(payment['principal_payment'] for payment in loan_schedule)
