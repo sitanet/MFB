@@ -1271,20 +1271,25 @@ def branch_superuser_list(request):
 @vendor_login_required
 def branch_superuser_detail(request, uuid):
     """
-    View and manage all superusers for a specific branch.
+    View and manage all users for a specific branch.
     """
     User = get_user_model()
     branch = get_object_or_404(Branch, uuid=uuid)
     
-    superusers = User.objects.filter(
-        branch_id=str(branch.id),
-        role=1  # System Administrator
-    )
+    # Get all users in this branch, not just admins
+    all_users = User.objects.filter(branch_id=str(branch.id))
+    
+    # Separate admins from other users
+    superusers = all_users.filter(role=1)  # System Administrator
+    other_users = all_users.exclude(role=1)
     
     context = {
         'vendor_user': request.vendor_user,
         'branch': branch,
         'superusers': superusers,
+        'other_users': other_users,
+        'all_users': all_users,
+        'total_users': all_users.count(),
     }
     return render(request, 'company/branch_superuser_detail.html', context)
 
