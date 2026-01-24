@@ -32,7 +32,7 @@ DEFAULT_CHART_OF_ACCOUNTS = [
     {'gl_no': '10300', 'gl_name': 'OTHER RECEIVABLE & PREPAYMENTS', 'account_type': 'ASSETS', 'currency': 'NAGERIA', 'double_entry_type': 'DEBIT_CREDIT'},
     {'gl_no': '10301', 'gl_name': 'ACCOUNTS RECEIVABLES', 'account_type': 'ASSETS', 'currency': 'NAGERIA', 'double_entry_type': 'DEBIT_CREDIT'},
     {'gl_no': '10302', 'gl_name': 'INTEREST RECEIVABLES INVESTMENT', 'account_type': 'ASSETS', 'currency': 'NAGERIA', 'double_entry_type': 'DEBIT_CREDIT'},
-    {'gl_no': '10303', 'gl_name': 'STAFF LOAN RECEIVABLE', 'account_type': 'ASSETS', 'currency': 'NAGERIA', 'double_entry_type': 'DEBIT_CREDIT'},
+    {'gl_no': '10303', 'gl_name': 'LOAN RECEIVABLE', 'account_type': 'ASSETS', 'currency': 'NAGERIA', 'double_entry_type': 'DEBIT_CREDIT'},
     {'gl_no': '10304', 'gl_name': 'STAFF SALARY ADVANCE', 'account_type': 'ASSETS', 'currency': 'NAGERIA', 'double_entry_type': 'DEBIT_CREDIT'},
     {'gl_no': '10305', 'gl_name': 'PREPAID RENT', 'account_type': 'ASSETS', 'currency': 'NAGERIA', 'double_entry_type': 'DEBIT_CREDIT'},
     {'gl_no': '10306', 'gl_name': 'PREPAID INSURANCE', 'account_type': 'ASSETS', 'currency': 'NAGERIA', 'double_entry_type': 'DEBIT_CREDIT'},
@@ -99,6 +99,7 @@ DEFAULT_CHART_OF_ACCOUNTS = [
     {'gl_no': '20504', 'gl_name': 'PAYE PAYABLE', 'account_type': 'LIABILITIES', 'currency': 'NAGERIA', 'double_entry_type': 'DEBIT_CREDIT'},
     {'gl_no': '20505', 'gl_name': 'VAT PAYABLE', 'account_type': 'LIABILITIES', 'currency': 'NAGERIA', 'double_entry_type': 'DEBIT_CREDIT'},
     {'gl_no': '20506', 'gl_name': 'WITHHOLDING TAX PAYABLE', 'account_type': 'LIABILITIES', 'currency': 'NAGERIA', 'double_entry_type': 'DEBIT_CREDIT'},
+    {'gl_no': '20507', 'gl_name': 'UNEARNED INTEREST INCOME', 'account_type': 'LIABILITIES', 'currency': 'NAGERIA', 'double_entry_type': 'DEBIT_CREDIT'},
     {'gl_no': '30000', 'gl_name': 'EQUITY', 'account_type': 'EQUITY', 'currency': 'NAGERIA', 'double_entry_type': 'DEBIT_CREDIT'},
     {'gl_no': '30100', 'gl_name': 'SHAREHOLDERS\' FUND', 'account_type': 'EQUITY', 'currency': 'NAGERIA', 'double_entry_type': 'DEBIT_CREDIT'},
     {'gl_no': '30101', 'gl_name': 'SHARE CAPITAL', 'account_type': 'EQUITY', 'currency': 'NAGERIA', 'double_entry_type': 'DEBIT_CREDIT'},
@@ -117,6 +118,7 @@ DEFAULT_CHART_OF_ACCOUNTS = [
     {'gl_no': '40202', 'gl_name': 'ACCOUNT MAINTENANCE FEES', 'account_type': 'INCOME', 'currency': 'NAGERIA', 'double_entry_type': 'DEBIT_CREDIT'},
     {'gl_no': '40203', 'gl_name': 'PENALTY CHARGES', 'account_type': 'INCOME', 'currency': 'NAGERIA', 'double_entry_type': 'DEBIT_CREDIT'},
     {'gl_no': '40204', 'gl_name': 'SMS/E-CHANNEL FEES', 'account_type': 'INCOME', 'currency': 'NAGERIA', 'double_entry_type': 'DEBIT_CREDIT'},
+    {'gl_no': '40205', 'gl_name': 'LOAN COMMISSION', 'account_type': 'INCOME', 'currency': 'NAGERIA', 'double_entry_type': 'DEBIT_CREDIT'},
     {'gl_no': '40300', 'gl_name': 'OTHER INCOME', 'account_type': 'INCOME', 'currency': 'NAGERIA', 'double_entry_type': 'DEBIT_CREDIT'},
     {'gl_no': '40301', 'gl_name': 'FOREIGN EXCHANGE GAIN', 'account_type': 'INCOME', 'currency': 'NAGERIA', 'double_entry_type': 'DEBIT_CREDIT'},
     {'gl_no': '40302', 'gl_name': 'GAIN ON ASSET DISPOSAL', 'account_type': 'INCOME', 'currency': 'NAGERIA', 'double_entry_type': 'DEBIT_CREDIT'},
@@ -145,8 +147,9 @@ DEFAULT_CHART_OF_ACCOUNTS = [
     {'gl_no': '50402', 'gl_name': 'BANK CHARGES', 'account_type': 'EXPENSES', 'currency': 'NAGERIA', 'double_entry_type': 'DEBIT_CREDIT'},
     {'gl_no': '50403', 'gl_name': 'FOREIGN EXCHANGE LOSS', 'account_type': 'EXPENSES', 'currency': 'NAGERIA', 'double_entry_type': 'DEBIT_CREDIT'},
     {'gl_no': '50500', 'gl_name': 'IMPAIRMENT & PROVISIONS', 'account_type': 'EXPENSES', 'currency': 'NAGERIA', 'double_entry_type': 'DEBIT_CREDIT'},
-    {'gl_no': '50501', 'gl_name': 'LOANS LOSS PROVISIONS EXPENSES', 'account_type': 'EXPENSES', 'currency': 'NAGERIA', 'double_entry_type': 'DEBIT_CREDIT'},
+    {'gl_no': '50501', 'gl_name': 'PROVISIONS EXPENSE ON BAD DEBT', 'account_type': 'EXPENSES', 'currency': 'NAGERIA', 'double_entry_type': 'DEBIT_CREDIT'},
     {'gl_no': '50502', 'gl_name': 'ASSET IMPAIRMENT EXPENSE', 'account_type': 'EXPENSES', 'currency': 'NAGERIA', 'double_entry_type': 'DEBIT_CREDIT'},
+    {'gl_no': '50503', 'gl_name': 'LOAN WRITTEN-OFF', 'account_type': 'EXPENSES', 'currency': 'NAGERIA', 'double_entry_type': 'DEBIT_CREDIT'},
 ]
 
 
@@ -240,6 +243,37 @@ def create_default_accounts(sender, instance, created, **kwargs):
             parent_gl_no = get_parent_gl_no(gl_no)
             if parent_gl_no and parent_gl_no in created_accounts:
                 account.header = created_accounts[parent_gl_no]
+                account.save()
+        
+        # Third pass: set default loan parameters for loan accounts (GL starting with 104)
+        for gl_no, account in created_accounts.items():
+            if gl_no.startswith('104') and gl_no not in ['10400', '10410', '10420']:
+                account.interest_gl = '40101'
+                account.interest_ac = '40101'
+                account.pen_gl_no = '40203'
+                account.pen_ac_no = '40203'
+                account.prov_cr_gl_no = '20405'
+                account.prov_cr_ac_no = '20405'
+                account.prov_dr_gl_no = '50501'
+                account.prov_dr_ac_no = '50501'
+                account.writ_off_dr_gl_no = '50503'
+                account.writ_off_dr_ac_no = '50503'
+                account.writ_off_cr_gl_no = '50503'
+                account.writ_off_cr_ac_no = '50503'
+                account.loan_com_gl_no = '40205'
+                account.loan_com_ac_no = '40205'
+                account.int_to_recev_gl_dr = '10303'
+                account.int_to_recev_ac_dr = '10303'
+                account.unearned_int_inc_gl = '20507'
+                account.unearned_int_inc_ac = '20507'
+                account.loan_com_gl_vat = '40205'
+                account.loan_com_ac_vat = '40205'
+                account.loan_proc_gl_vat = '40201'
+                account.loan_proc_ac_vat = '40201'
+                account.loan_appl_gl_vat = '40201'
+                account.loan_appl_ac_vat = '40201'
+                account.loan_commit_gl_vat = '40205'
+                account.loan_commit_ac_vat = '40205'
                 account.save()
         
         logger.info(f"Created {len(created_accounts)} chart of account entries for company {company.company_name}")

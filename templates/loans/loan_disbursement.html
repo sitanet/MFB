@@ -1,691 +1,185 @@
 {% extends 'base.html' %}
+
 {% load static %}
-{% load humanize %}
 
 {% block content %}
-<style>
-    :root {
-        --primary: #7c3aed;
-        --primary-dark: #6d28d9;
-        --secondary: #0891b2;
-        --success: #10b981;
-        --warning: #f59e0b;
-        --danger: #ef4444;
-        --dark: #1e293b;
-        --muted: #64748b;
-        --light: #f8fafc;
-        --border: #e2e8f0;
-        --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-        --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-    }
-
-    .loan-form-wrapper {
-        background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 50%, #faf5ff 100%);
-        min-height: 100vh;
-        padding: 30px 15px;
-    }
-
-    .loan-form-container {
-        max-width: 1000px;
-        margin: 0 auto;
-    }
-
-    .form-header {
-        background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-        border-radius: 20px 20px 0 0;
-        padding: 30px;
-        color: white;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .form-header::before {
-        content: '';
-        position: absolute;
-        top: -50%;
-        right: -20%;
-        width: 300px;
-        height: 300px;
-        background: rgba(255,255,255,0.1);
-        border-radius: 50%;
-    }
-
-    .form-header h1 {
-        font-size: 1.75rem;
-        font-weight: 700;
-        margin: 0;
-        position: relative;
-        z-index: 1;
-    }
-
-    .form-header p {
-        margin: 8px 0 0;
-        opacity: 0.9;
-        font-size: 0.95rem;
-        position: relative;
-        z-index: 1;
-    }
-
-    .header-actions {
-        position: absolute;
-        top: 25px;
-        right: 30px;
-        z-index: 2;
-        display: flex;
-        gap: 10px;
-    }
-
-    .btn-back, .btn-menu-header {
-        background: rgba(255,255,255,0.2);
-        color: white;
-        border: 1px solid rgba(255,255,255,0.3);
-        padding: 8px 18px;
-        border-radius: 8px;
-        text-decoration: none;
-        font-weight: 500;
-        transition: all 0.2s;
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        font-size: 0.9rem;
-    }
-
-    .btn-back:hover, .btn-menu-header:hover {
-        background: rgba(255,255,255,0.3);
-        color: white;
-        text-decoration: none;
-    }
-
-    .form-card {
-        background: white;
-        border-radius: 0 0 20px 20px;
-        box-shadow: var(--shadow-lg);
-        overflow: hidden;
-    }
-
-    .customer-banner {
-        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-        padding: 25px 30px;
-        border-bottom: 1px solid var(--border);
-        display: flex;
-        align-items: center;
-        gap: 20px;
-    }
-
-    .customer-avatar {
-        width: 70px;
-        height: 70px;
-        background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.5rem;
-        color: white;
-        font-weight: 700;
-        flex-shrink: 0;
-    }
-
-    .customer-details h3 {
-        font-size: 1.25rem;
-        font-weight: 600;
-        color: var(--dark);
-        margin: 0 0 5px;
-    }
-
-    .customer-details p {
-        color: var(--muted);
-        margin: 0;
-        font-size: 0.9rem;
-    }
-
-    .customer-meta {
-        display: flex;
-        gap: 15px;
-        margin-top: 10px;
-        flex-wrap: wrap;
-    }
-
-    .meta-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 5px 12px;
-        border-radius: 20px;
-        font-size: 0.8rem;
-        font-weight: 600;
-    }
-
-    .meta-badge.account {
-        background: var(--primary);
-        color: white;
-    }
-
-    .meta-badge.amount {
-        background: #fef3c7;
-        color: #b45309;
-    }
-
-    .meta-badge.approved {
-        background: #d1fae5;
-        color: #047857;
-    }
-
-    .meta-badge.cycle {
-        background: #e0e7ff;
-        color: #4338ca;
-    }
-
-    .form-body {
-        padding: 30px;
-    }
-
-    .section-title {
-        font-size: 1rem;
-        font-weight: 600;
-        color: var(--dark);
-        margin-bottom: 20px;
-        padding-bottom: 10px;
-        border-bottom: 2px solid var(--border);
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-
-    .section-title i {
-        color: var(--primary);
-    }
-
-    .form-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-        gap: 20px;
-        margin-bottom: 30px;
-    }
-
-    .form-grid.three-col {
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    }
-
-    .form-group {
-        position: relative;
-    }
-
-    .form-group label {
-        display: block;
-        font-size: 0.85rem;
-        font-weight: 600;
-        color: var(--dark);
-        margin-bottom: 8px;
-    }
-
-    .form-group label .required {
-        color: var(--danger);
-    }
-
-    .form-group input,
-    .form-group select {
-        width: 100%;
-        padding: 12px 16px;
-        border: 2px solid var(--border);
-        border-radius: 10px;
-        font-size: 0.95rem;
-        transition: all 0.2s;
-        background: white;
-    }
-
-    .form-group input:focus,
-    .form-group select:focus {
-        outline: none;
-        border-color: var(--primary);
-        box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
-    }
-
-    .form-group input[readonly],
-    .form-group input:disabled {
-        background: var(--light);
-        color: var(--muted);
-    }
-
-    .form-group select {
-        cursor: pointer;
-        appearance: none;
-        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-        background-position: right 12px center;
-        background-repeat: no-repeat;
-        background-size: 20px;
-        padding-right: 45px;
-    }
-
-    .disbursement-summary {
-        background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
-        border: 1px solid #d8b4fe;
-        border-radius: 12px;
-        padding: 25px;
-        margin-bottom: 25px;
-    }
-
-    .disbursement-summary h5 {
-        font-size: 0.9rem;
-        color: var(--primary);
-        font-weight: 600;
-        margin-bottom: 15px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-    .summary-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-        gap: 20px;
-    }
-
-    .summary-item label {
-        display: block;
-        font-size: 0.75rem;
-        color: var(--muted);
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        margin-bottom: 4px;
-    }
-
-    .summary-item .value {
-        font-size: 1.1rem;
-        font-weight: 700;
-        color: var(--dark);
-    }
-
-    .summary-item .value.highlight {
-        color: var(--primary);
-        font-size: 1.25rem;
-    }
-
-    .funding-card {
-        background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-        border: 1px solid #93c5fd;
-        border-radius: 12px;
-        padding: 20px;
-        margin-bottom: 25px;
-    }
-
-    .funding-card h5 {
-        font-size: 0.9rem;
-        color: #1d4ed8;
-        font-weight: 600;
-        margin-bottom: 15px;
-    }
-
-    .checkbox-group {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 15px 20px;
-        background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-        border-radius: 10px;
-        border: 1px solid #86efac;
-        margin-top: 10px;
-    }
-
-    .checkbox-group input[type="checkbox"] {
-        width: 20px;
-        height: 20px;
-        cursor: pointer;
-        accent-color: var(--success);
-    }
-
-    .checkbox-group label {
-        margin: 0;
-        font-weight: 500;
-        color: var(--dark);
-        cursor: pointer;
-    }
-
-    .form-actions {
-        display: flex;
-        gap: 15px;
-        padding-top: 25px;
-        border-top: 1px solid var(--border);
-        flex-wrap: wrap;
-        align-items: center;
-    }
-
-    .btn-disburse {
-        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-        color: white;
-        border: none;
-        padding: 14px 40px;
-        border-radius: 10px;
-        font-size: 1rem;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.3s;
-        display: inline-flex;
-        align-items: center;
-        gap: 10px;
-        box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3);
-    }
-
-    .btn-disburse:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(124, 58, 237, 0.4);
-    }
-
-    .btn-schedule {
-        background: linear-gradient(135deg, var(--success) 0%, #059669 100%);
-        color: white;
-        border: none;
-        padding: 14px 25px;
-        border-radius: 10px;
-        font-size: 0.95rem;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.3s;
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-    .btn-schedule:hover {
-        transform: translateY(-2px);
-        color: white;
-        text-decoration: none;
-    }
-
-    .alert-messages {
-        margin-bottom: 20px;
-    }
-
-    .alert-messages .alert {
-        padding: 15px 20px;
-        border-radius: 10px;
-        margin-bottom: 10px;
-        font-weight: 500;
-    }
-
-    .alert-error {
-        background: #fef2f2;
-        border: 1px solid #fecaca;
-        color: #dc2626;
-    }
-
-    .alert-success {
-        background: #f0fdf4;
-        border: 1px solid #bbf7d0;
-        color: #16a34a;
-    }
-
-    @media (max-width: 768px) {
-        .form-header {
-            padding: 25px 20px;
-            padding-top: 70px;
-        }
-        .header-actions {
-            top: 15px;
-            right: 15px;
-            flex-wrap: wrap;
-        }
-        .customer-banner {
-            flex-direction: column;
-            text-align: center;
-        }
-        .customer-meta {
-            justify-content: center;
-        }
-        .form-body {
-            padding: 20px;
-        }
-        .form-grid {
-            grid-template-columns: 1fr;
-        }
-        .form-actions {
-            flex-direction: column;
-        }
-        .btn-disburse, .btn-schedule {
-            width: 100%;
-            justify-content: center;
-        }
-    }
-</style>
-
-<div class="loan-form-wrapper">
-    <div class="loan-form-container">
-        <!-- Header -->
-        <div class="form-header">
-            <div class="header-actions">
-                <a href="{% url 'loans' %}" class="btn-menu-header">
-                    <i class="fa fa-th-large"></i> Menu
-                </a>
-                <a href="javascript:history.back()" class="btn-back">
-                    <i class="fa fa-arrow-left"></i> Back
+<div class="container-fluid">
+    <div class="row column_title">
+        <div class="col-md-12">
+            <div class="page_title d-flex justify-content-between align-items-center">
+                <h2>Loan Disbursement</h2>
+                <a href="javascript:history.back()" class="btn btn-outline-secondary">
+                    <i class="fa fa-arrow-left mr-2"></i> Back
                 </a>
             </div>
-            <h1><i class="fa fa-bank mr-2"></i> Loan Disbursement</h1>
-            <p>Process loan disbursement to customer account</p>
         </div>
+    </div>
 
-        <!-- Form Card -->
-        <div class="form-card">
-            <!-- Customer Banner -->
-            <div class="customer-banner">
-                <div class="customer-avatar">
-                    {{ loan.customer.first_name|slice:":1" }}{{ loan.customer.last_name|slice:":1" }}
-                </div>
-                <div class="customer-details">
-                    <h3>{{ loan.customer.first_name }} {{ loan.customer.middle_name }} {{ loan.customer.last_name }}</h3>
-                    <p>{{ loan.customer.address }}</p>
-                    <div class="customer-meta">
-                        <span class="meta-badge account">{{ loan.gl_no }}-{{ loan.ac_no }}</span>
-                        <span class="meta-badge amount">N{{ loan.loan_amount|floatformat:2|intcomma }}</span>
-                        <span class="meta-badge approved"><i class="fa fa-check"></i> Approved</span>
-                        <span class="meta-badge cycle">Cycle {{ loan.cycle }}</span>
-                    </div>
-                </div>
-            </div>
+    <div class="container">
+        <a href="{% url 'loans' %}" style="color: green; font-weight: bold; text-align: right; display: block;">Loans Menu</a>
+        <form method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+            {% if messages %}
+            <ul class="messages">
+                {% for message in messages %}
+                <li style="font-size: 30px; color: brown; font-weight: bold;" {% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+            <h6 style="color: red;">{{ form.errors }}</h6>
+            {% include 'includes/alerts.html' %}
 
-            <!-- Form Body -->
-            <div class="form-body">
-                <form method="POST" enctype="multipart/form-data">
-                    {% csrf_token %}
-                    
-                    <!-- Alert Messages -->
-                    {% if messages %}
-                    <div class="alert-messages">
-                        {% for message in messages %}
-                        <div class="alert {% if message.tags %}alert-{{ message.tags }}{% else %}alert-error{% endif %}">
-                            {{ message }}
+            <div class="form first">
+                <div class="details personal">
+                    <div class="fields">
+                        <input type="hidden" value="{{ member.team_sup.username }}" name="user" required>
+                        <!-- <input type="hidden" name="branch" value="{{ user.branch }}" required> -->
+
+                        <div class="input-field">
+                            <label>First Name*</label>
+                            <input type="text" class="form-control bg-light" name="first_name" value="{{ loan.customer.first_name }}" readonly>
                         </div>
-                        {% endfor %}
-                    </div>
-                    {% endif %}
-                    
-                    {% if form.errors %}
-                    <div class="alert-messages">
-                        <div class="alert alert-error">{{ form.errors }}</div>
-                    </div>
-                    {% endif %}
-
-                    <!-- Hidden Fields -->
-                    <input type="hidden" value="{{ member.team_sup.username }}" name="user">
-                    <input type="hidden" name="customer" value="{{ loan.customer.id }}">
-                    <input type="hidden" name="ac_no" value="{{ loan.ac_no }}">
-                    <input type="hidden" name="int_to_recev_gl_dr" value="{{ account.int_to_recev_gl_dr }}">
-                    <input type="hidden" name="int_to_recev_ac_dr" value="{{ account.int_to_recev_ac_dr }}">
-                    <input type="hidden" name="unearned_int_inc_gl" value="{{ account.unearned_int_inc_gl }}">
-                    <input type="hidden" name="unearned_int_inc_ac" value="{{ account.unearned_int_inc_ac }}">
-
-                    <!-- Disbursement Summary -->
-                    <div class="disbursement-summary">
-                        <h5><i class="fa fa-money"></i> Disbursement Summary</h5>
-                        <div class="summary-grid">
-                            <div class="summary-item">
-                                <label>Loan Amount</label>
-                                <div class="value highlight">N{{ loan.loan_amount|floatformat:2|intcomma }}</div>
-                            </div>
-                            <div class="summary-item">
-                                <label>Interest Rate</label>
-                                <div class="value">{{ loan.interest_rate }}% p.a.</div>
-                            </div>
-                            <div class="summary-item">
-                                <label>Installments</label>
-                                <div class="value">{{ loan.num_install }}</div>
-                            </div>
-                            <div class="summary-item">
-                                <label>Application Date</label>
-                                <div class="value">{{ loan.appli_date|date:"d M, Y" }}</div>
-                            </div>
-                            <div class="summary-item">
-                                <label>Approval Date</label>
-                                <div class="value">{{ loan.approval_date|date:"d M, Y" }}</div>
-                            </div>
-                            <div class="summary-item">
-                                <label>Loan Cycle</label>
-                                <div class="value">{{ loan.cycle }}</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Customer Information -->
-                    <h4 class="section-title"><i class="fa fa-user"></i> Customer Information</h4>
-                    <div class="form-grid three-col">
-                        <div class="form-group">
-                            <label>First Name</label>
-                            <input type="text" value="{{ loan.customer.first_name }}" readonly>
-                        </div>
-                        <div class="form-group">
+                        <div class="input-field">
                             <label>Middle Name</label>
-                            <input type="text" value="{{ loan.customer.middle_name }}" readonly>
+                            <input type="text" class="form-control bg-light" name="middle_name" value="{{ loan.customer.middle_name }}" readonly>
                         </div>
-                        <div class="form-group">
-                            <label>Last Name</label>
-                            <input type="text" value="{{ loan.customer.last_name }}" readonly>
+                        <div class="input-field">
+                            <label>Last Name*</label>
+                            <input type="text" class="form-control bg-light" name="last_name" value="{{ loan.customer.last_name }}" readonly>
                         </div>
-                        <div class="form-group">
-                            <label>Loan Account (GL)</label>
-                            <input type="text" name="gl_no" value="{{ loan.gl_no }}" readonly>
+                        <div class="input-field">
+                            <label>Account Type</label>
+                            <input type="text" class="form-control bg-light" name="gl_no" value="{{ loan.gl_no }}" readonly>
                         </div>
-                        <div class="form-group">
-                            <label>Account Number</label>
-                            <input type="text" name="ac_no_cashier" value="{{ loan.ac_no }}" readonly>
+                        <div class="input-field">
+                            <label for="accountNoInput">Account No.:</label>
+                            <input type="text" class="form-control bg-light" name="ac_no_cashier" value="{{ loan.ac_no }}" readonly>
                         </div>
-                        <div class="form-group">
-                            <label>Loan Cycle</label>
-                            <input type="text" name="cycle" value="{{ loan.cycle }}" readonly>
+                            
+                        <div class="input-field">
+                            <label>customer id</label>
+                            <input type="text" class="form-control bg-light" name="customer" value="{{ loan.customer.id }}" readonly>
                         </div>
-                    </div>
+                        <div class="input-field">
+                            <label>Cycle</label>
+                            <input type="text" class="form-control bg-light" name="cycle" value="{{ loan.cycle }}" readonly>
+                        </div>
 
-                    <!-- Disbursement Details -->
-                    <h4 class="section-title"><i class="fa fa-calendar"></i> Disbursement Details</h4>
-                    <div class="form-grid">
-                        <div class="form-group">
+                        <div class="input-field">
                             <label>Application Date</label>
-                            <input type="date" value="{{ appli_date }}" disabled>
+                            <input type="date" name="appli_date" value="{{appli_date}}" required disabled>
                         </div>
-                        <div class="form-group">
-                            <label>Approval Date</label>
-                            <input type="date" value="{{ approve_date }}" disabled>
+                        <div class="input-field">
+                            <label>Approve Date</label>
+                            <!-- <input type="date" name="approval_date" value="{{ form.appli_date.value}}" required disabled> -->
+                            {{ form.appli_date}}
+                        </div> 
+                        <div class="input-field">
+                            <label>Disbursement Date</label>
+                            <input type="date" name="disbursement_date" value="{{ company_date }}">
                         </div>
-                        <div class="form-group">
-                            <label>Disbursement Date <span class="required">*</span></label>
-                            <input type="date" name="disbursement_date" value="{{ company_date }}" required>
+                        <div class="input-field">
+                            <label>Transactions Date</label>
+                         <!-- <input type="date" name="app_date" id="ses_date" value="{% now 'Y-m-d' %}"  > -->
+                         <input type="date" name="app_date" id="ses_date" value="{{ company_date }}"  >
+                        <input type="date" name="ses_date" value="{{ company_date }}"  hidden>
                         </div>
-                        <div class="form-group">
-                            <label>Transaction Date <span class="required">*</span></label>
-                            <input type="date" name="app_date" id="ses_date" value="{{ company_date }}" required>
-                            <input type="hidden" name="ses_date" value="{{ company_date }}">
-                        </div>
-                    </div>
 
-                    <!-- Loan Details -->
-                    <h4 class="section-title"><i class="fa fa-money"></i> Loan Details</h4>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label>Loan Amount</label>
-                            <input type="text" name="amount" value="{{ loan.loan_amount }}" readonly>
+                        <div class="input-field">
+                            <label for="deposit_description">Loan Amount:</label>
+                            <input type="text" class="form-control bg-light" name="amount" value="{{ loan.loan_amount }}" readonly>
                         </div>
-                        <div class="form-group">
-                            <label>Processing/Admin Fee</label>
-                            <input type="number" name="loan_appl_vat" value="0.00" step="0.01" min="0">
+
+                        <!-- <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="loan_appl_vat">VAT Amount</label>
+                                <input type="number" 
+                                       class="form-control" 
+                                       id="loan_appl_vat" 
+                                       name="loan_appl_vat" 
+                                       value="{{ default_vat|default:'0' }}" 
+                                       step="0.01" 
+                                       min="0">
+                              
+                            </div>
+                        </div> -->
+                        
+                        <div class="input-field">
+                            <label for="deposit_description">Loan Proc/Mgt/Admin Fee:</label>
+                            <input type="text" class="form-control bg-light" name="loan_appl_vat" value="0.00" >
                         </div>
-                        <div class="form-group">
-                            <label>Annual Interest Rate (%)</label>
-                            <input type="text" name="interest_rate" value="{{ loan.interest_rate }}" readonly>
+                        <div class="input-field">
+                            <label for="deposit_description">Annual Int Rate:</label>
+                            <input type="text" class="form-control bg-light" name="interest_rate" value="{{ loan.interest_rate }}" readonly>
                         </div>
-                        <div class="form-group">
-                            <label>Payment Frequency</label>
+                        <div class="input-field">
+                            <label for="deposit_description">No. of Frequency:</label>
                             {{ form.payment_freq }}
                         </div>
-                        <div class="form-group">
-                            <label>Interest Method</label>
+                        <div class="input-field">
+                            <label for="deposit_description">Interest Method:</label>
                             {{ form.interest_calculation_method }}
                         </div>
-                        <div class="form-group">
-                            <label>Number of Installments</label>
-                            {{ form.num_install }}
-                        </div>
-                        <div class="form-group">
-                            <label>Loan Officer</label>
+                        <div class="input-field">
+                            <label for="deposit_description">Loan Officers:</label>
                             {{ form.loan_officer }}
                         </div>
-                        <div class="form-group">
-                            <label>Business Sector</label>
+                        <div class="input-field">
+                            <label for="deposit_description">Business Sector:</label>
                             {{ form.business_sector }}
                         </div>
-                    </div>
+                        <div class="input-field">
+                            <label for="deposit_description">No of Installment:</label>
+                            {{ form.num_install }}
+                        </div>
 
-                    <!-- Funding Account -->
-                    <div class="funding-card">
-                        <h5><i class="fa fa-bank mr-2"></i> Funding Source</h5>
-                        <div class="form-group" style="margin-bottom: 0;">
-                            <label>Select Funding Account <span class="required">*</span></label>
-                            <select name="gl_no_cashier" id="gl_no" required>
-                                <option value="">-- Select Account --</option>
+                        <div class="input-field">
+                            <label for="gl_no">Funding Account:</label>
+                            <select name="gl_no_cashier" id="gl_no">
                                 {% for record in amounts %}
-                                <option value="{{ record.gl_no }}">GL: {{ record.gl_no }} - Balance: N{{ record.total_amount|floatformat:2|intcomma }}</option>
+                                <option value="{{ record.gl_no }}">GL No: {{ record.gl_no }} - Total Amount: {{ record.total_amount }}</option>
                                 {% endfor %}
                             </select>
                         </div>
-                    </div>
 
-                    <!-- Notification -->
-                    <div class="checkbox-group">
-                        <input type="checkbox" name="send_email_notification" id="send_email_notification">
-                        <label for="send_email_notification">
-                            <i class="fa fa-envelope mr-1"></i> Send disbursement email notification to customer
-                        </label>
-                    </div>
+                      
 
-                    <!-- Actions -->
-                    <div class="form-actions">
-                        <button type="submit" class="btn-disburse">
-                            <i class="fa fa-send"></i> Disburse Loan
+                        <input type="hidden" name="ac_no" value="{{ loan.ac_no }}">
+                        <input type="hidden" name="int_to_recev_gl_dr" value="{{ account.int_to_recev_gl_dr }}">
+                        <input type="hidden" name="int_to_recev_ac_dr" value="{{ account.int_to_recev_ac_dr }}">
+                        <input type="hidden" name="unearned_int_inc_gl" value="{{ account.unearned_int_inc_gl }}">
+                        <input type="hidden" name="unearned_int_inc_ac" value="{{ account.unearned_int_inc_ac }}">
+
+                        <div class="input-field" style="display: flex; align-items: center; gap: 10px;">
+                            <input type="checkbox" name="send_email_notification" id="send_email_notification" style="width: auto;">
+                            <label for="send_email_notification" style="margin: 0;">Send email notification to customer</label>
+                        </div>
+
+                        <button class="submit">
+                            <span class="btnText">Disburse</span>
+                            <i class="uil uil-navigator"></i>
                         </button>
-                        <a href="{% url 'loan_schedule' loan.uuid %}" class="btn-schedule">
-                            <i class="fa fa-calendar"></i> View Schedule
-                        </a>
                     </div>
-                </form>
+                </div>
             </div>
-        </div>
+        </form>
     </div>
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    var sessionDateInput = document.getElementById('ses_date');
-    var companyDate = '{{ company_date }}';
-    
-    sessionDateInput.addEventListener('change', function() {
-        var selectedDate = new Date(sessionDateInput.value);
-        var companyDateObj = new Date(companyDate);
-        
-        if (selectedDate > companyDateObj) {
-            alert('Please select a date not greater than the session date.');
-            sessionDateInput.value = companyDate;
-        }
-    });
-});
-</script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var sessionDateInput = document.getElementById('ses_date');
+        var companyDate = '{{ company_date }}'; // Assuming company_date is in the 'YYYY-MM-DD' format
 
+        sessionDateInput.addEventListener('change', function() {
+            var selectedDate = new Date(sessionDateInput.value);
+            var companyDateObj = new Date(companyDate);
+
+            if (selectedDate > companyDateObj) {
+                alert('Please select a date not greater than the session date.');
+                sessionDateInput.value = '{{ company_date }}'; // Reset the input value
+            }
+        });
+    });
+</script>
 {% endblock %}
