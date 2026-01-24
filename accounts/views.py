@@ -1291,26 +1291,33 @@ def dashboard_9(request):
     """Verification Officer Dashboard - Customer verification tasks"""
     ctx = get_base_dashboard_context(request)
     branch_id = ctx['user_branch_id']
+    today = ctx['today']
     
-    # Customers pending verification
-    pending_verification = Customer.all_objects.filter(branch_id=branch_id, verified=False).count()
-    verified_customers = Customer.all_objects.filter(branch_id=branch_id, verified=True).count()
+    # Total customers
     total_customers = Customer.all_objects.filter(branch_id=branch_id).count()
     
-    # Recent unverified customers
-    unverified_customers = Customer.all_objects.filter(branch_id=branch_id, verified=False).order_by('-created_at')[:20]
+    # New customers this month (need verification)
+    new_customers_month = Customer.all_objects.filter(
+        branch_id=branch_id, 
+        date_registered__month=today.month, 
+        date_registered__year=today.year
+    ).count()
+    
+    # Recent customers to review
+    recent_customers = Customer.all_objects.filter(branch_id=branch_id).order_by('-date_registered')[:20]
     
     # Loans pending verification/approval
     pending_loans = Loans.all_objects.filter(branch_id=branch_id, approval_status='Pending').count()
+    approved_loans = Loans.all_objects.filter(branch_id=branch_id, approval_status='Approved').count()
     
     context = {
         **ctx,
         'role_name': 'Verification Officer',
-        'pending_verification': pending_verification,
-        'verified_customers': verified_customers,
         'total_customers': total_customers,
-        'unverified_customers': unverified_customers,
+        'new_customers_month': new_customers_month,
+        'recent_customers': recent_customers,
         'pending_loans': pending_loans,
+        'approved_loans': approved_loans,
     }
     return render(request, 'accounts/dashboards/verification_officer.html', context)
 
