@@ -89,6 +89,17 @@ def vendor_dashboard(request):
     # Get all users from client database
     all_users = User.objects.all().order_by('-date_joined')
     
+    # Create a mapping of branch_id to branch info for quick lookup
+    branch_map = {branch.id: branch for branch in branches}
+    
+    # Add branch and company info to each user
+    users_with_branch_info = []
+    for user in all_users:
+        branch = branch_map.get(user.branch_id)
+        user.branch_name = branch.branch_name if branch else '-'
+        user.company_name = branch.company.company_name if branch and branch.company else '-'
+        users_with_branch_info.append(user)
+    
     # Statistics
     total_companies = companies.count()
     total_branches = branches.count()
@@ -105,7 +116,7 @@ def vendor_dashboard(request):
         'total_users': total_users,
         'recent_companies': companies.order_by('-id')[:5],
         'recent_branches': branches.order_by('-created_at')[:5],
-        'all_users': all_users,
+        'all_users': users_with_branch_info,
     }
     return render(request, 'company/vendor_dashboard.html', context)
 

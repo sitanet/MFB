@@ -556,7 +556,8 @@
                             <th style="padding: 12px; text-align: left;">Name</th>
                             <th style="padding: 12px; text-align: left;">Email</th>
                             <th style="padding: 12px; text-align: left;">Username</th>
-                            <th style="padding: 12px; text-align: left;">Branch ID</th>
+                            <th style="padding: 12px; text-align: left;">Company</th>
+                            <th style="padding: 12px; text-align: left;">Branch</th>
                             <th style="padding: 12px; text-align: left;">Role</th>
                             <th style="padding: 12px; text-align: left;">Status</th>
                             <th style="padding: 12px; text-align: center;">Action</th>
@@ -568,7 +569,8 @@
                             <td style="padding: 12px;">{{ user.first_name }} {{ user.last_name }}</td>
                             <td style="padding: 12px;">{{ user.email }}</td>
                             <td style="padding: 12px;">{{ user.username }}</td>
-                            <td style="padding: 12px;">{{ user.branch_id|default:"-" }}</td>
+                            <td style="padding: 12px;">{{ user.company_name }}</td>
+                            <td style="padding: 12px;">{{ user.branch_name }}</td>
                             <td style="padding: 12px;">{{ user.get_role_display|default:"N/A" }}</td>
                             <td style="padding: 12px;">
                                 <span class="status-badge {% if user.is_active %}status-active{% else %}status-inactive{% endif %}">
