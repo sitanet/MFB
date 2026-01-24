@@ -33,6 +33,8 @@ urlpatterns = [
     path('branch/<uuid:uuid>/create-admin/', views.create_branch_admin, name='create_branch_admin'),
     path('branch/<uuid:uuid>/edit-admin/', views.edit_branch_admin, name='edit_branch_admin'),
     path('branch/<uuid:uuid>/toggle-active/', views.toggle_branch_active, name='toggle_branch_active'),
+    path('branch/<uuid:uuid>/renew/', views.renew_branch_expiration, name='renew_branch_expiration'),
+    path('expired-branches/', views.expired_branches_list, name='expired_branches_list'),
     
     # Session Management (client-side, requires client login)
     path('company/session_mgt/', views.session_mgt, name='session_mgt'),

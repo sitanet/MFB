@@ -1235,6 +1235,111 @@ def toggle_branch_active(request, uuid):
     return redirect('branch_list')
 
 
+@vendor_login_required
+def renew_branch_expiration(request, uuid):
+    """Renew/extend the expiration date for a branch and notify client via email"""
+    from django.core.mail import send_mail
+    from django.conf import settings
+    from django.template.loader import render_to_string
+    from django.utils import timezone
+    
+    branch = get_object_or_404(Branch, uuid=uuid)
+    old_expire_date = branch.expire_date
+    
+    if request.method == 'POST':
+        new_expire_date = request.POST.get('expire_date')
+        
+        if not new_expire_date:
+            messages.error(request, 'Please provide a new expiration date.')
+            return redirect('renew_branch_expiration', uuid=uuid)
+        
+        try:
+            from datetime import datetime
+            new_date = datetime.strptime(new_expire_date, '%Y-%m-%d').date()
+            
+            if new_date <= timezone.now().date():
+                messages.error(request, 'Expiration date must be in the future.')
+                return redirect('renew_branch_expiration', uuid=uuid)
+            
+            branch.expire_date = new_date
+            branch.is_active = True
+            branch.save()
+            
+            # Send email notification to branch admin
+            try:
+                from accounts.models import User
+                branch_admins = User.objects.filter(branch_id=str(branch.id), role=1)
+                
+                for admin in branch_admins:
+                    if admin.email:
+                        subject = f'Subscription Renewed - {branch.branch_name}'
+                        message = f'''
+Dear {admin.first_name or admin.username},
+
+Great news! Your subscription for {branch.branch_name} has been renewed.
+
+Previous Expiration Date: {old_expire_date.strftime('%B %d, %Y') if old_expire_date else 'Not Set'}
+New Expiration Date: {new_date.strftime('%B %d, %Y')}
+
+Your account is now active and you can continue using all features.
+
+If you have any questions, please contact support.
+
+Best regards,
+FinanceFlex Team
+                        '''
+                        
+                        send_mail(
+                            subject,
+                            message,
+                            settings.DEFAULT_FROM_EMAIL,
+                            [admin.email],
+                            fail_silently=True,
+                        )
+                
+                messages.success(request, f'Expiration date updated and notification email sent to branch administrators.')
+            except Exception as e:
+                messages.warning(request, f'Expiration date updated but failed to send email: {str(e)}')
+            
+            return redirect('branch_list')
+            
+        except ValueError:
+            messages.error(request, 'Invalid date format.')
+            return redirect('renew_branch_expiration', uuid=uuid)
+    
+    context = {
+        'branch': branch,
+        'today': timezone.now().date(),
+    }
+    return render(request, 'branch/renew_branch_expiration.html', context)
+
+
+@vendor_login_required
+def expired_branches_list(request):
+    """List all expired or soon-to-expire branches"""
+    from django.utils import timezone
+    from datetime import timedelta
+    
+    today = timezone.now().date()
+    warning_date = today + timedelta(days=15)
+    
+    expired_branches = Branch.objects.filter(
+        expire_date__lt=today
+    ).select_related('company').order_by('expire_date')
+    
+    expiring_soon = Branch.objects.filter(
+        expire_date__gte=today,
+        expire_date__lte=warning_date
+    ).select_related('company').order_by('expire_date')
+    
+    context = {
+        'expired_branches': expired_branches,
+        'expiring_soon': expiring_soon,
+        'today': today,
+    }
+    return render(request, 'branch/expired_branches_list.html', context)
+
+
 # ==================== BRANCH SUPERUSER MANAGEMENT (VENDOR) ====================
 
 @vendor_login_required
