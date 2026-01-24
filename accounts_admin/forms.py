@@ -9,6 +9,14 @@ class AccountForm(forms.ModelForm):
     class Meta:
         model = Account
         fields = ['gl_name','gl_no','currency','account_type','double_entry_type','header','is_non_financial']
+    
+    def __init__(self, *args, branch_ids=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Use all_objects to include accounts from all company branches
+        if branch_ids:
+            self.fields['header'].queryset = Account.all_objects.filter(branch_id__in=branch_ids).order_by('gl_no')
+        else:
+            self.fields['header'].queryset = Account.all_objects.all().order_by('gl_no')
 
 
 class CreditOfficerForm(forms.ModelForm):

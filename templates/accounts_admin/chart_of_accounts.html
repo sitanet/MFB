@@ -25,6 +25,7 @@
                 {% endfor %}
             </ul>
             {% endif %}
+            {% if can_edit_chart %}
             <h6 style="color: red;">{{ form.errors }}</h6>
             <div class="form-row">
                 <div class="form-group col-md-4">
@@ -82,6 +83,11 @@
 
                 <button type="submit" class="btn w- btn-success mt-4 shadow-sm">Add</button>
             </div>
+            {% else %}
+            <div class="alert alert-info">
+                <strong>View Only:</strong> Only users from the parent branch can create or edit chart of accounts.
+            </div>
+            {% endif %}
 
             <ul id="account-tree">
                 {% for account in accounts %}
@@ -99,8 +105,10 @@
                           data-is-non-financial="{{ account.is_non_financial }}">
                         {{ account.gl_no }} {{ account.gl_name }}
                     </span>
+                    {% if can_edit_chart %}
                     <a href="{% url 'update_chart_of_account' account.uuid %}">Edit</a>
                     <a href="{% url 'delete_chart_of_account' account.uuid %}">Delete</a>
+                    {% endif %}
                     <ul class="children" style="display:none;">
                         {% for child in account.get_children_ordered %}
                         <li class="child">
@@ -117,8 +125,10 @@
                                   data-is-non-financial="{{ child.is_non_financial }}">
                                 {{ child.gl_no }} {{ child.gl_name }}
                             </span>
+                            {% if can_edit_chart %}
                             <a href="{% url 'update_chart_of_account' child.uuid %}">Edit</a>
                             <a href="{% url 'delete_chart_of_account' child.uuid %}">Delete</a>
+                            {% endif %}
                             <ul class="children" style="display:none;">
                                 {% for grandchild in child.get_children_ordered %}
                                 <li class="grandchild">
@@ -135,8 +145,10 @@
                                           data-is-non-financial="{{ grandchild.is_non_financial }}">
                                         {{ grandchild.gl_no }} {{ grandchild.gl_name }}
                                     </span>
+                                    {% if can_edit_chart %}
                                     <a href="{% url 'update_chart_of_account' grandchild.uuid %}">Edit</a>
                                     <a class="submit" href="{% url 'delete_chart_of_account' grandchild.uuid %}">Delete</a>
+                                    {% endif %}
                                     <ul class="children" style="display:none;">
                                         {% for greatgrandchild in grandchild.get_children_ordered %}
                                     <li class="greatgrandchild">
@@ -153,8 +165,10 @@
           data-is-non-financial="{{ greatgrandchild.is_non_financial }}">
         {{ greatgrandchild.gl_no }} {{ greatgrandchild.gl_name }}
     </span>
+    {% if can_edit_chart %}
     <a href="{% url 'update_chart_of_account' greatgrandchild.uuid %}">Edit</a>
     <a class="submit" href="{% url 'delete_chart_of_account' greatgrandchild.uuid %}" style="color: red;">Delete</a>
+    {% endif %}
 
     <!-- 🔽 New nested level -->
     <ul class="children" style="display:none;">
@@ -173,8 +187,10 @@
                   data-is-non-financial="{{ gggrandchild.is_non_financial }}">
                 {{ gggrandchild.gl_no }} {{ gggrandchild.gl_name }}
             </span>
+            {% if can_edit_chart %}
             <a href="{% url 'update_chart_of_account' gggrandchild.uuid %}">Edit</a>
             <a class="submit" href="{% url 'delete_chart_of_account' gggrandchild.uuid %}" style="color: red;">Delete</a>
+            {% endif %}
         </li>
         {% endfor %}
     </ul>

@@ -126,6 +126,7 @@ class Branch(models.Model):
     session_status = models.CharField(max_length=10, null=True, blank=True)
     expire_date = models.DateField(null=True, blank=True)
     is_active = models.BooleanField(default=True, help_text="Uncheck to deactivate branch when subscription is not made")
+    is_parent_branch = models.BooleanField(default=False, help_text="Only admin users from parent branch can create/edit chart of accounts")
     
     # Customer limit - set by vendor during branch registration
     max_customers = models.PositiveIntegerField(

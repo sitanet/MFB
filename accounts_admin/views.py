@@ -65,6 +65,9 @@ def chart_of_accounts(request):
         messages.error(request, 'No branch assigned to your account. Please contact administrator to assign you to a branch.')
         return redirect('dashboard')
     
+    # Check if user is from parent branch (can create/edit chart of accounts)
+    can_edit_chart = getattr(user_branch, 'is_parent_branch', False)
+    
     # Get company for this user (chart of accounts is company-wide)
     branch_ids = get_company_branch_ids_all(request.user)
     user_company = user_branch.company if user_branch else None
@@ -85,7 +88,12 @@ def chart_of_accounts(request):
             accounts.append(acc)
     
     if request.method == 'POST':
-        form = AccountForm(request.POST)
+        # Only allow POST if user is from parent branch
+        if not can_edit_chart:
+            messages.error(request, 'Only users from the parent branch can create chart of accounts.')
+            return redirect('chart_of_accounts')
+        
+        form = AccountForm(request.POST, branch_ids=branch_ids)
         if form.is_valid():
             account = form.save(commit=False)
             # Assign company and branch to the new account
@@ -100,7 +108,7 @@ def chart_of_accounts(request):
                 messages.success(request, 'Account added successfully! It is now visible to all branches in your company.')
                 return redirect('chart_of_accounts')
     else:
-        form = AccountForm()
+        form = AccountForm(branch_ids=branch_ids)
 
     # Retrieve all accounts within the company (remove duplicates by gl_no)
     all_account_list = Account.all_objects.filter(
@@ -118,6 +126,7 @@ def chart_of_accounts(request):
         'account': account,
         'accounts': accounts,
         'form': form,
+        'can_edit_chart': can_edit_chart,
     })
 
 
@@ -140,6 +149,14 @@ def success_view(request):
 def update_chart_of_account(request, uuid):
     from accounts.utils import get_company_branch_ids_all, get_branch_from_vendor_db
     
+    # Get user's branch and check permission
+    user_branch = get_branch_from_vendor_db(request.user.branch_id)
+    can_edit_chart = getattr(user_branch, 'is_parent_branch', False) if user_branch else False
+    
+    if not can_edit_chart:
+        messages.error(request, 'Only users from the parent branch can edit chart of accounts.')
+        return redirect('chart_of_accounts')
+    
     chart_of_account = Account.all_objects.get(uuid=uuid)
     
     # Get all branch IDs for this company (chart of accounts is always company-wide)
@@ -148,7 +165,7 @@ def update_chart_of_account(request, uuid):
     # Filter the accounts based on the company (visible to all branches)
     accounts = Account.all_objects.filter(header=None, branch_id__in=branch_ids)
     
-    form = AccountForm(instance=chart_of_account)
+    form = AccountForm(instance=chart_of_account, branch_ids=branch_ids)
 
     if request.method == 'POST':
         # Store original branch and company before form processing
@@ -156,7 +173,7 @@ def update_chart_of_account(request, uuid):
         original_branch_id = chart_of_account.branch_id
         original_company = chart_of_account.company
         
-        form = AccountForm(request.POST, instance=chart_of_account)
+        form = AccountForm(request.POST, instance=chart_of_account, branch_ids=branch_ids)
         if form.is_valid():
             account = form.save(commit=False)
             # Restore original branch and company (form doesn't include these fields)
@@ -165,7 +182,6 @@ def update_chart_of_account(request, uuid):
             account.company = original_company
             # If still no branch, assign user's branch
             if not account.branch_id:
-                user_branch = get_branch_from_vendor_db(request.user.branch_id)
                 account.branch = user_branch
                 account.branch_id = user_branch.id if user_branch else None
             account.save()
@@ -181,6 +197,16 @@ def update_chart_of_account(request, uuid):
 @login_required(login_url='login')
 @user_passes_test(check_role_admin)
 def delete_chart_of_account(request, uuid):
+    from accounts.utils import get_branch_from_vendor_db
+    
+    # Check permission
+    user_branch = get_branch_from_vendor_db(request.user.branch_id)
+    can_edit_chart = getattr(user_branch, 'is_parent_branch', False) if user_branch else False
+    
+    if not can_edit_chart:
+        messages.error(request, 'Only users from the parent branch can delete chart of accounts.')
+        return redirect('chart_of_accounts')
+    
     instance = get_object_or_404(Account, uuid=uuid)
 
     if request.method == 'POST':

@@ -6,10 +6,15 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('accounts_admin', '0017_loanautorepaymentsetting_interest_income_gl_no'),
+        ('accounts_admin', '0015_loan_auto_repayment_setting'),
     ]
 
     operations = [
+        migrations.AddField(
+            model_name='loanautorepaymentsetting',
+            name='interest_income_gl_no',
+            field=models.CharField(blank=True, help_text='GL number where interest income will be credited (e.g., 40101)', max_length=10, null=True),
+        ),
         migrations.AddField(
             model_name='loanautorepaymentsetting',
             name='int_receivable_gl_no',
