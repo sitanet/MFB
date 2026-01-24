@@ -1,0 +1,107 @@
+{% extends "accounts/dashboards/base_dashboard.html" %}
+
+{% block dashboard_content %}
+<div class="row">
+    <div class="col-md-3">
+        <div class="stat-card primary">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <div class="stat-value">{{ total_customers|default:0 }}</div>
+                    <div class="stat-label">Total Customers</div>
+                </div>
+                <i class="fas fa-users stat-icon"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card success">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <div class="stat-value">₦{{ total_deposits|floatformat:0|default:0 }}</div>
+                    <div class="stat-label">Total Deposits</div>
+                </div>
+                <i class="fas fa-wallet stat-icon"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card info">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <div class="stat-value">₦{{ total_loans|floatformat:0|default:0 }}</div>
+                    <div class="stat-label">Total Loans</div>
+                </div>
+                <i class="fas fa-hand-holding-usd stat-icon"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card warning">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <div class="stat-value">{{ staff_count|default:0 }}</div>
+                    <div class="stat-label">Staff Members</div>
+                </div>
+                <i class="fas fa-user-tie stat-icon"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="stat-card" style="background: white; color: #333;">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stat-value text-warning">{{ pending_loans|default:0 }}</div>
+                    <div class="stat-label">Pending Loans</div>
+                </div>
+                <i class="fas fa-clock stat-icon text-warning"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="stat-card" style="background: white; color: #333;">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stat-value text-info">{{ today_transactions|default:0 }}</div>
+                    <div class="stat-label">Today's Transactions</div>
+                </div>
+                <i class="fas fa-exchange-alt stat-icon text-info"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="data-table">
+            <div class="table-header">
+                <h5 class="mb-0"><i class="fas fa-file-invoice-dollar me-2"></i>Recent Loan Applications</h5>
+            </div>
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Customer</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for loan in recent_loans %}
+                    <tr>
+                        <td>{{ loan.customer }}</td>
+                        <td>₦{{ loan.loan_amount|floatformat:2 }}</td>
+                        <td><span class="badge bg-{% if loan.approval_status == 'Approved' %}success{% elif loan.approval_status == 'Pending' %}warning{% else %}secondary{% endif %}">{{ loan.approval_status }}</span></td>
+                        <td>{{ loan.appli_date|date:"M d, Y" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4" class="text-center">No recent loans</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

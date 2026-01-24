@@ -164,36 +164,27 @@ def filter_by_company(queryset, user, branch_field='branch_id', admin_sees_all=T
     return queryset.filter(**filter_kwargs)
 
 def detectUser(user):
-    if user.role == 1:
-        return 'dashboard'
-    elif user.role == 2:
-        return 'dashboard_2'
-    elif user.role == 3:
-        return 'dashboard_3'
-    elif user.role == 4:
-        return 'dashboard_4'
-    elif user.role == 5:
-        return 'dashboard_5'
-    elif user.role == 6:
-        return 'dashboard_6'
-    elif user.role == 7:
-        return 'dashboard_7'
-    elif user.role == 8:
-        return 'dashboard_8'
-    elif user.role == 9:
-        return 'dashboard_9'
-    elif user.role == 10:
-        return 'dashboard_10'
-    elif user.role == 11:
-        return 'dashboard_11'
-    elif user.role == 12:
-        return 'dashboard_12'
-    elif user.role == 13:
-        return 'dashboard'
-    elif user.role is None and user.is_superadmin:
+    """Redirect users to their role-specific dashboard"""
+    role_dashboards = {
+        1: 'dashboard',              # System Administrator
+        2: 'dashboard_2',            # General Manager
+        3: 'dashboard_3',            # Branch Manager
+        4: 'dashboard_4',            # Assistant Manager
+        5: 'dashboard_5',            # Accountant
+        6: 'dashboard_6',            # Accounts Assistant
+        7: 'dashboard_7',            # Credit Supervisor
+        8: 'dashboard_8',            # Credit Officer
+        9: 'dashboard_9',            # Verification Officer
+        10: 'dashboard_10',          # Customer Service Unit
+        11: 'dashboard_11',          # Teller
+        12: 'dashboard_12',          # M.I.S Officer
+        13: 'customer_dashboard',    # Customer
+    }
+    
+    if user.role is None and user.is_superadmin:
         return '/admin'
-    # Default fallback to prevent None return
-    return 'dashboard'
+    
+    return role_dashboards.get(user.role, 'dashboard')
 
     
 def send_verification_email(request, user, mail_subject, email_template):

@@ -1,0 +1,78 @@
+{% extends "accounts/dashboards/base_dashboard.html" %}
+
+{% block dashboard_content %}
+<div class="row">
+    <div class="col-md-3">
+        <div class="stat-card primary">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <div class="stat-value">{{ total_customers|default:0 }}</div>
+                    <div class="stat-label">Total Customers</div>
+                </div>
+                <i class="fas fa-users stat-icon"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card success">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <div class="stat-value">₦{{ total_deposits|floatformat:0|default:0 }}</div>
+                    <div class="stat-label">Total Deposits</div>
+                </div>
+                <i class="fas fa-wallet stat-icon"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card warning">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <div class="stat-value">{{ pending_loans|default:0 }}</div>
+                    <div class="stat-label">Pending Loans</div>
+                </div>
+                <i class="fas fa-clock stat-icon"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card info">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <div class="stat-value">{{ today_transactions|default:0 }}</div>
+                    <div class="stat-label">Today's Transactions</div>
+                </div>
+                <i class="fas fa-exchange-alt stat-icon"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="data-table">
+            <div class="table-header">
+                <h5 class="mb-0"><i class="fas fa-tasks me-2"></i>Quick Actions</h5>
+            </div>
+            <div class="p-3">
+                <a href="{% url 'customer_list' %}" class="btn btn-outline-primary mb-2 w-100"><i class="fas fa-users me-2"></i>View Customers</a>
+                <a href="{% url 'loan_list' %}" class="btn btn-outline-success mb-2 w-100"><i class="fas fa-file-invoice-dollar me-2"></i>View Loans</a>
+                <a href="{% url 'display_all_user' %}" class="btn btn-outline-info w-100"><i class="fas fa-user-cog me-2"></i>Manage Staff</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="data-table">
+            <div class="table-header">
+                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Branch Summary</h5>
+            </div>
+            <div class="p-3">
+                <p><strong>Branch:</strong> {{ user_branch.branch_name|default:"-" }}</p>
+                <p><strong>Company:</strong> {{ user_company.company_name|default:"-" }}</p>
+                <p><strong>Session Date:</strong> {{ user_branch.session_date|date:"M d, Y"|default:"-" }}</p>
+                <p><strong>Session Status:</strong> <span class="badge bg-{% if user_branch.session_status == 'Open' %}success{% else %}secondary{% endif %}">{{ user_branch.session_status|default:"-" }}</span></p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

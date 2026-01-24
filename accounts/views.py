@@ -1018,6 +1018,453 @@ def dashboard(request):
     return render(request, 'accounts/dashboard.html', context)
 
 
+# ==================== ROLE-SPECIFIC DASHBOARDS ====================
+
+def get_base_dashboard_context(request):
+    """Get base context data for all dashboards"""
+    today = timezone.now()
+    user_branch = get_branch_from_vendor_db(request.user.branch_id)
+    user_company = user_branch.company if user_branch else None
+    
+    try:
+        user_branch_id = int(request.user.branch_id) if request.user.branch_id else None
+    except (ValueError, TypeError):
+        user_branch_id = None
+    
+    return {
+        'today': today,
+        'user_branch': user_branch,
+        'user_company': user_company,
+        'user_branch_id': user_branch_id,
+        'user': request.user,
+    }
+
+
+@login_required(login_url='login')
+def dashboard_2(request):
+    """General Manager Dashboard - Company-wide overview"""
+    ctx = get_base_dashboard_context(request)
+    today = ctx['today']
+    user_company = ctx['user_company']
+    
+    if user_company:
+        company_branches = Branch.objects.filter(company=user_company)
+        branch_ids = [b.id for b in company_branches]
+    else:
+        branch_ids = []
+    
+    # Company-wide statistics
+    total_customers = Customer.all_objects.filter(branch_id__in=branch_ids).count()
+    total_loans = Loans.all_objects.filter(branch_id__in=branch_ids, disb_status='T').aggregate(total=Sum('loan_amount'))['total'] or 0
+    total_deposits = Memtrans.all_objects.filter(branch_id__in=branch_ids, amount__gt=0, account_type='C').aggregate(total=Sum('amount'))['total'] or 0
+    pending_loans = Loans.all_objects.filter(branch_id__in=branch_ids, approval_status='Pending').count()
+    approved_loans = Loans.all_objects.filter(branch_id__in=branch_ids, approval_status='Approved').count()
+    
+    # Branch performance
+    branch_data = []
+    for branch in company_branches if user_company else []:
+        cust_count = Customer.all_objects.filter(branch_id=branch.id).count()
+        b_deposits = Memtrans.all_objects.filter(branch_id=branch.id, amount__gt=0, account_type='C').aggregate(total=Sum('amount'))['total'] or 0
+        b_loans = Loans.all_objects.filter(branch_id=branch.id, disb_status='T').aggregate(total=Sum('loan_amount'))['total'] or 0
+        branch_data.append({
+            'name': branch.branch_name,
+            'customers': cust_count,
+            'deposits': b_deposits,
+            'loans': b_loans,
+        })
+    
+    context = {
+        **ctx,
+        'role_name': 'General Manager',
+        'total_customers': total_customers,
+        'total_loans': total_loans,
+        'total_deposits': total_deposits,
+        'pending_loans': pending_loans,
+        'approved_loans': approved_loans,
+        'branch_data': branch_data,
+        'total_branches': len(branch_ids),
+    }
+    return render(request, 'accounts/dashboards/general_manager.html', context)
+
+
+@login_required(login_url='login')
+def dashboard_3(request):
+    """Branch Manager Dashboard - Branch operations overview"""
+    ctx = get_base_dashboard_context(request)
+    branch_id = ctx['user_branch_id']
+    today = ctx['today']
+    
+    # Branch statistics
+    total_customers = Customer.all_objects.filter(branch_id=branch_id).count()
+    total_loans = Loans.all_objects.filter(branch_id=branch_id, disb_status='T').aggregate(total=Sum('loan_amount'))['total'] or 0
+    total_deposits = Memtrans.all_objects.filter(branch_id=branch_id, amount__gt=0, account_type='C').aggregate(total=Sum('amount'))['total'] or 0
+    pending_loans = Loans.all_objects.filter(branch_id=branch_id, approval_status='Pending').count()
+    today_transactions = Memtrans.all_objects.filter(branch_id=branch_id, ses_date=today.date()).count()
+    
+    # Staff count
+    staff_count = User.objects.filter(branch_id=branch_id, role__in=[4,5,6,7,8,9,10,11,12]).count()
+    
+    # Recent loans
+    recent_loans = Loans.all_objects.filter(branch_id=branch_id).order_by('-appli_date')[:10]
+    
+    context = {
+        **ctx,
+        'role_name': 'Branch Manager',
+        'total_customers': total_customers,
+        'total_loans': total_loans,
+        'total_deposits': total_deposits,
+        'pending_loans': pending_loans,
+        'today_transactions': today_transactions,
+        'staff_count': staff_count,
+        'recent_loans': recent_loans,
+    }
+    return render(request, 'accounts/dashboards/branch_manager.html', context)
+
+
+@login_required(login_url='login')
+def dashboard_4(request):
+    """Assistant Manager Dashboard"""
+    ctx = get_base_dashboard_context(request)
+    branch_id = ctx['user_branch_id']
+    today = ctx['today']
+    
+    total_customers = Customer.all_objects.filter(branch_id=branch_id).count()
+    pending_loans = Loans.all_objects.filter(branch_id=branch_id, approval_status='Pending').count()
+    today_transactions = Memtrans.all_objects.filter(branch_id=branch_id, ses_date=today.date()).count()
+    total_deposits = Memtrans.all_objects.filter(branch_id=branch_id, amount__gt=0, account_type='C').aggregate(total=Sum('amount'))['total'] or 0
+    
+    context = {
+        **ctx,
+        'role_name': 'Assistant Manager',
+        'total_customers': total_customers,
+        'pending_loans': pending_loans,
+        'today_transactions': today_transactions,
+        'total_deposits': total_deposits,
+    }
+    return render(request, 'accounts/dashboards/assistant_manager.html', context)
+
+
+@login_required(login_url='login')
+def dashboard_5(request):
+    """Accountant Dashboard - Financial overview"""
+    ctx = get_base_dashboard_context(request)
+    branch_id = ctx['user_branch_id']
+    today = ctx['today']
+    current_month = today.month
+    current_year = today.year
+    
+    # Financial metrics
+    total_deposits = Memtrans.all_objects.filter(branch_id=branch_id, amount__gt=0, account_type='C').aggregate(total=Sum('amount'))['total'] or 0
+    total_withdrawals = Memtrans.all_objects.filter(branch_id=branch_id, amount__lt=0, account_type='C').aggregate(total=Sum('amount'))['total'] or 0
+    month_deposits = Memtrans.all_objects.filter(branch_id=branch_id, ses_date__month=current_month, ses_date__year=current_year, amount__gt=0, account_type='C').aggregate(total=Sum('amount'))['total'] or 0
+    month_withdrawals = Memtrans.all_objects.filter(branch_id=branch_id, ses_date__month=current_month, ses_date__year=current_year, amount__lt=0, account_type='C').aggregate(total=Sum('amount'))['total'] or 0
+    
+    total_loan_disbursed = Loans.all_objects.filter(branch_id=branch_id, disb_status='T').aggregate(total=Sum('loan_amount'))['total'] or 0
+    total_loan_repaid = Loans.all_objects.filter(branch_id=branch_id, disb_status='T').aggregate(total=Sum('amount_paid'))['total'] or 0
+    
+    context = {
+        **ctx,
+        'role_name': 'Accountant',
+        'total_deposits': total_deposits,
+        'total_withdrawals': abs(total_withdrawals) if total_withdrawals else 0,
+        'month_deposits': month_deposits,
+        'month_withdrawals': abs(month_withdrawals) if month_withdrawals else 0,
+        'total_loan_disbursed': total_loan_disbursed,
+        'total_loan_repaid': total_loan_repaid,
+    }
+    return render(request, 'accounts/dashboards/accountant.html', context)
+
+
+@login_required(login_url='login')
+def dashboard_6(request):
+    """Accounts Assistant Dashboard"""
+    ctx = get_base_dashboard_context(request)
+    branch_id = ctx['user_branch_id']
+    today = ctx['today']
+    
+    today_deposits = Memtrans.all_objects.filter(branch_id=branch_id, ses_date=today.date(), amount__gt=0, account_type='C').aggregate(total=Sum('amount'))['total'] or 0
+    today_withdrawals = Memtrans.all_objects.filter(branch_id=branch_id, ses_date=today.date(), amount__lt=0, account_type='C').aggregate(total=Sum('amount'))['total'] or 0
+    today_transactions = Memtrans.all_objects.filter(branch_id=branch_id, ses_date=today.date()).count()
+    
+    recent_transactions = Memtrans.all_objects.filter(branch_id=branch_id).order_by('-ses_date', '-id')[:20]
+    
+    context = {
+        **ctx,
+        'role_name': 'Accounts Assistant',
+        'today_deposits': today_deposits,
+        'today_withdrawals': abs(today_withdrawals) if today_withdrawals else 0,
+        'today_transactions': today_transactions,
+        'recent_transactions': recent_transactions,
+    }
+    return render(request, 'accounts/dashboards/accounts_assistant.html', context)
+
+
+@login_required(login_url='login')
+def dashboard_7(request):
+    """Credit Supervisor Dashboard - Loan portfolio overview"""
+    ctx = get_base_dashboard_context(request)
+    branch_id = ctx['user_branch_id']
+    
+    # Loan statistics
+    total_loans = Loans.all_objects.filter(branch_id=branch_id).count()
+    pending_loans = Loans.all_objects.filter(branch_id=branch_id, approval_status='Pending').count()
+    approved_loans = Loans.all_objects.filter(branch_id=branch_id, approval_status='Approved').count()
+    disbursed_loans = Loans.all_objects.filter(branch_id=branch_id, disb_status='T').count()
+    defaulted_loans = Loans.all_objects.filter(branch_id=branch_id, approval_status='Defaulted').count()
+    
+    total_portfolio = Loans.all_objects.filter(branch_id=branch_id, disb_status='T').aggregate(total=Sum('loan_amount'))['total'] or 0
+    total_outstanding = Loans.all_objects.filter(branch_id=branch_id, disb_status='T').aggregate(total=Sum('loan_balance'))['total'] or 0
+    
+    # Loans pending approval
+    loans_to_approve = Loans.all_objects.filter(branch_id=branch_id, approval_status='Pending').order_by('-appli_date')[:10]
+    
+    # Credit officers performance
+    credit_officers = User.objects.filter(branch_id=branch_id, role__in=[7, 8])
+    officer_performance = []
+    for officer in credit_officers:
+        officer_loans = Loans.all_objects.filter(branch_id=branch_id, user=officer)
+        officer_performance.append({
+            'name': f"{officer.first_name} {officer.last_name}",
+            'total_loans': officer_loans.count(),
+            'disbursed': officer_loans.filter(disb_status='T').count(),
+            'defaulted': officer_loans.filter(approval_status='Defaulted').count(),
+        })
+    
+    context = {
+        **ctx,
+        'role_name': 'Credit Supervisor',
+        'total_loans': total_loans,
+        'pending_loans': pending_loans,
+        'approved_loans': approved_loans,
+        'disbursed_loans': disbursed_loans,
+        'defaulted_loans': defaulted_loans,
+        'total_portfolio': total_portfolio,
+        'total_outstanding': total_outstanding,
+        'loans_to_approve': loans_to_approve,
+        'officer_performance': officer_performance,
+    }
+    return render(request, 'accounts/dashboards/credit_supervisor.html', context)
+
+
+@login_required(login_url='login')
+def dashboard_8(request):
+    """Credit Officer Dashboard - Personal loan management"""
+    ctx = get_base_dashboard_context(request)
+    branch_id = ctx['user_branch_id']
+    user = request.user
+    
+    # My loans
+    my_loans = Loans.all_objects.filter(branch_id=branch_id, user=user)
+    my_pending = my_loans.filter(approval_status='Pending').count()
+    my_approved = my_loans.filter(approval_status='Approved').count()
+    my_disbursed = my_loans.filter(disb_status='T').count()
+    my_defaulted = my_loans.filter(approval_status='Defaulted').count()
+    
+    my_portfolio = my_loans.filter(disb_status='T').aggregate(total=Sum('loan_amount'))['total'] or 0
+    my_outstanding = my_loans.filter(disb_status='T').aggregate(total=Sum('loan_balance'))['total'] or 0
+    
+    # Recent loans
+    recent_loans = my_loans.order_by('-appli_date')[:10]
+    
+    # My customers
+    my_customer_ids = my_loans.values_list('customer_id', flat=True).distinct()
+    my_customers = Customer.all_objects.filter(id__in=my_customer_ids).count()
+    
+    context = {
+        **ctx,
+        'role_name': 'Credit Officer',
+        'my_pending': my_pending,
+        'my_approved': my_approved,
+        'my_disbursed': my_disbursed,
+        'my_defaulted': my_defaulted,
+        'my_portfolio': my_portfolio,
+        'my_outstanding': my_outstanding,
+        'recent_loans': recent_loans,
+        'my_customers': my_customers,
+        'total_loans': my_loans.count(),
+    }
+    return render(request, 'accounts/dashboards/credit_officer.html', context)
+
+
+@login_required(login_url='login')
+def dashboard_9(request):
+    """Verification Officer Dashboard - Customer verification tasks"""
+    ctx = get_base_dashboard_context(request)
+    branch_id = ctx['user_branch_id']
+    
+    # Customers pending verification
+    pending_verification = Customer.all_objects.filter(branch_id=branch_id, verified=False).count()
+    verified_customers = Customer.all_objects.filter(branch_id=branch_id, verified=True).count()
+    total_customers = Customer.all_objects.filter(branch_id=branch_id).count()
+    
+    # Recent unverified customers
+    unverified_customers = Customer.all_objects.filter(branch_id=branch_id, verified=False).order_by('-created_at')[:20]
+    
+    # Loans pending verification/approval
+    pending_loans = Loans.all_objects.filter(branch_id=branch_id, approval_status='Pending').count()
+    
+    context = {
+        **ctx,
+        'role_name': 'Verification Officer',
+        'pending_verification': pending_verification,
+        'verified_customers': verified_customers,
+        'total_customers': total_customers,
+        'unverified_customers': unverified_customers,
+        'pending_loans': pending_loans,
+    }
+    return render(request, 'accounts/dashboards/verification_officer.html', context)
+
+
+@login_required(login_url='login')
+def dashboard_10(request):
+    """Customer Service Unit Dashboard"""
+    ctx = get_base_dashboard_context(request)
+    branch_id = ctx['user_branch_id']
+    today = ctx['today']
+    
+    total_customers = Customer.all_objects.filter(branch_id=branch_id).count()
+    new_customers_today = Customer.all_objects.filter(branch_id=branch_id, created_at__date=today.date()).count()
+    new_customers_month = Customer.all_objects.filter(branch_id=branch_id, created_at__month=today.month, created_at__year=today.year).count()
+    
+    # Recent customers
+    recent_customers = Customer.all_objects.filter(branch_id=branch_id).order_by('-created_at')[:20]
+    
+    context = {
+        **ctx,
+        'role_name': 'Customer Service',
+        'total_customers': total_customers,
+        'new_customers_today': new_customers_today,
+        'new_customers_month': new_customers_month,
+        'recent_customers': recent_customers,
+    }
+    return render(request, 'accounts/dashboards/customer_service.html', context)
+
+
+@login_required(login_url='login')
+def dashboard_11(request):
+    """Teller Dashboard - Daily transactions"""
+    ctx = get_base_dashboard_context(request)
+    branch_id = ctx['user_branch_id']
+    today = ctx['today']
+    user = request.user
+    
+    # Today's transactions by this teller
+    my_today_transactions = Memtrans.all_objects.filter(branch_id=branch_id, ses_date=today.date(), user=user)
+    my_deposits = my_today_transactions.filter(amount__gt=0, account_type='C').aggregate(total=Sum('amount'))['total'] or 0
+    my_withdrawals = my_today_transactions.filter(amount__lt=0, account_type='C').aggregate(total=Sum('amount'))['total'] or 0
+    my_transaction_count = my_today_transactions.count()
+    
+    # Branch totals for today
+    branch_today = Memtrans.all_objects.filter(branch_id=branch_id, ses_date=today.date())
+    branch_deposits = branch_today.filter(amount__gt=0, account_type='C').aggregate(total=Sum('amount'))['total'] or 0
+    branch_withdrawals = branch_today.filter(amount__lt=0, account_type='C').aggregate(total=Sum('amount'))['total'] or 0
+    
+    # Recent transactions
+    recent_transactions = my_today_transactions.order_by('-id')[:20]
+    
+    context = {
+        **ctx,
+        'role_name': 'Teller',
+        'my_deposits': my_deposits,
+        'my_withdrawals': abs(my_withdrawals) if my_withdrawals else 0,
+        'my_transaction_count': my_transaction_count,
+        'branch_deposits': branch_deposits,
+        'branch_withdrawals': abs(branch_withdrawals) if branch_withdrawals else 0,
+        'recent_transactions': recent_transactions,
+    }
+    return render(request, 'accounts/dashboards/teller.html', context)
+
+
+@login_required(login_url='login')
+def dashboard_12(request):
+    """M.I.S Officer Dashboard - Reports and analytics"""
+    ctx = get_base_dashboard_context(request)
+    branch_id = ctx['user_branch_id']
+    today = ctx['today']
+    current_month = today.month
+    current_year = today.year
+    
+    # Overall statistics
+    total_customers = Customer.all_objects.filter(branch_id=branch_id).count()
+    total_loans = Loans.all_objects.filter(branch_id=branch_id).count()
+    total_transactions = Memtrans.all_objects.filter(branch_id=branch_id).count()
+    
+    # Monthly trends
+    months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    deposits_trend = []
+    loans_trend = []
+    customers_trend = []
+    
+    for m in range(1, 13):
+        dep = Memtrans.all_objects.filter(branch_id=branch_id, ses_date__month=m, ses_date__year=current_year, amount__gt=0, account_type='C').aggregate(total=Sum('amount'))['total'] or 0
+        loan = Loans.all_objects.filter(branch_id=branch_id, appli_date__month=m, appli_date__year=current_year, disb_status='T').aggregate(total=Sum('loan_amount'))['total'] or 0
+        cust = Customer.all_objects.filter(branch_id=branch_id, created_at__month=m, created_at__year=current_year).count()
+        
+        deposits_trend.append(float(dep))
+        loans_trend.append(float(loan))
+        customers_trend.append(cust)
+    
+    # NPL ratio
+    total_loan_count = Loans.all_objects.filter(branch_id=branch_id).count()
+    defaulted_count = Loans.all_objects.filter(branch_id=branch_id, approval_status='Defaulted').count()
+    npl_ratio = round((defaulted_count / total_loan_count) * 100, 2) if total_loan_count > 0 else 0
+    
+    context = {
+        **ctx,
+        'role_name': 'M.I.S Officer',
+        'total_customers': total_customers,
+        'total_loans': total_loans,
+        'total_transactions': total_transactions,
+        'months': months,
+        'deposits_trend': deposits_trend,
+        'loans_trend': loans_trend,
+        'customers_trend': customers_trend,
+        'npl_ratio': npl_ratio,
+    }
+    return render(request, 'accounts/dashboards/mis_officer.html', context)
+
+
+@login_required(login_url='login')
+def customer_dashboard(request):
+    """Customer Dashboard - Personal account overview"""
+    ctx = get_base_dashboard_context(request)
+    user = request.user
+    
+    # Get customer record
+    try:
+        customer = Customer.all_objects.get(email=user.email)
+    except Customer.DoesNotExist:
+        customer = None
+    
+    if customer:
+        # Account balance
+        account_balance = customer.available_balance or 0
+        
+        # My loans
+        my_loans = Loans.all_objects.filter(customer=customer)
+        active_loans = my_loans.filter(disb_status='T', loan_balance__gt=0).count()
+        total_loan_balance = my_loans.filter(disb_status='T').aggregate(total=Sum('loan_balance'))['total'] or 0
+        
+        # Recent transactions
+        recent_transactions = Memtrans.all_objects.filter(cust_ac_no=customer.cust_ac_no).order_by('-ses_date', '-id')[:10]
+    else:
+        account_balance = 0
+        active_loans = 0
+        total_loan_balance = 0
+        recent_transactions = []
+    
+    context = {
+        **ctx,
+        'role_name': 'Customer',
+        'customer': customer,
+        'account_balance': account_balance,
+        'active_loans': active_loans,
+        'total_loan_balance': total_loan_balance,
+        'recent_transactions': recent_transactions,
+    }
+    return render(request, 'accounts/dashboards/customer.html', context)
+
+
 # ==================== PASSWORD MANAGEMENT ====================
 
 @login_required(login_url='login')

@@ -1,0 +1,138 @@
+{% extends "accounts/dashboards/base_dashboard.html" %}
+
+{% block dashboard_content %}
+<div class="row">
+    <div class="col-md-3">
+        <div class="stat-card primary">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <div class="stat-value">{{ total_loans|default:0 }}</div>
+                    <div class="stat-label">Total Loans</div>
+                </div>
+                <i class="fas fa-file-invoice-dollar stat-icon"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card warning">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <div class="stat-value">{{ pending_loans|default:0 }}</div>
+                    <div class="stat-label">Pending Approval</div>
+                </div>
+                <i class="fas fa-clock stat-icon"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card success">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <div class="stat-value">{{ disbursed_loans|default:0 }}</div>
+                    <div class="stat-label">Disbursed</div>
+                </div>
+                <i class="fas fa-check-circle stat-icon"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card danger">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <div class="stat-value">{{ defaulted_loans|default:0 }}</div>
+                    <div class="stat-label">Defaulted</div>
+                </div>
+                <i class="fas fa-exclamation-triangle stat-icon"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="stat-card" style="background: white; color: #333;">
+            <h6 class="text-muted mb-3">Portfolio Summary</h6>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span>Total Portfolio</span>
+                <strong>₦{{ total_portfolio|floatformat:2|default:0 }}</strong>
+            </div>
+            <div class="d-flex justify-content-between align-items-center">
+                <span>Outstanding Balance</span>
+                <strong class="text-warning">₦{{ total_outstanding|floatformat:2|default:0 }}</strong>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="stat-card" style="background: white; color: #333;">
+            <h6 class="text-muted mb-3">Approval Status</h6>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span>Approved</span>
+                <strong class="text-success">{{ approved_loans|default:0 }}</strong>
+            </div>
+            <div class="d-flex justify-content-between align-items-center">
+                <span>Pending</span>
+                <strong class="text-warning">{{ pending_loans|default:0 }}</strong>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="data-table">
+            <div class="table-header">
+                <h5 class="mb-0"><i class="fas fa-hourglass-half me-2"></i>Loans Awaiting Approval</h5>
+            </div>
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Customer</th>
+                        <th>Amount</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for loan in loans_to_approve %}
+                    <tr>
+                        <td>{{ loan.customer }}</td>
+                        <td>₦{{ loan.loan_amount|floatformat:2 }}</td>
+                        <td>{{ loan.appli_date|date:"M d" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="3" class="text-center">No pending loans</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="data-table">
+            <div class="table-header">
+                <h5 class="mb-0"><i class="fas fa-user-tie me-2"></i>Credit Officers Performance</h5>
+            </div>
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Officer</th>
+                        <th>Loans</th>
+                        <th>Disbursed</th>
+                        <th>Defaulted</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for officer in officer_performance %}
+                    <tr>
+                        <td>{{ officer.name }}</td>
+                        <td>{{ officer.total_loans }}</td>
+                        <td class="text-success">{{ officer.disbursed }}</td>
+                        <td class="text-danger">{{ officer.defaulted }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4" class="text-center">No officers found</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

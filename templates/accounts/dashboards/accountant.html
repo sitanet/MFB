@@ -1,0 +1,91 @@
+{% extends "accounts/dashboards/base_dashboard.html" %}
+
+{% block dashboard_content %}
+<div class="row">
+    <div class="col-md-4">
+        <div class="stat-card success">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <div class="stat-value">₦{{ total_deposits|floatformat:0|default:0 }}</div>
+                    <div class="stat-label">Total Deposits</div>
+                </div>
+                <i class="fas fa-arrow-down stat-icon"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card danger">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <div class="stat-value">₦{{ total_withdrawals|floatformat:0|default:0 }}</div>
+                    <div class="stat-label">Total Withdrawals</div>
+                </div>
+                <i class="fas fa-arrow-up stat-icon"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card primary">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <div class="stat-value">₦{{ total_loan_disbursed|floatformat:0|default:0 }}</div>
+                    <div class="stat-label">Loans Disbursed</div>
+                </div>
+                <i class="fas fa-hand-holding-usd stat-icon"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="stat-card" style="background: white; color: #333;">
+            <h6 class="text-muted mb-3">This Month</h6>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span>Deposits</span>
+                <strong class="text-success">₦{{ month_deposits|floatformat:2|default:0 }}</strong>
+            </div>
+            <div class="d-flex justify-content-between align-items-center">
+                <span>Withdrawals</span>
+                <strong class="text-danger">₦{{ month_withdrawals|floatformat:2|default:0 }}</strong>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="stat-card" style="background: white; color: #333;">
+            <h6 class="text-muted mb-3">Loan Summary</h6>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span>Total Disbursed</span>
+                <strong>₦{{ total_loan_disbursed|floatformat:2|default:0 }}</strong>
+            </div>
+            <div class="d-flex justify-content-between align-items-center">
+                <span>Total Repaid</span>
+                <strong class="text-success">₦{{ total_loan_repaid|floatformat:2|default:0 }}</strong>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="data-table">
+            <div class="table-header">
+                <h5 class="mb-0"><i class="fas fa-calculator me-2"></i>Quick Actions</h5>
+            </div>
+            <div class="p-3">
+                <div class="row">
+                    <div class="col-md-4">
+                        <a href="{% url 'reports' %}" class="btn btn-outline-primary w-100 mb-2"><i class="fas fa-chart-bar me-2"></i>Financial Reports</a>
+                    </div>
+                    <div class="col-md-4">
+                        <a href="{% url 'transaction_list' %}" class="btn btn-outline-success w-100 mb-2"><i class="fas fa-list me-2"></i>All Transactions</a>
+                    </div>
+                    <div class="col-md-4">
+                        <a href="{% url 'chart_of_accounts' %}" class="btn btn-outline-info w-100 mb-2"><i class="fas fa-sitemap me-2"></i>Chart of Accounts</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,152 @@
+{% extends "accounts/dashboards/base_dashboard.html" %}
+
+{% block dashboard_content %}
+<div class="row">
+    <div class="col-md-3">
+        <div class="stat-card primary">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <div class="stat-value">{{ total_customers|default:0 }}</div>
+                    <div class="stat-label">Total Customers</div>
+                </div>
+                <i class="fas fa-users stat-icon"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card success">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <div class="stat-value">{{ total_loans|default:0 }}</div>
+                    <div class="stat-label">Total Loans</div>
+                </div>
+                <i class="fas fa-file-invoice-dollar stat-icon"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card info">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <div class="stat-value">{{ total_transactions|default:0 }}</div>
+                    <div class="stat-label">Total Transactions</div>
+                </div>
+                <i class="fas fa-exchange-alt stat-icon"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card {% if npl_ratio > 10 %}danger{% elif npl_ratio > 5 %}warning{% else %}success{% endif %}">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <div class="stat-value">{{ npl_ratio|default:0 }}%</div>
+                    <div class="stat-label">NPL Ratio</div>
+                </div>
+                <i class="fas fa-chart-pie stat-icon"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="data-table">
+            <div class="table-header">
+                <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Deposits Trend ({{ today.year }})</h5>
+            </div>
+            <div class="p-3">
+                <canvas id="depositsChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="data-table">
+            <div class="table-header">
+                <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Loans Trend ({{ today.year }})</h5>
+            </div>
+            <div class="p-3">
+                <canvas id="loansChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="data-table">
+            <div class="table-header">
+                <h5 class="mb-0"><i class="fas fa-user-plus me-2"></i>New Customers ({{ today.year }})</h5>
+            </div>
+            <div class="p-3">
+                <canvas id="customersChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="data-table">
+            <div class="table-header">
+                <h5 class="mb-0"><i class="fas fa-file-alt me-2"></i>Quick Reports</h5>
+            </div>
+            <div class="p-3">
+                <a href="{% url 'reports' %}" class="btn btn-outline-primary w-100 mb-2"><i class="fas fa-chart-bar me-2"></i>Financial Reports</a>
+                <a href="{% url 'loan_list' %}" class="btn btn-outline-success w-100 mb-2"><i class="fas fa-file-invoice-dollar me-2"></i>Loan Reports</a>
+                <a href="{% url 'customer_list' %}" class="btn btn-outline-info w-100 mb-2"><i class="fas fa-users me-2"></i>Customer Reports</a>
+                <a href="{% url 'transaction_list' %}" class="btn btn-outline-secondary w-100"><i class="fas fa-list me-2"></i>Transaction History</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const months = {{ months|safe }};
+    const depositsTrend = {{ deposits_trend|safe }};
+    const loansTrend = {{ loans_trend|safe }};
+    const customersTrend = {{ customers_trend|safe }};
+    
+    new Chart(document.getElementById('depositsChart'), {
+        type: 'line',
+        data: {
+            labels: months,
+            datasets: [{
+                label: 'Deposits',
+                data: depositsTrend,
+                borderColor: '#10b981',
+                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: { responsive: true, plugins: { legend: { display: false } } }
+    });
+    
+    new Chart(document.getElementById('loansChart'), {
+        type: 'bar',
+        data: {
+            labels: months,
+            datasets: [{
+                label: 'Loans',
+                data: loansTrend,
+                backgroundColor: '#667eea'
+            }]
+        },
+        options: { responsive: true, plugins: { legend: { display: false } } }
+    });
+    
+    new Chart(document.getElementById('customersChart'), {
+        type: 'line',
+        data: {
+            labels: months,
+            datasets: [{
+                label: 'New Customers',
+                data: customersTrend,
+                borderColor: '#f59e0b',
+                backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: { responsive: true, plugins: { legend: { display: false } } }
+    });
+</script>
+{% endblock %}

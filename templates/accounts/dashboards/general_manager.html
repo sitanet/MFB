@@ -1,0 +1,107 @@
+{% extends "accounts/dashboards/base_dashboard.html" %}
+
+{% block dashboard_content %}
+<div class="row">
+    <div class="col-md-3">
+        <div class="stat-card primary">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <div class="stat-value">{{ total_branches }}</div>
+                    <div class="stat-label">Total Branches</div>
+                </div>
+                <i class="fas fa-building stat-icon"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card success">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <div class="stat-value">{{ total_customers|default:0 }}</div>
+                    <div class="stat-label">Total Customers</div>
+                </div>
+                <i class="fas fa-users stat-icon"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card info">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <div class="stat-value">₦{{ total_deposits|floatformat:0|default:0 }}</div>
+                    <div class="stat-label">Total Deposits</div>
+                </div>
+                <i class="fas fa-wallet stat-icon"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card warning">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <div class="stat-value">₦{{ total_loans|floatformat:0|default:0 }}</div>
+                    <div class="stat-label">Total Loans Disbursed</div>
+                </div>
+                <i class="fas fa-hand-holding-usd stat-icon"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="stat-card" style="background: white; color: #333;">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stat-value text-warning">{{ pending_loans|default:0 }}</div>
+                    <div class="stat-label">Pending Loan Approvals</div>
+                </div>
+                <i class="fas fa-clock stat-icon text-warning"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="stat-card" style="background: white; color: #333;">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stat-value text-success">{{ approved_loans|default:0 }}</div>
+                    <div class="stat-label">Approved Loans</div>
+                </div>
+                <i class="fas fa-check-circle stat-icon text-success"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="data-table">
+            <div class="table-header">
+                <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Branch Performance</h5>
+            </div>
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Branch Name</th>
+                        <th>Customers</th>
+                        <th>Deposits</th>
+                        <th>Loans</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for branch in branch_data %}
+                    <tr>
+                        <td>{{ branch.name }}</td>
+                        <td>{{ branch.customers }}</td>
+                        <td>₦{{ branch.deposits|floatformat:2 }}</td>
+                        <td>₦{{ branch.loans|floatformat:2 }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4" class="text-center">No branch data available</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,101 @@
+{% extends "accounts/dashboards/base_dashboard.html" %}
+
+{% block dashboard_content %}
+<div class="row">
+    <div class="col-md-4">
+        <div class="stat-card success">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <div class="stat-value">₦{{ my_deposits|floatformat:0|default:0 }}</div>
+                    <div class="stat-label">My Deposits Today</div>
+                </div>
+                <i class="fas fa-arrow-down stat-icon"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card danger">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <div class="stat-value">₦{{ my_withdrawals|floatformat:0|default:0 }}</div>
+                    <div class="stat-label">My Withdrawals Today</div>
+                </div>
+                <i class="fas fa-arrow-up stat-icon"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card primary">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <div class="stat-value">{{ my_transaction_count|default:0 }}</div>
+                    <div class="stat-label">My Transactions Today</div>
+                </div>
+                <i class="fas fa-exchange-alt stat-icon"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="stat-card" style="background: white; color: #333;">
+            <h6 class="text-muted mb-3">Branch Totals Today</h6>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span><i class="fas fa-arrow-down text-success me-2"></i>Total Deposits</span>
+                <strong class="text-success">₦{{ branch_deposits|floatformat:2|default:0 }}</strong>
+            </div>
+            <div class="d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-arrow-up text-danger me-2"></i>Total Withdrawals</span>
+                <strong class="text-danger">₦{{ branch_withdrawals|floatformat:2|default:0 }}</strong>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="data-table">
+            <div class="table-header">
+                <h5 class="mb-0"><i class="fas fa-cash-register me-2"></i>Quick Actions</h5>
+            </div>
+            <div class="p-3">
+                <a href="{% url 'deposit' %}" class="btn btn-success w-100 mb-2"><i class="fas fa-arrow-down me-2"></i>Process Deposit</a>
+                <a href="{% url 'withdrawal' %}" class="btn btn-danger w-100 mb-2"><i class="fas fa-arrow-up me-2"></i>Process Withdrawal</a>
+                <a href="{% url 'fund_transfer' %}" class="btn btn-info w-100"><i class="fas fa-exchange-alt me-2"></i>Fund Transfer</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="data-table">
+            <div class="table-header">
+                <h5 class="mb-0"><i class="fas fa-history me-2"></i>My Today's Transactions</h5>
+            </div>
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Account</th>
+                        <th>Description</th>
+                        <th>Amount</th>
+                        <th>Type</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for trans in recent_transactions %}
+                    <tr>
+                        <td>{{ trans.created_at|time:"H:i" }}</td>
+                        <td>{{ trans.cust_ac_no }}</td>
+                        <td>{{ trans.description|truncatechars:25 }}</td>
+                        <td>₦{{ trans.amount|floatformat:2 }}</td>
+                        <td><span class="badge bg-{% if trans.amount > 0 %}success{% else %}danger{% endif %}">{% if trans.amount > 0 %}Deposit{% else %}Withdrawal{% endif %}</span></td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" class="text-center">No transactions yet today</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
