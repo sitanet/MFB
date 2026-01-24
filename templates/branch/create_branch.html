@@ -389,6 +389,21 @@
                     </div>
                 </div>
 
+                <!-- Expiration Date Section -->
+                <div class="form-row" style="margin-top: 1rem;">
+                    <div class="form-group">
+                        <label for="expire_date">
+                            <i class="fas fa-calendar-times"></i> Expiration Date
+                        </label>
+                        <input type="date" name="expire_date" id="expire_date" class="form-control" 
+                               value="{{ form.expire_date.value|default:'' }}" required>
+                        <small class="text-muted">Set the subscription expiration date for this branch</small>
+                        {% if form.expire_date.errors %}
+                            <div class="form-error">{{ form.expire_date.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
                 <!-- Parent Branch Section -->
                 <div style="margin-top: 1.5rem; padding: 1rem; background: #fff3cd; border-radius: var(--border-radius); border: 1px solid #ffc107;">
                     <h4 style="margin-bottom: 1rem; color: var(--dark);">
