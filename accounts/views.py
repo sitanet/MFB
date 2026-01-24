@@ -99,6 +99,13 @@ def check_role_admin(user):
     return False
 
 
+def check_role_system_admin(user):
+    """Check if user is System Administrator (role 1) - only they can manage users"""
+    if not user.is_authenticated:
+        return False
+    return user.role == 1
+
+
 def check_role_coordinator(user):
     """Check if user has coordinator role"""
     if user.role == 2:
@@ -134,9 +141,9 @@ def check_role_vendor(user):
 # ==================== USER REGISTRATION VIEWS ====================
 
 @login_required(login_url='login')
-@user_passes_test(check_role_admin)
+@user_passes_test(check_role_system_admin)
 def registerUser(request):
-    """Register a new user with multi-database support"""
+    """Register a new user with multi-database support - Only System Administrator can access"""
     # Get allowed branches based on user's company
     allowed_branches = get_user_branches_from_vendor_db(request.user)
 
@@ -708,9 +715,9 @@ def profile(request):
 # ==================== USER MANAGEMENT VIEWS ====================
 
 @login_required(login_url='login')
-@user_passes_test(check_role_admin)
+@user_passes_test(check_role_system_admin)
 def users(request):
-    """Display all users for admin with branch information"""
+    """Display all users for admin with branch information - Only System Administrator can access"""
     # Get user's branch and company information
     user_branch = get_branch_from_vendor_db(request.user.branch_id)
     
@@ -742,9 +749,9 @@ display_all_user = users
 
 
 @login_required(login_url='login')
-@user_passes_test(check_role_admin)
+@user_passes_test(check_role_system_admin)
 def editUser(request, uuid=None):
-    """Edit user with multi-database branch support"""
+    """Edit user with multi-database branch support - Only System Administrator can access"""
     user = get_object_or_404(User, uuid=uuid)
     
     # Get allowed branches based on current user's company
@@ -787,9 +794,9 @@ edit_user = editUser
 
 
 @login_required(login_url='login')
-@user_passes_test(check_role_admin)
+@user_passes_test(check_role_system_admin)
 def deleteUser(request, uuid=None):
-    """Delete a user"""
+    """Delete a user - Only System Administrator can access"""
     user = get_object_or_404(User, uuid=uuid)
     user.delete()
     messages.success(request, 'User deleted successfully!')
@@ -797,9 +804,9 @@ def deleteUser(request, uuid=None):
 
 
 @login_required(login_url='login')
-@user_passes_test(check_role_admin)
+@user_passes_test(check_role_system_admin)
 def verify_user(request, uuid=None):
-    """Admin verifies a user account"""
+    """Admin verifies a user account - Only System Administrator can access"""
     user = get_object_or_404(User, uuid=uuid)
     user.verified = True
     user.is_active = True
@@ -808,9 +815,11 @@ def verify_user(request, uuid=None):
     return redirect('display_all_user')
 
 
-# Alias for compatibility
+# Alias for compatibility - also protected
+@login_required(login_url='login')
+@user_passes_test(check_role_system_admin)
 def delete_user(request, uuid):
-    """Delete user by UUID (compatibility function)"""
+    """Delete user by UUID (compatibility function) - Only System Administrator can access"""
     user = User.objects.get(uuid=uuid)
     user.delete()
     messages.success(request, 'User deleted successfully!')
