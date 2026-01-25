@@ -1,333 +1,206 @@
 {% extends 'base.html' %}
+{% load static %}
+{% load custom_filters %}
 
 {% block content %}
-<div class="container-fluid">
-    <!-- Page Header with Filter Toggle -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h2 class="text-primary mb-1">{{ report_title }}</h2>
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb bg-transparent p-0">
-                    <li class="breadcrumb-item"><a href="#">Reports</a></li>
-                    <li class="breadcrumb-item active" aria-current="page">Loan Dues</li>
-                </ol>
-            </nav>
-        </div>
-        <div>
-            <button id="toggle-form-btn" class="btn btn-sm btn-outline-primary">
-                <i class="fas fa-filter mr-1"></i> 
-                <span class="d-none d-md-inline">{% if expected_repayments %}Adjust Filters{% else %}Show Filters{% endif %}</span>
+{% include 'includes/alerts.html' %}
+{% include 'reports/includes/report_styles.html' %}
+
+<div class="report-page">
+    <!-- Page Header -->
+    <div class="report-page-header no-print">
+        <h2 class="report-page-title">
+            <i class="fas fa-balance-scale"></i>
+            Loan Due vs Repayment Report
+        </h2>
+        <div class="report-header-actions">
+            {% if report_data %}
+            <button onclick="window.print()" class="report-btn report-btn-print">
+                <i class="fas fa-print"></i> Print
             </button>
+            {% endif %}
+            <a href="{% url 'loan_report' %}" class="report-btn report-btn-back">
+                <i class="fas fa-arrow-left"></i> Back
+            </a>
         </div>
     </div>
 
-    <!-- Filter Form Card -->
-    <div id="filter-form" class="card mb-4 {% if expected_repayments %}d-none{% endif %}">
-        <div class="card-header bg-white d-flex justify-content-between align-items-center">
-            <h5 class="mb-0"><i class="fas fa-sliders-h text-primary mr-2"></i>Filter Criteria</h5>
-            <small class="text-muted">All fields are optional</small>
+    <!-- Filter Form -->
+    <div class="report-filter-container no-print {% if report_data %}d-none{% endif %}">
+        <div class="report-filter-header">
+            <i class="fas fa-filter"></i>
+            Report Filters
         </div>
-        <div class="card-body pt-3">
-            <form method="post" id="report-filter-form">
+        <div class="report-filter-body">
+            <form method="post" action="{% url 'loan_due_vs_repayment' %}">
                 {% csrf_token %}
                 <div class="row">
-                    <!-- Date Filter -->
-                    <div class="col-md-4 mb-3">
-                        <label for="id_reporting_date" class="font-weight-bold">Reporting Date</label>
-                        <div class="input-group">
-                            <div class="input-group-prepend">
-                                <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
-                            </div>
-                            <input type="date" name="reporting_date" id="id_reporting_date" 
-                                   class="form-control" value="{{ reporting_date|date:'Y-m-d' }}">
+                    <div class="col-md-3">
+                        <div class="report-form-group">
+                            <label class="report-form-label">
+                                <i class="fas fa-calendar"></i> Start Date
+                            </label>
+                            <input type="date" class="report-form-control" name="start_date" 
+                                   value="{{ start_date|date:'Y-m-d' }}" required>
                         </div>
                     </div>
-                    
-                    <!-- Branch Filter -->
-                    <div class="col-md-4 mb-3">
-                        <label for="id_branch" class="font-weight-bold">Branch</label>
-                        <select name="branch" id="id_branch" class="form-control select2">
-                            <option value="">All Branches</option>
-                            {% for branch in branches %}
-                                <option value="{{ branch.id }}"
-                                    {% if selected_branch == branch.id|stringformat:"s" %}selected{% endif %}>
-                                    {{ branch.branch_name }} ({{ branch.branch_code }})
-                                </option>
-                            {% endfor %}
-                        </select>
+                    <div class="col-md-3">
+                        <div class="report-form-group">
+                            <label class="report-form-label">
+                                <i class="fas fa-calendar-check"></i> End Date
+                            </label>
+                            <input type="date" class="report-form-control" name="end_date" 
+                                   value="{{ end_date|date:'Y-m-d' }}" required>
+                        </div>
                     </div>
-                    
-                    <!-- GL Account Filter -->
-                    <div class="col-md-4 mb-3">
-                        <label for="id_gl_no" class="font-weight-bold">GL Account</label>
-                        <select name="gl_no" id="id_gl_no" class="form-control select2">
-                            <option value="">All GL Accounts</option>
-                            {% for gl_account in gl_accounts %}
-                                <option value="{{ gl_account.gl_no }}"
-                                    {% if selected_gl_no == gl_account.gl_no %}selected{% endif %}>
-                                    {{ gl_account.gl_no }} - {{ gl_account.gl_name }}
-                                </option>
-                            {% endfor %}
-                        </select>
+                    <div class="col-md-3">
+                        <div class="report-form-group">
+                            <label class="report-form-label">
+                                <i class="fas fa-building"></i> Branch
+                            </label>
+                            <select class="report-form-select" name="branch">
+                                {% if head_office %}
+                                    <option value="">All Branches</option>
+                                {% endif %}
+                                {% for branch in branches %}
+                                    <option value="{{ branch.id }}" 
+                                        {% if selected_branch and branch.id == selected_branch.id %}selected{% endif %}>
+                                        {{ branch.branch_name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="report-form-group">
+                            <label class="report-form-label">
+                                <i class="fas fa-book"></i> GL Account
+                            </label>
+                            <select class="report-form-select" name="gl_no">
+                                <option value="">All GL Accounts</option>
+                                {% for gl in gl_accounts %}
+                                    <option value="{{ gl.gl_no }}" {% if selected_gl_no == gl.gl_no %}selected{% endif %}>
+                                        {{ gl.gl_no }} - {{ gl.gl_name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
                     </div>
                 </div>
-                
-                <div class="d-flex justify-content-between align-items-center mt-2">
-                    <div>
-                        <button type="button" id="reset-filters" class="btn btn-link text-muted">
-                            <i class="fas fa-undo mr-1"></i> Clear Filters
-                        </button>
-                    </div>
-                    <div>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-search mr-1"></i> Generate Report
-                        </button>
-                    </div>
-                </div>
+                <button type="submit" class="report-btn report-btn-generate">
+                    <i class="fas fa-cogs"></i> Generate Report
+                </button>
             </form>
         </div>
     </div>
 
-    <!-- Report Results Section -->
-    {% if expected_repayments %}
-    <div class="card shadow-sm border-0">
-        <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center">
-            <div class="mb-2 mb-md-0">
-                <h5 class="mb-0">
-                    <i class="fas fa-file-alt text-primary mr-2"></i>
-                    Report Results
-                </h5>
-            </div>
-            <div class="d-flex">
-                <div class="dropdown mr-2">
-                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" 
-                            id="exportDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                        <i class="fas fa-download mr-1"></i> Export
-                    </button>
-                    <div class="dropdown-menu" aria-labelledby="exportDropdown">
-                        <a class="dropdown-item" href="#" id="export-excel"><i class="fas fa-file-excel text-success mr-1"></i> Excel</a>
-                        <a class="dropdown-item" href="#" id="export-pdf"><i class="fas fa-file-pdf text-danger mr-1"></i> PDF</a>
-                        <a class="dropdown-item" href="#" id="export-csv"><i class="fas fa-file-csv text-info mr-1"></i> CSV</a>
-                    </div>
-                </div>
-                <button class="btn btn-sm btn-outline-primary" onclick="window.print()">
-                    <i class="fas fa-print mr-1"></i> Print
-                </button>
+    <!-- Results Section -->
+    {% if report_data %}
+    <div class="report-results-container">
+        <!-- Company Header -->
+        <div class="report-company-header">
+            <h3 class="report-company-name">{{ company.company_name|default:"All Branches"|upper }}</h3>
+            {% if selected_branch %}
+            <p class="report-branch-name">{{ selected_branch.branch_name }}</p>
+            {% endif %}
+            <h4 class="report-title-main">Loan Due vs Repayment Report</h4>
+            <div class="report-period-info">
+                <strong>Period:</strong> {{ start_date|date:"F d, Y" }} to {{ end_date|date:"F d, Y" }}
             </div>
         </div>
-        
-        <div class="card-body px-0">
-            <!-- Report Summary Header -->
-            <div class="px-4 mb-4">
-                <div class="d-flex flex-wrap justify-content-between">
-                    <div class="mb-2">
-                        <h4 class="text-primary mb-1">{{ report_title }}</h4>
-                        <div class="d-flex flex-wrap">
-                            <span class="badge badge-light mr-2 mb-1">
-                                <i class="fas fa-calendar-alt mr-1"></i> 
-                                {{ reporting_date|date:"M j, Y" }}
-                            </span>
-                            {% if selected_branch %}
-                            <span class="badge badge-light mr-2 mb-1">
-                                <i class="fas fa-building mr-1"></i> 
-                                {% for branch in branches %}
-                                    {% if branch.id|stringformat:"s" == selected_branch %}
-                                        {{ branch.branch_name }}
-                                    {% endif %}
-                                {% endfor %}
-                            </span>
-                            {% endif %}
-                            {% if selected_gl_no %}
-                            <span class="badge badge-light mb-1">
-                                <i class="fas fa-file-invoice-dollar mr-1"></i> 
-                                {% for gl in gl_accounts %}
-                                    {% if gl.gl_no == selected_gl_no %}
-                                        {{ gl.gl_no }}
-                                    {% endif %}
-                                {% endfor %}
-                            </span>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <div class="text-right">
-                        <div class="text-muted small">Generated on</div>
-                        <div class="font-weight-bold">{{ current_date|date:"M j, Y H:i" }}</div>
-                    </div>
-                </div>
-            </div>
 
-            <!-- Report Table -->
-            <div class="table-responsive">
-                <table class="table table-hover mb-0">
-                    <thead class="thead-light">
-                        <tr>
-                            <th class="border-top-0">GL No</th>
-                            <th class="border-top-0">Account No</th>
-                            <th class="border-top-0">Customer</th>
-                            <th class="border-top-0 text-right">Loan Amount</th>
-                            <th class="border-top-0 text-right">Interest</th>
-                            <th class="border-top-0 text-right">Principal Paid</th>
-                            <th class="border-top-0 text-right">Interest Paid</th>
-                            <th class="border-top-0 text-right">Principal Due</th>
-                            <th class="border-top-0 text-right">Interest Due</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for repayment in expected_repayments %}
-                        <tr>
-                            <td><span class="badge badge-light">{{ repayment.gl_no }}</span></td>
-                            <td>{{ repayment.ac_no }}</td>
-                            <td>
-                                <div class="d-flex align-items-center">
-                                    <div class="avatar-sm mr-2">
-                                        <span class="avatar-title rounded-circle bg-primary text-white">
-                                            {{ repayment.customer_name|slice:"1" }}
-                                        </span>
-                                    </div>
-                                    <div>{{ repayment.customer_name }}</div>
-                                </div>
-                            </td>
-                            <td class="text-right">{{ repayment.loan_amount|floatformat:2 }}</td>
-                            <td class="text-right">{{ repayment.total_interest|floatformat:2 }}</td>
-                            <td class="text-right">{{ repayment.total_principal_paid|floatformat:2 }}</td>
-                            <td class="text-right">{{ repayment.total_interest_paid|floatformat:2 }}</td>
-                            <td class="text-right font-weight-bold {% if repayment.expected_principal_repayment > 0 %}text-danger{% endif %}">
-                                {{ repayment.expected_principal_repayment|floatformat:2 }}
-                            </td>
-                            <td class="text-right font-weight-bold {% if repayment.expected_interest_repayment > 0 %}text-danger{% endif %}">
-                                {{ repayment.expected_interest_repayment|floatformat:2 }}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                    <tfoot class="font-weight-bold bg-light">
-                        <tr>
-                            <td colspan="3" class="border-top">Totals</td>
-                            <td class="border-top text-right">{{ grand_totals.loan_amount|floatformat:2 }}</td>
-                            <td class="border-top text-right">{{ grand_totals.total_interest|floatformat:2 }}</td>
-                            <td class="border-top text-right">{{ grand_totals.total_principal_paid|floatformat:2 }}</td>
-                            <td class="border-top text-right">{{ grand_totals.total_interest_paid|floatformat:2 }}</td>
-                            <td class="border-top text-right text-danger">{{ grand_totals.expected_principal_repayment|floatformat:2 }}</td>
-                            <td class="border-top text-right text-danger">{{ grand_totals.expected_interest_repayment|floatformat:2 }}</td>
-                        </tr>
-                    </tfoot>
-                </table>
+        <!-- Summary Cards -->
+        <div class="report-summary">
+            <div class="report-summary-grid">
+                <div class="report-summary-card">
+                    <div class="report-summary-label">Total Loans</div>
+                    <div class="report-summary-value">{{ report_data|length }}</div>
+                </div>
+                <div class="report-summary-card debit">
+                    <div class="report-summary-label">Total Due</div>
+                    <div class="report-summary-value">{{ total_due|currency }}</div>
+                </div>
+                <div class="report-summary-card credit">
+                    <div class="report-summary-label">Total Paid</div>
+                    <div class="report-summary-value">{{ total_paid|currency }}</div>
+                </div>
+                <div class="report-summary-card balance">
+                    <div class="report-summary-label">Variance</div>
+                    <div class="report-summary-value">{{ variance|currency_signed }}</div>
+                </div>
             </div>
         </div>
-        
-        <!-- Report Footer -->
-        <div class="card-footer bg-white d-flex flex-wrap justify-content-between align-items-center py-2">
-            <div class="small text-muted">
-                Showing <strong>{{ expected_repayments|length }}</strong> records
+
+        <!-- Data Table -->
+        <div class="table-responsive">
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>S/N</th>
+                        <th>Customer Name</th>
+                        <th>Loan GL</th>
+                        <th class="text-right">Amount Due</th>
+                        <th class="text-right">Amount Paid</th>
+                        <th class="text-right">Variance</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in report_data %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ item.customer_name }}</td>
+                        <td><span class="badge bg-secondary">{{ item.gl_no }}</span></td>
+                        <td class="text-right amount">{{ item.amount_due|currency }}</td>
+                        <td class="text-right amount">{{ item.amount_paid|currency }}</td>
+                        <td class="text-right amount {% if item.variance < 0 %}amount-negative{% else %}amount-positive{% endif %}">
+                            {{ item.variance|currency_signed }}
+                        </td>
+                        <td>
+                            {% if item.variance >= 0 %}
+                                <span class="badge bg-success">Paid</span>
+                            {% elif item.variance < 0 %}
+                                <span class="badge bg-danger">Shortfall</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-4">No data found for the selected criteria.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="3"><strong>Total</strong></td>
+                        <td class="text-right amount"><strong>{{ total_due|currency }}</strong></td>
+                        <td class="text-right amount"><strong>{{ total_paid|currency }}</strong></td>
+                        <td class="text-right amount"><strong>{{ variance|currency_signed }}</strong></td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <!-- Footer -->
+        <div class="p-3 border-top">
+            <div class="row">
+                <div class="col-md-6">
+                    <small class="text-muted">Generated: {% now "F d, Y h:i A" %}</small>
+                </div>
+                <div class="col-md-6 text-end">
+                    <small class="text-muted">By: {{ user.username }}</small>
+                </div>
             </div>
-            <div class="small">
-                <span class="text-muted mr-2">Processing time:</span>
-                <span class="font-weight-bold">{{ current_date|timesince:reporting_date }}</span>
-            </div>
+        </div>
+
+        <!-- New Search Button -->
+        <div class="p-3 text-center no-print">
+            <a href="{% url 'loan_due_vs_repayment' %}" class="report-btn report-btn-reset">
+                <i class="fas fa-search"></i> New Search
+            </a>
         </div>
     </div>
     {% endif %}
 </div>
-{% endblock %}
-
-{% block scripts %}
-<script>
-$(document).ready(function() {
-    // Initialize Select2 with better configuration
-    $('.select2').select2({
-        placeholder: "Select option",
-        allowClear: true,
-        width: '100%',
-        dropdownParent: $('#filter-form')
-    });
-
-    // Toggle filter form with animation
-    $('#toggle-form-btn').click(function() {
-        $('#filter-form').slideToggle('fast', function() {
-            $(this).toggleClass('d-none');
-        });
-        $(this).find('span').text(function(i, text) {
-            return text.includes('Adjust') ? 'Adjust Filters' : 'Show Filters';
-        });
-    });
-
-    // Reset form completely
-    $('#reset-filters').click(function() {
-        $('#report-filter-form')[0].reset();
-        $('.select2').val(null).trigger('change');
-        $('#id_reporting_date').val('{{ reporting_date|date:"Y-m-d" }}');
-    });
-
-    // Export buttons
-    $('#export-excel').click(function(e) {
-        e.preventDefault();
-        alert('Excel export would be implemented here');
-    });
-    
-    $('#export-pdf').click(function(e) {
-        e.preventDefault();
-        alert('PDF export would be implemented here');
-    });
-    
-    $('#export-csv').click(function(e) {
-        e.preventDefault();
-        alert('CSV export would be implemented here');
-    });
-
-    // Form submission loading state
-    $('#report-filter-form').submit(function() {
-        var submitBtn = $(this).find('button[type="submit"]');
-        submitBtn.html('<span class="spinner-border spinner-border-sm mr-1" role="status" aria-hidden="true"></span> Processing...')
-            .prop('disabled', true);
-    });
-
-    // Highlight overdue amounts
-    $('td.text-danger').each(function() {
-        if (parseFloat($(this).text()) > 0) {
-            $(this).closest('tr').addClass('table-warning');
-        }
-    });
-});
-</script>
-
-<style>
-    .select2-container {
-        z-index: 1060 !important;
-    }
-    .table th {
-        font-weight: 600;
-        font-size: 0.8rem;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        border-top: 1px solid #dee2e6 !important;
-    }
-    .table td {
-        vertical-align: middle;
-    }
-    .avatar-sm {
-        width: 32px;
-        height: 32px;
-        font-size: 0.875rem;
-    }
-    .badge-light {
-        background-color: #f8f9fa;
-        color: #495057;
-    }
-    @media print {
-        #filter-form, #toggle-form-btn, .card-footer, .dropdown {
-            display: none !important;
-        }
-        .card {
-            border: none !important;
-        }
-        .table {
-            font-size: 11pt;
-        }
-    }
-    @media (max-width: 768px) {
-        .table-responsive {
-            border: none;
-        }
-    }
-</style>
 {% endblock %}

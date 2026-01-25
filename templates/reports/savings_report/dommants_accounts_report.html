@@ -1,0 +1,194 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+{% load custom_filters %}
+
+{% block content %}
+{% include 'includes/alerts.html' %}
+{% include 'reports/includes/report_styles.html' %}
+
+<div class="report-page">
+    <!-- Page Header -->
+    <div class="report-page-header no-print">
+        <h2 class="report-page-title">
+            <i class="fas fa-bed"></i>
+            Dormant Accounts Report
+        </h2>
+        <div class="report-header-actions">
+            {% if report_data %}
+            <button onclick="window.print()" class="report-btn report-btn-print">
+                <i class="fas fa-print"></i> Print
+            </button>
+            {% endif %}
+            <a href="{% url 'savings_report' %}" class="report-btn report-btn-back">
+                <i class="fas fa-arrow-left"></i> Back
+            </a>
+        </div>
+    </div>
+
+    <!-- Filter Form -->
+    <div class="report-filter-container no-print {% if report_data %}d-none{% endif %}">
+        <div class="report-filter-header">
+            <i class="fas fa-filter"></i>
+            Report Filters
+        </div>
+        <div class="report-filter-body">
+            <form method="post" action="{% url 'dormant_accounts_report' %}">
+                {% csrf_token %}
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="report-form-group">
+                            <label class="report-form-label">
+                                <i class="fas fa-calendar"></i> Reporting Date
+                            </label>
+                            <input type="date" class="report-form-control" name="reporting_date" 
+                                   value="{{ reporting_date|date:'Y-m-d' }}" required>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="report-form-group">
+                            <label class="report-form-label">
+                                <i class="fas fa-building"></i> Branch
+                            </label>
+                            <select class="report-form-select" name="branch">
+                                {% if head_office %}
+                                    <option value="">All Branches</option>
+                                {% endif %}
+                                {% for branch in branches %}
+                                    <option value="{{ branch.id }}" 
+                                        {% if selected_branch and branch.id == selected_branch.id %}selected{% endif %}>
+                                        {{ branch.branch_name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="report-form-group">
+                            <label class="report-form-label">
+                                <i class="fas fa-box"></i> Product (GL)
+                            </label>
+                            <select class="report-form-select" name="gl_no">
+                                <option value="">All Products</option>
+                                {% for gl in gl_accounts %}
+                                    <option value="{{ gl.gl_no }}" {% if selected_gl_no == gl.gl_no %}selected{% endif %}>
+                                        {{ gl.gl_no }} - {{ gl.gl_name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="report-form-group">
+                            <label class="report-form-label">
+                                <i class="fas fa-clock"></i> Dormancy Period (Days)
+                            </label>
+                            <input type="number" class="report-form-control" name="dormancy_days" 
+                                   value="{{ dormancy_days|default:180 }}" min="30">
+                        </div>
+                    </div>
+                </div>
+                <button type="submit" class="report-btn report-btn-generate">
+                    <i class="fas fa-cogs"></i> Generate Report
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Results Section -->
+    {% if report_data %}
+    <div class="report-results-container">
+        <!-- Company Header -->
+        <div class="report-company-header">
+            <h3 class="report-company-name">
+                {% if company %}{{ company.company_name|upper }}{% else %}ALL BRANCHES{% endif %}
+            </h3>
+            {% if selected_branch %}
+            <p class="report-branch-name">{{ selected_branch.branch_name }}</p>
+            {% endif %}
+            <h4 class="report-title-main">Dormant Accounts Report</h4>
+            <div class="report-period-info">
+                <strong>As At:</strong> {{ reporting_date|date:"F d, Y" }} | <strong>Dormancy Period:</strong> {{ dormancy_days }} days+
+            </div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="report-summary">
+            <div class="report-summary-grid">
+                <div class="report-summary-card">
+                    <div class="report-summary-label">Total Dormant Accounts</div>
+                    <div class="report-summary-value">{{ report_data|length }}</div>
+                </div>
+                <div class="report-summary-card balance">
+                    <div class="report-summary-label">Total Balance</div>
+                    <div class="report-summary-value">{{ total_balance|currency }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Table -->
+        <div class="table-responsive">
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>S/N</th>
+                        <th>Account No</th>
+                        <th>Customer Name</th>
+                        <th>GL No</th>
+                        <th>Last Transaction Date</th>
+                        <th>Days Dormant</th>
+                        <th class="text-right">Balance</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for account in report_data %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ account.ac_no }}</td>
+                        <td>{{ account.customer_name|default:"-" }}</td>
+                        <td><span class="badge bg-secondary">{{ account.gl_no }}</span></td>
+                        <td>{{ account.last_trx_date|date:"Y-m-d"|default:"-" }}</td>
+                        <td class="text-center">
+                            <span class="badge bg-warning">{{ account.days_dormant }} days</span>
+                        </td>
+                        <td class="text-right amount {% if account.balance < 0 %}amount-negative{% else %}amount-positive{% endif %}">
+                            {{ account.balance|currency }}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-4">No dormant accounts found for the selected criteria.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="6"><strong>Total</strong></td>
+                        <td class="text-right amount"><strong>{{ total_balance|currency }}</strong></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <!-- Footer -->
+        <div class="p-3 border-top">
+            <div class="row">
+                <div class="col-md-6">
+                    <small class="text-muted">Generated: {% now "F d, Y h:i A" %}</small>
+                </div>
+                <div class="col-md-6 text-end">
+                    <small class="text-muted">By: {{ user.username }}</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- New Search Button -->
+        <div class="p-3 text-center no-print">
+            <a href="{% url 'dormant_accounts_report' %}" class="report-btn report-btn-reset">
+                <i class="fas fa-search"></i> New Search
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

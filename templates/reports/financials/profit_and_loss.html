@@ -1,271 +1,182 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load custom_filters %}
 
 {% block content %}
 {% include 'includes/alerts.html' %}
+{% include 'reports/includes/report_styles.html' %}
 
-<style>
-    body {
-        font-family: 'Poppins', sans-serif;
-        background-color: #f4f6f9;
-    }
-
-    .container-fluid {
-        padding: 40px;
-    }
-
-    /* Page Title */
-    .page_title h2 {
-        font-weight: 700;
-        color: #2c3e50;
-        text-align: center;
-        margin-bottom: 40px;
-        position: relative;
-    }
-
-    .page_title h2::after {
-        content: "";
-        width: 100px;
-        height: 4px;
-        background: linear-gradient(90deg, #f39c12, #27ae60);
-        display: block;
-        margin: 10px auto 0;
-        border-radius: 4px;
-    }
-
-    /* Form Card */
-    .chart_of_account {
-        background: #fff;
-        border-radius: 18px;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-        transition: all 0.3s ease;
-        border-top: 5px solid #27ae60;
-    }
-
-    .chart_of_account:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
-    }
-
-    label {
-        font-weight: 600;
-        color: #34495e;
-    }
-
-    .form-control {
-        border-radius: 10px;
-        border: 1px solid #dee2e6;
-        transition: all 0.2s ease;
-    }
-
-    .form-control:focus {
-        border-color: #f39c12;
-        box-shadow: 0 0 5px rgba(243, 156, 18, 0.3);
-    }
-
-    /* Buttons */
-    .btn-success {
-        background: linear-gradient(90deg, #27ae60, #f39c12);
-        border: none;
-        color: #fff;
-        border-radius: 10px;
-        padding: 10px 25px;
-        font-weight: 600;
-        transition: all 0.2s ease;
-    }
-
-    .btn-success:hover {
-        transform: scale(1.05);
-        background: linear-gradient(90deg, #f39c12, #27ae60);
-    }
-
-    /* Report Card */
-    .white_shd {
-        background: #fff;
-        border-radius: 20px;
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
-        padding: 30px;
-        border-top: 6px solid #f39c12;
-    }
-
-    .office-address {
-        font-style: italic;
-        color: #7f8c8d;
-    }
-
-    .thead-dark th {
-        background: linear-gradient(90deg, #27ae60, #f39c12);
-        color: #fff;
-        border: none;
-    }
-
-    .table {
-        border-radius: 10px;
-        overflow: hidden;
-        background: #fff;
-    }
-
-    .table th, .table td {
-        padding: 14px;
-        vertical-align: middle;
-    }
-
-    .table tbody tr:nth-child(even) {
-        background-color: #f9fbfd;
-    }
-
-    .table tbody tr:hover {
-        background-color: #fef7ef;
-        transition: 0.2s;
-    }
-
-    tfoot td {
-        font-weight: bold;
-        background-color: #fafafa;
-    }
-
-    .net-income {
-        font-weight: 700;
-        color: #27ae60;
-        font-size: 1.1rem;
-    }
-
-    .net-income.negative {
-        color: #e74c3c;
-    }
-
-    /* Print Button */
-    .btn-print {
-        float: right;
-        background: #f39c12;
-        color: #fff;
-        border: none;
-        border-radius: 10px;
-        padding: 10px 20px;
-        font-weight: 600;
-        transition: all 0.2s ease;
-    }
-
-    .btn-print:hover {
-        background: #27ae60;
-        transform: scale(1.05);
-    }
-
-    @media print {
-        body * { visibility: hidden; }
-        .printable-area, .printable-area * { visibility: visible; }
-        .printable-area { position: absolute; left: 0; top: 0; width: 100%; padding: 20px; }
-        .btn-print { display: none; }
-    }
-
-    @media (max-width: 768px) {
-        .chart_of_account { padding: 25px; }
-        .page_title h2 { font-size: 1.4rem; }
-    }
-</style>
-
-<div class="container-fluid">
-    <div class="row column_title">
-        <div class="col-md-12">
-            <div class="page_title">
-                <h2>Profit and Loss Statement</h2>
-            </div>
+<div class="report-page">
+    <!-- Page Header -->
+    <div class="report-page-header no-print">
+        <h2 class="report-page-title">
+            <i class="fas fa-chart-line"></i>
+            Profit and Loss Statement
+        </h2>
+        <div class="report-header-actions">
+            {% if profit_loss_data %}
+            <button onclick="window.print()" class="report-btn report-btn-print">
+                <i class="fas fa-print"></i> Print
+            </button>
+            {% endif %}
+            <a href="{% url 'financial_report' %}" class="report-btn report-btn-back">
+                <i class="fas fa-arrow-left"></i> Back
+            </a>
         </div>
     </div>
 
-    {% if not balance_sheet_data %}
-    <!-- Display form when no report -->
-    <form id="generateForm" method="post" action="{% url 'profit_and_loss' %}" class="chart_of_account p-5">
-        {% csrf_token %}
-        <div class="form-row">
-            <div class="form-group col-md-3">
-                <label for="start_date">Start Date</label>
-                <input type="date" class="form-control bg-light" name="start_date" id="start_date" value="{{ start_date|default:'' }}">
-            </div>
-            <div class="form-group col-md-3">
-                <label for="end_date">End Date</label>
-                <input type="date" class="form-control bg-light" name="end_date" id="end_date" value="{{ end_date|default:'' }}">
-            </div>
-            <div class="form-group col-md-3">
-                <label for="branch">Branch</label>
-                <select class="form-control bg-light" name="branch" id="branch">
-                    <option value="">All Branches</option>
-                    {% for branch in branches %}
-                        <option value="{{ branch.id }}" {% if branch.id == selected_branch %}selected{% endif %}>{{ branch.branch_name }}</option>
-                    {% endfor %}
-                </select>
+    <!-- Filter Form -->
+    <div class="report-filter-container no-print {% if profit_loss_data %}d-none{% endif %}">
+        <div class="report-filter-header">
+            <i class="fas fa-filter"></i>
+            Report Filters
+        </div>
+        <div class="report-filter-body">
+            <form method="post" action="{% url 'profit_and_loss' %}">
+                {% csrf_token %}
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="report-form-group">
+                            <label class="report-form-label">
+                                <i class="fas fa-calendar"></i> Start Date
+                            </label>
+                            <input type="date" class="report-form-control" name="start_date" 
+                                   value="{{ start_date|date:'Y-m-d' }}" required>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="report-form-group">
+                            <label class="report-form-label">
+                                <i class="fas fa-calendar-check"></i> End Date
+                            </label>
+                            <input type="date" class="report-form-control" name="end_date" 
+                                   value="{{ end_date|date:'Y-m-d' }}" required>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="report-form-group">
+                            <label class="report-form-label">
+                                <i class="fas fa-building"></i> Branch
+                            </label>
+                            <select class="report-form-select" name="branch">
+                                {% if head_office %}
+                                    <option value="">All Branches</option>
+                                {% endif %}
+                                {% for b in branches %}
+                                    <option value="{{ b.id }}" {% if selected_branch == b.id|stringformat:"s" %}selected{% endif %}>
+                                        {{ b.branch_name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <button type="submit" class="report-btn report-btn-generate">
+                    <i class="fas fa-cogs"></i> Generate Report
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Results Section -->
+    {% if profit_loss_data %}
+    <div class="report-results-container">
+        <!-- Company Header -->
+        <div class="report-company-header">
+            <h3 class="report-company-name">{{ branch.company_name|default:"Company Name"|upper }}</h3>
+            <p class="report-branch-name">{{ branch.branch_name|default:"All Branches" }}</p>
+            <p class="report-company-address">{{ branch.office_address }}</p>
+            <h4 class="report-title-main">Profit and Loss Statement</h4>
+            <div class="report-period-info">
+                <strong>Period:</strong> {{ start_date|date:"F d, Y" }} to {{ end_date|date:"F d, Y" }}
             </div>
         </div>
-        <button type="submit" class="btn btn-success mt-4 shadow-sm">Generate Report</button>
-    </form>
-    {% endif %}
 
-    {% if balance_sheet_data %}
-    <!-- Report Section -->
-    <div class="col-md-12 printable-area mt-4">
-        <div class="white_shd full margin_bottom_30">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 class="text-primary fw-bold">Statement of Profit or Loss</h5>
-                <button onclick="window.print()" class="btn-print shadow-sm">🖨 Print</button>
-            </div>
+        <!-- Income Section -->
+        <div class="p-4">
+            <h5 class="fw-bold text-success mb-3"><i class="fas fa-arrow-down me-2"></i>INCOME</h5>
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>GL No.</th>
+                        <th>Account Name</th>
+                        <th class="text-right">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in incomes %}
+                    <tr>
+                        <td>{{ item.gl_no }}</td>
+                        <td>{{ item.gl_name }}</td>
+                        <td class="text-right amount amount-positive">{{ item.balance|currency }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="3" class="text-center">No income data</td></tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="2"><strong>Total Income</strong></td>
+                        <td class="text-right amount"><strong>{{ total_income|currency }}</strong></td>
+                    </tr>
+                </tfoot>
+            </table>
 
-            <div class="text-center mb-4">
-                {% if branch %}
-                    <h4 class="fw-bold">{{ branch.branch_name }}</h4>
-                    <p class="office-address">{{ branch.office_address }}</p>
-                {% endif %}
-                <p class="text-muted">From <strong>{{ start_date }}</strong> To <strong>{{ end_date }}</strong></p>
-            </div>
+            <!-- Expenses Section -->
+            <h5 class="fw-bold text-danger mb-3 mt-4"><i class="fas fa-arrow-up me-2"></i>EXPENSES</h5>
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>GL No.</th>
+                        <th>Account Name</th>
+                        <th class="text-right">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in expenses %}
+                    <tr>
+                        <td>{{ item.gl_no }}</td>
+                        <td>{{ item.gl_name }}</td>
+                        <td class="text-right amount amount-negative">{{ item.balance|currency }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="3" class="text-center">No expense data</td></tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="2"><strong>Total Expenses</strong></td>
+                        <td class="text-right amount"><strong>{{ total_expenses|currency }}</strong></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
 
-            <div class="table-responsive">
-                <table class="table table-bordered table-hover">
-                    <thead class="thead-dark">
-                        <tr>
-                            <th>GL No.</th>
-                            <th>Account Name</th>
-                            <th>Debit (₦)</th>
-                            <th>Credit (₦)</th>
-                            <th>Balance (₦)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for entry in balance_sheet_data %}
-                            <tr>
-                                <td>{{ entry.gl_no }}</td>
-                                <td>{{ entry.gl_name }}</td>
-                                <td>{{ entry.credit|floatformat:2 }}</td>
-                                <td>{{ entry.debit|floatformat:2 }}</td>
-                                <td>
-                                    {% if entry.balance < 0 %}
-                                        <span style="color:red;">{{ entry.balance|floatformat:2 }}</span>
-                                    {% else %}
-                                        {{ entry.balance|floatformat:2 }}
-                                    {% endif %}
-                                </td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                    <tfoot>
-                        <tr>
-                            <td colspan="3"><strong>Total Debit:</strong> {{ total_credit|floatformat:2 }}</td>
-                            <td colspan="2"><strong>Total Income:</strong> {{ subtotal_4|floatformat:2 }}</td>
-                        </tr>
-                        <tr>
-                            <td colspan="3"><strong>Total Credit:</strong> {{ total_debit|floatformat:2 }}</td>
-                            <td colspan="2"><strong>Total Expenses:</strong> {{ subtotal_5|floatformat:2 }}</td>
-                        </tr>
-                        <tr>
-                            <td colspan="4" class="text-end"><strong>Net Income:</strong></td>
-                            <td class="{% if net_income < 0 %}net-income negative{% else %}net-income{% endif %}">
-                                {{ net_income|floatformat:2 }}
-                            </td>
-                        </tr>
-                    </tfoot>
-                </table>
+        <!-- Summary Section -->
+        <div class="report-summary">
+            <div class="report-summary-grid">
+                <div class="report-summary-card credit">
+                    <div class="report-summary-label">Total Income</div>
+                    <div class="report-summary-value">{{ total_income|currency }}</div>
+                </div>
+                <div class="report-summary-card debit">
+                    <div class="report-summary-label">Total Expenses</div>
+                    <div class="report-summary-value">{{ total_expenses|currency }}</div>
+                </div>
+                <div class="report-summary-card {% if net_profit >= 0 %}credit{% else %}debit{% endif %}">
+                    <div class="report-summary-label">Net {% if net_profit >= 0 %}Profit{% else %}Loss{% endif %}</div>
+                    <div class="report-summary-value">{{ net_profit|currency_signed }}</div>
+                </div>
             </div>
+        </div>
+
+        <!-- New Search Button -->
+        <div class="p-3 text-center no-print">
+            <a href="{% url 'profit_and_loss' %}" class="report-btn report-btn-reset">
+                <i class="fas fa-search"></i> New Search
+            </a>
         </div>
     </div>
     {% endif %}
 </div>
-
 {% endblock %}

@@ -1,93 +1,196 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+{% load custom_filters %}
 
 {% block content %}
-<div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>Fixed Deposit Register Report</h2>
-        <button onclick="window.print()" class="btn btn-primary">
-            <i class="fas fa-print"></i> Print Report
-        </button>
-    </div>
+{% include 'includes/alerts.html' %}
+{% include 'reports/includes/report_styles.html' %}
 
-    <!-- Summary Cards -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card bg-success text-white">
-                <div class="card-body">
-                    <h5>Active Deposits</h5>
-                    <h3>{{ active_count }}</h3>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-warning text-white">
-                <div class="card-body">
-                    <h5>Matured</h5>
-                    <h3>{{ matured_count }}</h3>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-secondary text-white">
-                <div class="card-body">
-                    <h5>Closed</h5>
-                    <h3>{{ closed_count }}</h3>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-info text-white">
-                <div class="card-body">
-                    <h5>Total Principal</h5>
-                    <h3>{{ total_principal|floatformat:2 }}</h3>
-                </div>
-            </div>
+<div class="report-page">
+    <!-- Page Header -->
+    <div class="report-page-header no-print">
+        <h2 class="report-page-title">
+            <i class="fas fa-book"></i>
+            Fixed Deposit Register Report
+        </h2>
+        <div class="report-header-actions">
+            {% if report_data %}
+            <button onclick="window.print()" class="report-btn report-btn-print">
+                <i class="fas fa-print"></i> Print
+            </button>
+            {% endif %}
+            <a href="{% url 'fixed_deposit_report' %}" class="report-btn report-btn-back">
+                <i class="fas fa-arrow-left"></i> Back
+            </a>
         </div>
     </div>
 
-    <!-- Active Deposits -->
-    <div class="card mb-4">
-        <div class="card-header bg-success text-white">
-            <h5>Active Fixed Deposits</h5>
+    <!-- Filter Form -->
+    <div class="report-filter-container no-print {% if report_data %}d-none{% endif %}">
+        <div class="report-filter-header">
+            <i class="fas fa-filter"></i>
+            Report Filters
         </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-striped table-sm">
-                    <thead>
-                        <tr>
-                            <th>FD No</th>
-                            <th>Customer</th>
-                            <th>Principal</th>
-                            <th>Rate (%)</th>
-                            <th>Tenure</th>
-                            <th>Start Date</th>
-                            <th>Maturity Date</th>
-                            <th>Interest</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for fd in active_deposits %}
-                        <tr>
-                            <td>{{ fd.fixed_ac_no }}</td>
-                            <td>{{ fd.customer.first_name }} {{ fd.customer.last_name }}</td>
-                            <td>{{ fd.deposit_amount|floatformat:2 }}</td>
-                            <td>{{ fd.interest_rate }}</td>
-                            <td>{{ fd.tenure_months }} months</td>
-                            <td>{{ fd.start_date }}</td>
-                            <td>{{ fd.maturity_date }}</td>
-                            <td>{{ fd.interest_amount|floatformat:2 }}</td>
-                        </tr>
-                        {% empty %}
-                        <tr><td colspan="8" class="text-center">No active deposits</td></tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+        <div class="report-filter-body">
+            <form method="post" action="{% url 'fd_register_report' %}">
+                {% csrf_token %}
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="report-form-group">
+                            <label class="report-form-label">
+                                <i class="fas fa-calendar"></i> Reporting Date
+                            </label>
+                            <input type="date" class="report-form-control" name="reporting_date" 
+                                   value="{{ reporting_date|date:'Y-m-d' }}" required>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="report-form-group">
+                            <label class="report-form-label">
+                                <i class="fas fa-building"></i> Branch
+                            </label>
+                            <select class="report-form-select" name="branch">
+                                {% if head_office %}
+                                    <option value="">All Branches</option>
+                                {% endif %}
+                                {% for branch in branches %}
+                                    <option value="{{ branch.id }}" 
+                                        {% if selected_branch and branch.id == selected_branch.id %}selected{% endif %}>
+                                        {{ branch.branch_name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="report-form-group">
+                            <label class="report-form-label">
+                                <i class="fas fa-toggle-on"></i> Status
+                            </label>
+                            <select class="report-form-select" name="status">
+                                <option value="">All Status</option>
+                                <option value="active" {% if selected_status == 'active' %}selected{% endif %}>Active</option>
+                                <option value="matured" {% if selected_status == 'matured' %}selected{% endif %}>Matured</option>
+                                <option value="terminated" {% if selected_status == 'terminated' %}selected{% endif %}>Terminated</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <button type="submit" class="report-btn report-btn-generate">
+                    <i class="fas fa-cogs"></i> Generate Report
+                </button>
+            </form>
         </div>
     </div>
 
-    <a href="{% url 'fixed_deposit_report' %}" class="btn btn-secondary">
-        <i class="fa fa-arrow-left"></i> Back
-    </a>
+    <!-- Results Section -->
+    {% if report_data %}
+    <div class="report-results-container">
+        <!-- Company Header -->
+        <div class="report-company-header">
+            <h3 class="report-company-name">
+                {% if company %}{{ company.company_name|upper }}{% else %}ALL BRANCHES{% endif %}
+            </h3>
+            {% if selected_branch %}
+            <p class="report-branch-name">{{ selected_branch.branch_name }}</p>
+            {% endif %}
+            <h4 class="report-title-main">Fixed Deposit Register</h4>
+            <div class="report-period-info">
+                <strong>As At:</strong> {{ reporting_date|date:"F d, Y" }}
+            </div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="report-summary">
+            <div class="report-summary-grid">
+                <div class="report-summary-card">
+                    <div class="report-summary-label">Total FDs</div>
+                    <div class="report-summary-value">{{ report_data|length }}</div>
+                </div>
+                <div class="report-summary-card credit">
+                    <div class="report-summary-label">Total Principal</div>
+                    <div class="report-summary-value">{{ total_principal|currency }}</div>
+                </div>
+                <div class="report-summary-card balance">
+                    <div class="report-summary-label">Interest Accrued</div>
+                    <div class="report-summary-value">{{ total_interest|currency }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Table -->
+        <div class="table-responsive">
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>S/N</th>
+                        <th>FD No</th>
+                        <th>Customer Name</th>
+                        <th>Booking Date</th>
+                        <th>Maturity Date</th>
+                        <th>Tenor</th>
+                        <th class="text-right">Principal</th>
+                        <th class="text-right">Rate %</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for fd in report_data %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ fd.fd_no }}</td>
+                        <td>{{ fd.customer_name|default:"-"|truncatechars:25 }}</td>
+                        <td>{{ fd.booking_date|date:"Y-m-d" }}</td>
+                        <td>{{ fd.maturity_date|date:"Y-m-d" }}</td>
+                        <td>{{ fd.tenor }} days</td>
+                        <td class="text-right amount">{{ fd.principal|currency }}</td>
+                        <td class="text-right">{{ fd.interest_rate }}%</td>
+                        <td>
+                            {% if fd.status == 'active' %}
+                                <span class="badge bg-success">Active</span>
+                            {% elif fd.status == 'matured' %}
+                                <span class="badge bg-info">Matured</span>
+                            {% else %}
+                                <span class="badge bg-warning">{{ fd.status|title }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="9" class="text-center py-4">No fixed deposits found for the selected criteria.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="6"><strong>Total</strong></td>
+                        <td class="text-right amount"><strong>{{ total_principal|currency }}</strong></td>
+                        <td colspan="2"></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <!-- Footer -->
+        <div class="p-3 border-top">
+            <div class="row">
+                <div class="col-md-6">
+                    <small class="text-muted">Generated: {% now "F d, Y h:i A" %}</small>
+                </div>
+                <div class="col-md-6 text-end">
+                    <small class="text-muted">By: {{ user.username }}</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- New Search Button -->
+        <div class="p-3 text-center no-print">
+            <a href="{% url 'fd_register_report' %}" class="report-btn report-btn-reset">
+                <i class="fas fa-search"></i> New Search
+            </a>
+        </div>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}

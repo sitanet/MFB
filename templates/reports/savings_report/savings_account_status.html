@@ -1,228 +1,217 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load humanize %}
+{% load custom_filters %}
 
 {% block content %}
 {% include 'includes/alerts.html' %}
+{% include 'reports/includes/report_styles.html' %}
 
-<style>
-:root {
-  --primary: #3498db; --secondary: #2c3e50; --light: #ecf0f1; --dark: #34495e;
-  --success: #27ae60; --danger: #e74c3c;
-}
-.report-container { background: #fff; border-radius: 10px; box-shadow: 0 .5rem 1rem rgba(0,0,0,.08); overflow: hidden; }
-.report-header { background: linear-gradient(135deg,var(--primary),var(--secondary)); color: #fff; padding: 1.25rem; }
-.report-title { font-weight: 600; }
-.report-subtitle { font-weight: 300; opacity: .95; }
-.form-container { background: #fff; padding: 1rem; border-radius: 8px; box-shadow: 0 .25rem .5rem rgba(0,0,0,.03); margin-bottom: 1rem; }
-.report-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: .95rem; }
-.report-table thead th { background: var(--secondary); color: #fff; padding: .75rem 1rem; position: sticky; top: 0; }
-.report-table tbody td { padding: .6rem .9rem; border-bottom: 1px solid #eee; vertical-align: middle; }
-.amount { font-family: 'Courier New', monospace; text-align: right; }
-.days-column { text-align: center; }
-.no-data { padding: 1.25rem; background: #fff3cd; border-radius: 6px; color: #856404; }
-@media print { .no-print { display: none !important } .report-header{ background: #fff !important; color: #000 !important } }
-</style>
-
-<div class="container-fluid">
-  <div class="row mb-3">
-    <div class="col-12 d-flex justify-content-between align-items-center">
-      <h2 class="mb-0">Savings Account Status</h2>
-
-      {% if customer_data %}
-      <div class="no-print">
-        <button onclick="window.print()" class="btn btn-secondary">
-          <i class="fas fa-print me-1"></i> Print
-        </button>
-      </div>
-      {% endif %}
-    </div>
-  </div>
-
-  <!-- FILTER FORM (GET). Hidden when customer_data is present -->
-  <div class="row mb-4 no-print">
-    <div class="col-12">
-      <div class="form-container {% if customer_data %}d-none{% endif %}">
-        <form method="get" class="row g-3">
-          <div class="col-md-3">
-            <label class="form-label">Start Date</label>
-            <input type="date" name="start_date" class="form-control" value="{{ start_date|default:'' }}">
-          </div>
-
-          <div class="col-md-3">
-            <label class="form-label">End Date</label>
-            <input type="date" name="end_date" class="form-control" value="{{ end_date|default:'' }}">
-          </div>
-
-          <div class="col-md-3">
-            <label class="form-label">Branch</label>
-            <select name="branch" class="form-control">
-              {% if user_branch and user_branch.head_office %}
-                <option value="">All Branches</option>
-              {% endif %}
-              {% for b in branches %}
-                <option value="{{ b.id }}"
-                  {% if selected_branch and selected_branch.id == b.id %}selected{% endif %}>
-                  {{ b.branch_name }} ({{ b.branch_code }})
-                </option>
-              {% endfor %}
-            </select>
-          </div>
-
-          <div class="col-md-3">
-            <label class="form-label">Product</label>
-            <select name="gl_no" class="form-control">
-              <option value="">All Products</option>
-              {% for ga in gl_accounts %}
-                <option value="{{ ga.gl_no }}" {% if selected_gl_no == ga.gl_no %}selected{% endif %}>
-                  {{ ga.gl_no }} - {{ ga.gl_name }}
-                </option>
-              {% endfor %}
-            </select>
-          </div>
-
-          <div class="col-md-3">
-            <label class="form-label">Region</label>
-            <select name="region" class="form-control">
-              <option value="">All Regions</option>
-              {% for r in regions %}
-                <option value="{{ r.id }}" {% if selected_region and selected_region.id == r.id %}selected{% endif %}>
-                  {{ r.region_name }}
-                </option>
-              {% endfor %}
-            </select>
-          </div>
-
-          <div class="col-md-3">
-            <label class="form-label">Account Officer</label>
-            <select name="account_officer" class="form-control">
-              <option value="">All Officers</option>
-              {% for ao in account_officers %}
-                <option value="{{ ao.id }}" {% if selected_officer and selected_officer.id == ao.id %}selected{% endif %}>
-                  {{ ao.user.get_full_name|default:ao.user }}
-                </option>
-              {% endfor %}
-            </select>
-          </div>
-
-          <!-- checkboxes -->
-          <div class="col-md-3 d-flex align-items-center">
-            <div class="form-check me-3">
-              <input class="form-check-input" type="checkbox" id="include_non_zero" name="include_non_zero" value="on"
-                {% if include_non_zero %}checked{% endif %}>
-              <label class="form-check-label" for="include_non_zero">Include Non-Zero Only</label>
-            </div>
-
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" id="exclude_ac_no_one" name="exclude_ac_no_one" value="on"
-                {% if exclude_ac_no_one %}checked{% endif %}>
-              <label class="form-check-label" for="exclude_ac_no_one">Exclude Internal Accounts</label>
-            </div>
-          </div>
-
-          <div class="col-md-3 d-flex align-items-end">
-            <button type="submit" class="btn btn-success w-100">
-              <i class="fas fa-filter me-1"></i> Generate
+<div class="report-page">
+    <!-- Page Header -->
+    <div class="report-page-header no-print">
+        <h2 class="report-page-title">
+            <i class="fas fa-info-circle"></i>
+            Savings Account Status Report
+        </h2>
+        <div class="report-header-actions">
+            {% if report_data %}
+            <button onclick="window.print()" class="report-btn report-btn-print">
+                <i class="fas fa-print"></i> Print
             </button>
-          </div>
-        </form>
-      </div>
+            {% endif %}
+            <a href="{% url 'savings_report' %}" class="report-btn report-btn-back">
+                <i class="fas fa-arrow-left"></i> Back
+            </a>
+        </div>
     </div>
-  </div>
 
-  <!-- REPORT -->
-  {% if customer_data %}
-  <div class="row">
-    <div class="col-12">
-      <div class="report-container">
-        <div class="report-header">
-          <div class="d-flex justify-content-between align-items-start">
-            <div>
-              <h4 class="report-title mb-0">SAVINGS ACCOUNT STATUS</h4>
-              <div class="report-subtitle small">
-                {% if user_company_name %}{{ user_company_name|upper }}{% else %}ALL BRANCHES{% endif %}
-                {% if selected_branch %} | {{ selected_branch.branch_name|upper }}{% endif %}
-              </div>
+    <!-- Filter Form -->
+    <div class="report-filter-container no-print {% if report_data %}d-none{% endif %}">
+        <div class="report-filter-header">
+            <i class="fas fa-filter"></i>
+            Report Filters
+        </div>
+        <div class="report-filter-body">
+            <form method="post" action="{% url 'savings_account_status' %}">
+                {% csrf_token %}
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="report-form-group">
+                            <label class="report-form-label">
+                                <i class="fas fa-calendar"></i> Reporting Date
+                            </label>
+                            <input type="date" class="report-form-control" name="reporting_date" 
+                                   value="{{ reporting_date|date:'Y-m-d' }}" required>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="report-form-group">
+                            <label class="report-form-label">
+                                <i class="fas fa-building"></i> Branch
+                            </label>
+                            <select class="report-form-select" name="branch">
+                                {% if head_office %}
+                                    <option value="">All Branches</option>
+                                {% endif %}
+                                {% for branch in branches %}
+                                    <option value="{{ branch.id }}" 
+                                        {% if selected_branch and branch.id == selected_branch.id %}selected{% endif %}>
+                                        {{ branch.branch_name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="report-form-group">
+                            <label class="report-form-label">
+                                <i class="fas fa-box"></i> Product (GL)
+                            </label>
+                            <select class="report-form-select" name="gl_no">
+                                <option value="">All Products</option>
+                                {% for gl in gl_accounts %}
+                                    <option value="{{ gl.gl_no }}" {% if selected_gl_no == gl.gl_no %}selected{% endif %}>
+                                        {{ gl.gl_no }} - {{ gl.gl_name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="report-form-group">
+                            <label class="report-form-label">
+                                <i class="fas fa-toggle-on"></i> Status
+                            </label>
+                            <select class="report-form-select" name="status">
+                                <option value="">All Status</option>
+                                <option value="active" {% if selected_status == 'active' %}selected{% endif %}>Active</option>
+                                <option value="dormant" {% if selected_status == 'dormant' %}selected{% endif %}>Dormant</option>
+                                <option value="closed" {% if selected_status == 'closed' %}selected{% endif %}>Closed</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <button type="submit" class="report-btn report-btn-generate">
+                    <i class="fas fa-cogs"></i> Generate Report
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Results Section -->
+    {% if report_data %}
+    <div class="report-results-container">
+        <!-- Company Header -->
+        <div class="report-company-header">
+            <h3 class="report-company-name">
+                {% if company %}{{ company.company_name|upper }}{% else %}ALL BRANCHES{% endif %}
+            </h3>
+            {% if selected_branch %}
+            <p class="report-branch-name">{{ selected_branch.branch_name }}</p>
+            {% endif %}
+            <h4 class="report-title-main">Savings Account Status Report</h4>
+            <div class="report-period-info">
+                <strong>As At:</strong> {{ reporting_date|date:"F d, Y" }}
+                {% if selected_gl_no %} | <strong>Product:</strong> {{ selected_gl_no }}{% endif %}
+                {% if selected_status %} | <strong>Status:</strong> {{ selected_status|title }}{% endif %}
             </div>
-            <div class="text-end small">
-              <div><strong>Period:</strong> {% if start_date %}{{ start_date|date:"F d, Y" }}{% endif %} to {% if end_date %}{{ end_date|date:"F d, Y" }}{% endif %}</div>
-              <div><strong>Generated:</strong> {% now "F d, Y h:i A" %}</div>
-            </div>
-          </div>
         </div>
 
-        <div class="p-4">
-          <div class="mb-2 small text-muted">
-            Results: <strong>{{ customer_data|length }}</strong> account{{ customer_data|length|pluralize }}. Grand total: <strong>{{ grand_total|floatformat:2|intcomma }}</strong>.
-          </div>
+        <!-- Summary Cards -->
+        <div class="report-summary">
+            <div class="report-summary-grid">
+                <div class="report-summary-card">
+                    <div class="report-summary-label">Total Accounts</div>
+                    <div class="report-summary-value">{{ report_data|length }}</div>
+                </div>
+                <div class="report-summary-card credit">
+                    <div class="report-summary-label">Active Accounts</div>
+                    <div class="report-summary-value">{{ active_count|default:0 }}</div>
+                </div>
+                <div class="report-summary-card debit">
+                    <div class="report-summary-label">Dormant Accounts</div>
+                    <div class="report-summary-value">{{ dormant_count|default:0 }}</div>
+                </div>
+                <div class="report-summary-card balance">
+                    <div class="report-summary-label">Total Balance</div>
+                    <div class="report-summary-value">{{ total_balance|currency }}</div>
+                </div>
+            </div>
+        </div>
 
-          <div class="table-responsive">
+        <!-- Data Table -->
+        <div class="table-responsive">
             <table class="report-table">
-              <thead>
-                <tr>
-                  <th>GL No</th>
-                  <th>Account No</th>
-                  <th>Customer Name</th>
-                  <th class="text-end">Balance</th>
-                  <th>Last Transaction</th>
-                  <th class="days-column">Inactive Days</th>
-                  <th>Registered</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {% for entry in customer_data %}
-                <tr>
-                  <td>{{ entry.customer.gl_no }}</td>
-                  <td>{{ entry.customer.ac_no }}</td>
-                  <td>
-                    {{ entry.customer.first_name }}{% if entry.customer.middle_name %} {{ entry.customer.middle_name }}{% endif %} {{ entry.customer.last_name }}
-                  </td>
-                  <td class="amount">{{ entry.balance|floatformat:2|intcomma }}</td>
-                  <td>{% if entry.last_transaction_date %}{{ entry.last_transaction_date|date:"M d, Y" }}{% else %}-{% endif %}</td>
-                  <td class="days-column">{{ entry.days_without_activity|default:"-" }}</td>
-                  <td>{{ entry.reg_date|date:"M d, Y" }}</td>
-                </tr>
-                {% endfor %}
-              </tbody>
-
-              <tfoot>
-                <tr class="total-row">
-                  <td colspan="3" class="text-end fw-bold">GRAND TOTAL</td>
-                  <td class="amount"><strong>{{ grand_total|floatformat:2|intcomma }}</strong></td>
-                  <td colspan="3"></td>
-                </tr>
-              </tfoot>
+                <thead>
+                    <tr>
+                        <th>S/N</th>
+                        <th>Account No</th>
+                        <th>Customer Name</th>
+                        <th>GL No</th>
+                        <th>Opening Date</th>
+                        <th>Last Transaction</th>
+                        <th class="text-right">Balance</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for account in report_data %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ account.ac_no }}</td>
+                        <td>{{ account.customer_name|default:"-"|truncatechars:25 }}</td>
+                        <td><span class="badge bg-secondary">{{ account.gl_no }}</span></td>
+                        <td>{{ account.opening_date|date:"Y-m-d" }}</td>
+                        <td>{{ account.last_trx_date|date:"Y-m-d"|default:"-" }}</td>
+                        <td class="text-right amount {% if account.balance < 0 %}amount-negative{% else %}amount-positive{% endif %}">
+                            {{ account.balance|currency }}
+                        </td>
+                        <td>
+                            {% if account.status == 'active' %}
+                                <span class="badge bg-success">Active</span>
+                            {% elif account.status == 'dormant' %}
+                                <span class="badge bg-warning">Dormant</span>
+                            {% else %}
+                                <span class="badge bg-danger">Closed</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-4">No accounts found for the selected criteria.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="6"><strong>Total</strong></td>
+                        <td class="text-right amount"><strong>{{ total_balance|currency }}</strong></td>
+                        <td></td>
+                    </tr>
+                </tfoot>
             </table>
-          </div>
-
-          <div class="mt-3 small text-muted d-flex justify-content-between">
-            <div><strong>Note:</strong> Days without activity counted in calendar days from last transaction to today.</div>
-            <div>Generated by: {{ request.user.get_full_name|default:request.user.username }}</div>
-          </div>
         </div>
-      </div>
+
+        <!-- Footer -->
+        <div class="p-3 border-top">
+            <div class="row">
+                <div class="col-md-6">
+                    <small class="text-muted">Generated: {% now "F d, Y h:i A" %}</small>
+                </div>
+                <div class="col-md-6 text-end">
+                    <small class="text-muted">By: {{ user.username }}</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- New Search Button -->
+        <div class="p-3 text-center no-print">
+            <a href="{% url 'savings_account_status' %}" class="report-btn report-btn-reset">
+                <i class="fas fa-search"></i> New Search
+            </a>
+        </div>
     </div>
-  </div>
-  {% else %}
-  <div class="row">
-    <div class="col-12">
-      <div class="no-data">No customer accounts found for the selected filters.</div>
-    </div>
-  </div>
-  {% endif %}
+    {% endif %}
 </div>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-  // simple client-side date validation
-  const start = document.querySelector('input[name="start_date"]');
-  const end = document.querySelector('input[name="end_date"]');
-  if (start && end) {
-    start.addEventListener('change', () => { if (end.value && start.value > end.value) { alert('Start date cannot be after End date'); start.value = ''; }});
-    end.addEventListener('change', () => { if (start.value && end.value < start.value) { alert('End date cannot be before Start date'); end.value = ''; }});
-  }
-});
-</script>
-
 {% endblock %}

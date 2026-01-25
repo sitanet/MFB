@@ -1,344 +1,206 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load custom_filters %}
 
 {% block content %}
 {% include 'includes/alerts.html' %}
+{% include 'reports/includes/report_styles.html' %}
 
-<style>
-    :root {
-        --orange: #f97316;
-        --green: #16a34a;
-        --green-dark: #15803d;
-        --bg-light: #f4f6f9;
-        --text-dark: #1e293b;
-    }
-
-    body { background: var(--bg-light); }
-
-    /* Page Container */
-    .container-fluid {
-        padding: 40px 25px;
-        min-height: 100vh;
-    }
-
-    /* Title */
-    .page-title h2 {
-        font-weight: 800;
-        background: linear-gradient(135deg, var(--orange), var(--green));
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        text-align: center;
-        margin-bottom: 1rem;
-        font-size: 2.2rem;
-    }
-
-    .title-underline {
-        width: 120px;
-        height: 5px;
-        border-radius: 4px;
-        background: linear-gradient(135deg, var(--orange), var(--green));
-        margin: 0 auto 30px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-    }
-
-    /* Cards */
-    .form-card, .print-card {
-        background: white;
-        border-radius: 20px;
-        box-shadow: 0 8px 25px rgba(0,0,0,0.08);
-        transition: all 0.3s ease;
-        padding: 30px;
-        border: 1px solid rgba(0,0,0,0.05);
-    }
-
-    .form-card:hover, .print-card:hover {
-        transform: translateY(-3px);
-    }
-
-    /* Labels & Inputs */
-    .form-label {
-        font-weight: 600;
-        color: var(--text-dark);
-    }
-
-    .form-control {
-        border-radius: 10px;
-        border: 1px solid #e5e7eb;
-        transition: all 0.2s ease;
-    }
-
-    .form-control:focus {
-        border-color: var(--green);
-        box-shadow: 0 0 0 0.15rem rgba(22, 163, 74, 0.25);
-    }
-
-    /* Buttons */
-    .btn-submit {
-        font-weight: 600;
-        border-radius: 12px;
-        background: linear-gradient(135deg, var(--orange), var(--green));
-        border: none;
-        color: #fff;
-        transition: all 0.3s ease;
-        padding: 0.7rem 1.2rem;
-    }
-
-    .btn-submit:hover {
-        background: linear-gradient(135deg, var(--green-dark), var(--orange));
-        transform: translateY(-2px);
-        box-shadow: 0 4px 10px rgba(22, 163, 74, 0.25);
-    }
-
-    .btn-print {
-        background: linear-gradient(135deg, var(--orange), var(--green));
-        border: none;
-        font-weight: 600;
-        border-radius: 10px;
-        color: white;
-        padding: 10px 20px;
-        transition: 0.3s;
-    }
-
-    .btn-print:hover {
-        background: linear-gradient(135deg, var(--green-dark), var(--orange));
-        transform: translateY(-2px);
-    }
-
-    /* Report Header */
-    .report-header h4 {
-        font-weight: 700;
-        color: var(--text-dark);
-        font-size: 1.6rem;
-    }
-
-    .report-header h5 {
-        color: #475569;
-        margin-top: 3px;
-    }
-
-    .office-address {
-        font-style: italic;
-        color: #64748b;
-        margin-bottom: 10px;
-    }
-
-    .report-header .text-primary {
-        font-weight: 700;
-        font-size: 1.2rem;
-        background: linear-gradient(135deg, var(--orange), var(--green));
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-    }
-
-    /* Table Styling */
-    .table {
-        border-radius: 10px;
-        overflow: hidden;
-        margin-top: 10px;
-    }
-
-    .table thead {
-        background: linear-gradient(90deg, var(--orange), var(--green));
-        color: #fff;
-    }
-
-    .table th, .table td {
-        padding: 14px;
-        font-size: 0.95rem;
-        vertical-align: middle;
-    }
-
-    .table tbody tr:nth-child(even) {
-        background: #f9fafb;
-    }
-
-    .table tbody tr:hover {
-        background: #eef3f7;
-        transition: 0.3s;
-    }
-
-    .total-row td {
-        font-weight: 700;
-        background: #e2e8f0;
-        color: var(--text-dark);
-    }
-
-    /* Totals */
-    .totals-left p {
-        font-weight: 600;
-        color: var(--text-dark);
-    }
-
-    .totals-left strong {
-        font-size: 1.1rem;
-        color: var(--green);
-    }
-
-    /* Print Mode */
-    @media print {
-        body * { visibility: hidden; }
-        .printable-area, .printable-area * { visibility: visible; }
-        .printable-area { position: absolute; left: 0; top: 0; width: 100%; padding: 20px; }
-        .btn-print { display: none; }
-    }
-
-    @keyframes fadeInUp {
-        from { opacity: 0; transform: translateY(20px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-</style>
-
-<div class="container-fluid">
-
-    <!-- Back Button -->
-    <div class="mb-3">
-        <a href="javascript:history.back()" class="btn btn-outline-secondary">
-            <i class="fa fa-arrow-left mr-2"></i> Back
-        </a>
+<div class="report-page">
+    <!-- Page Header -->
+    <div class="report-page-header no-print">
+        <h2 class="report-page-title">
+            <i class="fas fa-balance-scale-right"></i>
+            Balance Sheet
+        </h2>
+        <div class="report-header-actions">
+            {% if balance_sheet_data %}
+            <button onclick="window.print()" class="report-btn report-btn-print">
+                <i class="fas fa-print"></i> Print
+            </button>
+            {% endif %}
+            <a href="{% url 'financial_report' %}" class="report-btn report-btn-back">
+                <i class="fas fa-arrow-left"></i> Back
+            </a>
+        </div>
     </div>
 
-    <!-- Title -->
-    <div class="text-center page-title">
-        <h2>📊 Balance Sheet Report</h2>
-        <div class="title-underline"></div>
-    </div>
-
-    <!-- Form -->
-    <div class="row justify-content-center" id="formSection">
-        <div class="col-md-10 form-card">
-            <form id="generateForm" method="post" action="{% url 'balance_sheet' %}">
+    <!-- Filter Form -->
+    <div class="report-filter-container no-print {% if balance_sheet_data %}d-none{% endif %}">
+        <div class="report-filter-header">
+            <i class="fas fa-filter"></i>
+            Report Filters
+        </div>
+        <div class="report-filter-body">
+            <form method="post" action="{% url 'balance_sheet' %}">
                 {% csrf_token %}
-                <div class="row g-3">
-                    <div class="col-md-3">
-                        <label for="start_date" class="form-label">Start Date</label>
-                        <input type="date" class="form-control" name="start_date" id="start_date" value="{{ start_date }}">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="report-form-group">
+                            <label class="report-form-label">
+                                <i class="fas fa-calendar"></i> As At Date
+                            </label>
+                            <input type="date" class="report-form-control" name="as_at_date" 
+                                   value="{{ as_at_date|date:'Y-m-d' }}" required>
+                        </div>
                     </div>
-                    <div class="col-md-3">
-                        <label for="end_date" class="form-label">End Date</label>
-                        <input type="date" class="form-control" name="end_date" id="end_date" value="{{ end_date }}">
-                    </div>
-                    <div class="col-md-3">
-                        <label for="branch" class="form-label">Select Branch</label>
-                        {% if is_head_office %}
-                            <select class="form-control" name="branch" id="branch">
-                                <option value="">All Branches</option>
-                                {% for branch in branches %}
-                                    <option value="{{ branch.id }}" {% if branch.id|stringformat:"s" == selected_branch %}selected{% endif %}>{{ branch.branch_name }}</option>
+                    <div class="col-md-4">
+                        <div class="report-form-group">
+                            <label class="report-form-label">
+                                <i class="fas fa-building"></i> Branch
+                            </label>
+                            <select class="report-form-select" name="branch">
+                                {% if head_office %}
+                                    <option value="">All Branches</option>
+                                {% endif %}
+                                {% for b in branches %}
+                                    <option value="{{ b.id }}" {% if selected_branch == b.id|stringformat:"s" %}selected{% endif %}>
+                                        {{ b.branch_name }}
+                                    </option>
                                 {% endfor %}
                             </select>
-                        {% else %}
-                            <input type="text" class="form-control" value="{{ user_branch.branch_name }}" disabled>
-                            <input type="hidden" name="branch" value="{{ user_branch.id }}">
-                        {% endif %}
-                    </div>
-                    <div class="col-md-3 d-flex align-items-end">
-                        <button type="submit" class="btn btn-submit w-100 shadow-sm">Generate Report</button>
+                        </div>
                     </div>
                 </div>
+                <button type="submit" class="report-btn report-btn-generate">
+                    <i class="fas fa-cogs"></i> Generate Report
+                </button>
             </form>
         </div>
     </div>
 
-    <!-- Print Button -->
+    <!-- Results Section -->
     {% if balance_sheet_data %}
-    <div class="row mt-4">
-        <div class="col-md-12 text-end">
-            <button onclick="window.print()" class="btn btn-print shadow-sm">🖨 Print Report</button>
+    <div class="report-results-container">
+        <!-- Company Header -->
+        <div class="report-company-header">
+            <h3 class="report-company-name">{{ branch.company_name|default:"Company Name"|upper }}</h3>
+            <p class="report-branch-name">{{ branch.branch_name|default:"All Branches" }}</p>
+            <p class="report-company-address">{{ branch.office_address }}</p>
+            <h4 class="report-title-main">Balance Sheet</h4>
+            <div class="report-period-info">
+                <strong>As At:</strong> {{ as_at_date|date:"F d, Y" }}
+            </div>
         </div>
-    </div>
-    {% endif %}
 
-    <!-- Report Section -->
-    {% if balance_sheet_data %}
-    <div class="row printable-area mt-4" id="reportSection">
-        <div class="col-md-12 print-card">
-            <!-- Header -->
-            <div class="text-center report-header mb-4">
-                {% if is_all_branches %}
-                    <h4>{{ user_branch.company_name }}</h4>
-                    <h5>All Branches (Consolidated Report)</h5>
-                {% elif selected_branch_obj %}
-                    <h4>{{ selected_branch_obj.company_name }}</h4>
-                    <h5>{{ selected_branch_obj.branch_name }}</h5>
-                    <p class="office-address">{{ selected_branch_obj.office_address }}</p>
-                {% else %}
-                    <h4>{{ user_branch.company_name }}</h4>
-                    <h5>{{ user_branch.branch_name }}</h5>
-                    <p class="office-address">{{ user_branch.office_address }}</p>
-                {% endif %}
-                <h5 class="text-primary mt-2">Balance Sheet</h5>
-                <p>Reporting From <strong>{{ start_date }}</strong> To <strong>{{ end_date }}</strong></p>
-            </div>
+        <!-- Assets Section -->
+        <div class="p-4">
+            <h5 class="fw-bold text-success mb-3"><i class="fas fa-coins me-2"></i>ASSETS</h5>
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>GL No.</th>
+                        <th>Account Name</th>
+                        <th class="text-right">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in assets %}
+                    <tr>
+                        <td>{{ item.gl_no }}</td>
+                        <td>{{ item.gl_name }}</td>
+                        <td class="text-right amount">{{ item.balance|currency }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="3" class="text-center">No asset data</td></tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="2"><strong>Total Assets</strong></td>
+                        <td class="text-right amount"><strong>{{ total_assets|currency }}</strong></td>
+                    </tr>
+                </tfoot>
+            </table>
 
-            <!-- Table -->
-            <div class="table-responsive">
-                <table class="table table-bordered table-hover">
-                    <thead>
-                        <tr>
-                            <th>GL No.</th>
-                            <th>Account Name</th>
-                            <th>Debit (₦)</th>
-                            <th>Credit (₦)</th>
-                            <th>Balance (₦)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for entry in balance_sheet_data %}
-                        <tr>
-                            <td>{{ entry.gl_no }}</td>
-                            <td>{{ entry.gl_name }}</td>
-                            <td>{{ entry.debit|floatformat:2 }}</td>
-                            <td>{{ entry.credit|floatformat:2 }}</td>
-                            <td>{{ entry.balance|floatformat:2 }}</td>
-                        </tr>
-                        {% endfor %}
-                        <tr class="total-row">
-                            <td colspan="2">Grand Total</td>
-                            <td>{{ total_debit|floatformat:2 }}</td>
-                            <td>{{ total_credit|floatformat:2 }}</td>
-                            <td>{{ total_balance|floatformat:2 }}</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
+            <!-- Liabilities Section -->
+            <h5 class="fw-bold text-danger mb-3 mt-4"><i class="fas fa-hand-holding-usd me-2"></i>LIABILITIES</h5>
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>GL No.</th>
+                        <th>Account Name</th>
+                        <th class="text-right">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in liabilities %}
+                    <tr>
+                        <td>{{ item.gl_no }}</td>
+                        <td>{{ item.gl_name }}</td>
+                        <td class="text-right amount">{{ item.balance|currency }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="3" class="text-center">No liability data</td></tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="2"><strong>Total Liabilities</strong></td>
+                        <td class="text-right amount"><strong>{{ total_liabilities|currency }}</strong></td>
+                    </tr>
+                </tfoot>
+            </table>
 
-            <!-- Totals -->
-            <div class="row mt-4">
-                <div class="col-md-6 totals-left">
-                    {% if subtotal_4 %}
-                        <p>💰 Total Incomes: {{ subtotal_4|floatformat:2 }}</p>
-                    {% endif %}
-                    {% if subtotal_5 %}
-                        <p>📉 Total Expenses: {{ subtotal_5|floatformat:2 }}</p>
-                    {% endif %}
-                    <p><strong>⚖️ Net Income: {{ net_income|floatformat:2 }}</strong></p>
+            <!-- Equity Section -->
+            <h5 class="fw-bold text-primary mb-3 mt-4"><i class="fas fa-university me-2"></i>EQUITY</h5>
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>GL No.</th>
+                        <th>Account Name</th>
+                        <th class="text-right">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in equity %}
+                    <tr>
+                        <td>{{ item.gl_no }}</td>
+                        <td>{{ item.gl_name }}</td>
+                        <td class="text-right amount">{{ item.balance|currency }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="3" class="text-center">No equity data</td></tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="2"><strong>Total Equity</strong></td>
+                        <td class="text-right amount"><strong>{{ total_equity|currency }}</strong></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <!-- Summary Section -->
+        <div class="report-summary">
+            <div class="report-summary-grid">
+                <div class="report-summary-card credit">
+                    <div class="report-summary-label">Total Assets</div>
+                    <div class="report-summary-value">{{ total_assets|currency }}</div>
+                </div>
+                <div class="report-summary-card debit">
+                    <div class="report-summary-label">Total Liabilities</div>
+                    <div class="report-summary-value">{{ total_liabilities|currency }}</div>
+                </div>
+                <div class="report-summary-card balance">
+                    <div class="report-summary-label">Total Equity</div>
+                    <div class="report-summary-value">{{ total_equity|currency }}</div>
+                </div>
+                <div class="report-summary-card">
+                    <div class="report-summary-label">Liabilities + Equity</div>
+                    <div class="report-summary-value">{{ total_liabilities_equity|currency }}</div>
                 </div>
             </div>
+        </div>
+
+        <!-- New Search Button -->
+        <div class="p-3 text-center no-print">
+            <a href="{% url 'balance_sheet' %}" class="report-btn report-btn-reset">
+                <i class="fas fa-search"></i> New Search
+            </a>
         </div>
     </div>
     {% endif %}
 </div>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const startDateInput = document.getElementById('start_date');
-        const endDateInput = document.getElementById('end_date');
-        const branchDate = new Date('{{ branch_date|default:"9999-12-31" }}');
-
-        function validateDate(input, label) {
-            const selected = new Date(input.value);
-            if (selected > branchDate) {
-                alert(label + ' cannot be greater than session date.');
-                input.value = '{{ branch_date }}';
-            }
-        }
-
-        startDateInput.addEventListener('change', () => validateDate(startDateInput, 'Start Date'));
-        endDateInput.addEventListener('change', () => validateDate(endDateInput, 'End Date'));
-
-        const formSection = document.getElementById('formSection');
-        const reportSection = document.getElementById('reportSection');
-        if (reportSection) formSection.style.display = 'none';
-    });
-</script>
 {% endblock %}

@@ -1,55 +1,58 @@
 {% extends 'base.html' %}
+{% load static %}
+{% load custom_filters %}
 
 {% block content %}
-<div class="container-fluid py-4">
-    <!-- Report Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4 bg-gradient-primary text-white rounded px-4 py-3 shadow-sm">
-        <div>
-            <h2 class="mb-0 font-weight-bold">{{ report_title }}</h2>
-            <div class="small opacity-85">
-                Generated on: {{ current_date|date:"M d, Y H:i" }}
-                {% if reporting_date %} | Reporting Date: {{ reporting_date|date:"M d, Y" }}{% endif %}
-                {% if selected_branch %}
-                    | Branch: 
-                    {% for branch in branches %}
-                        {% if branch.id|stringformat:"s" == selected_branch %}
-                            {{ branch.branch_name }}
-                        {% endif %}
-                    {% endfor %}
-                {% endif %}
-            </div>
-        </div>
-        <div>
-            <button id="print-report" class="btn btn-sm btn-light mr-2 shadow-sm">
+{% include 'includes/alerts.html' %}
+{% include 'reports/includes/report_styles.html' %}
+
+<div class="report-page">
+    <!-- Page Header -->
+    <div class="report-page-header no-print">
+        <h2 class="report-page-title">
+            <i class="fas fa-file-invoice-dollar"></i>
+            {{ report_title|default:"Loan Outstanding Balance Report" }}
+        </h2>
+        <div class="report-header-actions">
+            {% if loans %}
+            <button onclick="window.print()" class="report-btn report-btn-print">
                 <i class="fas fa-print"></i> Print
             </button>
-            <button id="export-excel" class="btn btn-sm btn-light shadow-sm">
+            <button id="export-excel" class="report-btn report-btn-back">
                 <i class="fas fa-file-excel"></i> Excel
             </button>
+            {% endif %}
+            <a href="{% url 'loan_report' %}" class="report-btn report-btn-back">
+                <i class="fas fa-arrow-left"></i> Back
+            </a>
         </div>
     </div>
 
-    <!-- Filter Card -->
-    <div class="card mb-4 shadow-sm border-0 rounded-lg">
-        <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
-            <h6 class="mb-0 font-weight-bold">Report Filters</h6>
-            <button class="btn btn-sm btn-light" type="button" data-toggle="collapse" data-target="#filterCollapse" aria-expanded="true" aria-controls="filterCollapse">
-                <i class="fas fa-sliders-h"></i>
-            </button>
+    <!-- Filter Form -->
+    <div class="report-filter-container no-print {% if loans %}d-none{% endif %}">
+        <div class="report-filter-header">
+            <i class="fas fa-filter"></i>
+            Report Filters
         </div>
-        <div class="collapse show" id="filterCollapse">
-            <div class="card-body">
-                <form method="post" action="{% url 'loan_outstanding_balance' %}">
-                    {% csrf_token %}
-                    <div class="form-row">
-                        <div class="form-group col-md-3">
-                            <label for="id_reporting_date" class="small font-weight-bold text-info">Reporting Date</label>
-                            <input type="date" name="reporting_date" id="id_reporting_date" 
-                                   class="form-control form-control-sm border-info" value="{{ reporting_date }}">
+        <div class="report-filter-body">
+            <form method="post" action="{% url 'loan_outstanding_balance' %}">
+                {% csrf_token %}
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="report-form-group">
+                            <label class="report-form-label">
+                                <i class="fas fa-calendar"></i> Reporting Date
+                            </label>
+                            <input type="date" class="report-form-control" name="reporting_date" 
+                                   value="{{ reporting_date }}" required>
                         </div>
-                        <div class="form-group col-md-3">
-                            <label for="id_branch" class="small font-weight-bold text-info">Branch</label>
-                            <select name="branch" id="id_branch" class="form-control form-control-sm border-info">
+                    </div>
+                    <div class="col-md-4">
+                        <div class="report-form-group">
+                            <label class="report-form-label">
+                                <i class="fas fa-building"></i> Branch
+                            </label>
+                            <select class="report-form-select" name="branch">
                                 <option value="">All Branches</option>
                                 {% for branch in branches %}
                                     <option value="{{ branch.id }}" 
@@ -59,9 +62,13 @@
                                 {% endfor %}
                             </select>
                         </div>
-                        <div class="form-group col-md-3">
-                            <label for="id_gl_no" class="small font-weight-bold text-info">GL Account</label>
-                            <select name="gl_no" id="id_gl_no" class="form-control form-control-sm border-info">
+                    </div>
+                    <div class="col-md-4">
+                        <div class="report-form-group">
+                            <label class="report-form-label">
+                                <i class="fas fa-book"></i> GL Account
+                            </label>
+                            <select class="report-form-select" name="gl_no">
                                 <option value="">All GL Accounts</option>
                                 {% for gl_account in gl_accounts %}
                                     <option value="{{ gl_account.gl_no }}" 
@@ -71,225 +78,133 @@
                                 {% endfor %}
                             </select>
                         </div>
-                        <div class="form-group col-md-3 d-flex align-items-end">
-                            <button type="submit" class="btn btn-info btn-sm btn-block font-weight-bold shadow-sm">
-                                <i class="fas fa-filter"></i> Apply Filters
-                            </button>
-                        </div>
                     </div>
-                </form>
-            </div>
+                </div>
+                <button type="submit" class="report-btn report-btn-generate">
+                    <i class="fas fa-cogs"></i> Generate Report
+                </button>
+            </form>
         </div>
     </div>
 
-    <!-- Report Summary Cards -->
-    {% if outstanding_loans %}
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card bg-gradient-primary text-white shadow-sm rounded-lg h-100">
-                <div class="card-body text-center">
-                    <div class="text-uppercase font-weight-bold small">Total Loans</div>
-                    <div class="h3 font-weight-bold">{{ outstanding_loans|length }}</div>
-                </div>
+    <!-- Results Section -->
+    {% if loans %}
+    <div class="report-results-container">
+        <!-- Company Header -->
+        <div class="report-company-header">
+            <h3 class="report-company-name">{{ company.company_name|default:"All Branches"|upper }}</h3>
+            {% if selected_branch %}
+            <p class="report-branch-name">
+                {% for branch in branches %}
+                    {% if branch.id|stringformat:"s" == selected_branch %}{{ branch.branch_name }}{% endif %}
+                {% endfor %}
+            </p>
+            {% endif %}
+            <h4 class="report-title-main">Loan Outstanding Balance Report</h4>
+            <div class="report-period-info">
+                <strong>As At:</strong> {{ reporting_date|date:"F d, Y" }}
+                {% if selected_gl_no %} | <strong>Product:</strong> {{ selected_gl_no }}{% endif %}
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card bg-gradient-success text-white shadow-sm rounded-lg h-100">
-                <div class="card-body text-center">
-                    <div class="text-uppercase font-weight-bold small">Total Disbursed</div>
-                    <div class="h3 font-weight-bold">{{ grand_total_loan_disbursement|floatformat:2 }}</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-gradient-warning text-dark shadow-sm rounded-lg h-100">
-                <div class="card-body text-center">
-                    <div class="text-uppercase font-weight-bold small">Outstanding Principal</div>
-                    <div class="h3 font-weight-bold">{{ grand_total_outstanding_principal|floatformat:2 }}</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-gradient-danger text-white shadow-sm rounded-lg h-100">
-                <div class="card-body text-center">
-                    <div class="text-uppercase font-weight-bold small">Outstanding Amount</div>
-                    <div class="h3 font-weight-bold">{{ grand_total_outstanding_amount|floatformat:2 }}</div>
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
 
-    <!-- Main Report Table -->
-    {% if outstanding_loans %}
-    <div class="card shadow-sm rounded-lg">
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-striped table-hover table-bordered table-sm mb-0" id="reportTable" width="100%" cellspacing="0" style="min-width: 1100px;">
-                    <thead class="thead-dark">
-                        <tr>
-                            <th>GL No</th>
-                            <th>Account No</th>
-                            <th>Customer Name</th>
-                            <th class="text-right">Loan Amount</th>
-                            <th class="text-right">Total Interest</th>
-                            <th>Disbursement Date</th>
-                            <th>Expiry Date</th>
-                            <th class="text-right">Principal Paid</th>
-                            <th class="text-right">Interest Paid</th>
-                            <th class="text-right">O/S Principal</th>
-                            <th class="text-right">O/S Interest</th>
-                            <th class="text-right">O/S Amount</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for loan in outstanding_loans %}
-                        <tr>
-                            <td class="font-weight-bold text-primary">{{ loan.gl_no }}</td>
-                            <td>{{ loan.ac_no }}</td>
-                            <td title="{{ loan.customer_name }}">{{ loan.customer_name|truncatechars:20 }}</td>
-                            <td class="text-right text-success font-weight-bold">${{ loan.loan_amount|floatformat:2 }}</td>
-                           
-                              <td class="text-right text-warning">{{ loan.outstanding_interest|floatformat:2 }}</td>
-                            <td>{{ loan.disbursement_date|date:"Y-m-d" }}</td>
-                            <td>{{ loan.expiry_date|date:"Y-m-d"|default:"-" }}</td>
-                            <td class="text-right text-success">{{ loan.total_principal_paid|floatformat:2 }}</td>
-                            <td class="text-right text-info">{{ loan.total_interest_paid|floatformat:2 }}</td>
-                            <td class="text-right font-weight-bold text-warning">{{ loan.outstanding_principal|floatformat:2 }}</td>
-                           <td class="text-right text-info">{{ loan.total_interest|floatformat:2 }}</td>
-                            <td class="text-right font-weight-bold text-danger">${{ loan.outstanding_amount|floatformat:2 }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-<tfoot class="bg-secondary text-white font-weight-bold">
-    <tr>
-        <th colspan="3">Totals</th>
-        <th class="text-right">${{ grand_total_loan_disbursement|floatformat:2 }}</th>
-                <th class="text-right">{{ grand_total_outstanding_interest|floatformat:2 }}</th> <!-- stays -->
-
-        <th colspan="4"></th>
-        <th class="text-right">{{ grand_total_outstanding_principal|floatformat:2 }}</th>
-        <th class="text-right">{{ grand_total_total_interest|floatformat:2 }}</th>  <!-- changed -->
-        <th class="text-right">${{ grand_total_outstanding_amount|floatformat:2 }}</th>
-    </tr>
-</tfoot>
-
-                </table>
+        <!-- Summary Cards -->
+        <div class="report-summary">
+            <div class="report-summary-grid">
+                <div class="report-summary-card">
+                    <div class="report-summary-label">Total Loans</div>
+                    <div class="report-summary-value">{{ loans|length }}</div>
+                </div>
+                <div class="report-summary-card credit">
+                    <div class="report-summary-label">Total Principal</div>
+                    <div class="report-summary-value">{{ total_principal|currency }}</div>
+                </div>
+                <div class="report-summary-card balance">
+                    <div class="report-summary-label">Total Interest</div>
+                    <div class="report-summary-value">{{ total_interest|currency }}</div>
+                </div>
+                <div class="report-summary-card debit">
+                    <div class="report-summary-label">Total Outstanding</div>
+                    <div class="report-summary-value">{{ total_outstanding|currency }}</div>
+                </div>
             </div>
         </div>
-    </div>
-    {% else %}
-    <div class="alert alert-info mt-4">
-        <i class="fas fa-info-circle"></i> No loan data found for the selected criteria. Please adjust your filters and try again.
+
+        <!-- Data Table -->
+        <div class="table-responsive">
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>S/N</th>
+                        <th>Customer Name</th>
+                        <th>Loan GL</th>
+                        <th>Disbursement Date</th>
+                        <th class="text-right">Loan Amount</th>
+                        <th class="text-right">Principal Paid</th>
+                        <th class="text-right">Outstanding</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for loan in loans %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ loan.customer_name }}</td>
+                        <td><span class="badge bg-secondary">{{ loan.gl_no }}</span></td>
+                        <td>{{ loan.disbursement_date|date:"Y-m-d" }}</td>
+                        <td class="text-right amount">{{ loan.loan_amount|currency }}</td>
+                        <td class="text-right amount">{{ loan.principal_paid|currency }}</td>
+                        <td class="text-right amount {% if loan.outstanding_balance > 0 %}amount-negative{% endif %}">
+                            {{ loan.outstanding_balance|currency }}
+                        </td>
+                        <td>
+                            {% if loan.status == 'Active' %}
+                                <span class="badge bg-success">Active</span>
+                            {% elif loan.status == 'Completed' %}
+                                <span class="badge bg-info">Completed</span>
+                            {% elif loan.status == 'Overdue' %}
+                                <span class="badge bg-danger">Overdue</span>
+                            {% else %}
+                                <span class="badge bg-warning">{{ loan.status }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-4">No loans found for the selected criteria.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="4"><strong>Total</strong></td>
+                        <td class="text-right amount"><strong>{{ total_principal|currency }}</strong></td>
+                        <td class="text-right amount"><strong>{{ total_paid|currency }}</strong></td>
+                        <td class="text-right amount"><strong>{{ total_outstanding|currency }}</strong></td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <!-- Footer -->
+        <div class="p-3 border-top">
+            <div class="row">
+                <div class="col-md-6">
+                    <small class="text-muted">Generated: {{ current_date|date:"F d, Y H:i" }}</small>
+                </div>
+                <div class="col-md-6 text-end">
+                    <small class="text-muted">By: {{ user.username }}</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- New Search Button -->
+        <div class="p-3 text-center no-print">
+            <a href="{% url 'loan_outstanding_balance' %}" class="report-btn report-btn-reset">
+                <i class="fas fa-search"></i> New Search
+            </a>
+        </div>
     </div>
     {% endif %}
 </div>
-
-<!-- JavaScript for enhanced functionality -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script>
-$(document).ready(function() {
-    // Print report functionality
-    $('#print-report').click(function() {
-        var printContents = $('#reportTable').clone();
-
-        var originalContents = $('body').html();
-        $('body').empty().append(printContents);
-        window.print();
-        $('body').html(originalContents);
-    });
-
-    // Export to Excel functionality
-    $('#export-excel').click(function() {
-        var table = document.getElementById('reportTable');
-        var wb = XLSX.utils.table_to_book(table, {sheet:"Loan Report"});
-        XLSX.writeFile(wb, 'Loan_Outstanding_Balance_{{ current_date|date:"Ymd" }}.xlsx');
-    });
-
-    // Initialize DataTable with styling
-    $('#reportTable').DataTable({
-        dom: '<"top"Bf>rt<"bottom"lip><"clear">',
-        buttons: [
-            {
-                extend: 'print',
-                text: '<i class="fas fa-print"></i> Print',
-                title: '{{ report_title }}',
-                messageTop: 'Generated on: {{ current_date|date:"M d, Y H:i" }}',
-                exportOptions: { columns: ':visible' }
-            },
-            {
-                extend: 'excel',
-                text: '<i class="fas fa-file-excel"></i> Excel',
-                title: '{{ report_title }}',
-                messageTop: 'Generated on: {{ current_date|date:"M d, Y H:i" }}',
-                filename: 'Loan_Outstanding_Balance_{{ current_date|date:"Ymd" }}'
-            }
-        ],
-        pageLength: 25,
-        order: [[5, 'desc']],  // Default sort by disbursement date
-        responsive: true,
-        language: {
-            search: "Filter records:",
-            lengthMenu: "Show _MENU_ entries"
-        }
-    });
-});
-</script>
-
-<style>
-/* Gradient background for header */
-.bg-gradient-primary {
-    background: linear-gradient(45deg, #007bff, #00c6ff);
-}
-/* Card gradients for summary */
-.bg-gradient-success {
-    background: linear-gradient(45deg, #28a745, #85e085);
-}
-.bg-gradient-warning {
-    background: linear-gradient(45deg, #ffc107, #fff5b1);
-    color: #333;
-}
-.bg-gradient-danger {
-    background: linear-gradient(45deg, #dc3545, #f28b94);
-}
-
-/* Table row hover */
-table#reportTable tbody tr:hover {
-    background-color: #dff0fb !important;
-}
-
-/* Accent text colors */
-.text-primary { color: #0056b3 !important; }
-.text-success { color: #28a745 !important; }
-.text-info { color: #17a2b8 !important; }
-.text-warning { color: #ffc107 !important; }
-.text-danger { color: #dc3545 !important; }
-
-/* Rounded corners for table header */
-table#reportTable thead th {
-    border-top-left-radius: 0.5rem;
-    border-top-right-radius: 0.5rem;
-}
-
-/* Button styling */
-#export-excel, #print-report {
-    transition: background-color 0.3s ease;
-}
-#export-excel:hover, #print-report:hover {
-    background-color: #e0f7fa;
-    color: #007bff;
-    cursor: pointer;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    .form-row > .form-group {
-        margin-bottom: 1rem;
-    }
-    .table-responsive {
-        font-size: 0.9rem;
-    }
-}
-</style>
-
-{% endblock content %}
+{% endblock %}

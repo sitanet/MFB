@@ -1,258 +1,202 @@
-<!-- templates/reports/loans/loan_repayment_report.html -->
 {% extends 'base.html' %}
+{% load static %}
+{% load custom_filters %}
 
 {% block content %}
-<style>
-  @media print {
-    @page {
-      size: A4 portrait;
-      margin: 15mm;
-    }
-    body {
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
-      font-size: 11pt;
-      line-height: 1.4;
-      color: #000 !important;
-      background: #fff !important;
-    }
-    button, .no-print {
-      display: none !important;
-    }
-    .container {
-      width: 100% !important;
-      padding: 0 !important;
-      margin: 0 !important;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 10pt;
-    }
-    thead {
-      display: table-header-group;
-    }
-    tr {
-      page-break-inside: avoid;
-    }
-  }
+{% include 'includes/alerts.html' %}
+{% include 'reports/includes/report_styles.html' %}
 
-  /* Custom Colors */
-  .card-green {
-    background-color: #d4edda !important;
-    border-color: #c3e6cb;
-    color: #155724;
-  }
-  .card-orange {
-    background-color: #fff3cd !important;
-    border-color: #ffeaa7;
-    color: #856404;
-  }
-  .text-green {
-    color: #28a745 !important;
-  }
-  .text-orange {
-    color: #fd7e14 !important;
-  }
-  .bg-green-light {
-    background-color: #f8fff9;
-  }
-  .border-green {
-    border-left: 4px solid #28a745 !important;
-  }
-  .border-orange {
-    border-left: 4px solid #fd7e14 !important;
-  }
-</style>
-
-<div class="container py-4">
-  <!-- Header -->
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2 class="fw-bold text-green">Loan Repayment Report</h2>
-    <div class="no-print">
-      <button onclick="window.print()" class="btn btn-outline-success btn-sm me-2">
-        <i class="fas fa-print"></i> Print
-      </button>
-      <button class="btn btn-outline-secondary btn-sm">
-        <i class="fas fa-question-circle"></i> Help
-      </button>
-    </div>
-  </div>
-
-  <!-- Filter Form -->
-  {% if not repayment_list %}
-  <div class="card border-green shadow-sm mb-5">
-    <div class="card-header bg-green-light fw-bold">
-      <i class="fas fa-filter me-2"></i>Filter Repayment Records
-    </div>
-    <div class="card-body">
-      <form method="post">
-        {% csrf_token %}
-        <div class="row g-3">
-          <div class="col-md-3">
-            <label class="form-label fw-bold">{{ form.start_date.label }}</label>
-            {{ form.start_date }}
-          </div>
-          <div class="col-md-3">
-            <label class="form-label fw-bold">{{ form.end_date.label }}</label>
-            {{ form.end_date }}
-          </div>
-          <div class="col-md-3">
-            <label class="form-label fw-bold">{{ form.branch.label }}</label>
-            {{ form.branch }}
-          </div>
-          <div class="col-md-2">
-            <label class="form-label fw-bold">{{ form.account.label }}</label>
-            {{ form.account }}
-          </div>
-          <div class="col-md-1">
-            <label class="form-label fw-bold">{{ form.cycle.label }}</label>
-            {{ form.cycle }}
-          </div>
-          <div class="col-12 text-end mt-2">
-            <button type="submit" class="btn btn-success px-4">
-              <i class="fas fa-search me-1"></i> Generate Report
+<div class="report-page">
+    <!-- Page Header -->
+    <div class="report-page-header no-print">
+        <h2 class="report-page-title">
+            <i class="fas fa-hand-holding-usd"></i>
+            Loan Repayment Report
+        </h2>
+        <div class="report-header-actions">
+            {% if repayment_list %}
+            <button onclick="window.print()" class="report-btn report-btn-print">
+                <i class="fas fa-print"></i> Print
             </button>
-          </div>
+            {% endif %}
+            <a href="{% url 'loan_report' %}" class="report-btn report-btn-back">
+                <i class="fas fa-arrow-left"></i> Back
+            </a>
         </div>
-        {% if error_message %}
-          <div class="alert alert-danger mt-3">{{ error_message }}</div>
-        {% endif %}
-      </form>
     </div>
-  </div>
-  {% endif %}
 
-  <!-- Report Output -->
-  {% if repayment_list %}
-  <div class="card mb-4 border-0 shadow-sm">
-    <div class="card-body bg-light">
-      <h5 class="fw-bold text-uppercase text-green mb-2">Loan Repayment Summary</h5>
-      <p class="mb-1">
-        <strong>Company:</strong> {{ company_name }} |
-        <strong>Branch:</strong> {{ branch_name }}
-      </p>
-      <p class="mb-1">
-        <strong>Period:</strong>
-        {% if start_date %}{{ start_date|date:"d/m/Y" }}{% else %}All{% endif %}
-        to
-        {% if end_date %}{{ end_date|date:"d/m/Y" }}{% else %}All{% endif %}
-      </p>
-      <p class="mb-0"><strong>Generated:</strong> {{ current_date }}</p>
+    <!-- Filter Form -->
+    <div class="report-filter-container no-print {% if repayment_list %}d-none{% endif %}">
+        <div class="report-filter-header">
+            <i class="fas fa-filter"></i>
+            Report Filters
+        </div>
+        <div class="report-filter-body">
+            <form method="post">
+                {% csrf_token %}
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="report-form-group">
+                            <label class="report-form-label">
+                                <i class="fas fa-calendar"></i> Start Date
+                            </label>
+                            {{ form.start_date }}
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="report-form-group">
+                            <label class="report-form-label">
+                                <i class="fas fa-calendar-check"></i> End Date
+                            </label>
+                            {{ form.end_date }}
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="report-form-group">
+                            <label class="report-form-label">
+                                <i class="fas fa-building"></i> Branch
+                            </label>
+                            {{ form.branch }}
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="report-form-group">
+                            <label class="report-form-label">
+                                <i class="fas fa-book"></i> GL Account
+                            </label>
+                            {{ form.gl_no }}
+                        </div>
+                    </div>
+                </div>
+                <button type="submit" class="report-btn report-btn-generate">
+                    <i class="fas fa-cogs"></i> Generate Report
+                </button>
+            </form>
+        </div>
     </div>
-  </div>
 
-  <!-- Summary Cards -->
-  <div class="row mb-4 g-3">
-    <div class="col-md-3">
-      <div class="card card-green h-100 text-center shadow-sm">
-        <div class="card-body">
-          <h6 class="fw-bold">PRINCIPAL PAID</h6>
-          <p class="fs-5 mb-0">₦{{ grand_total_principal|floatformat:2 }}</p>
+    <!-- Results Section -->
+    {% if repayment_list %}
+    <div class="report-results-container">
+        <!-- Company Header -->
+        <div class="report-company-header">
+            <h3 class="report-company-name">{{ company.company_name|default:"All Branches"|upper }}</h3>
+            {% if selected_branch %}
+            <p class="report-branch-name">{{ selected_branch.branch_name }}</p>
+            {% endif %}
+            <h4 class="report-title-main">Loan Repayment Report</h4>
+            <div class="report-period-info">
+                <strong>Period:</strong> {{ start_date|date:"F d, Y" }} to {{ end_date|date:"F d, Y" }}
+                {% if selected_gl %} | <strong>Product:</strong> {{ selected_gl }}{% endif %}
+            </div>
         </div>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="card card-orange h-100 text-center shadow-sm">
-        <div class="card-body">
-          <h6 class="fw-bold">INTEREST PAID</h6>
-          <p class="fs-5 mb-0">₦{{ grand_total_interest|floatformat:2 }}</p>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="card card-orange h-100 text-center shadow-sm">
-        <div class="card-body">
-          <h6 class="fw-bold">PENALTY PAID</h6>
-          <p class="fs-5 mb-0">₦{{ grand_total_penalty|floatformat:2 }}</p>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="card border-success h-100 text-center shadow-sm">
-        <div class="card-body text-success">
-          <h6 class="fw-bold">TOTAL PAID</h6>
-          <p class="fs-5 mb-0">₦{{ total_paid_sum|floatformat:2 }}</p>
-        </div>
-      </div>
-    </div>
-  </div>
 
-  {% if loan %}
-  <div class="row mb-4 g-3">
-    <div class="col-md-6">
-      <div class="card card-green h-100 text-center shadow-sm">
-        <div class="card-body">
-          <h6 class="fw-bold">TOTAL DISBURSED</h6>
-          <p class="fs-5 mb-0">₦{{ grand_total_disbursed|floatformat:2 }}</p>
+        <!-- Summary Cards -->
+        <div class="report-summary">
+            <div class="report-summary-grid">
+                <div class="report-summary-card">
+                    <div class="report-summary-label">Total Repayments</div>
+                    <div class="report-summary-value">{{ repayment_list|length }}</div>
+                </div>
+                <div class="report-summary-card credit">
+                    <div class="report-summary-label">Principal Repaid</div>
+                    <div class="report-summary-value">{{ total_principal|currency }}</div>
+                </div>
+                <div class="report-summary-card balance">
+                    <div class="report-summary-label">Interest Repaid</div>
+                    <div class="report-summary-value">{{ total_interest|currency }}</div>
+                </div>
+                <div class="report-summary-card debit">
+                    <div class="report-summary-label">Total Collected</div>
+                    <div class="report-summary-value">{{ grand_total|currency }}</div>
+                </div>
+            </div>
         </div>
-      </div>
-    </div>
-    <div class="col-md-6">
-      <div class="card card-orange h-100 text-center shadow-sm">
-        <div class="card-body">
-          <h6 class="fw-bold">OUTSTANDING AMOUNT</h6>
-          <p class="fs-5 mb-0">₦{{ outstanding_amount|floatformat:2 }}</p>
+
+        <!-- Data Table -->
+        <div class="table-responsive">
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>S/N</th>
+                        <th>Date</th>
+                        <th>Customer Name</th>
+                        <th>Loan GL</th>
+                        <th class="text-right">Principal</th>
+                        <th class="text-right">Interest</th>
+                        <th class="text-right">Total</th>
+                        <th>Collected By</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in repayment_list %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ item.repayment_date|date:"Y-m-d" }}</td>
+                        <td>{{ item.customer_name }}</td>
+                        <td><span class="badge bg-secondary">{{ item.gl_no }}</span></td>
+                        <td class="text-right amount">{{ item.principal_amount|currency }}</td>
+                        <td class="text-right amount">{{ item.interest_amount|currency }}</td>
+                        <td class="text-right amount">{{ item.total_amount|currency }}</td>
+                        <td>{{ item.collected_by|default:"-" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-4">No repayments found for the selected criteria.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="4"><strong>Total</strong></td>
+                        <td class="text-right amount"><strong>{{ total_principal|currency }}</strong></td>
+                        <td class="text-right amount"><strong>{{ total_interest|currency }}</strong></td>
+                        <td class="text-right amount"><strong>{{ grand_total|currency }}</strong></td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
         </div>
-      </div>
-    </div>
-  </div>
-  {% endif %}
 
-  <!-- Detailed Table -->
-  <div class="card shadow-sm">
-    <div class="card-header bg-white border-bottom">
-      <h6 class="mb-0 fw-bold text-green">
-        <i class="fas fa-list me-2"></i>Repayment Details
-      </h6>
-    </div>
-    <div class="table-responsive">
-      <table class="table table-hover mb-0">
-        <thead class="table-light">
-          <tr>
-            <th>#</th>
-            <th>Customer</th>
-            <th>Branch</th>
-            <th>GL No</th>
-            <th>Ac No</th>
-            <th>Cycle</th>
-            <th>Date</th>
-            <th>Trx No</th>
-            <th>Principal</th>
-            <th>Interest</th>
-            <th>Penalty</th>
-            <th>Total Paid</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for row in repayment_list %}
-          <tr>
-            <td>{{ row.counter }}</td>
-            <td>{{ row.customer_name }}</td>
-            <td>{{ row.branch_name }}</td>
-            <td>{{ row.gl_no }}</td>
-            <td>{{ row.ac_no }}</td>
-            <td>{{ row.cycle }}</td>
-            <td>{{ row.trx_date|date:"d/m/Y" }}</td>
-            <td>{{ row.trx_no }}</td>
-            <td class="text-green fw-bold">₦{{ row.principal|floatformat:2 }}</td>
-            <td class="text-orange">₦{{ row.interest|floatformat:2 }}</td>
-            <td class="text-orange">₦{{ row.penalty|floatformat:2 }}</td>
-            <td class="fw-bold">₦{{ row.total_paid|floatformat:2 }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
+        <!-- Footer -->
+        <div class="p-3 border-top">
+            <div class="row">
+                <div class="col-md-6">
+                    <small class="text-muted">Generated: {% now "F d, Y h:i A" %}</small>
+                </div>
+                <div class="col-md-6 text-end">
+                    <small class="text-muted">By: {{ user.username }}</small>
+                </div>
+            </div>
+        </div>
 
-  {% else %}
-    {% if request.method == 'POST' %}
-    <div class="alert alert-warning d-flex align-items-center mt-5" role="alert">
-      <i class="fas fa-exclamation-triangle me-3 fs-4 text-orange"></i>
-      <div>No repayment records found for the selected criteria.</div>
+        <!-- New Search Button -->
+        <div class="p-3 text-center no-print">
+            <a href="{% url 'loan_repayment_report' %}" class="report-btn report-btn-reset">
+                <i class="fas fa-search"></i> New Search
+            </a>
+        </div>
     </div>
     {% endif %}
-  {% endif %}
 </div>
+
+<style>
+    /* Form control styling to match unified design */
+    form .form-control,
+    form select {
+        width: 100%;
+        padding: 12px 15px;
+        border: 2px solid #dee2e6;
+        border-radius: 8px;
+        font-size: 0.95rem;
+        transition: all 0.3s ease;
+    }
+    
+    form .form-control:focus,
+    form select:focus {
+        outline: none;
+        border-color: #ff8c00;
+        box-shadow: 0 0 0 3px rgba(255, 140, 0, 0.15);
+    }
+</style>
 {% endblock %}

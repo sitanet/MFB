@@ -1,272 +1,200 @@
 {% extends 'base.html' %}
-{% load humanize %}
+{% load static %}
+{% load custom_filters %}
 
 {% block content %}
-<div class="container-fluid">
-    <!-- Report Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h2 class="mb-0">{{ report_title }}</h2>
-            <div class="text-muted small">
-                Generated on: {{ current_date|date:"M d, Y H:i" }}
-                {% if reporting_date %} | Reporting Date: {{ reporting_date|date:"M d, Y" }}{% endif %}
-                {% if selected_branch %}
-                    | Branch: 
-                    {% for branch in branches %}
-                        {% if branch.id|stringformat:"s" == selected_branch %}
-                            {{ branch.branch_name }}
-                        {% endif %}
-                    {% endfor %}
-                {% endif %}
-            </div>
-        </div>
-        <div>
-            <button id="print-report" class="btn btn-sm btn-outline-secondary">
+{% include 'includes/alerts.html' %}
+{% include 'reports/includes/report_styles.html' %}
+
+<div class="report-page">
+    <!-- Page Header -->
+    <div class="report-page-header no-print">
+        <h2 class="report-page-title">
+            <i class="fas fa-user-tie"></i>
+            Active Loans by Officer
+        </h2>
+        <div class="report-header-actions">
+            {% if report_data %}
+            <button onclick="window.print()" class="report-btn report-btn-print">
                 <i class="fas fa-print"></i> Print
             </button>
-            <button id="export-excel" class="btn btn-sm btn-outline-secondary ml-2">
-                <i class="fas fa-file-excel"></i> Excel
-            </button>
+            {% endif %}
+            <a href="{% url 'loan_report' %}" class="report-btn report-btn-back">
+                <i class="fas fa-arrow-left"></i> Back
+            </a>
         </div>
     </div>
 
-    <!-- Filter Card -->
-    <div class="card mb-4 border-0 shadow-sm">
-        <div class="card-header bg-light d-flex justify-content-between align-items-center">
-            <h6 class="mb-0">Report Filters</h6>
-            <button class="btn btn-sm btn-link" type="button" data-toggle="collapse" data-target="#filterCollapse">
-                <i class="fas fa-sliders-h"></i>
-            </button>
+    <!-- Filter Form -->
+    <div class="report-filter-container no-print {% if report_data %}d-none{% endif %}">
+        <div class="report-filter-header">
+            <i class="fas fa-filter"></i>
+            Report Filters
         </div>
-        <div class="collapse show" id="filterCollapse">
-            <div class="card-body">
-                <form method="post" action="{% url 'active_loans_by_officer' %}">
-                    {% csrf_token %}
-                    <div class="form-row">
-                        <div class="form-group col-md-3">
-                            <label for="id_reporting_date" class="small font-weight-bold">Reporting Date</label>
-                            <input type="date" name="reporting_date" id="id_reporting_date" 
-                                   class="form-control form-control-sm" value="{{ reporting_date|date:'Y-m-d' }}">
+        <div class="report-filter-body">
+            <form method="post" action="{% url 'active_loans_by_officer' %}">
+                {% csrf_token %}
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="report-form-group">
+                            <label class="report-form-label">
+                                <i class="fas fa-calendar"></i> Reporting Date
+                            </label>
+                            <input type="date" class="report-form-control" name="reporting_date" 
+                                   value="{{ reporting_date|date:'Y-m-d' }}" required>
                         </div>
-                        <div class="form-group col-md-3">
-                            <label for="id_branch" class="small font-weight-bold">Branch</label>
-                            <select name="branch" id="id_branch" class="form-control form-control-sm">
-                                <option value="">All Branches</option>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="report-form-group">
+                            <label class="report-form-label">
+                                <i class="fas fa-building"></i> Branch
+                            </label>
+                            <select class="report-form-select" name="branch">
+                                {% if head_office %}
+                                    <option value="">All Branches</option>
+                                {% endif %}
                                 {% for branch in branches %}
                                     <option value="{{ branch.id }}" 
-                                        {% if selected_branch == branch.id|stringformat:"s" %}selected{% endif %}>
-                                        {{ branch.branch_code }} - {{ branch.branch_name }}
+                                        {% if selected_branch and branch.id == selected_branch.id %}selected{% endif %}>
+                                        {{ branch.branch_name }}
                                     </option>
                                 {% endfor %}
                             </select>
                         </div>
-                        <div class="form-group col-md-3">
-                            <label for="id_gl_no" class="small font-weight-bold">GL Account</label>
-                            <select name="gl_no" id="id_gl_no" class="form-control form-control-sm">
-                                <option value="">All GL Accounts</option>
-                                {% for gl_account in gl_accounts %}
-                                    <option value="{{ gl_account.gl_no }}" 
-                                        {% if selected_gl_no == gl_account.gl_no %}selected{% endif %}>
-                                        {{ gl_account.gl_no }} - {{ gl_account.gl_name }}
-                                    </option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="form-group col-md-3">
-                            <label for="id_officer" class="small font-weight-bold">Loan Officer</label>
-                            <select name="officer" id="id_officer" class="form-control form-control-sm">
+                    </div>
+                    <div class="col-md-4">
+                        <div class="report-form-group">
+                            <label class="report-form-label">
+                                <i class="fas fa-user-tie"></i> Credit Officer
+                            </label>
+                            <select class="report-form-select" name="credit_officer">
                                 <option value="">All Officers</option>
-                                {% for officer in officers %}
-                                    <option value="{{ officer.user }}" 
-                                        {% if selected_officer == officer.user %}selected{% endif %}>
+                                {% for officer in credit_officers %}
+                                    <option value="{{ officer.id }}" {% if selected_officer and selected_officer.id == officer.id %}selected{% endif %}>
                                         {{ officer.user }}
-                                        {% if officer.branch %} ({{ officer.branch.branch_code }}){% endif %}
                                     </option>
                                 {% endfor %}
                             </select>
                         </div>
                     </div>
-                    <div class="form-row mt-2">
-                        <div class="form-group col-md-12">
-                            <button type="submit" class="btn btn-primary btn-sm w-100">
-                                <i class="fas fa-filter"></i> Apply Filters
-                            </button>
-                        </div>
-                    </div>
-                </form>
-            </div>
+                </div>
+                <button type="submit" class="report-btn report-btn-generate">
+                    <i class="fas fa-cogs"></i> Generate Report
+                </button>
+            </form>
         </div>
     </div>
 
-    <!-- Report Summary Cards -->
-    {% if active_loans_by_officer %}
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card border-left-primary shadow-sm h-100">
-                <div class="card-body">
-                    <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Total Officers</div>
-                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{ active_loans_by_officer|length }}</div>
+    <!-- Results Section -->
+    {% if report_data %}
+    <div class="report-results-container">
+        <!-- Company Header -->
+        <div class="report-company-header">
+            <h3 class="report-company-name">{{ company.company_name|default:"All Branches"|upper }}</h3>
+            {% if selected_branch %}
+            <p class="report-branch-name">{{ selected_branch.branch_name }}</p>
+            {% endif %}
+            <h4 class="report-title-main">Active Loans by Officer</h4>
+            <div class="report-period-info">
+                <strong>As At:</strong> {{ reporting_date|date:"F d, Y" }}
+                {% if selected_officer %} | <strong>Officer:</strong> {{ selected_officer.user }}{% endif %}
+            </div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="report-summary">
+            <div class="report-summary-grid">
+                <div class="report-summary-card">
+                    <div class="report-summary-label">Total Officers</div>
+                    <div class="report-summary-value">{{ officer_count|default:report_data|length }}</div>
+                </div>
+                <div class="report-summary-card credit">
+                    <div class="report-summary-label">Total Active Loans</div>
+                    <div class="report-summary-value">{{ total_loans }}</div>
+                </div>
+                <div class="report-summary-card balance">
+                    <div class="report-summary-label">Total Disbursed</div>
+                    <div class="report-summary-value">{{ total_disbursed|currency }}</div>
+                </div>
+                <div class="report-summary-card debit">
+                    <div class="report-summary-label">Total Outstanding</div>
+                    <div class="report-summary-value">{{ total_outstanding|currency }}</div>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card border-left-success shadow-sm h-100">
-                <div class="card-body">
-                    <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Total Loans</div>
-                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{ grand_total_loans|intcomma }}</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card border-left-info shadow-sm h-100">
-                <div class="card-body">
-                    <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Total Amount</div>
-                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{ grand_total_amount|intcomma }}</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card border-left-warning shadow-sm h-100">
-                <div class="card-body">
-                    <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Avg Loan Size</div>
-                    <div class="h5 mb-0 font-weight-bold text-gray-800">
-                        {% with avg=grand_total_amount|default:0|floatformat:2 %}
-                            {% if grand_total_loans > 0 %}
-                                {{ avg }}
+
+        <!-- Data Table -->
+        <div class="table-responsive">
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>S/N</th>
+                        <th>Credit Officer</th>
+                        <th class="text-center">Active Loans</th>
+                        <th class="text-right">Total Disbursed</th>
+                        <th class="text-right">Total Outstanding</th>
+                        <th class="text-center">PAR %</th>
+                        <th>Performance</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in report_data %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ item.officer_name }}</td>
+                        <td class="text-center">{{ item.active_loans }}</td>
+                        <td class="text-right amount">{{ item.total_disbursed|currency }}</td>
+                        <td class="text-right amount">{{ item.total_outstanding|currency }}</td>
+                        <td class="text-center">{{ item.par_percentage|floatformat:2 }}%</td>
+                        <td>
+                            {% if item.par_percentage <= 5 %}
+                                <span class="badge bg-success">Excellent</span>
+                            {% elif item.par_percentage <= 10 %}
+                                <span class="badge bg-info">Good</span>
+                            {% elif item.par_percentage <= 20 %}
+                                <span class="badge bg-warning">Fair</span>
                             {% else %}
-                                0
+                                <span class="badge bg-danger">Poor</span>
                             {% endif %}
-                        {% endwith %}
-                    </div>
-                </div>
-            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-4">No active loans found for the selected criteria.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="2"><strong>Total</strong></td>
+                        <td class="text-center"><strong>{{ total_loans }}</strong></td>
+                        <td class="text-right amount"><strong>{{ total_disbursed|currency }}</strong></td>
+                        <td class="text-right amount"><strong>{{ total_outstanding|currency }}</strong></td>
+                        <td colspan="2"></td>
+                    </tr>
+                </tfoot>
+            </table>
         </div>
-    </div>
-    {% endif %}
 
-    <!-- Main Report Table -->
-    {% if active_loans_by_officer %}
-    <div class="card shadow-sm">
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                {% for officer, data in active_loans_by_officer.items %}
-                <div class="officer-section mb-4">
-                    <div class="d-flex justify-content-between align-items-center bg-light p-3">
-                        <h5 class="mb-0">
-                            <i class="fas fa-user-tie mr-2"></i>
-                            {{ officer }}
-                        </h5>
-                        <div class="badge badge-primary">
-                            {{ data.total_loans }} Loan{{ data.total_loans|pluralize }} • 
-                            {{ data.total_amount|intcomma }}
-                        </div>
-                    </div>
-                    <table class="table table-bordered table-hover table-sm mb-4">
-                        <thead class="thead-light">
-                            <tr>
-                                <th>GL No</th>
-                                <th>Account No</th>
-                                <th>Customer Name</th>
-                                <th class="text-right">Loan Amount</th>
-                                <th>Disbursement Date</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for loan in data.loans %}
-                            <tr>
-                                <td>{{ loan.gl_no }}</td>
-                                <td>{{ loan.ac_no }}</td>
-                                <td>{{ loan.customer_name|truncatechars:20 }}</td>
-                                <td class="text-right">{{ loan.loan_amount|intcomma }}</td>
-                                <td>{{ loan.disbursement_date|date:"Y-m-d" }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+        <!-- Footer -->
+        <div class="p-3 border-top">
+            <div class="row">
+                <div class="col-md-6">
+                    <small class="text-muted">Generated: {% now "F d, Y h:i A" %}</small>
                 </div>
-                {% endfor %}
+                <div class="col-md-6 text-end">
+                    <small class="text-muted">By: {{ user.username }}</small>
+                </div>
             </div>
         </div>
-    </div>
-    {% else %}
-    <div class="alert alert-info mt-4">
-        <i class="fas fa-info-circle"></i> No active loans found for the selected criteria. Please adjust your filters and try again.
+
+        <!-- New Search Button -->
+        <div class="p-3 text-center no-print">
+            <a href="{% url 'active_loans_by_officer' %}" class="report-btn report-btn-reset">
+                <i class="fas fa-search"></i> New Search
+            </a>
+        </div>
     </div>
     {% endif %}
 </div>
-
-<!-- JavaScript for enhanced functionality -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script>
-$(document).ready(function() {
-    // Print report functionality
-    $('#print-report').click(function() {
-        // Clone the report content
-        var printContents = $('.card.shadow-sm').clone();
-        
-        // Create a new window
-        var originalContents = $('body').html();
-        $('body').empty().append(printContents);
-        window.print();
-        $('body').html(originalContents);
-    });
-
-    // Export to Excel functionality
-    $('#export-excel').click(function() {
-        // Create a new workbook
-        var wb = XLSX.utils.book_new();
-        
-        // Add a worksheet for each officer
-        {% for officer, data in active_loans_by_officer.items %}
-        var ws_data = [
-            ['Officer: {{ officer }}', 'Loans: {{ data.total_loans }}', 'Amount: {{ data.total_amount|intcomma }}'],
-            ['GL No', 'Account No', 'Customer Name', 'Loan Amount', 'Disbursement Date']
-        ];
-        
-        {% for loan in data.loans %}
-        ws_data.push([
-            '{{ loan.gl_no }}',
-            '{{ loan.ac_no }}',
-            '{{ loan.customer_name }}',
-            {{ loan.loan_amount }},
-            '{{ loan.disbursement_date|date:"Y-m-d" }}'
-        ]);
-        {% endfor %}
-        
-        var ws = XLSX.utils.aoa_to_sheet(ws_data);
-        XLSX.utils.book_append_sheet(wb, ws, '{{ officer|truncatechars:30 }}');
-        {% endfor %}
-        
-        // Generate file and download
-        XLSX.writeFile(wb, 'Active_Loans_By_Officer_{{ current_date|date:"Ymd" }}.xlsx');
-    });
-
-    // Auto-focus the first filter field
-    $('#id_reporting_date').focus();
-});
-</script>
-
-<style>
-@media print {
-    body * {
-        visibility: hidden;
-    }
-    .card.shadow-sm, .card.shadow-sm * {
-        visibility: visible;
-    }
-    .card.shadow-sm {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-    }
-    .officer-section {
-        page-break-inside: avoid;
-    }
-    table {
-        font-size: 10pt !important;
-        width: 100% !important;
-    }
-}
-</style>
 {% endblock %}

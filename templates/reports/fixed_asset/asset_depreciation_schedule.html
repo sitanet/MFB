@@ -1,68 +1,206 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+{% load custom_filters %}
 
 {% block content %}
-<div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>Depreciation Schedule Report</h2>
-        <button onclick="window.print()" class="btn btn-primary">
-            <i class="fas fa-print"></i> Print Report
-        </button>
+{% include 'includes/alerts.html' %}
+{% include 'reports/includes/report_styles.html' %}
+
+<div class="report-page">
+    <!-- Page Header -->
+    <div class="report-page-header no-print">
+        <h2 class="report-page-title">
+            <i class="fas fa-chart-bar"></i>
+            Asset Depreciation Schedule
+        </h2>
+        <div class="report-header-actions">
+            {% if report_data %}
+            <button onclick="window.print()" class="report-btn report-btn-print">
+                <i class="fas fa-print"></i> Print
+            </button>
+            {% endif %}
+            <a href="{% url 'fixed_asset_report' %}" class="report-btn report-btn-back">
+                <i class="fas fa-arrow-left"></i> Back
+            </a>
+        </div>
     </div>
 
-    {% for item in schedule %}
-    <div class="card mb-4">
-        <div class="card-header">
-            <div class="d-flex justify-content-between">
-                <h5>{{ item.asset.asset_name }} ({{ item.asset.asset_id }})</h5>
-                <span class="badge bg-info">{{ item.remaining_life }} periods remaining</span>
+    <!-- Filter Form -->
+    <div class="report-filter-container no-print {% if report_data %}d-none{% endif %}">
+        <div class="report-filter-header">
+            <i class="fas fa-filter"></i>
+            Report Filters
+        </div>
+        <div class="report-filter-body">
+            <form method="post" action="{% url 'asset_depreciation_schedule' %}">
+                {% csrf_token %}
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="report-form-group">
+                            <label class="report-form-label">
+                                <i class="fas fa-calendar"></i> Start Date
+                            </label>
+                            <input type="date" class="report-form-control" name="start_date" 
+                                   value="{{ start_date|date:'Y-m-d' }}" required>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="report-form-group">
+                            <label class="report-form-label">
+                                <i class="fas fa-calendar-check"></i> End Date
+                            </label>
+                            <input type="date" class="report-form-control" name="end_date" 
+                                   value="{{ end_date|date:'Y-m-d' }}" required>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="report-form-group">
+                            <label class="report-form-label">
+                                <i class="fas fa-building"></i> Branch
+                            </label>
+                            <select class="report-form-select" name="branch">
+                                {% if head_office %}
+                                    <option value="">All Branches</option>
+                                {% endif %}
+                                {% for branch in branches %}
+                                    <option value="{{ branch.id }}" 
+                                        {% if selected_branch and branch.id == selected_branch.id %}selected{% endif %}>
+                                        {{ branch.branch_name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="report-form-group">
+                            <label class="report-form-label">
+                                <i class="fas fa-tags"></i> Asset Category
+                            </label>
+                            <select class="report-form-select" name="category">
+                                <option value="">All Categories</option>
+                                {% for category in categories %}
+                                    <option value="{{ category.id }}" {% if selected_category and selected_category.id == category.id %}selected{% endif %}>
+                                        {{ category.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <button type="submit" class="report-btn report-btn-generate">
+                    <i class="fas fa-cogs"></i> Generate Report
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Results Section -->
+    {% if report_data %}
+    <div class="report-results-container">
+        <!-- Company Header -->
+        <div class="report-company-header">
+            <h3 class="report-company-name">
+                {% if company %}{{ company.company_name|upper }}{% else %}ALL BRANCHES{% endif %}
+            </h3>
+            {% if selected_branch %}
+            <p class="report-branch-name">{{ selected_branch.branch_name }}</p>
+            {% endif %}
+            <h4 class="report-title-main">Asset Depreciation Schedule</h4>
+            <div class="report-period-info">
+                <strong>Period:</strong> {{ start_date|date:"F d, Y" }} to {{ end_date|date:"F d, Y" }}
             </div>
         </div>
-        <div class="card-body">
-            <div class="row mb-3">
-                <div class="col-md-3">
-                    <strong>Original Cost:</strong> {{ item.asset.asset_cost|floatformat:2 }}
+
+        <!-- Summary Cards -->
+        <div class="report-summary">
+            <div class="report-summary-grid">
+                <div class="report-summary-card">
+                    <div class="report-summary-label">Total Assets</div>
+                    <div class="report-summary-value">{{ report_data|length }}</div>
                 </div>
-                <div class="col-md-3">
-                    <strong>Residual Value:</strong> {{ item.asset.residual_value|floatformat:2 }}
+                <div class="report-summary-card credit">
+                    <div class="report-summary-label">Opening NBV</div>
+                    <div class="report-summary-value">{{ total_opening_nbv|currency }}</div>
                 </div>
-                <div class="col-md-3">
-                    <strong>Current NBV:</strong> {{ item.asset.net_book_value|floatformat:2 }}
+                <div class="report-summary-card debit">
+                    <div class="report-summary-label">Period Depreciation</div>
+                    <div class="report-summary-value">{{ total_period_depreciation|currency }}</div>
                 </div>
-                <div class="col-md-3">
-                    <strong>Periodic Depreciation:</strong> {{ item.monthly_depreciation|floatformat:2 }}
+                <div class="report-summary-card balance">
+                    <div class="report-summary-label">Closing NBV</div>
+                    <div class="report-summary-value">{{ total_closing_nbv|currency }}</div>
                 </div>
             </div>
-            
-            <table class="table table-sm table-striped">
+        </div>
+
+        <!-- Data Table -->
+        <div class="table-responsive">
+            <table class="report-table">
                 <thead>
                     <tr>
-                        <th>Period</th>
-                        <th>Date</th>
-                        <th>Depreciation Amount</th>
-                        <th>Projected NBV</th>
+                        <th>S/N</th>
+                        <th>Asset Code</th>
+                        <th>Description</th>
+                        <th>Category</th>
+                        <th class="text-right">Cost</th>
+                        <th class="text-right">Opening NBV</th>
+                        <th class="text-right">Period Depr.</th>
+                        <th class="text-right">Closing NBV</th>
+                        <th>Rate %</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for proj in item.projections %}
+                    {% for asset in report_data %}
                     <tr>
-                        <td>{{ proj.period }}</td>
-                        <td>{{ proj.date }}</td>
-                        <td>{{ proj.depreciation|floatformat:2 }}</td>
-                        <td>{{ proj.nbv|floatformat:2 }}</td>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ asset.asset_code }}</td>
+                        <td>{{ asset.description|truncatechars:25 }}</td>
+                        <td><span class="badge bg-secondary">{{ asset.category }}</span></td>
+                        <td class="text-right amount">{{ asset.cost|currency }}</td>
+                        <td class="text-right amount">{{ asset.opening_nbv|currency }}</td>
+                        <td class="text-right amount amount-negative">{{ asset.period_depreciation|currency }}</td>
+                        <td class="text-right amount">{{ asset.closing_nbv|currency }}</td>
+                        <td class="text-center">{{ asset.depreciation_rate }}%</td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="4" class="text-center">Asset fully depreciated</td></tr>
+                    <tr>
+                        <td colspan="9" class="text-center py-4">No depreciation data found for the selected criteria.</td>
+                    </tr>
                     {% endfor %}
                 </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="4"><strong>Total</strong></td>
+                        <td class="text-right amount"><strong>{{ total_cost|currency }}</strong></td>
+                        <td class="text-right amount"><strong>{{ total_opening_nbv|currency }}</strong></td>
+                        <td class="text-right amount"><strong>{{ total_period_depreciation|currency }}</strong></td>
+                        <td class="text-right amount"><strong>{{ total_closing_nbv|currency }}</strong></td>
+                        <td></td>
+                    </tr>
+                </tfoot>
             </table>
         </div>
-    </div>
-    {% empty %}
-    <div class="alert alert-info">No assets found for depreciation schedule.</div>
-    {% endfor %}
 
-    <a href="{% url 'fixed_asset_report' %}" class="btn btn-secondary">
-        <i class="fa fa-arrow-left"></i> Back
-    </a>
+        <!-- Footer -->
+        <div class="p-3 border-top">
+            <div class="row">
+                <div class="col-md-6">
+                    <small class="text-muted">Generated: {% now "F d, Y h:i A" %}</small>
+                </div>
+                <div class="col-md-6 text-end">
+                    <small class="text-muted">By: {{ user.username }}</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- New Search Button -->
+        <div class="p-3 text-center no-print">
+            <a href="{% url 'asset_depreciation_schedule' %}" class="report-btn report-btn-reset">
+                <i class="fas fa-search"></i> New Search
+            </a>
+        </div>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}

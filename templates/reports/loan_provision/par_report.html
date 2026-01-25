@@ -1,135 +1,260 @@
 {% extends 'base.html' %}
+{% load static %}
+{% load custom_filters %}
 
 {% block content %}
-<div class="container-fluid">
-    <div class="row column_title">
-        <div class="col-md-12">
-            <div class="page_title">
-                <h2>Portfolio At Risk Report</h2>
-            </div>
+{% include 'includes/alerts.html' %}
+{% include 'reports/includes/report_styles.html' %}
+
+<div class="report-page">
+    <!-- Page Header -->
+    <div class="report-page-header no-print">
+        <h2 class="report-page-title">
+            <i class="fas fa-chart-pie"></i>
+            Portfolio at Risk (PAR) Report
+        </h2>
+        <div class="report-header-actions">
+            {% if report_data %}
+            <button onclick="window.print()" class="report-btn report-btn-print">
+                <i class="fas fa-print"></i> Print
+            </button>
+            {% endif %}
+            <a href="{% url 'loan_report' %}" class="report-btn report-btn-back">
+                <i class="fas fa-arrow-left"></i> Back
+            </a>
         </div>
     </div>
 
-    <!-- Form Card (Displayed if no report) -->
-    <div class="card p-4 shadow-sm" id="reportFormCard" style="{% if report.loans|length == 0 and not reporting_date %}display:block;{% else %}display:none;{% endif %}">
-        <div class="card-body">
-            <form id="reportingForm" method="get" action="{% url 'portfolio_at_risk_report_view' %}">
+    <!-- Filter Form -->
+    <div class="report-filter-container no-print {% if report_data %}d-none{% endif %}">
+        <div class="report-filter-header">
+            <i class="fas fa-filter"></i>
+            Report Filters
+        </div>
+        <div class="report-filter-body">
+            <form method="post" action="{% url 'par_report' %}">
                 {% csrf_token %}
-                <div class="form-row">
-                    <!-- Reporting Date Field -->
-                    <div class="form-group col-md-3">
-                        <label for="reporting_date">Reporting Date:</label>
-                        <input type="date" class="form-control" name="reporting_date" id="reporting_date" value="{{ reporting_date|date:'Y-m-d' }}">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="report-form-group">
+                            <label class="report-form-label">
+                                <i class="fas fa-calendar"></i> Reporting Date
+                            </label>
+                            <input type="date" class="report-form-control" name="reporting_date" 
+                                   value="{{ reporting_date|date:'Y-m-d' }}" required>
+                        </div>
                     </div>
-
-                    <!-- Product (GL No) Field -->
-                    <div class="form-group col-md-3">
-                        <label for="gl_no">Product (GL No):</label>
-                        <select class="form-control" name="gl_no" id="gl_no">
-                            <option value="">All Products</option>
-                            {% for gl_account in report.gl_nos %}
-                                <option value="{{ gl_account.gl_no }}" {% if selected_product == gl_account.gl_no %}selected{% endif %}>
-                                    {{ gl_account.gl_no }} - {{ gl_account.gl_name }}
-                                </option>
-                            {% endfor %}
-                        </select>
+                    <div class="col-md-4">
+                        <div class="report-form-group">
+                            <label class="report-form-label">
+                                <i class="fas fa-building"></i> Branch
+                            </label>
+                            <select class="report-form-select" name="branch">
+                                {% if head_office %}
+                                    <option value="">All Branches</option>
+                                {% endif %}
+                                {% for branch in branches %}
+                                    <option value="{{ branch.id }}" 
+                                        {% if selected_branch and branch.id == selected_branch.id %}selected{% endif %}>
+                                        {{ branch.branch_name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
                     </div>
-
-                    <!-- Account Officer Field -->
-                    <div class="form-group col-md-3">
-                        <label for="account_officer">Account Officer:</label>
-                        <select class="form-control" name="account_officer" id="account_officer">
-                            <option value="">All Account Officers</option>
-                            {% for officer in report.account_officers %}
-                                <option value="{{ officer.id }}" {% if selected_officer == officer.id %}selected{% endif %}>
-                                    {{ officer.user }}
-                                </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-
-                    <!-- Exclude Internal Account Checkbox -->
-                    <div class="form-group col-md-3">
-                        <div class="form-check mt-4">
-                            <input type="checkbox" class="form-check-input" id="exclude_ac_no_one" name="exclude_ac_no_one" {% if exclude_ac_no_one %}checked{% endif %}>
-                            <label class="form-check-label" for="exclude_ac_no_one">Exclude Internal Accounts</label>
+                    <div class="col-md-4">
+                        <div class="report-form-group">
+                            <label class="report-form-label">
+                                <i class="fas fa-book"></i> GL Account
+                            </label>
+                            <select class="report-form-select" name="gl_no">
+                                <option value="">All GL Accounts</option>
+                                {% for gl in gl_accounts %}
+                                    <option value="{{ gl.gl_no }}" {% if selected_gl_no == gl.gl_no %}selected{% endif %}>
+                                        {{ gl.gl_no }} - {{ gl.gl_name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
                         </div>
                     </div>
                 </div>
-
-                <button type="submit" class="btn btn-primary mt-4">Generate Report</button>
+                <button type="submit" class="report-btn report-btn-generate">
+                    <i class="fas fa-cogs"></i> Generate Report
+                </button>
             </form>
         </div>
     </div>
 
-    <!-- Report Card (Displayed after form submission) -->
-    {% if report.loans|length > 0 or reporting_date %}
-    <div class="card mt-4 p-4 shadow-sm" id="reportCard">
-        <div class="card-body">
-            <!-- Back to Form Button -->
-            <div class="text-right">
-                <button class="btn btn-secondary mb-3" id="backToFormButton">Back to Form</button>
+    <!-- Results Section -->
+    {% if report_data %}
+    <div class="report-results-container">
+        <!-- Company Header -->
+        <div class="report-company-header">
+            <h3 class="report-company-name">{{ company.company_name|default:"All Branches"|upper }}</h3>
+            {% if selected_branch %}
+            <p class="report-branch-name">{{ selected_branch.branch_name }}</p>
+            {% endif %}
+            <h4 class="report-title-main">Portfolio at Risk (PAR) Report</h4>
+            <div class="report-period-info">
+                <strong>As At:</strong> {{ reporting_date|date:"F d, Y" }}
             </div>
+        </div>
 
-            <div class="card-body text-center">
-                <h3 style="color: blue;">Portfolio At Risk</h3>
-                <h5>Reporting Date: {{ reporting_date|date:"F j, Y" }}</h5>
-                <p>Total Loans: <strong>{{ report.total_loans }}</strong></p>
-                <p>Total Outstanding Balance: <strong>{{ report.total_outstanding|floatformat:2 }}</strong></p>
+        <!-- Summary Cards -->
+        <div class="report-summary">
+            <div class="report-summary-grid">
+                <div class="report-summary-card">
+                    <div class="report-summary-label">Total Portfolio</div>
+                    <div class="report-summary-value">{{ total_portfolio|currency }}</div>
+                </div>
+                <div class="report-summary-card credit">
+                    <div class="report-summary-label">Performing Loans</div>
+                    <div class="report-summary-value">{{ performing_loans|currency }}</div>
+                </div>
+                <div class="report-summary-card debit">
+                    <div class="report-summary-label">PAR > 30 Days</div>
+                    <div class="report-summary-value">{{ par_30|currency }}</div>
+                </div>
+                <div class="report-summary-card balance">
+                    <div class="report-summary-label">PAR Ratio</div>
+                    <div class="report-summary-value">{{ par_ratio|floatformat:2 }}%</div>
+                </div>
             </div>
-            
-            <!-- Beautified Table -->
-            <table class="table table-hover table-bordered table-striped text-center mt-3">
-                <thead class="thead-dark">
+        </div>
+
+        <!-- PAR Breakdown Table -->
+        <div class="p-4">
+            <h5 class="fw-bold mb-3"><i class="fas fa-chart-bar me-2"></i>PAR Breakdown by Aging</h5>
+            <table class="report-table">
+                <thead>
                     <tr>
-                        <th>GL No</th>
-                        <th>Account No</th>
-                        <th>Cycle</th>
-                        <th>Branch</th>
-                        <th>Days in Arrears</th>
-                        <th>Outstanding Balance</th>
-                        <th>Pass & Watch</th>
-                        <th>Sub-standard</th>
-                        <th>Doubtful</th>
-                        <th>Loss</th>
+                        <th>Aging Category</th>
+                        <th class="text-center">No. of Loans</th>
+                        <th class="text-right">Outstanding Balance</th>
+                        <th class="text-right">% of Portfolio</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for loan in report.loans %}
                     <tr>
-                        <td>{{ loan.gl_no }}</td>
-                        <td>{{ loan.ac_no }}</td>
-                        <td>{{ loan.cycle }}</td>
-                        <td>{{ loan.branch }}</td>
-                        <td>{{ loan.days_in_arrears }}</td>
-                        <td>{{ loan.outstanding_balance|floatformat:2 }}</td>
-                        <td class="{% if loan.category == 'Pass & Watch' %}text-success font-weight-bold{% endif %}">
-                            {% if loan.category == 'Pass & Watch' %}{{ loan.provision_amount|floatformat:2 }}{% else %}0{% endif %}
-                        </td>
-                        <td class="{% if loan.category == 'Sub-standard' %}text-warning font-weight-bold{% endif %}">
-                            {% if loan.category == 'Sub-Standard' %}{{ loan.provision_amount|floatformat:2 }}{% else %}0{% endif %}
-                        </td>
-                        <td class="{% if loan.category == 'Doubtful' %}text-danger font-weight-bold{% endif %}">
-                            {% if loan.category == 'Doubtful' %}{{ loan.provision_amount|floatformat:2 }}{% else %}0{% endif %}
-                        </td>
-                        <td class="{% if loan.category == 'Loss' %}text-danger font-weight-bold{% endif %}">
-                            {% if loan.category == 'Loss' %}{{ loan.provision_amount|floatformat:2 }}{% else %}0{% endif %}
-                        </td>
+                        <td>Current (0 days)</td>
+                        <td class="text-center">{{ current_count }}</td>
+                        <td class="text-right amount amount-positive">{{ current_balance|currency }}</td>
+                        <td class="text-right">{{ current_percentage|floatformat:2 }}%</td>
                     </tr>
-                    {% endfor %}
+                    <tr>
+                        <td>1-30 Days</td>
+                        <td class="text-center">{{ par_1_30_count }}</td>
+                        <td class="text-right amount">{{ par_1_30|currency }}</td>
+                        <td class="text-right">{{ par_1_30_percentage|floatformat:2 }}%</td>
+                    </tr>
+                    <tr>
+                        <td>31-60 Days</td>
+                        <td class="text-center">{{ par_31_60_count }}</td>
+                        <td class="text-right amount amount-negative">{{ par_31_60|currency }}</td>
+                        <td class="text-right">{{ par_31_60_percentage|floatformat:2 }}%</td>
+                    </tr>
+                    <tr>
+                        <td>61-90 Days</td>
+                        <td class="text-center">{{ par_61_90_count }}</td>
+                        <td class="text-right amount amount-negative">{{ par_61_90|currency }}</td>
+                        <td class="text-right">{{ par_61_90_percentage|floatformat:2 }}%</td>
+                    </tr>
+                    <tr>
+                        <td>91-180 Days</td>
+                        <td class="text-center">{{ par_91_180_count }}</td>
+                        <td class="text-right amount amount-negative">{{ par_91_180|currency }}</td>
+                        <td class="text-right">{{ par_91_180_percentage|floatformat:2 }}%</td>
+                    </tr>
+                    <tr>
+                        <td>> 180 Days</td>
+                        <td class="text-center">{{ par_180_count }}</td>
+                        <td class="text-right amount amount-negative">{{ par_180|currency }}</td>
+                        <td class="text-right">{{ par_180_percentage|floatformat:2 }}%</td>
+                    </tr>
                 </tbody>
+                <tfoot>
+                    <tr>
+                        <td><strong>Total</strong></td>
+                        <td class="text-center"><strong>{{ total_loans }}</strong></td>
+                        <td class="text-right amount"><strong>{{ total_portfolio|currency }}</strong></td>
+                        <td class="text-right"><strong>100.00%</strong></td>
+                    </tr>
+                </tfoot>
             </table>
+        </div>
+
+        <!-- Detailed Loan List -->
+        {% if report_data %}
+        <div class="p-4">
+            <h5 class="fw-bold mb-3"><i class="fas fa-list me-2"></i>At Risk Loans Detail</h5>
+            <div class="table-responsive">
+                <table class="report-table">
+                    <thead>
+                        <tr>
+                            <th>S/N</th>
+                            <th>Customer Name</th>
+                            <th>Loan GL</th>
+                            <th>Days Overdue</th>
+                            <th class="text-right">Outstanding</th>
+                            <th class="text-right">Arrears</th>
+                            <th>Category</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for loan in report_data %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ loan.customer_name }}</td>
+                            <td><span class="badge bg-secondary">{{ loan.gl_no }}</span></td>
+                            <td class="text-center">{{ loan.days_overdue }}</td>
+                            <td class="text-right amount">{{ loan.outstanding|currency }}</td>
+                            <td class="text-right amount amount-negative">{{ loan.arrears|currency }}</td>
+                            <td>
+                                {% if loan.days_overdue <= 30 %}
+                                    <span class="badge bg-info">PAR 1-30</span>
+                                {% elif loan.days_overdue <= 60 %}
+                                    <span class="badge bg-warning">PAR 31-60</span>
+                                {% elif loan.days_overdue <= 90 %}
+                                    <span class="badge bg-orange">PAR 61-90</span>
+                                {% elif loan.days_overdue <= 180 %}
+                                    <span class="badge bg-danger">PAR 91-180</span>
+                                {% else %}
+                                    <span class="badge bg-dark">PAR > 180</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Footer -->
+        <div class="p-3 border-top">
+            <div class="row">
+                <div class="col-md-6">
+                    <small class="text-muted">Generated: {% now "F d, Y h:i A" %}</small>
+                </div>
+                <div class="col-md-6 text-end">
+                    <small class="text-muted">By: {{ user.username }}</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- New Search Button -->
+        <div class="p-3 text-center no-print">
+            <a href="{% url 'par_report' %}" class="report-btn report-btn-reset">
+                <i class="fas fa-search"></i> New Search
+            </a>
         </div>
     </div>
     {% endif %}
 </div>
 
-<script>
-    document.getElementById('backToFormButton').addEventListener('click', function() {
-        // Hide the report card and show the form card
-        document.getElementById('reportCard').style.display = 'none';
-        document.getElementById('reportFormCard').style.display = 'block';
-    });
-</script>
-
+<style>
+    .bg-orange {
+        background-color: #fd7e14 !important;
+    }
+</style>
 {% endblock %}
