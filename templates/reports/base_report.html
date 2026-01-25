@@ -1,0 +1,482 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block extra_css %}
+<style>
+    /* ===== Report Global Layout ===== */
+    .report-container {
+        background: linear-gradient(135deg, #f9fafc, #fff7f0);
+        min-height: 100vh;
+        padding: 30px 25px;
+    }
+
+    /* ===== Page Header ===== */
+    .report-header {
+        background: #ffffff;
+        border-radius: 15px;
+        padding: 20px 30px;
+        margin-bottom: 25px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+
+    .report-title {
+        font-weight: 700;
+        color: #2e3b32;
+        margin: 0;
+        font-size: 1.5rem;
+    }
+
+    .report-title i {
+        color: #ff8c00;
+        margin-right: 10px;
+    }
+
+    .report-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .btn-report {
+        border-radius: 10px;
+        padding: 10px 20px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        border: none;
+    }
+
+    .btn-print {
+        background: linear-gradient(90deg, #3498db, #2980b9);
+        color: #fff;
+    }
+
+    .btn-print:hover {
+        background: linear-gradient(90deg, #2980b9, #3498db);
+        transform: translateY(-2px);
+        color: #fff;
+    }
+
+    .btn-export {
+        background: linear-gradient(90deg, #27ae60, #2ecc71);
+        color: #fff;
+    }
+
+    .btn-export:hover {
+        background: linear-gradient(90deg, #2ecc71, #27ae60);
+        transform: translateY(-2px);
+        color: #fff;
+    }
+
+    .btn-back {
+        background: #6c757d;
+        color: #fff;
+    }
+
+    .btn-back:hover {
+        background: #5a6268;
+        transform: translateY(-2px);
+        color: #fff;
+    }
+
+    /* ===== Filter Form Card ===== */
+    .report-filter-card {
+        background: #ffffff;
+        border-radius: 15px;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
+        padding: 25px 30px;
+        margin-bottom: 25px;
+        transition: all 0.3s ease;
+    }
+
+    .report-filter-card:hover {
+        box-shadow: 0 8px 25px rgba(255, 140, 0, 0.15);
+    }
+
+    .filter-title {
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #f0f0f0;
+    }
+
+    .filter-title i {
+        color: #ff8c00;
+        margin-right: 8px;
+    }
+
+    /* ===== Form Controls ===== */
+    .report-filter-card label {
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 5px;
+    }
+
+    .report-filter-card .form-control,
+    .report-filter-card .form-select {
+        border-radius: 10px;
+        border: 1px solid #dee2e6;
+        padding: 10px 15px;
+        transition: all 0.2s ease;
+    }
+
+    .report-filter-card .form-control:focus,
+    .report-filter-card .form-select:focus {
+        border-color: #ff8c00;
+        box-shadow: 0 0 5px rgba(255, 140, 0, 0.3);
+    }
+
+    .btn-generate {
+        background: linear-gradient(90deg, #ff8c00, #ff6b00);
+        border: none;
+        border-radius: 12px;
+        font-weight: 600;
+        padding: 12px 30px;
+        color: #fff;
+        transition: all 0.3s ease;
+    }
+
+    .btn-generate:hover {
+        background: linear-gradient(90deg, #ff6b00, #ff8c00);
+        transform: scale(1.02);
+        color: #fff;
+    }
+
+    /* ===== Report Content Card ===== */
+    .report-content-card {
+        background: #ffffff;
+        border-radius: 15px;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
+        overflow: hidden;
+    }
+
+    /* ===== Company Header (for printable reports) ===== */
+    .report-company-header {
+        text-align: center;
+        padding: 25px;
+        background: linear-gradient(135deg, #f8f9fa, #ffffff);
+        border-bottom: 2px solid #f0f0f0;
+    }
+
+    .company-name {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #2c3e50;
+        margin-bottom: 5px;
+    }
+
+    .branch-name {
+        font-size: 1rem;
+        color: #7f8c8d;
+        margin-bottom: 5px;
+    }
+
+    .company-address {
+        font-size: 0.9rem;
+        color: #95a5a6;
+        font-style: italic;
+    }
+
+    .report-name {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #ff8c00;
+        margin-top: 15px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .report-period {
+        font-size: 0.95rem;
+        color: #555;
+        margin-top: 10px;
+    }
+
+    /* ===== Data Table ===== */
+    .report-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .report-table thead {
+        background: linear-gradient(90deg, #2c3e50, #34495e);
+        color: #fff;
+    }
+
+    .report-table th {
+        padding: 14px 12px;
+        font-weight: 600;
+        text-align: left;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .report-table td {
+        padding: 12px;
+        border-bottom: 1px solid #f0f0f0;
+        font-size: 0.95rem;
+        color: #2c3e50;
+    }
+
+    .report-table tbody tr:nth-child(even) {
+        background-color: #fafbfc;
+    }
+
+    .report-table tbody tr:hover {
+        background-color: #fff7f0;
+    }
+
+    /* ===== Number Formatting ===== */
+    .text-right {
+        text-align: right !important;
+    }
+
+    .text-center {
+        text-align: center !important;
+    }
+
+    .amount-positive {
+        color: #27ae60;
+        font-weight: 600;
+    }
+
+    .amount-negative {
+        color: #e74c3c;
+        font-weight: 600;
+    }
+
+    .amount-zero {
+        color: #7f8c8d;
+    }
+
+    /* ===== Table Footer / Totals ===== */
+    .report-table tfoot {
+        background: linear-gradient(90deg, #f8f9fa, #fff7f0);
+        font-weight: 700;
+    }
+
+    .report-table tfoot td {
+        padding: 14px 12px;
+        border-top: 2px solid #ff8c00;
+        font-size: 1rem;
+    }
+
+    /* ===== Summary Cards ===== */
+    .report-summary {
+        padding: 25px;
+        background: #f8f9fa;
+        border-top: 1px solid #f0f0f0;
+    }
+
+    .summary-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+    }
+
+    .summary-card {
+        flex: 1;
+        min-width: 200px;
+        background: #ffffff;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+        text-align: center;
+    }
+
+    .summary-card .label {
+        font-size: 0.85rem;
+        color: #7f8c8d;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 8px;
+    }
+
+    .summary-card .value {
+        font-size: 1.5rem;
+        font-weight: 700;
+    }
+
+    .summary-card.total-debit .value { color: #e74c3c; }
+    .summary-card.total-credit .value { color: #27ae60; }
+    .summary-card.total-balance .value { color: #3498db; }
+    .summary-card.total-count .value { color: #9b59b6; }
+
+    /* ===== Empty State ===== */
+    .report-empty {
+        text-align: center;
+        padding: 60px 30px;
+        color: #7f8c8d;
+    }
+
+    .report-empty i {
+        font-size: 4rem;
+        color: #bdc3c7;
+        margin-bottom: 20px;
+    }
+
+    .report-empty h4 {
+        color: #7f8c8d;
+        margin-bottom: 10px;
+    }
+
+    /* ===== Pagination ===== */
+    .report-pagination {
+        padding: 20px;
+        display: flex;
+        justify-content: center;
+    }
+
+    .report-pagination .pagination {
+        margin: 0;
+    }
+
+    .report-pagination .page-link {
+        border-radius: 8px;
+        margin: 0 3px;
+        color: #ff8c00;
+        border-color: #dee2e6;
+    }
+
+    .report-pagination .page-item.active .page-link {
+        background: #ff8c00;
+        border-color: #ff8c00;
+    }
+
+    /* ===== Print Styles ===== */
+    @media print {
+        body * {
+            visibility: hidden;
+        }
+
+        .printable-area,
+        .printable-area * {
+            visibility: visible;
+        }
+
+        .printable-area {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 20px;
+        }
+
+        .report-header,
+        .report-filter-card,
+        .report-actions,
+        .report-pagination,
+        .no-print {
+            display: none !important;
+        }
+
+        .report-content-card {
+            box-shadow: none;
+            border: none;
+        }
+
+        .report-table th {
+            background: #2c3e50 !important;
+            color: #fff !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .report-table tbody tr:nth-child(even) {
+            background-color: #f5f5f5 !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+    }
+
+    /* ===== Responsive ===== */
+    @media (max-width: 768px) {
+        .report-header {
+            flex-direction: column;
+            text-align: center;
+        }
+
+        .report-actions {
+            justify-content: center;
+        }
+
+        .report-filter-card {
+            padding: 20px;
+        }
+
+        .summary-card {
+            min-width: 100%;
+        }
+    }
+</style>
+{% block report_css %}{% endblock %}
+{% endblock %}
+
+{% block content %}
+<div class="report-container">
+    <!-- Report Header -->
+    <div class="report-header no-print">
+        <h2 class="report-title">
+            <i class="fas fa-{% block report_icon %}file-alt{% endblock %}"></i>
+            {% block report_title %}Report{% endblock %}
+        </h2>
+        <div class="report-actions">
+            {% block report_actions %}
+            <button onclick="window.print()" class="btn btn-report btn-print">
+                <i class="fas fa-print me-2"></i>Print
+            </button>
+            <a href="javascript:history.back()" class="btn btn-report btn-back">
+                <i class="fas fa-arrow-left me-2"></i>Back
+            </a>
+            {% endblock %}
+        </div>
+    </div>
+
+    <!-- Filter Form (optional) -->
+    {% block report_filter %}{% endblock %}
+
+    <!-- Report Content -->
+    <div class="report-content-card printable-area">
+        {% block report_content %}{% endblock %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Format numbers with commas and handle negatives
+function formatNumber(num) {
+    if (num === null || num === undefined || isNaN(num)) return '0.00';
+    num = parseFloat(num);
+    if (num < 0) {
+        return '(' + Math.abs(num).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ')';
+    }
+    return num.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+}
+
+// Apply formatting to all amount cells
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.format-amount').forEach(function(cell) {
+        let value = parseFloat(cell.dataset.value || cell.textContent.replace(/,/g, ''));
+        if (!isNaN(value)) {
+            cell.textContent = formatNumber(value);
+            if (value < 0) {
+                cell.classList.add('amount-negative');
+            } else if (value > 0) {
+                cell.classList.add('amount-positive');
+            } else {
+                cell.classList.add('amount-zero');
+            }
+        }
+    });
+});
+</script>
+{% block report_js %}{% endblock %}
+{% endblock %}

@@ -1,9 +1,11 @@
-{% extends 'base.html' %}
+{% extends 'reports/base_report.html' %}
 {% load static %}
+{% load custom_filters %}
 
-{% block content %}
-{% include 'includes/alerts.html' %}
+{% block report_icon %}balance-scale{% endblock %}
+{% block report_title %}Trial Balance{% endblock %}
 
+{% block report_css %}
 <style>
     /* ===== Global Layout ===== */
     .container-fluid {
@@ -239,18 +241,18 @@
                             <tr>
                                 <td>{{ entry.gl_no }}</td>
                                 <td>{{ entry.gl_name }}</td>
-                                <td>{{ entry.debit }}</td>
-                                <td>{{ entry.credit }}</td>
-                                <td>{% if entry.balance < 0 %}<span style="color: red;">{{ entry.balance }}</span>{% else %}{{ entry.balance }}{% endif %}</td>
+                                <td class="text-end">{{ entry.debit|currency }}</td>
+                                <td class="text-end">{{ entry.credit|currency }}</td>
+                                <td class="text-end">{{ entry.balance|currency_signed }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
                         <tfoot>
                             <tr class="fw-bold" style="background: #fef5e7;">
                                 <td colspan="2">Total</td>
-                                <td>{{ total_debit }}</td>
-                                <td>{{ total_credit }}</td>
-                                <td style="{% if total_balance < 0 %}color:red;{% endif %}">{{ total_balance }}</td>
+                                <td class="text-end">{{ total_debit|currency }}</td>
+                                <td class="text-end">{{ total_credit|currency }}</td>
+                                <td class="text-end">{{ total_balance|currency_signed }}</td>
                             </tr>
                         </tfoot>
                     </table>
@@ -298,4 +300,10 @@
         });
     });
 </script>
+{% endblock %}
+
+{% block report_filter %}
+{% endblock %}
+
+{% block report_content %}
 {% endblock %}
