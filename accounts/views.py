@@ -2007,9 +2007,9 @@ def permission_required_view(permission_code):
 
 
 @login_required(login_url='login')
-@user_passes_test(check_role_admin)
+@user_passes_test(check_role_system_admin)
 def manage_role_permissions(request):
-    """View to manage role permissions"""
+    """View to manage role permissions - Only System Administrator (role 1) can access"""
     roles = User.ROLE_CHOICE
     selected_role = request.GET.get('role')
     current_permissions = []
@@ -2045,9 +2045,9 @@ def manage_role_permissions(request):
 
 
 @login_required(login_url='login')
-@user_passes_test(check_role_admin)
+@user_passes_test(check_role_system_admin)
 def view_role_permissions(request):
-    """View all role permissions summary"""
+    """View all role permissions summary - Only System Administrator (role 1) can access"""
     roles = User.ROLE_CHOICE
     role_permissions_list = []
     

@@ -7,7 +7,7 @@ from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 from django.shortcuts import render, redirect
 from accounts.models import User
-from accounts.views import check_role_admin
+from accounts.views import check_role_admin, permission_required_view
 from company.models import Company, Branch
 from customers.forms import CustomerForm
 from customers.models import Customer
@@ -60,8 +60,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse, Http404
 
 @login_required(login_url='login')
-@user_passes_test(check_role_admin)
-
+@permission_required_view('make_deposit')
 def deposit(request, uuid):
     # Get user and branch - FIXED: use get_branch() method
     user = request.user
@@ -277,8 +276,7 @@ def deposit(request, uuid):
     
      
 @login_required(login_url='login')
-@user_passes_test(check_role_admin)
-
+@permission_required_view('make_withdrawal')
 def withdraw(request, uuid):
     # Get user and branch information
     user = request.user
@@ -486,11 +484,7 @@ def withdraw(request, uuid):
     })
 
 @login_required(login_url='login')
-@user_passes_test(check_role_admin)
-# or generate_deposit_id() as appropriate
-
-
-
+@permission_required_view('record_income')
 def income(request, uuid):
     # Retrieve the logged-in user's branch (Branch instance)
     user_branch = request.user.branch
@@ -656,10 +650,7 @@ def income(request, uuid):
 
 
 @login_required(login_url='login')
-@user_passes_test(check_role_admin)
-# Ensure this function exists
-
-
+@permission_required_view('record_expense')
 def expense(request, uuid):
     # Get user and branch information
     user = request.user
@@ -886,7 +877,7 @@ def expense(request, uuid):
 #     return render(request, 'transactions/cash_trans/choose_deposit.html', context)
 
 @login_required(login_url='login')
-@user_passes_test(check_role_admin)
+@permission_required_view('make_deposit')
 def choose_transaction(request):
     """Combined view for deposit and withdrawal - single page with both actions"""
     from accounts.utils import get_branch_from_vendor_db
@@ -925,7 +916,7 @@ def choose_transaction(request):
 
 
 @login_required(login_url='login')
-@user_passes_test(check_role_admin)
+@permission_required_view('make_deposit')
 def choose_deposit(request):
     data = Memtrans.objects.all().order_by('-id').first()
 
@@ -960,7 +951,7 @@ def choose_deposit(request):
 
 
 @login_required(login_url='login')
-@user_passes_test(check_role_admin)
+@permission_required_view('make_withdrawal')
 def choose_withdrawal(request):
     # Get the latest transaction (if any exists)
     latest_transaction = Memtrans.objects.order_by('-id').first()
@@ -1022,8 +1013,7 @@ def choose_withdrawal(request):
     return render(request, 'transactions/cash_trans/choose_withdrawal.html', context)
 
 @login_required(login_url='login')
-@user_passes_test(check_role_admin)
-@login_required
+@permission_required_view('record_income')
 def choose_income(request):
     # Get the branch of the logged-in user
     user_branch = request.user.branch
@@ -1062,9 +1052,7 @@ def choose_income(request):
 
 
 @login_required(login_url='login')
-@user_passes_test(check_role_admin)
-
-@login_required
+@permission_required_view('record_expense')
 def choose_expense(request):
     # Get the branch of the logged-in user
     user_branch = request.user.branch
@@ -1102,8 +1090,7 @@ def choose_expense(request):
 
 
 @login_required(login_url='login')
-@user_passes_test(check_role_admin)
-@login_required
+@permission_required_view('general_journal')
 def choose_general_journal(request):
     # Get the branch of the logged-in user
     user_branch = request.user.branch
@@ -1138,7 +1125,8 @@ def choose_general_journal(request):
     return render(request, 'transactions/non_cash/choose_general_journal.html', context)
 
 
-
+@login_required(login_url='login')
+@permission_required_view('general_journal')
 def general_journal(request, uuid):
     user_branch = request.user.branch
     # Fetch the customer with the given UUID
@@ -1288,9 +1276,7 @@ def get_customer_data(request):
 
 
 @login_required(login_url='login')
-@user_passes_test(check_role_admin)
-
-
+@permission_required_view('seek_and_update')
 def seek_and_update(request):
     form = SeekAndUpdateForm()
     updated_records = None
@@ -1399,6 +1385,9 @@ from .forms import UploadFileForm
 from .models import Memtrans, Customer
 from .utils import generate_upload_excel  # Ensure you import your utility function
 
+
+@login_required(login_url='login')
+@permission_required_view('upload_transactions')
 def upload_file(request):
     if request.method == 'POST':
         form = UploadFileForm(request.POST, request.FILES)

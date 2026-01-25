@@ -23,56 +23,79 @@
     </div>
     <div class="sidebar_blog_2">
           <ul class="list-unstyled components">
+                        {% if has_permission('view_dashboard') %}
                         <li>
                         <a href="{% url 'dashboard' %}">
                         <i class="fas fa-tachometer-alt" style="color: orange;"></i> 
                         <span>Dashboard</span>
                         </a>
                         </li>
+                        {% endif %}
 
+                {% if has_permission('view_chart_of_accounts') or has_permission('create_account') %}
                 <li class="active">
                       <a href="#dashboard" data-toggle="collapse" aria-expanded="false"
                             class="dropdown-toggle"><i class="fas fa-file" style="color: yellow;"></i>
                             <span>File</span></a>
                       <ul class="collapse list-unstyled" id="dashboard">
+                            {% if has_permission('create_account') %}
                             <li>
                                   <a href="{% url 'new_accounts' %}">> <span>Create Account</span></a>
                             </li>
+                            {% endif %}
                       </ul>
                 </li>
+                {% endif %}
 
+                {% if has_permission('make_deposit') or has_permission('make_withdrawal') or has_permission('record_income') or has_permission('record_expense') or has_permission('general_journal') or has_permission('view_loans') or has_permission('view_fixed_deposits') or has_permission('view_fixed_assets') %}
                 <li>
                       <a href="#transactions" data-toggle="collapse" aria-expanded="false"
                             class="dropdown-toggle">
                             <i class="fas fa-exchange-alt" style="color: purple;"></i></i><span>Transactions</span>
                       </a>
                       <ul class="collapse list-unstyled" id="transactions">
+                            {% if has_permission('make_deposit') or has_permission('make_withdrawal') %}
                             <li><a href="{% url 'choose_transaction' %}">><span>Choose Transaction</span></a></li>
-                            <!-- <li><a href="{% url 'choose_withdrawal' %}">><span>Withdrawal</span></a> -->
-                            </li>
+                            {% endif %}
+                            {% if has_permission('record_income') %}
                             <li><a href="{% url 'choose_income' %}">><span>Income Entry</span></a></li>
+                            {% endif %}
+                            {% if has_permission('record_expense') %}
                             <li><a href="{% url 'choose_expense' %}">><span>Expenses Entry</span></a>
                             </li>
+                            {% endif %}
+                            {% if has_permission('general_journal') %}
                             <li><a href="{% url 'choose_general_journal' %}">><span>General
                                                         Journal</span></a></li>
-                                              
-                              <li><a href="{% url 'upload_file' %}">><span>Bulk Transactions</span></a></li>
+                            {% endif %}
+                            {% if has_permission('upload_transactions') %}
+                            <li><a href="{% url 'upload_file' %}">><span>Bulk Transactions</span></a></li>
+                            {% endif %}
+                            {% if has_permission('view_loans') %}
                             <li><a href="{% url 'loans' %}">><span>Loans</span></a></li>
+                            {% endif %}
+                            {% if has_permission('view_fixed_deposits') %}
                             <li><a href="{% url 'fixed_dep' %}">><span>Fixed Deposit</span></a>
                             </li>
+                            {% endif %}
+                            {% if has_permission('seek_and_update') %}
                             <li><a href="{% url 'seek_and_update' %}"><span>Error Correction</span></a></li>
+                            {% endif %}
                             <li><a href="invoice_history.html">><span>Browser Chart</span></a></li>
                             <li><a href="sales_transactions.html">><span>Bank Placement</span></a>
                             </li>
                             <li><a href="purchase_transactions.html">><span>Delete Error Corrected
                                               Transaction</span></a>
                             </li>
+                            {% if has_permission('view_fixed_assets') %}
                             <li><a href="{% url 'fixed_asset_dash' %}">><span>Fixed Assets</span></a></li>
+                            {% endif %}
                             <li><a href="invoice_history.html">><span>Transaction
                                               Autorization</span></a></li>
 
                       </ul>
                 </li>
+                {% endif %}
                 
            
                 <!-- <li>
@@ -103,39 +126,60 @@
                       </ul>
                 </li> -->
 
+                {% if has_permission('view_reports') or has_permission('front_office_report') or has_permission('back_office_report') or has_permission('financial_report') or has_permission('loan_reports') or has_permission('savings_reports') %}
                 <li>
                       <a href="#reports" data-toggle="collapse" aria-expanded="false"
                             class="dropdown-toggle">
                             <i class="fas fa-chart-bar" style="color: blue;"></i><span>Reports</span>
                       </a>
                       <ul class="collapse list-unstyled" id="reports">
+                            {% if has_permission('front_office_report') %}
                             <li><a href="{% url 'front_office_report' %}">><span>Front Office Report</span></a></li>
+                            {% endif %}
+                            {% if has_permission('back_office_report') %}
                             <li><a href="{% url 'back_office_report' %}">><span>Back Office Report</span></a></li>
+                            {% endif %}
+                            {% if has_permission('savings_reports') %}
                             <li><a href="{% url 'savings_report' %}">><span>Savings Report</span></a></li>
+                            {% endif %}
+                            {% if has_permission('loan_reports') %}
                             <li><a href="{% url 'loan_report' %}">><span>Loans Report</span></a></li>
+                            {% endif %}
+                            {% if has_permission('financial_report') %}
                             <li><a href="{% url 'financial_report' %}">><span>Financial Report</span></a></li>
+                            {% endif %}
+                            {% if has_permission('fd_reports') %}
                             <li><a href="{% url 'fixed_deposit_report' %}">><span>Fixed Deposit Report</span></a></li>
+                            {% endif %}
+                            {% if has_permission('asset_reports') %}
                             <li><a href="{% url 'fixed_asset_report' %}">><span>Fixed Asset Report</span></a></li>
+                            {% endif %}
                       </ul>
                 </li>
+                {% endif %}
 
                 <!-- CBN Returns - Standalone Navigation Item -->
+                {% if has_permission('cbn_returns') %}
                 <li>
                   <a href="{% url 'cbn_returns' %}">
                     <i class="fas fa-file-alt" style="color: #e74c3c;"></i> 
                     <span>CBN Returns</span>
                   </a>
                 </li>
+                {% endif %}
 
+                {% if has_permission('view_customers') %}
                 <li>
                   <a href="{% url 'customer_list' %}">
                     <i class="fas fa-user" style="color: orange;"></i> 
                     <span>Browse Customer</span>
                   </a>
                 </li>
+                {% endif %}
                 
                 
 
+                {% if is_admin_user or has_permission('view_users') or has_permission('account_settings') %}
                 <li>
                       <a href="#admin" data-toggle="collapse" aria-expanded="false"
                             class="dropdown-toggle">
@@ -146,20 +190,27 @@
                             <li><a href="{% url 'utilities' %}">><span>Utility</span></a></li>
                             <li><a href="audit_logs.html">><span>General Configuration</span></a>
                             </li>
+                            {% if has_permission('view_users') or is_admin_user %}
                             <li><a href="{% url 'user_admin' %}">><span>Users Administration</span></a>
                             </li>
+                            {% endif %}
+                            {% if has_permission('account_settings') or is_admin_user %}
                             <li><a href="{% url 'account_settings' %}"><span>Account Setting</span></a>
                             </li>
+                            {% endif %}
                             <li><a href="{% url 'product_settings'%}">><span>Product Setting</span></a></li>
                             <li><a href="{% url 'customer_account_type_list' %}">><span>Customer Account Types</span></a></li>
                             <li><a href="{% url 'user_define' %}">><span>User Define</span></a></li>
+                            {% if is_admin_user %}
                             <li><a href="{% url 'manage_role_permissions' %}">><span>User Rights</span></a></li>
+                            {% endif %}
                             <li><a href="permissions.html">><span>Customize Files and
                                               Charge</span></a></li>
                             <li><a href="{% url 'software_reg' %}">><span>Software Registration</span></a>
                             </li>
                       </ul>
                 </li>
+                {% endif %}
 
 
                 <li>

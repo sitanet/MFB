@@ -3,7 +3,7 @@ from django.shortcuts import get_object_or_404, render
 # Create your views here.
 from django.shortcuts import render, redirect
 
-from accounts.views import check_role_admin
+from accounts.views import check_role_admin, permission_required_view
 from accounts_admin.models import Account, Account_Officer, Category, Id_card_type, Region, CustomerAccountType
 from company.models import Company
 from customers.utils import generate_unique_6_digit_number
@@ -18,7 +18,7 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 
 
 @login_required(login_url='login')
-@user_passes_test(check_role_admin)
+@permission_required_view('view_customers')
 def customer_list(request):
     from company.models import Branch
     
@@ -52,8 +52,7 @@ from .sms_service import send_sms
 from .utils import check_branch_customer_limit
 
 @login_required(login_url='login')
-@user_passes_test(check_role_admin)
-
+@permission_required_view('view_customers')
 def customers(request):
     user_branch = request.user.branch  # Get the user's branch
     user_company = user_branch.company if user_branch else None
@@ -518,7 +517,7 @@ def group_list(request):
 
 
 @login_required(login_url='login')
-@user_passes_test(check_role_admin)
+@permission_required_view('edit_customer')
 def edit_customer(request, uuid):
     from accounts.utils import get_branch_from_vendor_db
     user_branch = get_branch_from_vendor_db(request.user.branch_id)
@@ -566,7 +565,7 @@ def get_officers_by_region(request):
 
 
 @login_required(login_url='login')
-@user_passes_test(check_role_admin)
+@permission_required_view('delete_customer')
 def delete_customer(request, uuid):
     customer = get_object_or_404(Customer, uuid=uuid)
     # Check if there are transactions associated with this customer
@@ -587,7 +586,7 @@ def delete_customer(request, uuid):
 
 
 @login_required(login_url='login')
-@user_passes_test(check_role_admin)
+@permission_required_view('create_account')
 def new_accounts(request):
    
     return render(request, 'file/new_accounts.html')
