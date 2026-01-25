@@ -1,107 +1,86 @@
-
-
 {% extends 'base.html' %}
-
 {% load static %}
 
 {% block content %}
-            
-                    
-                       
+{% include 'includes/alerts.html' %}
+{% include 'reports/includes/report_styles.html' %}
 
-                
-                       
-                        {% include 'includes/alerts.html' %}
-                        
-                            {{ form.errors }}
-                        
-                        <!-- dashboard inner -->
-            
-                        
-                        <div class="container-fluid">
-                               <div class="row column_title">
-                                  <div class="col-md-12">
-                                     <div class="page_title">
-                                        <h2>Statement of Account</h2>
-                                     </div>
-                                  </div>
-                               </div>
-             
-     <form id="generateForm" method="post" action="{% url 'generate_statement' %}" 
-      class="p-4 shadow-lg rounded-4 bg-white">
-    {% csrf_token %}
-    
-    <!-- Form Header -->
-    <div class="mb-4 border-bottom pb-2">
-        <h5 class="text-primary mb-0">
-            <i class="fas fa-file-invoice-dollar me-2"></i> Generate Statement
-        </h5>
-        <small class="text-muted">Please select a date range and account details</small>
-    </div>
-
-    <div class="row g-4">
-        <!-- Start Date -->
-        <div class="col-md-3">
-            <label class="form-label fw-semibold">
-                <i class="fas fa-calendar-day me-1 text-primary"></i> Start Date
-            </label>
-            <input type="date" class="form-control bg-light shadow-sm"
-                   name="start_date" id="start_date" value="{{ company_date }}">
-        </div>
-
-        <!-- End Date -->
-        <div class="col-md-3">
-            <label class="form-label fw-semibold">
-                <i class="fas fa-calendar-check me-1 text-success"></i> End Date
-            </label>
-            <input type="date" class="form-control bg-light shadow-sm"
-                   name="end_date" id="end_date" value="{{ company_date }}">
-        </div>
-
-        <!-- GL No -->
-        <div class="col-md-3">
-            <label class="form-label fw-semibold">
-                <i class="fas fa-book me-1 text-warning"></i> GL Number
-            </label>
-            <input type="text" class="form-control bg-light shadow-sm"
-                   name="gl_no" placeholder="Enter GL No.">
-        </div>
-
-        <!-- AC No -->
-        <div class="col-md-3">
-            <label class="form-label fw-semibold">
-                <i class="fas fa-id-card me-1 text-danger"></i> Account Number
-            </label>
-            <input type="text" class="form-control bg-light shadow-sm"
-                   name="ac_no" placeholder="Enter Account No.">
+<div class="report-page">
+    <!-- Page Header -->
+    <div class="report-page-header no-print">
+        <h2 class="report-page-title">
+            <i class="fas fa-file-invoice-dollar"></i>
+            Statement of Account
+        </h2>
+        <div class="report-header-actions">
+            <a href="{% url 'front_office_report' %}" class="report-btn report-btn-back">
+                <i class="fas fa-arrow-left"></i> Back
+            </a>
         </div>
     </div>
 
-    <input type="hidden" id="pageInput" name="page" value="">
-
-    <!-- Submit Button -->
-    <div class="text-end mt-4">
-        <button type="submit" class="btn btn-success px-4 py-2 shadow-sm rounded-pill">
-            <i class="fas fa-file-alt me-2"></i> Generate Statement
-        </button>
+    <!-- Filter Form -->
+    <div class="report-filter-container">
+        <div class="report-filter-header">
+            <i class="fas fa-filter"></i>
+            Generate Statement
+        </div>
+        <div class="report-filter-body">
+            {{ form.errors }}
+            <form id="generateForm" method="post" action="{% url 'generate_statement' %}">
+                {% csrf_token %}
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="report-form-group">
+                            <label class="report-form-label">
+                                <i class="fas fa-calendar"></i> Start Date
+                            </label>
+                            <input type="date" class="report-form-control" name="start_date" 
+                                   id="start_date" value="{{ company_date }}" required>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="report-form-group">
+                            <label class="report-form-label">
+                                <i class="fas fa-calendar-check"></i> End Date
+                            </label>
+                            <input type="date" class="report-form-control" name="end_date" 
+                                   id="end_date" value="{{ company_date }}" required>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="report-form-group">
+                            <label class="report-form-label">
+                                <i class="fas fa-book"></i> GL Number
+                            </label>
+                            <input type="text" class="report-form-control" name="gl_no" 
+                                   placeholder="Enter GL No." required>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="report-form-group">
+                            <label class="report-form-label">
+                                <i class="fas fa-id-card"></i> Account Number
+                            </label>
+                            <input type="text" class="report-form-control" name="ac_no" 
+                                   placeholder="Enter Account No." required>
+                        </div>
+                    </div>
+                </div>
+                <input type="hidden" id="pageInput" name="page" value="">
+                <button type="submit" class="report-btn report-btn-generate">
+                    <i class="fas fa-cogs"></i> Generate Statement
+                </button>
+            </form>
+        </div>
     </div>
-</form>
+</div>
 
-
-                                
-                            </div>
-                 
-                     
-                         
-                    
-
-
-                    
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     var startDateInput = document.getElementById('start_date');
     var endDateInput = document.getElementById('end_date');
-    var companyDate = '{{ company_date }}'; // YYYY-MM-DD format
+    var companyDate = '{{ company_date }}';
 
     function validateDate(input) {
         var selectedDate = new Date(input.value);
@@ -122,6 +101,5 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
-
 
 {% endblock %}
