@@ -1,309 +1,196 @@
-{% extends 'reports/base_report.html' %}
+{% extends 'base.html' %}
 {% load static %}
 {% load custom_filters %}
 
-{% block report_icon %}balance-scale{% endblock %}
-{% block report_title %}Trial Balance{% endblock %}
+{% block content %}
+{% include 'includes/alerts.html' %}
+{% include 'reports/includes/report_styles.html' %}
 
-{% block report_css %}
-<style>
-    /* ===== Global Layout ===== */
-    .container-fluid {
-        background: linear-gradient(135deg, #f9fafc, #fff7f0);
-        min-height: 100vh;
-        padding: 40px 25px;
-    }
-
-    /* ===== Page Title ===== */
-    .page_title h2 {
-        font-weight: 700;
-        color: #2e3b32;
-        text-align: center;
-        margin-bottom: 40px;
-        position: relative;
-    }
-    .page_title h2::after {
-        content: "";
-        width: 90px;
-        height: 3px;
-        background: linear-gradient(90deg, #ff8c00, #27ae60);
-        display: block;
-        margin: 10px auto 0;
-        border-radius: 3px;
-    }
-
-    /* ===== Form Card ===== */
-    .chart_of_account {
-        background: #ffffff;
-        border-radius: 18px;
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
-        padding: 40px;
-        transition: all 0.3s ease;
-    }
-    .chart_of_account:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 12px 35px rgba(255, 140, 0, 0.2);
-    }
-
-    /* ===== Labels & Inputs ===== */
-    label {
-        font-weight: 600;
-        color: #2c3e50;
-    }
-    .form-control {
-        border-radius: 10px;
-        border: 1px solid #dee2e6;
-        transition: all 0.2s ease;
-    }
-    .form-control:focus {
-        border-color: #27ae60;
-        box-shadow: 0 0 5px rgba(39, 174, 96, 0.3);
-    }
-
-    /* ===== Submit Button ===== */
-    .btn-success {
-        background: linear-gradient(90deg, #27ae60, #ff8c00);
-        border: none;
-        border-radius: 12px;
-        font-weight: 600;
-        padding: 12px 25px;
-        transition: all 0.3s ease;
-        color: #fff;
-    }
-    .btn-success:hover {
-        transform: scale(1.05);
-        background: linear-gradient(90deg, #ff8c00, #27ae60);
-    }
-
-    /* ===== Print Button ===== */
-    .print-btn button {
-        background: #ff8c00;
-        border: none;
-        border-radius: 12px;
-        color: #fff;
-        font-weight: 600;
-        padding: 10px 20px;
-        transition: 0.3s;
-    }
-    .print-btn button:hover {
-        background: #27ae60;
-        transform: scale(1.05);
-    }
-
-    /* ===== Table Section ===== */
-    .table {
-        margin-top: 30px;
-        border-radius: 12px;
-        overflow: hidden;
-    }
-    .table thead {
-        background: linear-gradient(90deg, #27ae60, #ff8c00);
-        color: #fff;
-    }
-    .table th, .table td {
-        padding: 14px;
-        vertical-align: middle;
-        text-align: center;
-    }
-    .table tbody tr:nth-child(even) {
-        background-color: #f9fafb;
-    }
-    .table tbody tr:hover {
-        background-color: #fdf2e9;
-        transition: 0.2s ease;
-    }
-
-    /* ===== Totals Section ===== */
-    .totals-section {
-        margin-top: 30px;
-    }
-    .totals-card {
-        background: #ffffff;
-        border-radius: 12px;
-        padding: 20px;
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
-    }
-    .totals-item {
-        font-weight: 600;
-        margin: 5px 0;
-    }
-    .total-assets { color: #27ae60; }
-    .total-liabilities { color: #e67e22; }
-    .total-equities { color: #ff8c00; }
-    .total-incomes { color: #16a085; }
-    .total-expenses { color: #c0392b; }
-
-    /* ===== Responsive Design ===== */
-    @media (max-width: 768px) {
-        .chart_of_account {
-            padding: 25px;
-        }
-    }
-
-    /* ===== Print Styles ===== */
-    @media print {
-        body {
-            margin: 0;
-            padding: 0;
-        }
-        body * {
-            visibility: hidden;
-        }
-        .printable-area,
-        .printable-area * {
-            visibility: visible;
-        }
-        .printable-area {
-            position: absolute;
-            top: 0;               /* 👈 Bring report to top */
-            left: 0;
-            width: 100%;
-            margin: 0;
-            padding: 5px;         /* Reduced padding for tighter top print */
-            box-sizing: border-box;
-        }
-        .print-btn { display: none; }
-    }
-</style>
-
-<div class="container-fluid">
-    <!-- Page Title -->
-    <div class="row column_title">
-        <div class="col-md-12">
-            <div class="page_title">
-                <h2>📘 Trial Balance</h2>
-            </div>
+<div class="report-page">
+    <!-- Page Header -->
+    <div class="report-page-header no-print">
+        <h2 class="report-page-title">
+            <i class="fas fa-balance-scale"></i>
+            Trial Balance
+        </h2>
+        <div class="report-header-actions">
+            {% if trial_balance_data %}
+            <button onclick="window.print()" class="report-btn report-btn-print">
+                <i class="fas fa-print"></i> Print
+            </button>
+            {% endif %}
+            <a href="{% url 'financial_report' %}" class="report-btn report-btn-back">
+                <i class="fas fa-arrow-left"></i> Back
+            </a>
         </div>
     </div>
 
-    <!-- Print Button -->
-    <div class="row print-btn">
-        <div class="col-md-12 text-end">
-            <button onclick="window.print()">🖨️ Print</button>
+    <!-- Filter Form -->
+    <div class="report-filter-container no-print {% if trial_balance_data %}d-none{% endif %}">
+        <div class="report-filter-header">
+            <i class="fas fa-filter"></i>
+            Report Filters
         </div>
-    </div>
-
-    <!-- Form Section -->
-    <form id="generateForm" method="post" action="{% url 'trial_balance' %}" class="chart_of_account">
-        {% csrf_token %}
-        <div class="row g-4">
-            <div class="col-md-4">
-                <label for="start_date">Select Start Date</label>
-                <input type="date" class="form-control bg-light" name="start_date" id="start_date" value="{{ start_date }}">
-            </div>
-            <div class="col-md-4">
-                <label for="end_date">Select End Date</label>
-                <input type="date" class="form-control bg-light" name="end_date" id="end_date" value="{{ end_date }}">
-            </div>
-            <div class="col-md-4">
-                <label for="branch">Select Branch</label>
-                <select class="form-control bg-light" name="branch" id="branch">
-                    {% if head_office %}
-                        <option value="" {% if not selected_branch %}selected{% endif %}>All Branches</option>
-                    {% endif %}
-                    {% for branch in branches %}
-                        <option value="{{ branch.id }}" {% if branch.id|stringformat:"s" == selected_branch %}selected{% endif %}>{{ branch.branch_name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-        </div>
-        <button type="submit" class="btn btn-success mt-4 shadow-sm w-100">Generate Report</button>
-    </form>
-
-    <!-- Results Section -->
-    <div class="col-md-12 printable-area {% if not trial_balance_data %}hidden{% endif %}" style="margin-top: 10px;"> <!-- 👈 Reduced margin -->
-        <div class="white_shd full margin_bottom_30">
-            <div class="table_section padding_infor_info">
-                <div class="text-center mb-3">
-                    <h4 class="fw-bold">{{ branch.company_name }}</h4>
-                    <p>{{ branch.branch_name }}</p>
-                    <p class="text-muted fst-italic">{{ branch.office_address }}</p>
-                    <h5 class="text-success fw-bold mt-3">Trial Balance</h5>
-                </div>
-
-                <div class="text-center mb-3">
-                    <p><strong>Reporting Period:</strong> {{ start_date }} → {{ end_date }}</p>
-                </div>
-
-                <div class="table-responsive-sm">
-                    <table class="table table-bordered align-middle">
-                        <thead>
-                            <tr>
-                                <th>GL No.</th>
-                                <th>Account Name</th>
-                                <th>Debit</th>
-                                <th>Credit</th>
-                                <th>Balance</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for entry in trial_balance_data %}
-                            <tr>
-                                <td>{{ entry.gl_no }}</td>
-                                <td>{{ entry.gl_name }}</td>
-                                <td class="text-end">{{ entry.debit|currency }}</td>
-                                <td class="text-end">{{ entry.credit|currency }}</td>
-                                <td class="text-end">{{ entry.balance|currency_signed }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                        <tfoot>
-                            <tr class="fw-bold" style="background: #fef5e7;">
-                                <td colspan="2">Total</td>
-                                <td class="text-end">{{ total_debit|currency }}</td>
-                                <td class="text-end">{{ total_credit|currency }}</td>
-                                <td class="text-end">{{ total_balance|currency_signed }}</td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
-
-                <!-- Totals Summary -->
-                <div class="totals-section">
-                    <div class="totals-card">
-                        {% if subtotal_1 %}<p class="totals-item total-assets">💰 Total Assets: {{ subtotal_1 }}</p>{% endif %}
-                        {% if subtotal_2 %}<p class="totals-item total-liabilities">🏦 Total Liabilities: {{ subtotal_2 }}</p>{% endif %}
-                        {% if subtotal_3 %}<p class="totals-item total-equities">📈 Total Equities: {{ subtotal_3 }}</p>{% endif %}
-                        {% if subtotal_4 %}<p class="totals-item total-incomes">💵 Total Incomes: {{ subtotal_4 }}</p>{% endif %}
-                        {% if subtotal_5 %}<p class="totals-item total-expenses">📉 Total Expenses: {{ subtotal_5 }}</p>{% endif %}
+        <div class="report-filter-body">
+            <form id="generateForm" method="post" action="{% url 'trial_balance' %}">
+                {% csrf_token %}
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="report-form-group">
+                            <label class="report-form-label">
+                                <i class="fas fa-calendar"></i> Start Date
+                            </label>
+                            <input type="date" class="report-form-control" name="start_date" id="start_date" value="{{ start_date }}">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="report-form-group">
+                            <label class="report-form-label">
+                                <i class="fas fa-calendar-check"></i> End Date
+                            </label>
+                            <input type="date" class="report-form-control" name="end_date" id="end_date" value="{{ end_date }}">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="report-form-group">
+                            <label class="report-form-label">
+                                <i class="fas fa-building"></i> Branch
+                            </label>
+                            <select class="report-form-select" name="branch" id="branch">
+                                {% if head_office %}
+                                    <option value="" {% if not selected_branch %}selected{% endif %}>All Branches</option>
+                                {% endif %}
+                                {% for b in branches %}
+                                    <option value="{{ b.id }}" {% if b.id|stringformat:"s" == selected_branch %}selected{% endif %}>{{ b.branch_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
                     </div>
                 </div>
-            </div>
+                <button type="submit" class="report-btn report-btn-generate">
+                    <i class="fas fa-cogs"></i> Generate Report
+                </button>
+            </form>
         </div>
     </div>
+
+    <!-- Results Section -->
+    {% if trial_balance_data %}
+    <div class="report-results-container">
+        <!-- Company Header -->
+        <div class="report-company-header">
+            <h3 class="report-company-name">{{ branch.company_name }}</h3>
+            <p class="report-branch-name">{{ branch.branch_name }}</p>
+            <p class="report-company-address">{{ branch.office_address }}</p>
+            <h4 class="report-title-main">Trial Balance</h4>
+            <div class="report-period-info">
+                <strong>Reporting Period:</strong> {{ start_date }} to {{ end_date }}
+            </div>
+        </div>
+
+        <!-- Data Table -->
+        <div class="table-responsive">
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>GL No.</th>
+                        <th>Account Name</th>
+                        <th class="text-right">Debit</th>
+                        <th class="text-right">Credit</th>
+                        <th class="text-right">Balance</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for entry in trial_balance_data %}
+                    <tr>
+                        <td>{{ entry.gl_no }}</td>
+                        <td>{{ entry.gl_name }}</td>
+                        <td class="text-right amount">{{ entry.debit|currency }}</td>
+                        <td class="text-right amount">{{ entry.credit|currency }}</td>
+                        <td class="text-right amount">{{ entry.balance|currency_signed }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="2"><strong>Total</strong></td>
+                        <td class="text-right amount">{{ total_debit|currency }}</td>
+                        <td class="text-right amount">{{ total_credit|currency }}</td>
+                        <td class="text-right amount">{{ total_balance|currency_signed }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <!-- Summary Section -->
+        <div class="report-summary">
+            <div class="report-summary-grid">
+                {% if subtotal_1 %}
+                <div class="report-summary-card">
+                    <div class="report-summary-label">Total Assets</div>
+                    <div class="report-summary-value">{{ subtotal_1|currency }}</div>
+                </div>
+                {% endif %}
+                {% if subtotal_2 %}
+                <div class="report-summary-card debit">
+                    <div class="report-summary-label">Total Liabilities</div>
+                    <div class="report-summary-value">{{ subtotal_2|currency }}</div>
+                </div>
+                {% endif %}
+                {% if subtotal_3 %}
+                <div class="report-summary-card credit">
+                    <div class="report-summary-label">Total Equities</div>
+                    <div class="report-summary-value">{{ subtotal_3|currency }}</div>
+                </div>
+                {% endif %}
+                {% if subtotal_4 %}
+                <div class="report-summary-card credit">
+                    <div class="report-summary-label">Total Incomes</div>
+                    <div class="report-summary-value">{{ subtotal_4|currency }}</div>
+                </div>
+                {% endif %}
+                {% if subtotal_5 %}
+                <div class="report-summary-card debit">
+                    <div class="report-summary-label">Total Expenses</div>
+                    <div class="report-summary-value">{{ subtotal_5|currency }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- New Search Button -->
+        <div class="p-3 text-center no-print">
+            <a href="{% url 'trial_balance' %}" class="report-btn report-btn-reset">
+                <i class="fas fa-search"></i> New Search
+            </a>
+        </div>
+    </div>
+    {% endif %}
 </div>
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const startDateInput = document.getElementById('start_date');
         const endDateInput = document.getElementById('end_date');
-        const resultsArea = document.querySelector('.printable-area');
         const branchDate = '{{ branch_date }}';
 
-        {% if trial_balance_data %}
-            resultsArea.classList.remove('hidden');
-            document.getElementById('generateForm').classList.add('hidden');
-        {% endif %}
+        if (startDateInput) {
+            startDateInput.addEventListener('change', function() {
+                if (branchDate && new Date(this.value) > new Date(branchDate)) {
+                    alert('Start date cannot be greater than the session date.');
+                    this.value = branchDate;
+                }
+            });
+        }
 
-        startDateInput.addEventListener('change', function() {
-            if (new Date(this.value) > new Date(branchDate)) {
-                alert('Start date cannot be greater than the session date.');
-                this.value = '{{ branch_date }}';
-            }
-        });
-
-        endDateInput.addEventListener('change', function() {
-            if (new Date(this.value) > new Date(branchDate)) {
-                alert('End date cannot be greater than the session date.');
-                this.value = '{{ branch_date }}';
-            }
-        });
+        if (endDateInput) {
+            endDateInput.addEventListener('change', function() {
+                if (branchDate && new Date(this.value) > new Date(branchDate)) {
+                    alert('End date cannot be greater than the session date.');
+                    this.value = branchDate;
+                }
+            });
+        }
     });
 </script>
-{% endblock %}
-
-{% block report_filter %}
-{% endblock %}
-
-{% block report_content %}
 {% endblock %}
