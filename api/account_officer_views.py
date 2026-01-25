@@ -805,8 +805,8 @@ class LoansInquiryView(APIView):
             total_outstanding = Decimal('0.00')
             
             for loan in loans:
-                # Calculate outstanding balance (simplified)
-                loan_balance = loan.loan_amount - (loan.amount_paid or Decimal('0.00'))
+                # Calculate outstanding balance (simplified - using loan_amount as balance since amount_paid doesn't exist)
+                loan_balance = loan.loan_amount or Decimal('0.00')
                 total_outstanding += max(loan_balance, Decimal('0.00'))
                 
                 loans_data.append({

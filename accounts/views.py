@@ -1186,7 +1186,7 @@ def dashboard_5(request):
     month_withdrawals = Memtrans.all_objects.filter(branch_id=branch_id, ses_date__month=current_month, ses_date__year=current_year, amount__lt=0, account_type='C').aggregate(total=Sum('amount'))['total'] or 0
     
     total_loan_disbursed = Loans.all_objects.filter(branch_id=branch_id, disb_status='T').aggregate(total=Sum('loan_amount'))['total'] or 0
-    total_loan_repaid = Loans.all_objects.filter(branch_id=branch_id, disb_status='T').aggregate(total=Sum('amount_paid'))['total'] or 0
+    total_loan_repaid = 0  # TODO: Calculate from loan repayment transactions
     
     context = {
         **ctx,
