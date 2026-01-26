@@ -3,281 +3,228 @@
 {% load humanize %}
 
 {% block content %}
-<style>
-    :root {
-        --primary: #3498db;
-        --secondary: #2c3e50;
-        --success: #28a745;  /* Green for credit balances */
-        --light: #ecf0f1;
-        --dark: #34495e;
-    }
+{% include 'includes/alerts.html' %}
+{% include 'reports/includes/report_styles.html' %}
 
-    .report-container {
-        background: white;
-        border-radius: 10px;
-        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
-        overflow: hidden;
-    }
-
-    .report-header {
-        background: linear-gradient(135deg, var(--success), var(--secondary));
-        color: white;
-        padding: 1.5rem;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    }
-
-    .report-title {
-        font-weight: 600;
-        letter-spacing: 0.5px;
-    }
-
-    .credit-balance {
-        color: var(--success);
-        font-weight: bold;
-    }
-
-    .report-table {
-        width: 100%;
-        border-collapse: separate;
-        border-spacing: 0;
-    }
-
-    .report-table thead th {
-        background: var(--secondary);
-        color: white;
-        padding: 0.75rem 1rem;
-        position: sticky;
-        top: 0;
-    }
-
-    .report-table tbody td {
-        padding: 0.75rem 1rem;
-        border-bottom: 1px solid #eee;
-    }
-
-    .total-row {
-        background: #d4edda;  /* Light green for credit totals */
-        font-weight: 600;
-    }
-
-    .subtotal-row {
-        background-color: #e9ecef;
-        font-weight: 500;
-    }
-
-    @media print {
-        body * {
-            visibility: hidden;
-        }
-        
-        .print-section, .print-section * {
-            visibility: visible;
-        }
-        
-        .print-section {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-        }
-        
-        .credit-balance {
-            color: #28a745 !important;
-        }
-    }
-</style>
-
-<div class="container-fluid">
+<div class="report-page">
     <!-- Page Header -->
-    <div class="row mb-4">
-        <div class="col-12 d-flex justify-content-between align-items-center">
-            <h2 class="mb-0">Savings Accounts with Credit Balance</h2>
+    <div class="report-page-header no-print">
+        <h2 class="report-page-title">
+            <i class="fas fa-hand-holding-usd"></i>
+            Savings Accounts with Credit Balance
+        </h2>
+        <div class="report-header-actions">
             {% if customer_data %}
-            <button onclick="window.print()" class="btn btn-success no-print">
-                <i class="fas fa-print mr-2"></i> Print Report
+            <button onclick="window.print()" class="report-btn report-btn-print">
+                <i class="fas fa-print"></i> Print
             </button>
             {% endif %}
+            <a href="{% url 'savings_report' %}" class="report-btn report-btn-back">
+                <i class="fas fa-arrow-left"></i> Back
+            </a>
         </div>
     </div>
 
     <!-- Filter Form -->
-    {% if not customer_data %}
-    <div class="card no-print mb-4">
-        <div class="card-body">
+    <div class="report-filter-container no-print {% if customer_data %}d-none{% endif %}">
+        <div class="report-filter-header">
+            <i class="fas fa-filter"></i>
+            Report Filters
+        </div>
+        <div class="report-filter-body">
             <form method="post" action="{% url 'savings_account_credit_balance' %}">
                 {% csrf_token %}
-                <div class="row g-3">
+                <div class="row">
                     <div class="col-md-3">
-                        <label class="form-label">Reporting Date</label>
-                        <input type="date" class="form-control" name="reporting_date" 
-                               value="{{ reporting_date|date:'Y-m-d' }}" required>
-                    </div>
-              <div class="col-md-3">
-    <label class="form-label">Branch</label>
-    {% if user_branch.head_office %}
-        <!-- Head-office user: show all branches -->
-        <select class="form-control" name="branch">
-            <option value="">All Branches</option>
-            {% for branch in branches %}
-                <option value="{{ branch.id }}" {% if selected_branch and branch.id == selected_branch.id %}selected{% endif %}>
-                    {{ branch.branch_name }}
-                </option>
-            {% endfor %}
-        </select>
-    {% else %}
-        <!-- Non-head-office user: show only their branch as disabled input -->
-        <input type="text" class="form-control" value="{{ user_branch.branch_name }}" disabled>
-        <input type="hidden" name="branch" value="{{ user_branch.id }}">
-    {% endif %}
-</div>
-
-                    <div class="col-md-3">
-                        <label class="form-label">Product</label>
-                        <select class="form-control" name="gl_no">
-                            <option value="">All Products</option>
-                            {% for gl_account in gl_accounts %}
-                            <option value="{{ gl_account.gl_no }}" {% if selected_gl_no == gl_account.gl_no %}selected{% endif %}>
-                                {{ gl_account.gl_no }} - {{ gl_account.gl_name }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Region</label>
-                        <select class="form-control" name="region">
-                            <option value="">All Regions</option>
-                            {% for region in regions %}
-                            <option value="{{ region.id }}" {% if selected_region and region.id == selected_region.id %}selected{% endif %}>
-                                {{ region.region_name }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Account Officer</label>
-                        <select class="form-control" name="credit_officer">
-                            <option value="">All Officers</option>
-                            {% for officer in account_officers %}
-                            <option value="{{ officer.id }}" {% if selected_officer and officer.id == selected_officer.id %}selected{% endif %}>
-                                {{ officer.user }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="exclude_ac_no_one" 
-                                   name="exclude_ac_no_one" {% if exclude_ac_no_one %}checked{% endif %}>
-                            <label class="form-check-label" for="exclude_ac_no_one">
-                                Exclude Internal Accounts
+                        <div class="report-form-group">
+                            <label class="report-form-label">
+                                <i class="fas fa-calendar"></i> Reporting Date
                             </label>
+                            <input type="date" class="report-form-control" name="reporting_date" 
+                                   value="{{ reporting_date|date:'Y-m-d' }}" required>
                         </div>
                     </div>
-                    <div class="col-12">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-file-alt mr-2"></i> Generate Report
-                        </button>
+                    <div class="col-md-3">
+                        <div class="report-form-group">
+                            <label class="report-form-label">
+                                <i class="fas fa-building"></i> Branch
+                            </label>
+                            {% if user_branch.head_office %}
+                            <select class="report-form-select" name="branch">
+                                <option value="">All Branches</option>
+                                {% for branch in branches %}
+                                <option value="{{ branch.id }}" {% if selected_branch and branch.id == selected_branch.id %}selected{% endif %}>
+                                    {{ branch.branch_name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            {% else %}
+                            <input type="text" class="report-form-control" value="{{ user_branch.branch_name }}" disabled>
+                            <input type="hidden" name="branch" value="{{ user_branch.id }}">
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="report-form-group">
+                            <label class="report-form-label">
+                                <i class="fas fa-box"></i> Product
+                            </label>
+                            <select class="report-form-select" name="gl_no">
+                                <option value="">All Products</option>
+                                {% for gl_account in gl_accounts %}
+                                <option value="{{ gl_account.gl_no }}" {% if selected_gl_no == gl_account.gl_no %}selected{% endif %}>
+                                    {{ gl_account.gl_no }} - {{ gl_account.gl_name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="report-form-group">
+                            <label class="report-form-label">
+                                <i class="fas fa-map-marker-alt"></i> Region
+                            </label>
+                            <select class="report-form-select" name="region">
+                                <option value="">All Regions</option>
+                                {% for region in regions %}
+                                <option value="{{ region.id }}" {% if selected_region and region.id == selected_region.id %}selected{% endif %}>
+                                    {{ region.region_name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="report-form-group">
+                            <label class="report-form-label">
+                                <i class="fas fa-user-tie"></i> Account Officer
+                            </label>
+                            <select class="report-form-select" name="credit_officer">
+                                <option value="">All Officers</option>
+                                {% for officer in account_officers %}
+                                <option value="{{ officer.id }}" {% if selected_officer and officer.id == selected_officer.id %}selected{% endif %}>
+                                    {{ officer.user }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="report-form-group">
+                            <label class="report-form-label">&nbsp;</label>
+                            <div class="report-form-check">
+                                <input type="checkbox" id="exclude_ac_no_one" name="exclude_ac_no_one" 
+                                       {% if exclude_ac_no_one %}checked{% endif %}>
+                                <label class="report-form-check-label" for="exclude_ac_no_one">
+                                    Exclude Internal Accounts
+                                </label>
+                            </div>
+                        </div>
                     </div>
                 </div>
+                <button type="submit" class="report-btn report-btn-generate">
+                    <i class="fas fa-cogs"></i> Generate Report
+                </button>
             </form>
         </div>
     </div>
-    {% endif %}
 
-    <!-- Report Results -->
+    <!-- Results Section -->
     {% if customer_data %}
-    <div class="report-container print-section">
-        <div class="report-header">
-            <h3 class="report-title">SAVINGS ACCOUNTS WITH CREDIT BALANCE</h3>
-            <h5 class="report-subtitle mb-0">
-                {% if selected_branch %}
-                    {{ selected_branch.branch_name|upper }}
-                {% else %}
-                    ALL BRANCHES
-                {% endif %}
-            </h5>
+    <div class="report-results-container">
+        <!-- Company Header -->
+        <div class="report-company-header">
+            <h3 class="report-company-name">
+                {% if selected_branch %}{{ selected_branch.branch_name|upper }}{% else %}ALL BRANCHES{% endif %}
+            </h3>
+            <h4 class="report-title-main">Savings Accounts with Credit Balance</h4>
+            <div class="report-period-info">
+                <strong>Reporting Date:</strong> {{ reporting_date|date:"F d, Y" }}
+                {% if selected_gl_no %} | <strong>Product:</strong> {{ selected_gl_no }}{% endif %}
+                {% if selected_region %} | <strong>Region:</strong> {{ selected_region.region_name }}{% endif %}
+            </div>
         </div>
 
-        <div class="p-4">
-            <div class="mb-4">
-                <div class="row">
-                    <div class="col-md-6">
-                        <strong>Reporting Date:</strong> {{ reporting_date|date:"F d, Y" }}
-                    </div>
-                    <div class="col-md-6 text-end">
-                        <strong>Generated:</strong> {% now "F d, Y h:i A" %}
-                    </div>
-                    {% if selected_gl_no %}
-                    <div class="col-md-6">
-                        <strong>Product:</strong> {{ selected_gl_no }}
-                    </div>
-                    {% endif %}
-                    {% if selected_region %}
-                    <div class="col-md-6 text-end">
-                        <strong>Region:</strong> {{ selected_region.region_name }}
-                    </div>
-                    {% endif %}
+        <!-- Summary Cards -->
+        <div class="report-summary">
+            <div class="report-summary-grid">
+                <div class="report-summary-card credit">
+                    <div class="report-summary-label">Total Credit Balance</div>
+                    <div class="report-summary-value">₦{{ grand_total|floatformat:2|intcomma }}</div>
                 </div>
             </div>
+        </div>
 
-            <div class="table-responsive">
-                <table class="report-table">
-                    <thead>
-                        <tr>
-                            <th>GL No</th>
-                            <th>AC No</th>
-                            <th>Customer Name</th>
-                            <th>Balance</th>
-                            <th>Last Transaction</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for gl_no, data in customer_data.items %}
-                        <tr class="subtotal-row">
-                            <td colspan="3">
-                                <strong>{{ gl_no }} - {{ data.gl_name }}</strong>
-                                <span class="float-end">({{ data.count }} accounts)</span>
-                            </td>
-                            <td class="credit-balance">{{ data.subtotal|floatformat:2|intcomma }}</td>
-                            <td></td>
-                        </tr>
-                        {% for customer in data.customers %}
-                        <tr>
-                            <td>{{ customer.gl_no }}</td>
-                            <td>{{ customer.ac_no }}</td>
-                            <td>{{ customer.first_name }} {{ customer.middle_name }} {{ customer.last_name }}</td>
-                            <td class="credit-balance">{{ customer.account_balance|floatformat:2|intcomma }}</td>
-                            <td>
-                                {% if customer.last_trx_date %}
-                                    {{ customer.last_trx_date|date:"M d, Y" }}
-                                {% else %}
-                                    No transactions
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                        {% endfor %}
-                    </tbody>
-                    <tfoot>
-                        <tr class="total-row">
-                            <td colspan="3" class="text-end"><strong>Total Credit Balance</strong></td>
-                            <td class="credit-balance"><strong>{{ grand_total|floatformat:2|intcomma }}</strong></td>
-                            <td></td>
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>
+        <!-- Data Table -->
+        <div class="table-responsive">
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>GL No</th>
+                        <th>AC No</th>
+                        <th>Customer Name</th>
+                        <th class="text-right">Balance</th>
+                        <th>Last Transaction</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for gl_no, data in customer_data.items %}
+                    <tr class="subtotal-row">
+                        <td colspan="3">
+                            <strong>{{ gl_no }} - {{ data.gl_name }}</strong>
+                            <span class="float-end">({{ data.count }} accounts)</span>
+                        </td>
+                        <td class="text-right amount amount-positive">₦{{ data.subtotal|floatformat:2|intcomma }}</td>
+                        <td></td>
+                    </tr>
+                    {% for customer in data.customers %}
+                    <tr>
+                        <td>{{ customer.gl_no }}</td>
+                        <td><code>{{ customer.ac_no }}</code></td>
+                        <td>{{ customer.first_name }} {{ customer.middle_name }} {{ customer.last_name }}</td>
+                        <td class="text-right amount amount-positive">₦{{ customer.account_balance|floatformat:2|intcomma }}</td>
+                        <td>
+                            {% if customer.last_trx_date %}
+                            {{ customer.last_trx_date|date:"M d, Y" }}
+                            {% else %}
+                            <span class="text-muted">No transactions</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-4">No accounts with credit balance found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="3" class="text-right"><strong>Total Credit Balance</strong></td>
+                        <td class="text-right amount"><strong>₦{{ grand_total|floatformat:2|intcomma }}</strong></td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
 
-            <div class="mt-4 text-muted small">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <strong>Note:</strong> Shows accounts with positive balances as of {{ reporting_date|date:"F d, Y" }}.
-                    </div>
-                    <div>
-                        Generated by: {{ request.user.get_full_name|default:request.user.username }}
-                    </div>
+        <!-- Footer -->
+        <div class="p-3 border-top">
+            <div class="row">
+                <div class="col-md-6">
+                    <small class="text-muted">Generated: {% now "F d, Y h:i A" %}</small>
+                </div>
+                <div class="col-md-6 text-end">
+                    <small class="text-muted">By: {{ request.user.get_full_name|default:request.user.username }}</small>
                 </div>
             </div>
+        </div>
+
+        <!-- New Search Button -->
+        <div class="p-3 text-center no-print">
+            <a href="{% url 'savings_account_credit_balance' %}" class="report-btn report-btn-reset">
+                <i class="fas fa-search"></i> New Search
+            </a>
         </div>
     </div>
     {% endif %}
@@ -285,7 +232,6 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Form submission loading indicator
     const form = document.querySelector('form');
     if (form) {
         form.addEventListener('submit', function() {
