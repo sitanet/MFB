@@ -915,7 +915,9 @@ def dashboard(request):
 
     # Base querysets filtered by accessible branches
     # Use branch__in for ForeignKey filtering (branch_id__in also works but branch__in is clearer)
-    branch_customers = Customer.all_objects.filter(branch__in=branch_ids)
+    # Exclude internal accounts (ac_no <= 10) from customer statistics
+    internal_accounts = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']
+    branch_customers = Customer.all_objects.filter(branch__in=branch_ids).exclude(ac_no__in=internal_accounts)
     branch_loans = Loans.all_objects.filter(branch__in=branch_ids)
     branch_memtrans = Memtrans.all_objects.filter(branch__in=branch_ids)
 
@@ -1001,7 +1003,7 @@ def dashboard(request):
         branches_to_show = []  # Personal level doesn't see branch performance
 
     for branch in branches_to_show:
-        cust_count = Customer.all_objects.filter(branch_id=branch.id).count()
+        cust_count = Customer.all_objects.filter(branch_id=branch.id).exclude(ac_no__in=['1','2','3','4','5','6','7','8','9','10']).count()
         
         b_deposits = Memtrans.all_objects.filter(
             branch_id=branch.id, amount__gt=0, account_type='C'
@@ -1157,7 +1159,9 @@ def dashboard_2(request):
         branch_ids = [b.id for b in company_branches]
     
     # Statistics filtered by selected branches (use branch__in for ForeignKey)
-    total_customers = Customer.all_objects.filter(branch__in=branch_ids).count()
+    # Exclude internal accounts (ac_no <= 10) from customer statistics
+    internal_accounts = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']
+    total_customers = Customer.all_objects.filter(branch__in=branch_ids).exclude(ac_no__in=internal_accounts).count()
     total_loans = Loans.all_objects.filter(branch__in=branch_ids, disb_status='T').aggregate(total=Sum('loan_amount'))['total'] or 0
     total_deposits = Memtrans.all_objects.filter(branch__in=branch_ids, amount__gt=0, account_type='C').aggregate(total=Sum('amount'))['total'] or 0
     pending_loans = Loans.all_objects.filter(branch__in=branch_ids, approval_status='Pending').count()
@@ -1167,7 +1171,7 @@ def dashboard_2(request):
     branch_data = []
     branches_to_show = Branch.objects.filter(id__in=branch_ids) if branch_ids else []
     for branch in branches_to_show:
-        cust_count = Customer.all_objects.filter(branch_id=branch.id).count()
+        cust_count = Customer.all_objects.filter(branch_id=branch.id).exclude(ac_no__in=['1','2','3','4','5','6','7','8','9','10']).count()
         b_deposits = Memtrans.all_objects.filter(branch_id=branch.id, amount__gt=0, account_type='C').aggregate(total=Sum('amount'))['total'] or 0
         b_loans = Loans.all_objects.filter(branch_id=branch.id, disb_status='T').aggregate(total=Sum('loan_amount'))['total'] or 0
         branch_data.append({
