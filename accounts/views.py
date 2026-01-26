@@ -1050,6 +1050,11 @@ def dashboard(request):
     
     if user_role in [8, 10]:  # Credit Officer, CSU - show their customers
         my_customers = branch_customers.count()
+    
+    # Recent 30 customers for Admin/GM
+    recent_customers = []
+    if user_role in [1, 2]:
+        recent_customers = branch_customers.order_by('-id')[:30]
 
     context = {
         'user_branch': user_branch,
@@ -1074,6 +1079,7 @@ def dashboard(request):
         "pending_loans": pending_loans,
         "today_transactions": today_transactions,
         "my_customers": my_customers,
+        "recent_customers": recent_customers,
         
         # Branch filter dropdown data (for Admin/GM)
         "all_company_branches": all_company_branches,
