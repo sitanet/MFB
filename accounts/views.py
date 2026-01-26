@@ -862,8 +862,12 @@ def dashboard(request):
 
     # Get all company branches for Admin/GM dropdown
     all_company_branches = []
-    if user_role in [1, 2] and user_company:
-        all_company_branches = list(Branch.objects.filter(company=user_company))
+    if user_role in [1, 2]:
+        if user_company:
+            all_company_branches = list(Branch.objects.filter(company=user_company))
+        elif user_branch_id:
+            # Fallback: if no company, show user's own branch
+            all_company_branches = list(Branch.objects.filter(id=user_branch_id))
 
     # Check if a specific branch is selected via query param (for Admin/GM)
     selected_branch_id = request.GET.get('branch_id', '')
@@ -874,19 +878,26 @@ def dashboard(request):
     # Level 2: Branch-wide (Branch Manager=3, Assistant Manager=4, Accountant=5)
     # Level 3: Department/Personal (Credit roles=7,8, Teller=11, CSU=10, etc.)
     
-    if user_role in [1, 2] and user_company:
+    if user_role in [1, 2]:
         # System Admin & General Manager - can filter by branch
-        company_branches = Branch.objects.filter(company=user_company)
+        if user_company:
+            company_branches = Branch.objects.filter(company=user_company)
+        else:
+            # Fallback: if no company, use user's own branch
+            company_branches = Branch.objects.filter(id=user_branch_id) if user_branch_id else Branch.objects.none()
         
         if selected_branch_id and selected_branch_id != 'all':
             # Filter by selected branch
             try:
                 selected_branch_int = int(selected_branch_id)
-                branch_ids = [selected_branch_int]
-                # Get the branch name for display
-                selected_branch_obj = Branch.objects.filter(id=selected_branch_int, company=user_company).first()
-                if selected_branch_obj:
-                    selected_branch_name = selected_branch_obj.branch_name
+                # Verify the selected branch is in the allowed branches
+                if company_branches.filter(id=selected_branch_int).exists():
+                    branch_ids = [selected_branch_int]
+                    selected_branch_obj = company_branches.filter(id=selected_branch_int).first()
+                    if selected_branch_obj:
+                        selected_branch_name = selected_branch_obj.branch_name
+                else:
+                    branch_ids = [b.id for b in company_branches]
             except (ValueError, TypeError):
                 branch_ids = [b.id for b in company_branches]
         else:
@@ -903,9 +914,10 @@ def dashboard(request):
         access_level = 'personal'
 
     # Base querysets filtered by accessible branches
-    branch_customers = Customer.all_objects.filter(branch_id__in=branch_ids)
-    branch_loans = Loans.all_objects.filter(branch_id__in=branch_ids)
-    branch_memtrans = Memtrans.all_objects.filter(branch_id__in=branch_ids)
+    # Use branch__in for ForeignKey filtering (branch_id__in also works but branch__in is clearer)
+    branch_customers = Customer.all_objects.filter(branch__in=branch_ids)
+    branch_loans = Loans.all_objects.filter(branch__in=branch_ids)
+    branch_memtrans = Memtrans.all_objects.filter(branch__in=branch_ids)
 
     # For personal level, further filter by user
     if access_level == 'personal':
@@ -1104,8 +1116,14 @@ def dashboard_2(request):
     
     # Get all company branches for dropdown
     all_company_branches = []
+    user_branch_id = ctx['user_branch_id']
+    
     if user_company:
         company_branches = Branch.objects.filter(company=user_company)
+        all_company_branches = list(company_branches)
+    elif user_branch_id:
+        # Fallback: if no company, use user's own branch
+        company_branches = Branch.objects.filter(id=user_branch_id)
         all_company_branches = list(company_branches)
     else:
         company_branches = Branch.objects.none()
@@ -1114,26 +1132,30 @@ def dashboard_2(request):
     selected_branch_id = request.GET.get('branch_id', '')
     selected_branch_name = 'All Branches'
     
-    if selected_branch_id and selected_branch_id != 'all' and user_company:
+    if selected_branch_id and selected_branch_id != 'all':
         # Filter by selected branch
         try:
             selected_branch_int = int(selected_branch_id)
-            branch_ids = [selected_branch_int]
-            selected_branch_obj = Branch.objects.filter(id=selected_branch_int, company=user_company).first()
-            if selected_branch_obj:
-                selected_branch_name = selected_branch_obj.branch_name
+            # Verify the selected branch is in the allowed branches
+            if company_branches.filter(id=selected_branch_int).exists():
+                branch_ids = [selected_branch_int]
+                selected_branch_obj = company_branches.filter(id=selected_branch_int).first()
+                if selected_branch_obj:
+                    selected_branch_name = selected_branch_obj.branch_name
+            else:
+                branch_ids = [b.id for b in company_branches]
         except (ValueError, TypeError):
             branch_ids = [b.id for b in company_branches]
     else:
         # Show all branches
-        branch_ids = [b.id for b in company_branches] if user_company else []
+        branch_ids = [b.id for b in company_branches]
     
-    # Statistics filtered by selected branches
-    total_customers = Customer.all_objects.filter(branch_id__in=branch_ids).count()
-    total_loans = Loans.all_objects.filter(branch_id__in=branch_ids, disb_status='T').aggregate(total=Sum('loan_amount'))['total'] or 0
-    total_deposits = Memtrans.all_objects.filter(branch_id__in=branch_ids, amount__gt=0, account_type='C').aggregate(total=Sum('amount'))['total'] or 0
-    pending_loans = Loans.all_objects.filter(branch_id__in=branch_ids, approval_status='Pending').count()
-    approved_loans = Loans.all_objects.filter(branch_id__in=branch_ids, approval_status='Approved').count()
+    # Statistics filtered by selected branches (use branch__in for ForeignKey)
+    total_customers = Customer.all_objects.filter(branch__in=branch_ids).count()
+    total_loans = Loans.all_objects.filter(branch__in=branch_ids, disb_status='T').aggregate(total=Sum('loan_amount'))['total'] or 0
+    total_deposits = Memtrans.all_objects.filter(branch__in=branch_ids, amount__gt=0, account_type='C').aggregate(total=Sum('amount'))['total'] or 0
+    pending_loans = Loans.all_objects.filter(branch__in=branch_ids, approval_status='Pending').count()
+    approved_loans = Loans.all_objects.filter(branch__in=branch_ids, approval_status='Approved').count()
     
     # Branch performance (only show for selected branches or all)
     branch_data = []
