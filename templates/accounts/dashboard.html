@@ -591,22 +591,127 @@
     </div>
 </div>
 
-<!-- NPL & Customer Count -->
-<div class="row text-center mb-5">
-    <div class="col-md-6 mb-3">
-        <div class="card border-0 shadow-sm summary-card" style="background: linear-gradient(135deg, #f1f5f9, #f8fafc); border-left: 6px solid #16a34a;">
+<!-- Customer Statistics - Clickable -->
+<div class="row text-center mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card border-0 shadow-sm summary-card clickable-stat" data-bs-toggle="modal" data-bs-target="#customersModal" style="background: linear-gradient(135deg, #f1f5f9, #f8fafc); border-left: 6px solid #16a34a; cursor: pointer;">
             <div class="card-body">
-                <h6 class="text-muted mb-2">Total Customers</h6>
+                <h6 class="text-muted mb-2">Total Customers <i class="fas fa-external-link-alt small"></i></h6>
                 <h4 class="fw-bold text-dark">{{ total_customers|intcomma }}</h4>
+                <small class="text-success">Click for breakdown</small>
             </div>
         </div>
     </div>
-
-    <div class="col-md-6 mb-3">
+    <div class="col-md-3 mb-3">
+        <div class="card border-0 shadow-sm summary-card" style="background: linear-gradient(135deg, #dcfce7, #f0fdf4); border-left: 6px solid #22c55e;">
+            <div class="card-body">
+                <h6 class="text-muted mb-2">Active Customers</h6>
+                <h4 class="fw-bold" style="color: #16a34a;">{{ active_customers|intcomma }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
         <div class="card border-0 shadow-sm summary-card" style="background: linear-gradient(135deg, #fef3c7, #fff7ed); border-left: 6px solid #f59e0b;">
             <div class="card-body">
-                <h6 class="text-muted mb-2">NPL Ratio</h6>
-                <h4 class="fw-bold" style="color: #f59e0b;">{{ npl_ratio }}%</h4>
+                <h6 class="text-muted mb-2">Dormant Customers</h6>
+                <h4 class="fw-bold" style="color: #f59e0b;">{{ dormant_customers|intcomma }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card border-0 shadow-sm summary-card" style="background: linear-gradient(135deg, #dbeafe, #eff6ff); border-left: 6px solid #3b82f6;">
+            <div class="card-body">
+                <h6 class="text-muted mb-2">New This Month</h6>
+                <h4 class="fw-bold" style="color: #3b82f6;">{{ new_customers_month|intcomma }}</h4>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loan Statistics - Clickable -->
+<div class="row text-center mb-4">
+    <div class="col-md-2 mb-3">
+        <div class="card border-0 shadow-sm summary-card clickable-stat" data-bs-toggle="modal" data-bs-target="#loansModal" style="background: linear-gradient(135deg, #f1f5f9, #e2e8f0); border-left: 6px solid #6366f1; cursor: pointer;">
+            <div class="card-body py-3">
+                <h6 class="text-muted mb-1 small">Total Loans <i class="fas fa-external-link-alt small"></i></h6>
+                <h5 class="fw-bold" style="color: #6366f1;">{{ total_loan_count|intcomma }}</h5>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 mb-3">
+        <div class="card border-0 shadow-sm summary-card" style="background: linear-gradient(135deg, #fef3c7, #fefce8); border-left: 6px solid #eab308;">
+            <div class="card-body py-3">
+                <h6 class="text-muted mb-1 small">Pending</h6>
+                <h5 class="fw-bold" style="color: #eab308;">{{ pending_loan_count|intcomma }}</h5>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 mb-3">
+        <div class="card border-0 shadow-sm summary-card" style="background: linear-gradient(135deg, #dbeafe, #eff6ff); border-left: 6px solid #3b82f6;">
+            <div class="card-body py-3">
+                <h6 class="text-muted mb-1 small">Approved</h6>
+                <h5 class="fw-bold" style="color: #3b82f6;">{{ approved_loan_count|intcomma }}</h5>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 mb-3">
+        <div class="card border-0 shadow-sm summary-card" style="background: linear-gradient(135deg, #dcfce7, #f0fdf4); border-left: 6px solid #22c55e;">
+            <div class="card-body py-3">
+                <h6 class="text-muted mb-1 small">Disbursed</h6>
+                <h5 class="fw-bold" style="color: #22c55e;">{{ disbursed_loan_count|intcomma }}</h5>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 mb-3">
+        <div class="card border-0 shadow-sm summary-card" style="background: linear-gradient(135deg, #fee2e2, #fef2f2); border-left: 6px solid #ef4444;">
+            <div class="card-body py-3">
+                <h6 class="text-muted mb-1 small">Defaulted</h6>
+                <h5 class="fw-bold" style="color: #ef4444;">{{ defaulted_loan_count|intcomma }}</h5>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 mb-3">
+        <div class="card border-0 shadow-sm summary-card" style="background: linear-gradient(135deg, #fef3c7, #fff7ed); border-left: 6px solid #f59e0b;">
+            <div class="card-body py-3">
+                <h6 class="text-muted mb-1 small">NPL Ratio</h6>
+                <h5 class="fw-bold" style="color: #f59e0b;">{{ npl_ratio }}%</h5>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Today's Transactions - Clickable -->
+<div class="row text-center mb-5">
+    <div class="col-md-3 mb-3">
+        <div class="card border-0 shadow-sm summary-card clickable-stat" data-bs-toggle="modal" data-bs-target="#transactionsModal" style="background: linear-gradient(135deg, #f5f3ff, #ede9fe); border-left: 6px solid #8b5cf6; cursor: pointer;">
+            <div class="card-body">
+                <h6 class="text-muted mb-2">Today's Transactions <i class="fas fa-external-link-alt small"></i></h6>
+                <h4 class="fw-bold" style="color: #8b5cf6;">{{ today_total_transactions|intcomma }}</h4>
+                <small class="text-muted">Click for details</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card border-0 shadow-sm summary-card" style="background: linear-gradient(135deg, #dcfce7, #f0fdf4); border-left: 6px solid #16a34a;">
+            <div class="card-body">
+                <h6 class="text-muted mb-2">Today's Deposits ({{ today_deposit_count }})</h6>
+                <h4 class="fw-bold" style="color: #16a34a;">₦{{ today_deposits|floatformat:2|intcomma }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card border-0 shadow-sm summary-card" style="background: linear-gradient(135deg, #fee2e2, #fef2f2); border-left: 6px solid #ef4444;">
+            <div class="card-body">
+                <h6 class="text-muted mb-2">Today's Withdrawals ({{ today_withdrawal_count }})</h6>
+                <h4 class="fw-bold" style="color: #ef4444;">₦{{ today_withdrawals|floatformat:2|intcomma }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card border-0 shadow-sm summary-card" style="background: linear-gradient(135deg, #dbeafe, #eff6ff); border-left: 6px solid #3b82f6;">
+            <div class="card-body">
+                <h6 class="text-muted mb-2">Net Today</h6>
+                <h4 class="fw-bold" style="color: #3b82f6;">₦{{ today_deposits|add:today_withdrawals|floatformat:2|intcomma }}</h4>
             </div>
         </div>
     </div>
@@ -959,4 +1064,255 @@
         }
     });
 </script>
+
+<!-- Customers Breakdown Modal -->
+<div class="modal fade" id="customersModal" tabindex="-1" aria-labelledby="customersModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #16a34a, #22c55e); color: white;">
+                <h5 class="modal-title" id="customersModalLabel">
+                    <i class="fas fa-users me-2"></i>Customer Breakdown
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row text-center mb-4">
+                    <div class="col-md-3">
+                        <div class="p-3 rounded" style="background: #f0fdf4;">
+                            <h3 class="fw-bold text-success">{{ total_customers }}</h3>
+                            <small class="text-muted">Total</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3 rounded" style="background: #dcfce7;">
+                            <h3 class="fw-bold" style="color: #16a34a;">{{ active_customers }}</h3>
+                            <small class="text-muted">Active</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3 rounded" style="background: #fef3c7;">
+                            <h3 class="fw-bold" style="color: #f59e0b;">{{ dormant_customers }}</h3>
+                            <small class="text-muted">Dormant</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3 rounded" style="background: #dbeafe;">
+                            <h3 class="fw-bold" style="color: #3b82f6;">{{ pending_customers }}</h3>
+                            <small class="text-muted">Pending</small>
+                        </div>
+                    </div>
+                </div>
+                <hr>
+                <h6 class="fw-bold mb-3"><i class="fas fa-calendar-plus me-2"></i>New Customers This Month: <span class="badge bg-primary">{{ new_customers_month }}</span></h6>
+                <h6 class="fw-bold mb-3"><i class="fas fa-chart-pie me-2"></i>By Category:</h6>
+                <div class="row">
+                    {% for cat_name, count in segmentation.items %}
+                    <div class="col-md-4 mb-2">
+                        <div class="d-flex justify-content-between align-items-center p-2 rounded" style="background: #f8fafc;">
+                            <span>{{ cat_name }}</span>
+                            <span class="badge bg-secondary">{{ count }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="modal-footer">
+                <a href="{% url 'customer_list' %}" class="btn btn-success">
+                    <i class="fas fa-list me-1"></i>View All Customers
+                </a>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loans Breakdown Modal -->
+<div class="modal fade" id="loansModal" tabindex="-1" aria-labelledby="loansModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white;">
+                <h5 class="modal-title" id="loansModalLabel">
+                    <i class="fas fa-hand-holding-usd me-2"></i>Loans Breakdown
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row text-center mb-4">
+                    <div class="col">
+                        <div class="p-3 rounded" style="background: #f1f5f9;">
+                            <h3 class="fw-bold" style="color: #6366f1;">{{ total_loan_count }}</h3>
+                            <small class="text-muted">Total</small>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="p-3 rounded" style="background: #fef3c7;">
+                            <h3 class="fw-bold" style="color: #eab308;">{{ pending_loan_count }}</h3>
+                            <small class="text-muted">Pending</small>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="p-3 rounded" style="background: #dbeafe;">
+                            <h3 class="fw-bold" style="color: #3b82f6;">{{ approved_loan_count }}</h3>
+                            <small class="text-muted">Approved</small>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="p-3 rounded" style="background: #dcfce7;">
+                            <h3 class="fw-bold" style="color: #22c55e;">{{ disbursed_loan_count }}</h3>
+                            <small class="text-muted">Disbursed</small>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="p-3 rounded" style="background: #fee2e2;">
+                            <h3 class="fw-bold" style="color: #ef4444;">{{ defaulted_loan_count }}</h3>
+                            <small class="text-muted">Defaulted</small>
+                        </div>
+                    </div>
+                </div>
+                <hr>
+                <h6 class="fw-bold mb-3"><i class="fas fa-clock me-2"></i>Recent 20 Loans:</h6>
+                <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                    <table class="table table-sm table-hover">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th>Loan No</th>
+                                <th>Customer</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for loan in recent_loans %}
+                            <tr>
+                                <td>{{ loan.ac_no|default:"-" }}</td>
+                                <td>{{ loan.customer.get_full_name|default:"-" }}</td>
+                                <td>₦{{ loan.loan_amount|floatformat:2|intcomma }}</td>
+                                <td>
+                                    {% if loan.approval_status == 'Pending' %}
+                                        <span class="badge bg-warning">Pending</span>
+                                    {% elif loan.approval_status == 'Approved' %}
+                                        <span class="badge bg-primary">Approved</span>
+                                    {% elif loan.disb_status == 'T' %}
+                                        <span class="badge bg-success">Disbursed</span>
+                                    {% elif loan.approval_status == 'Defaulted' %}
+                                        <span class="badge bg-danger">Defaulted</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ loan.approval_status|default:"-" }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ loan.appli_date|date:"M d, Y"|default:"-" }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="5" class="text-center text-muted">No loans found</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <a href="{% url 'loan_list' %}" class="btn btn-primary">
+                    <i class="fas fa-list me-1"></i>View All Loans
+                </a>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Transactions Breakdown Modal -->
+<div class="modal fade" id="transactionsModal" tabindex="-1" aria-labelledby="transactionsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #8b5cf6, #a855f7); color: white;">
+                <h5 class="modal-title" id="transactionsModalLabel">
+                    <i class="fas fa-exchange-alt me-2"></i>Today's Transactions Breakdown
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row text-center mb-4">
+                    <div class="col-md-3">
+                        <div class="p-3 rounded" style="background: #f5f3ff;">
+                            <h3 class="fw-bold" style="color: #8b5cf6;">{{ today_total_transactions }}</h3>
+                            <small class="text-muted">Total Transactions</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3 rounded" style="background: #dcfce7;">
+                            <h3 class="fw-bold" style="color: #16a34a;">{{ today_deposit_count }}</h3>
+                            <small class="text-muted">Deposits</small>
+                            <p class="mb-0 small fw-bold text-success">₦{{ today_deposits|floatformat:2|intcomma }}</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3 rounded" style="background: #fee2e2;">
+                            <h3 class="fw-bold" style="color: #ef4444;">{{ today_withdrawal_count }}</h3>
+                            <small class="text-muted">Withdrawals</small>
+                            <p class="mb-0 small fw-bold text-danger">₦{{ today_withdrawals|floatformat:2|intcomma }}</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3 rounded" style="background: #dbeafe;">
+                            <h3 class="fw-bold" style="color: #3b82f6;">Net</h3>
+                            <small class="text-muted">Today's Net</small>
+                            <p class="mb-0 small fw-bold text-primary">₦{{ today_deposits|add:today_withdrawals|floatformat:2|intcomma }}</p>
+                        </div>
+                    </div>
+                </div>
+                <hr>
+                <h6 class="fw-bold mb-3"><i class="fas fa-history me-2"></i>Recent 20 Transactions:</h6>
+                <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                    <table class="table table-sm table-hover">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th>Trx No</th>
+                                <th>Account</th>
+                                <th>Type</th>
+                                <th>Amount</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for trx in recent_transactions %}
+                            <tr>
+                                <td>{{ trx.trx_no|default:"-" }}</td>
+                                <td>{{ trx.ac_no|default:"-" }}</td>
+                                <td>
+                                    {% if trx.amount > 0 %}
+                                        <span class="badge bg-success">Credit</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">Debit</span>
+                                    {% endif %}
+                                </td>
+                                <td class="{% if trx.amount > 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
+                                    ₦{{ trx.amount|floatformat:2|intcomma }}
+                                </td>
+                                <td>{{ trx.ses_date|date:"M d, Y"|default:"-" }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="5" class="text-center text-muted">No transactions found</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Clickable Card Hover Effect -->
+<style>
+    .clickable-stat:hover {
+        transform: translateY(-3px) scale(1.02);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+    }
+    .clickable-stat {
+        transition: all 0.3s ease;
+    }
+</style>
+
 {% endblock %}

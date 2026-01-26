@@ -1057,6 +1057,36 @@ def dashboard(request):
     recent_customers = []
     if user_role in [1, 2]:
         recent_customers = branch_customers.order_by('-id')[:30]
+    
+    # Additional statistics for Admin/GM
+    # Customer breakdown
+    active_customers = branch_customers.filter(status='A').count()
+    dormant_customers = branch_customers.filter(status='D').count()
+    pending_customers = branch_customers.filter(status='P').count()
+    new_customers_month = branch_customers.filter(
+        reg_date__month=current_month, reg_date__year=current_year
+    ).count()
+    
+    # Loan breakdown
+    total_loan_count = branch_loans.count()
+    pending_loan_count = branch_loans.filter(approval_status='Pending').count()
+    approved_loan_count = branch_loans.filter(approval_status='Approved').count()
+    disbursed_loan_count = branch_loans.filter(disb_status='T').count()
+    defaulted_loan_count = branch_loans.filter(approval_status='Defaulted').count()
+    
+    # Today's transactions breakdown
+    today_date = today.date()
+    today_total_transactions = branch_memtrans.filter(ses_date=today_date).count()
+    today_deposits = branch_memtrans.filter(ses_date=today_date, amount__gt=0, account_type='C').aggregate(total=Sum('amount'))['total'] or 0
+    today_withdrawals = branch_memtrans.filter(ses_date=today_date, amount__lt=0, account_type='C').aggregate(total=Sum('amount'))['total'] or 0
+    today_deposit_count = branch_memtrans.filter(ses_date=today_date, amount__gt=0, account_type='C').count()
+    today_withdrawal_count = branch_memtrans.filter(ses_date=today_date, amount__lt=0, account_type='C').count()
+    
+    # Recent transactions for breakdown modal
+    recent_transactions = branch_memtrans.order_by('-ses_date', '-id')[:20]
+    
+    # Recent loans for breakdown modal
+    recent_loans = branch_loans.order_by('-appli_date')[:20]
 
     context = {
         'user_branch': user_branch,
@@ -1082,6 +1112,30 @@ def dashboard(request):
         "today_transactions": today_transactions,
         "my_customers": my_customers,
         "recent_customers": recent_customers,
+        
+        # Customer breakdown
+        "active_customers": active_customers,
+        "dormant_customers": dormant_customers,
+        "pending_customers": pending_customers,
+        "new_customers_month": new_customers_month,
+        
+        # Loan breakdown
+        "total_loan_count": total_loan_count,
+        "pending_loan_count": pending_loan_count,
+        "approved_loan_count": approved_loan_count,
+        "disbursed_loan_count": disbursed_loan_count,
+        "defaulted_loan_count": defaulted_loan_count,
+        
+        # Today's transactions breakdown
+        "today_total_transactions": today_total_transactions,
+        "today_deposits": today_deposits,
+        "today_withdrawals": abs(today_withdrawals) if today_withdrawals else 0,
+        "today_deposit_count": today_deposit_count,
+        "today_withdrawal_count": today_withdrawal_count,
+        
+        # Recent data for modals
+        "recent_transactions": recent_transactions,
+        "recent_loans": recent_loans,
         
         # Branch filter dropdown data (for Admin/GM)
         "all_company_branches": all_company_branches,
