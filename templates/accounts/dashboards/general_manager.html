@@ -1,6 +1,47 @@
 {% extends "accounts/dashboards/base_dashboard.html" %}
 
 {% block dashboard_content %}
+<!-- Branch Filter Dropdown -->
+{% if show_branch_filter %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="data-table">
+            <div class="table-header d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-3">
+                    <label class="fw-semibold mb-0">
+                        <i class="fas fa-filter me-2"></i>Filter by Branch:
+                    </label>
+                    <select id="branchFilterSelect" class="form-select" style="width: 250px;">
+                        <option value="all" {% if not selected_branch_id or selected_branch_id == 'all' %}selected{% endif %}>
+                            All Branches
+                        </option>
+                        {% for branch in all_company_branches %}
+                        <option value="{{ branch.id }}" {% if selected_branch_id == branch.id|stringformat:"i" %}selected{% endif %}>
+                            {{ branch.branch_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <span class="badge bg-info">Viewing: {{ selected_branch_name }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('branchFilterSelect').addEventListener('change', function() {
+        const branchId = this.value;
+        const currentUrl = new URL(window.location.href);
+        if (branchId === 'all') {
+            currentUrl.searchParams.delete('branch_id');
+        } else {
+            currentUrl.searchParams.set('branch_id', branchId);
+        }
+        window.location.href = currentUrl.toString();
+    });
+</script>
+{% endif %}
+
 <div class="row">
     <div class="col-md-3">
         <div class="stat-card primary">

@@ -454,6 +454,51 @@
     <!-- Quick Navigation -->
     {% include 'include/quick_nav.html' with active_module='dashboard' %}
 
+    <!-- Branch Filter Dropdown for Admin/GM -->
+    {% if show_branch_filter %}
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card border-0 shadow-sm" style="border-radius: 12px;">
+                <div class="card-body py-3">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap">
+                        <div class="d-flex align-items-center gap-3">
+                            <label class="fw-semibold mb-0" style="color: #16a34a;">
+                                <i class="fas fa-filter me-2"></i>Filter by Branch:
+                            </label>
+                            <select id="branchFilterSelect" class="form-select" style="width: 250px; border-color: #f97316; border-radius: 8px;">
+                                <option value="all" {% if not selected_branch_id or selected_branch_id == 'all' %}selected{% endif %}>
+                                    All Branches
+                                </option>
+                                {% for branch in all_company_branches %}
+                                <option value="{{ branch.id }}" {% if selected_branch_id == branch.id|stringformat:"i" %}selected{% endif %}>
+                                    {{ branch.branch_name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="text-muted small">
+                            <span class="badge bg-success">Viewing: {{ selected_branch_name }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        document.getElementById('branchFilterSelect').addEventListener('change', function() {
+            const branchId = this.value;
+            const currentUrl = new URL(window.location.href);
+            if (branchId === 'all') {
+                currentUrl.searchParams.delete('branch_id');
+            } else {
+                currentUrl.searchParams.set('branch_id', branchId);
+            }
+            window.location.href = currentUrl.toString();
+        });
+    </script>
+    {% endif %}
+
     <!-- Page Title -->
     <!-- Dashboard Title -->
 <div class="text-center my-5">

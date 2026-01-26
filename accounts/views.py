@@ -860,15 +860,38 @@ def dashboard(request):
     except (ValueError, TypeError):
         user_branch_id = None
 
+    # Get all company branches for Admin/GM dropdown
+    all_company_branches = []
+    if user_role in [1, 2] and user_company:
+        all_company_branches = list(Branch.objects.filter(company=user_company))
+
+    # Check if a specific branch is selected via query param (for Admin/GM)
+    selected_branch_id = request.GET.get('branch_id', '')
+    selected_branch_name = 'All Branches'
+    
     # Role-based access levels:
     # Level 1: Company-wide (System Admin=1, General Manager=2)
     # Level 2: Branch-wide (Branch Manager=3, Assistant Manager=4, Accountant=5)
     # Level 3: Department/Personal (Credit roles=7,8, Teller=11, CSU=10, etc.)
     
     if user_role in [1, 2] and user_company:
-        # System Admin & General Manager see company-wide data
+        # System Admin & General Manager - can filter by branch
         company_branches = Branch.objects.filter(company=user_company)
-        branch_ids = [b.id for b in company_branches]
+        
+        if selected_branch_id and selected_branch_id != 'all':
+            # Filter by selected branch
+            try:
+                selected_branch_int = int(selected_branch_id)
+                branch_ids = [selected_branch_int]
+                # Get the branch name for display
+                selected_branch_obj = Branch.objects.filter(id=selected_branch_int, company=user_company).first()
+                if selected_branch_obj:
+                    selected_branch_name = selected_branch_obj.branch_name
+            except (ValueError, TypeError):
+                branch_ids = [b.id for b in company_branches]
+        else:
+            # Show all branches
+            branch_ids = [b.id for b in company_branches]
         access_level = 'company'
     elif user_role in [3, 4, 5, 6, 12]:
         # Branch Manager, Asst Manager, Accountant, Accounts Asst, MIS - see branch data
@@ -1039,6 +1062,12 @@ def dashboard(request):
         "pending_loans": pending_loans,
         "today_transactions": today_transactions,
         "my_customers": my_customers,
+        
+        # Branch filter dropdown data (for Admin/GM)
+        "all_company_branches": all_company_branches,
+        "selected_branch_id": selected_branch_id,
+        "selected_branch_name": selected_branch_name,
+        "show_branch_filter": user_role in [1, 2] and len(all_company_branches) > 0,
     }
 
     return render(request, 'accounts/dashboard.html', context)
@@ -1073,22 +1102,43 @@ def dashboard_2(request):
     today = ctx['today']
     user_company = ctx['user_company']
     
+    # Get all company branches for dropdown
+    all_company_branches = []
     if user_company:
         company_branches = Branch.objects.filter(company=user_company)
-        branch_ids = [b.id for b in company_branches]
+        all_company_branches = list(company_branches)
     else:
-        branch_ids = []
+        company_branches = Branch.objects.none()
     
-    # Company-wide statistics
+    # Check if a specific branch is selected via query param
+    selected_branch_id = request.GET.get('branch_id', '')
+    selected_branch_name = 'All Branches'
+    
+    if selected_branch_id and selected_branch_id != 'all' and user_company:
+        # Filter by selected branch
+        try:
+            selected_branch_int = int(selected_branch_id)
+            branch_ids = [selected_branch_int]
+            selected_branch_obj = Branch.objects.filter(id=selected_branch_int, company=user_company).first()
+            if selected_branch_obj:
+                selected_branch_name = selected_branch_obj.branch_name
+        except (ValueError, TypeError):
+            branch_ids = [b.id for b in company_branches]
+    else:
+        # Show all branches
+        branch_ids = [b.id for b in company_branches] if user_company else []
+    
+    # Statistics filtered by selected branches
     total_customers = Customer.all_objects.filter(branch_id__in=branch_ids).count()
     total_loans = Loans.all_objects.filter(branch_id__in=branch_ids, disb_status='T').aggregate(total=Sum('loan_amount'))['total'] or 0
     total_deposits = Memtrans.all_objects.filter(branch_id__in=branch_ids, amount__gt=0, account_type='C').aggregate(total=Sum('amount'))['total'] or 0
     pending_loans = Loans.all_objects.filter(branch_id__in=branch_ids, approval_status='Pending').count()
     approved_loans = Loans.all_objects.filter(branch_id__in=branch_ids, approval_status='Approved').count()
     
-    # Branch performance
+    # Branch performance (only show for selected branches or all)
     branch_data = []
-    for branch in company_branches if user_company else []:
+    branches_to_show = Branch.objects.filter(id__in=branch_ids) if branch_ids else []
+    for branch in branches_to_show:
         cust_count = Customer.all_objects.filter(branch_id=branch.id).count()
         b_deposits = Memtrans.all_objects.filter(branch_id=branch.id, amount__gt=0, account_type='C').aggregate(total=Sum('amount'))['total'] or 0
         b_loans = Loans.all_objects.filter(branch_id=branch.id, disb_status='T').aggregate(total=Sum('loan_amount'))['total'] or 0
@@ -1108,7 +1158,12 @@ def dashboard_2(request):
         'pending_loans': pending_loans,
         'approved_loans': approved_loans,
         'branch_data': branch_data,
-        'total_branches': len(branch_ids),
+        'total_branches': len(all_company_branches),
+        # Branch filter dropdown data
+        'all_company_branches': all_company_branches,
+        'selected_branch_id': selected_branch_id,
+        'selected_branch_name': selected_branch_name,
+        'show_branch_filter': len(all_company_branches) > 0,
     }
     return render(request, 'accounts/dashboards/general_manager.html', context)
 
