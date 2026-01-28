@@ -1,0 +1,407 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block content %}
+<div class="midde_cont">
+    <div class="container-fluid">
+        <div class="row column_title">
+            <div class="col-md-12">
+                <div class="page_title d-flex justify-content-between align-items-center">
+                    <h2><i class="fas fa-store me-2"></i> Merchant Dashboard</h2>
+                    <a href="{% url 'merchant:merchant_create' %}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Add New Merchant
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Summary Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="rounded-circle bg-primary bg-opacity-10 p-3 me-3">
+                                <i class="fas fa-store fa-2x text-primary"></i>
+                            </div>
+                            <div>
+                                <h3 class="mb-0">{{ total_merchants }}</h3>
+                                <small class="text-muted">Total Merchants</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="rounded-circle bg-success bg-opacity-10 p-3 me-3">
+                                <i class="fas fa-check-circle fa-2x text-success"></i>
+                            </div>
+                            <div>
+                                <h3 class="mb-0">{{ active_merchants }}</h3>
+                                <small class="text-muted">Active Merchants</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="rounded-circle bg-warning bg-opacity-10 p-3 me-3">
+                                <i class="fas fa-clock fa-2x text-warning"></i>
+                            </div>
+                            <div>
+                                <h3 class="mb-0">{{ pending_merchants }}</h3>
+                                <small class="text-muted">Pending Approval</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="rounded-circle bg-danger bg-opacity-10 p-3 me-3">
+                                <i class="fas fa-ban fa-2x text-danger"></i>
+                            </div>
+                            <div>
+                                <h3 class="mb-0">{{ suspended_merchants }}</h3>
+                                <small class="text-muted">Suspended</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Transaction Stats -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-white border-0">
+                        <h5 class="mb-0"><i class="fas fa-calendar-day me-2 text-info"></i>Today's Performance</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col-4 border-end">
+                                <h3 class="text-primary mb-1">{{ today_stats.count|default:0 }}</h3>
+                                <small class="text-muted">Transactions</small>
+                            </div>
+                            <div class="col-4 border-end">
+                                <h3 class="text-success mb-1">₦{{ today_stats.total_amount|default:0|floatformat:0|intcomma }}</h3>
+                                <small class="text-muted">Volume</small>
+                            </div>
+                            <div class="col-4">
+                                <h3 class="text-warning mb-1">₦{{ today_stats.total_commission|default:0|floatformat:2|intcomma }}</h3>
+                                <small class="text-muted">Commission</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-white border-0">
+                        <h5 class="mb-0"><i class="fas fa-calendar-alt me-2 text-primary"></i>This Month</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col-4 border-end">
+                                <h3 class="text-primary mb-1">{{ month_stats.count|default:0|intcomma }}</h3>
+                                <small class="text-muted">Transactions</small>
+                            </div>
+                            <div class="col-4 border-end">
+                                <h3 class="text-success mb-1">₦{{ month_stats.total_amount|default:0|floatformat:0|intcomma }}</h3>
+                                <small class="text-muted">Volume</small>
+                            </div>
+                            <div class="col-4">
+                                <h3 class="text-warning mb-1">₦{{ month_stats.total_commission|default:0|floatformat:2|intcomma }}</h3>
+                                <small class="text-muted">Commission</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Charts Row -->
+        <div class="row mb-4">
+            <!-- Daily Trend -->
+            <div class="col-md-8">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white border-0">
+                        <h5 class="mb-0"><i class="fas fa-chart-line me-2 text-success"></i>Transaction Trend (Last 7 Days)</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="trendChart" height="100"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Transaction Type Breakdown -->
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white border-0">
+                        <h5 class="mb-0"><i class="fas fa-chart-pie me-2 text-info"></i>By Type (This Month)</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if type_breakdown %}
+                        <table class="table table-sm">
+                            <tbody>
+                                {% for item in type_breakdown %}
+                                <tr>
+                                    <td>
+                                        <span class="badge 
+                                            {% if item.transaction_type == 'deposit' %}bg-success
+                                            {% elif item.transaction_type == 'withdrawal' %}bg-danger
+                                            {% elif item.transaction_type == 'airtime' %}bg-warning
+                                            {% elif item.transaction_type == 'data' %}bg-info
+                                            {% else %}bg-primary{% endif %}">
+                                            {{ item.transaction_type|title }}
+                                        </span>
+                                    </td>
+                                    <td class="text-center">{{ item.count }}</td>
+                                    <td class="text-end"><strong>₦{{ item.total|floatformat:0|intcomma }}</strong></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        {% else %}
+                        <div class="text-center py-4 text-muted">
+                            <i class="fas fa-chart-pie fa-3x mb-2"></i>
+                            <p>No transactions this month</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Top Merchants & Recent Activity -->
+        <div class="row">
+            <!-- Top Merchants -->
+            <div class="col-md-6">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-trophy me-2 text-warning"></i>Top Merchants (This Month)</h5>
+                        <a href="{% url 'merchant:merchant_list' %}" class="btn btn-sm btn-outline-primary">View All</a>
+                    </div>
+                    <div class="card-body p-0">
+                        {% if top_merchants %}
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Merchant</th>
+                                        <th class="text-center">Trx</th>
+                                        <th class="text-end">Volume</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for merchant in top_merchants %}
+                                    <tr>
+                                        <td>
+                                            {% if forloop.counter == 1 %}
+                                            <i class="fas fa-medal text-warning"></i>
+                                            {% elif forloop.counter == 2 %}
+                                            <i class="fas fa-medal text-secondary"></i>
+                                            {% elif forloop.counter == 3 %}
+                                            <i class="fas fa-medal" style="color: #cd7f32;"></i>
+                                            {% else %}
+                                            {{ forloop.counter }}
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <a href="{% url 'merchant:merchant_detail' merchant.id %}">
+                                                <strong>{{ merchant.merchant_name }}</strong>
+                                            </a><br>
+                                            <small class="text-muted">{{ merchant.merchant_code }}</small>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge bg-primary">{{ merchant.trx_count }}</span>
+                                        </td>
+                                        <td class="text-end">
+                                            <strong>₦{{ merchant.trx_volume|floatformat:0|intcomma }}</strong>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="text-center py-4 text-muted">
+                            <i class="fas fa-users fa-3x mb-2"></i>
+                            <p>No merchant activity this month</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Recent Transactions -->
+            <div class="col-md-6">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-history me-2 text-info"></i>Recent Transactions</h5>
+                        <a href="{% url 'merchant:all_transactions' %}" class="btn btn-sm btn-outline-primary">View All</a>
+                    </div>
+                    <div class="card-body p-0">
+                        {% if recent_transactions %}
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <tbody>
+                                    {% for trx in recent_transactions %}
+                                    <tr>
+                                        <td style="width: 40px;">
+                                            <div class="rounded-circle p-2 
+                                                {% if trx.transaction_type == 'deposit' %}bg-success
+                                                {% elif trx.transaction_type == 'withdrawal' %}bg-danger
+                                                {% else %}bg-primary{% endif %} bg-opacity-10 text-center">
+                                                {% if trx.transaction_type == 'deposit' %}
+                                                <i class="fas fa-arrow-down text-success"></i>
+                                                {% elif trx.transaction_type == 'withdrawal' %}
+                                                <i class="fas fa-arrow-up text-danger"></i>
+                                                {% else %}
+                                                <i class="fas fa-exchange-alt text-primary"></i>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <strong>{{ trx.merchant.merchant_name }}</strong><br>
+                                            <small class="text-muted">{{ trx.get_transaction_type_display }}</small>
+                                        </td>
+                                        <td class="text-end">
+                                            <strong>₦{{ trx.amount|floatformat:0|intcomma }}</strong><br>
+                                            <small class="text-muted">{{ trx.created_at|date:"M d, H:i" }}</small>
+                                        </td>
+                                        <td style="width: 30px;">
+                                            {% if trx.status == 'completed' %}
+                                            <i class="fas fa-check-circle text-success"></i>
+                                            {% elif trx.status == 'pending' %}
+                                            <i class="fas fa-clock text-warning"></i>
+                                            {% else %}
+                                            <i class="fas fa-times-circle text-danger"></i>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="text-center py-4 text-muted">
+                            <i class="fas fa-receipt fa-3x mb-2"></i>
+                            <p>No transactions yet</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quick Links -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white border-0">
+                        <h5 class="mb-0"><i class="fas fa-bolt me-2 text-warning"></i>Quick Actions</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-2 col-6">
+                                <a href="{% url 'merchant:merchant_create' %}" class="btn btn-outline-primary w-100 py-3">
+                                    <i class="fas fa-plus d-block mb-2 fa-lg"></i>
+                                    Add Merchant
+                                </a>
+                            </div>
+                            <div class="col-md-2 col-6">
+                                <a href="{% url 'merchant:merchant_list' %}" class="btn btn-outline-info w-100 py-3">
+                                    <i class="fas fa-list d-block mb-2 fa-lg"></i>
+                                    All Merchants
+                                </a>
+                            </div>
+                            <div class="col-md-2 col-6">
+                                <a href="{% url 'merchant:all_transactions' %}" class="btn btn-outline-success w-100 py-3">
+                                    <i class="fas fa-exchange-alt d-block mb-2 fa-lg"></i>
+                                    Transactions
+                                </a>
+                            </div>
+                            <div class="col-md-2 col-6">
+                                <a href="{% url 'merchant:reports_admin' %}" class="btn btn-outline-warning w-100 py-3">
+                                    <i class="fas fa-chart-bar d-block mb-2 fa-lg"></i>
+                                    Reports
+                                </a>
+                            </div>
+                            <div class="col-md-2 col-6">
+                                <a href="{% url 'merchant:service_config' %}" class="btn btn-outline-secondary w-100 py-3">
+                                    <i class="fas fa-cog d-block mb-2 fa-lg"></i>
+                                    Settings
+                                </a>
+                            </div>
+                            <div class="col-md-2 col-6">
+                                <a href="{% url 'merchant:merchant_list' %}?status=pending" class="btn btn-outline-danger w-100 py-3">
+                                    <i class="fas fa-clock d-block mb-2 fa-lg"></i>
+                                    Pending ({{ pending_merchants }})
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Transaction Trend Chart
+var ctx = document.getElementById('trendChart').getContext('2d');
+var trendChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: [
+            {% for day in daily_trend %}
+            '{{ day.date|date:"D" }}'{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ],
+        datasets: [{
+            label: 'Transaction Count',
+            data: [
+                {% for day in daily_trend %}
+                {{ day.count }}{% if not forloop.last %},{% endif %}
+                {% endfor %}
+            ],
+            borderColor: 'rgba(13, 110, 253, 1)',
+            backgroundColor: 'rgba(13, 110, 253, 0.1)',
+            fill: true,
+            tension: 0.4
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    stepSize: 1
+                }
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

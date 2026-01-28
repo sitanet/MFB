@@ -8,8 +8,11 @@ urlpatterns = [
     # FINANCEFLEX ADMIN URLS - For managing merchants
     # ==============================================================================
     
+    # Dashboard
+    path('', views.merchant_dashboard, name='merchant_dashboard'),
+    
     # Merchant Management
-    path('', views.merchant_list, name='merchant_list'),
+    path('list/', views.merchant_list, name='merchant_list'),
     path('create/', views.merchant_create, name='merchant_create'),
     path('<int:merchant_id>/', views.merchant_detail, name='merchant_detail'),
     path('<int:merchant_id>/update/', views.merchant_update, name='merchant_update'),

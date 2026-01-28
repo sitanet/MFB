@@ -186,6 +186,7 @@
                             <i class="fas fa-store" style="color: #17a2b8;"></i> <span>Merchant</span>
                       </a>
                       <ul class="collapse list-unstyled" id="merchant_menu">
+                            <li><a href="{% url 'merchant:merchant_dashboard' %}">><span>Dashboard</span></a></li>
                             <li><a href="{% url 'merchant:merchant_list' %}">><span>All Merchants</span></a></li>
                             <li><a href="{% url 'merchant:merchant_create' %}">><span>Add Merchant</span></a></li>
                             <li><a href="{% url 'merchant:all_transactions' %}">><span>Merchant Transactions</span></a></li>

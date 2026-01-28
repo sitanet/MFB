@@ -42,6 +42,105 @@ from .utils import (
 # ==============================================================================
 
 @login_required
+def merchant_dashboard(request):
+    """Main merchant dashboard for FinanceFlex Admin - Overview of all merchants"""
+    today = timezone.now().date()
+    month_start = today.replace(day=1)
+    
+    # Merchant counts
+    total_merchants = Merchant.objects.count()
+    active_merchants = Merchant.objects.filter(status='active').count()
+    pending_merchants = Merchant.objects.filter(status='pending').count()
+    suspended_merchants = Merchant.objects.filter(status='suspended').count()
+    
+    # Today's transaction stats
+    today_stats = MerchantTransaction.objects.filter(
+        created_at__date=today,
+        status='completed'
+    ).aggregate(
+        count=Count('id'),
+        total_amount=Sum('amount'),
+        total_commission=Sum('commission'),
+        total_charge=Sum('charge')
+    )
+    
+    # This month's transaction stats
+    month_stats = MerchantTransaction.objects.filter(
+        created_at__date__gte=month_start,
+        status='completed'
+    ).aggregate(
+        count=Count('id'),
+        total_amount=Sum('amount'),
+        total_commission=Sum('commission'),
+        total_charge=Sum('charge')
+    )
+    
+    # Transaction type breakdown (this month)
+    type_breakdown = MerchantTransaction.objects.filter(
+        created_at__date__gte=month_start,
+        status='completed'
+    ).values('transaction_type').annotate(
+        count=Count('id'),
+        total=Sum('amount')
+    ).order_by('-total')
+    
+    # Top 10 merchants by transaction volume (this month)
+    top_merchants = Merchant.objects.annotate(
+        trx_count=Count('transactions', filter=Q(
+            transactions__status='completed',
+            transactions__created_at__date__gte=month_start
+        )),
+        trx_volume=Sum('transactions__amount', filter=Q(
+            transactions__status='completed',
+            transactions__created_at__date__gte=month_start
+        )),
+        trx_commission=Sum('transactions__commission', filter=Q(
+            transactions__status='completed',
+            transactions__created_at__date__gte=month_start
+        ))
+    ).filter(trx_count__gt=0).order_by('-trx_volume')[:10]
+    
+    # Recent transactions
+    recent_transactions = MerchantTransaction.objects.select_related('merchant').order_by('-created_at')[:10]
+    
+    # Recent merchants
+    recent_merchants = Merchant.objects.order_by('-created_at')[:5]
+    
+    # Daily transaction trend (last 7 days)
+    from datetime import timedelta
+    daily_trend = []
+    for i in range(6, -1, -1):
+        date = today - timedelta(days=i)
+        day_stats = MerchantTransaction.objects.filter(
+            created_at__date=date,
+            status='completed'
+        ).aggregate(
+            count=Count('id'),
+            total=Sum('amount')
+        )
+        daily_trend.append({
+            'date': date,
+            'count': day_stats['count'] or 0,
+            'total': day_stats['total'] or 0
+        })
+    
+    context = {
+        'total_merchants': total_merchants,
+        'active_merchants': active_merchants,
+        'pending_merchants': pending_merchants,
+        'suspended_merchants': suspended_merchants,
+        'today_stats': today_stats,
+        'month_stats': month_stats,
+        'type_breakdown': type_breakdown,
+        'top_merchants': top_merchants,
+        'recent_transactions': recent_transactions,
+        'recent_merchants': recent_merchants,
+        'daily_trend': daily_trend,
+    }
+    return render(request, 'merchant/admin/dashboard.html', context)
+
+
+@login_required
 def merchant_list(request):
     """List all merchants (FinanceFlex Admin)"""
     merchants = Merchant.objects.all()
