@@ -512,59 +512,102 @@ def merchant_service_config(request):
 
 def merchant_login(request):
     """Merchant portal login"""
+    # Check if this is an API request (mobile app)
+    is_api_request = (
+        request.content_type == 'application/json' or
+        request.headers.get('Accept') == 'application/json' or
+        request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    )
+    
     if request.method == 'POST':
-        form = MerchantLoginForm(request.POST)
-        if form.is_valid():
-            username = form.cleaned_data['username']
-            password = form.cleaned_data['password']
-            
-            # Try to find user by username first, then authenticate with email
+        # Handle JSON request body for API
+        if is_api_request:
+            try:
+                data = json.loads(request.body)
+                username = data.get('username', '')
+                password = data.get('password', '')
+            except json.JSONDecodeError:
+                return JsonResponse({'success': False, 'message': 'Invalid JSON'}, status=400)
+        else:
+            form = MerchantLoginForm(request.POST)
+            if form.is_valid():
+                username = form.cleaned_data['username']
+                password = form.cleaned_data['password']
+            else:
+                if is_api_request:
+                    return JsonResponse({'success': False, 'message': 'Invalid form data'}, status=400)
+                return render(request, 'merchant/portal/login.html', {'form': form})
+        
+        # Try to find user by username first, then authenticate with email
+        try:
+            from accounts.models import User
+            merchant_user = User.objects.get(username=username)
+            user = authenticate(request, email=merchant_user.email, password=password)
+        except User.DoesNotExist:
+            user = None
+        
+        if user is not None:
+            # Check if user has merchant profile
+            try:
+                merchant = user.merchant_profile
+                if merchant.status != 'active':
+                    if is_api_request:
+                        return JsonResponse({'success': False, 'message': 'Your merchant account is not active'}, status=403)
+                    messages.error(request, 'Your merchant account is not active')
+                    return redirect('merchant:portal_login')
+                
+                login(request, user)
+                
+                # Log activity
+                log_merchant_activity(
+                    merchant=merchant,
+                    activity_type='login',
+                    description='Logged in to merchant portal',
+                    request=request
+                )
+                
+                if is_api_request:
+                    return JsonResponse({
+                        'success': True,
+                        'message': 'Login successful',
+                        'merchant': {
+                            'id': merchant.id,
+                            'merchant_id': merchant.merchant_id,
+                            'merchant_code': merchant.merchant_code,
+                            'merchant_name': merchant.merchant_name,
+                            'business_name': merchant.business_name,
+                            'status': merchant.status,
+                        }
+                    })
+                
+                return redirect('merchant:portal_dashboard')
+            except Merchant.DoesNotExist:
+                if is_api_request:
+                    return JsonResponse({'success': False, 'message': 'No merchant account found for this user'}, status=404)
+                messages.error(request, 'No merchant account found for this user')
+        else:
+            # Try to log failed login
             try:
                 from accounts.models import User
-                merchant_user = User.objects.get(username=username)
-                user = authenticate(request, email=merchant_user.email, password=password)
-            except User.DoesNotExist:
-                user = None
-            
-            if user is not None:
-                # Check if user has merchant profile
-                try:
-                    merchant = user.merchant_profile
-                    if merchant.status != 'active':
-                        messages.error(request, 'Your merchant account is not active')
-                        return redirect('merchant:portal_login')
-                    
-                    login(request, user)
-                    
-                    # Log activity
+                user = User.objects.get(username=username)
+                if hasattr(user, 'merchant_profile'):
                     log_merchant_activity(
-                        merchant=merchant,
-                        activity_type='login',
-                        description='Logged in to merchant portal',
+                        merchant=user.merchant_profile,
+                        activity_type='failed_login',
+                        description='Failed login attempt',
                         request=request
                     )
-                    
-                    return redirect('merchant:portal_dashboard')
-                except Merchant.DoesNotExist:
-                    messages.error(request, 'No merchant account found for this user')
-            else:
-                messages.error(request, 'Invalid username or password')
-                
-                # Try to log failed login
-                try:
-                    from accounts.models import User
-                    user = User.objects.get(username=username)
-                    if hasattr(user, 'merchant_profile'):
-                        log_merchant_activity(
-                            merchant=user.merchant_profile,
-                            activity_type='failed_login',
-                            description='Failed login attempt',
-                            request=request
-                        )
-                except:
-                    pass
+            except:
+                pass
+            
+            if is_api_request:
+                return JsonResponse({'success': False, 'message': 'Invalid username or password'}, status=401)
+            messages.error(request, 'Invalid username or password')
     else:
         form = MerchantLoginForm()
+    
+    if is_api_request:
+        return JsonResponse({'success': False, 'message': 'Method not allowed'}, status=405)
     
     return render(request, 'merchant/portal/login.html', {'form': form})
 
