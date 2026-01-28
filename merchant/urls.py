@@ -59,6 +59,7 @@ urlpatterns = [
     # Profile
     path('portal/profile/', views.portal_profile, name='portal_profile'),
     path('portal/change-pin/', views.portal_change_pin, name='portal_change_pin'),
+    path('portal/change-password/', views.portal_change_password, name='portal_change_password'),
     
     # ==============================================================================
     # API ENDPOINTS

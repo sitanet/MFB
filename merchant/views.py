@@ -1005,6 +1005,49 @@ def portal_change_pin(request):
     return render(request, 'merchant/portal/change_pin.html', context)
 
 
+@merchant_required
+def portal_change_password(request):
+    """Change merchant user password"""
+    merchant = request.merchant
+    user = request.user
+    
+    if request.method == 'POST':
+        current_password = request.POST.get('current_password')
+        new_password = request.POST.get('new_password')
+        confirm_password = request.POST.get('confirm_password')
+        
+        if not user.check_password(current_password):
+            messages.error(request, 'Current password is incorrect')
+            return redirect('merchant:portal_change_password')
+        
+        if new_password != confirm_password:
+            messages.error(request, 'New passwords do not match')
+            return redirect('merchant:portal_change_password')
+        
+        if len(new_password) < 8:
+            messages.error(request, 'Password must be at least 8 characters long')
+            return redirect('merchant:portal_change_password')
+        
+        user.set_password(new_password)
+        user.save()
+        
+        # Log activity
+        log_merchant_activity(
+            merchant=merchant,
+            activity_type='profile_update',
+            description='Password changed',
+            request=request
+        )
+        
+        messages.success(request, 'Password changed successfully. Please login again.')
+        return redirect('merchant:portal_login')
+    
+    context = {
+        'merchant': merchant,
+    }
+    return render(request, 'merchant/portal/change_password.html', context)
+
+
 # ==============================================================================
 # API ENDPOINTS
 # ==============================================================================

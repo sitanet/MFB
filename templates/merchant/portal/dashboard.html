@@ -3,53 +3,241 @@
 
 {% block title %}Dashboard{% endblock %}
 
+{% block extra_css %}
+<style>
+    /* Colorful Gradient Cards */
+    .gradient-card {
+        border-radius: 16px;
+        padding: 24px;
+        color: #fff;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .gradient-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+    }
+    .gradient-card::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -50%;
+        width: 100%;
+        height: 100%;
+        background: rgba(255,255,255,0.1);
+        border-radius: 50%;
+    }
+    .gradient-card .card-icon {
+        position: absolute;
+        right: 20px;
+        top: 20px;
+        font-size: 3rem;
+        opacity: 0.3;
+    }
+    
+    /* Card Gradients */
+    .bg-gradient-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    .bg-gradient-success {
+        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    }
+    .bg-gradient-info {
+        background: linear-gradient(135deg, #2193b0 0%, #6dd5ed 100%);
+    }
+    .bg-gradient-warning {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+    .bg-gradient-orange {
+        background: linear-gradient(135deg, #ff9a56 0%, #ff6b6b 100%);
+    }
+    .bg-gradient-purple {
+        background: linear-gradient(135deg, #a855f7 0%, #6366f1 100%);
+    }
+    .bg-gradient-teal {
+        background: linear-gradient(135deg, #0891b2 0%, #22d3ee 100%);
+    }
+    .bg-gradient-pink {
+        background: linear-gradient(135deg, #ec4899 0%, #f472b6 100%);
+    }
+    
+    /* Quick Action Cards */
+    .quick-action {
+        background: #fff;
+        border-radius: 16px;
+        padding: 20px;
+        text-align: center;
+        transition: all 0.3s ease;
+        border: 2px solid transparent;
+        text-decoration: none;
+        display: block;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    }
+    .quick-action:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 12px 30px rgba(0,0,0,0.12);
+    }
+    .quick-action.deposit:hover { border-color: #10b981; }
+    .quick-action.withdrawal:hover { border-color: #ef4444; }
+    .quick-action.transfer:hover { border-color: #3b82f6; }
+    .quick-action.airtime:hover { border-color: #f59e0b; }
+    .quick-action.data:hover { border-color: #06b6d4; }
+    .quick-action.bills:hover { border-color: #8b5cf6; }
+    .quick-action.register:hover { border-color: #ec4899; }
+    .quick-action.bank:hover { border-color: #6366f1; }
+    
+    .quick-action .icon-box {
+        width: 60px;
+        height: 60px;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 12px;
+        font-size: 1.5rem;
+        transition: transform 0.3s ease;
+    }
+    .quick-action:hover .icon-box {
+        transform: scale(1.1) rotate(5deg);
+    }
+    
+    .icon-deposit { background: linear-gradient(135deg, #10b981, #34d399); color: #fff; }
+    .icon-withdrawal { background: linear-gradient(135deg, #ef4444, #f87171); color: #fff; }
+    .icon-transfer { background: linear-gradient(135deg, #3b82f6, #60a5fa); color: #fff; }
+    .icon-airtime { background: linear-gradient(135deg, #f59e0b, #fbbf24); color: #fff; }
+    .icon-data { background: linear-gradient(135deg, #06b6d4, #22d3ee); color: #fff; }
+    .icon-bills { background: linear-gradient(135deg, #8b5cf6, #a78bfa); color: #fff; }
+    .icon-register { background: linear-gradient(135deg, #ec4899, #f472b6); color: #fff; }
+    .icon-bank { background: linear-gradient(135deg, #6366f1, #818cf8); color: #fff; }
+    
+    .quick-action h6 {
+        color: #1f2937;
+        font-weight: 600;
+        margin-bottom: 4px;
+    }
+    .quick-action small {
+        color: #6b7280;
+    }
+    
+    /* Transaction List */
+    .transaction-card {
+        background: #fff;
+        border-radius: 16px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        overflow: hidden;
+    }
+    .transaction-card .card-header {
+        background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+        color: #fff;
+        padding: 16px 20px;
+    }
+    .trx-item {
+        padding: 16px 20px;
+        border-bottom: 1px solid #f1f5f9;
+        display: flex;
+        align-items: center;
+        transition: background 0.2s;
+    }
+    .trx-item:hover {
+        background: #f8fafc;
+    }
+    .trx-item:last-child {
+        border-bottom: none;
+    }
+    .trx-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 16px;
+        font-size: 1.2rem;
+    }
+    .trx-icon.deposit { background: linear-gradient(135deg, #dcfce7, #bbf7d0); color: #16a34a; }
+    .trx-icon.withdrawal { background: linear-gradient(135deg, #fee2e2, #fecaca); color: #dc2626; }
+    .trx-icon.transfer { background: linear-gradient(135deg, #dbeafe, #bfdbfe); color: #2563eb; }
+    .trx-icon.airtime { background: linear-gradient(135deg, #fef3c7, #fde68a); color: #d97706; }
+    .trx-icon.data { background: linear-gradient(135deg, #cffafe, #a5f3fc); color: #0891b2; }
+    
+    .welcome-banner {
+        background: linear-gradient(135deg, #1e40af 0%, #7c3aed 50%, #ec4899 100%);
+        border-radius: 20px;
+        padding: 30px;
+        color: #fff;
+        position: relative;
+        overflow: hidden;
+        margin-bottom: 24px;
+    }
+    .welcome-banner::before {
+        content: '';
+        position: absolute;
+        top: -100px;
+        right: -100px;
+        width: 300px;
+        height: 300px;
+        background: rgba(255,255,255,0.1);
+        border-radius: 50%;
+    }
+    .welcome-banner::after {
+        content: '';
+        position: absolute;
+        bottom: -50px;
+        left: -50px;
+        width: 200px;
+        height: 200px;
+        background: rgba(255,255,255,0.05);
+        border-radius: 50%;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="page-header">
-    <h4>Dashboard</h4>
-    <nav aria-label="breadcrumb">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item active">Overview</li>
-        </ol>
-    </nav>
+<!-- Welcome Banner -->
+<div class="welcome-banner">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <h3 class="mb-2">Welcome back, {{ merchant.merchant_name }}! 👋</h3>
+            <p class="mb-0 opacity-75">Here's what's happening with your merchant account today.</p>
+        </div>
+        <div class="col-md-4 text-md-end mt-3 mt-md-0">
+            <span class="badge bg-white text-dark px-3 py-2">
+                <i class="fas fa-circle text-success me-1" style="font-size: 8px;"></i> Active
+            </span>
+        </div>
+    </div>
 </div>
 
+<!-- Stats Cards -->
 <div class="row g-4 mb-4">
     <!-- Float Balance Card -->
     <div class="col-md-6 col-lg-4">
-        <div class="balance-card">
-            <div class="d-flex justify-content-between align-items-start mb-3">
-                <div>
-                    <span class="balance-label">Float Balance</span>
-                    <h3 class="balance-amount mb-0">₦{{ stats.float_balance|floatformat:2|intcomma }}</h3>
-                </div>
-                <i class="fas fa-wallet fa-2x opacity-50"></i>
-            </div>
+        <div class="gradient-card bg-gradient-primary">
+            <i class="fas fa-wallet card-icon"></i>
+            <p class="mb-1 opacity-75">Float Balance</p>
+            <h2 class="mb-3">₦{{ stats.float_balance|floatformat:2|intcomma }}</h2>
             <a href="{% url 'merchant:portal_transactions' %}" class="btn btn-light btn-sm">
-                <i class="fas fa-history me-1"></i> View Transactions
+                <i class="fas fa-history me-1"></i> View History
             </a>
         </div>
     </div>
     
     <!-- Today's Stats -->
     <div class="col-md-6 col-lg-4">
-        <div class="stats-card h-100">
-            <div class="d-flex align-items-center mb-3">
-                <div class="stats-icon bg-success bg-opacity-10 text-success me-3">
-                    <i class="fas fa-chart-line"></i>
+        <div class="gradient-card bg-gradient-success">
+            <i class="fas fa-chart-line card-icon"></i>
+            <p class="mb-1 opacity-75">Today's Transactions</p>
+            <h2 class="mb-2">{{ stats.today.count|default:0 }}</h2>
+            <div class="d-flex gap-3">
+                <div>
+                    <small class="opacity-75">Volume</small>
+                    <p class="mb-0 fw-bold">₦{{ stats.today.amount|default:0|floatformat:0|intcomma }}</p>
                 </div>
                 <div>
-                    <small class="text-muted">Today's Transactions</small>
-                    <h4 class="mb-0">{{ stats.today.count }}</h4>
-                </div>
-            </div>
-            <div class="row text-center border-top pt-3">
-                <div class="col-6 border-end">
-                    <small class="text-muted d-block">Volume</small>
-                    <strong>₦{{ stats.today.amount|floatformat:2|intcomma }}</strong>
-                </div>
-                <div class="col-6">
-                    <small class="text-muted d-block">Commission</small>
-                    <strong class="text-success">₦{{ stats.today.commission|floatformat:2|intcomma }}</strong>
+                    <small class="opacity-75">Commission</small>
+                    <p class="mb-0 fw-bold">₦{{ stats.today.commission|default:0|floatformat:0|intcomma }}</p>
                 </div>
             </div>
         </div>
@@ -57,24 +245,18 @@
     
     <!-- This Month Stats -->
     <div class="col-md-6 col-lg-4">
-        <div class="stats-card h-100">
-            <div class="d-flex align-items-center mb-3">
-                <div class="stats-icon bg-primary bg-opacity-10 text-primary me-3">
-                    <i class="fas fa-calendar"></i>
+        <div class="gradient-card bg-gradient-info">
+            <i class="fas fa-calendar-alt card-icon"></i>
+            <p class="mb-1 opacity-75">This Month</p>
+            <h2 class="mb-2">{{ stats.month.count|default:0 }}</h2>
+            <div class="d-flex gap-3">
+                <div>
+                    <small class="opacity-75">Volume</small>
+                    <p class="mb-0 fw-bold">₦{{ stats.month.amount|default:0|floatformat:0|intcomma }}</p>
                 </div>
                 <div>
-                    <small class="text-muted">This Month</small>
-                    <h4 class="mb-0">{{ stats.month.count }}</h4>
-                </div>
-            </div>
-            <div class="row text-center border-top pt-3">
-                <div class="col-6 border-end">
-                    <small class="text-muted d-block">Volume</small>
-                    <strong>₦{{ stats.month.amount|floatformat:2|intcomma }}</strong>
-                </div>
-                <div class="col-6">
-                    <small class="text-muted d-block">Commission</small>
-                    <strong class="text-success">₦{{ stats.month.commission|floatformat:2|intcomma }}</strong>
+                    <small class="opacity-75">Commission</small>
+                    <p class="mb-0 fw-bold">₦{{ stats.month.commission|default:0|floatformat:0|intcomma }}</p>
                 </div>
             </div>
         </div>
@@ -82,78 +264,78 @@
 </div>
 
 <!-- Quick Actions -->
-<h5 class="mb-3">Quick Actions</h5>
+<h5 class="mb-3 fw-bold">Quick Actions</h5>
 <div class="row g-3 mb-4">
     <div class="col-6 col-md-4 col-lg-3">
-        <a href="{% url 'merchant:portal_deposit' %}" class="action-card">
-            <div class="action-icon bg-success bg-opacity-10 text-success">
+        <a href="{% url 'merchant:portal_deposit' %}" class="quick-action deposit">
+            <div class="icon-box icon-deposit">
                 <i class="fas fa-arrow-down"></i>
             </div>
-            <div class="action-title">Deposit</div>
-            <div class="action-desc">Customer deposit</div>
+            <h6>Deposit</h6>
+            <small>Customer deposit</small>
         </a>
     </div>
     <div class="col-6 col-md-4 col-lg-3">
-        <a href="{% url 'merchant:portal_withdrawal' %}" class="action-card">
-            <div class="action-icon bg-danger bg-opacity-10 text-danger">
+        <a href="{% url 'merchant:portal_withdrawal' %}" class="quick-action withdrawal">
+            <div class="icon-box icon-withdrawal">
                 <i class="fas fa-arrow-up"></i>
             </div>
-            <div class="action-title">Withdrawal</div>
-            <div class="action-desc">Customer withdrawal</div>
+            <h6>Withdrawal</h6>
+            <small>Customer withdrawal</small>
         </a>
     </div>
     <div class="col-6 col-md-4 col-lg-3">
-        <a href="{% url 'merchant:portal_internal_transfer' %}" class="action-card">
-            <div class="action-icon bg-primary bg-opacity-10 text-primary">
+        <a href="{% url 'merchant:portal_internal_transfer' %}" class="quick-action transfer">
+            <div class="icon-box icon-transfer">
                 <i class="fas fa-exchange-alt"></i>
             </div>
-            <div class="action-title">Transfer</div>
-            <div class="action-desc">FinanceFlex transfer</div>
+            <h6>Transfer</h6>
+            <small>FinanceFlex transfer</small>
         </a>
     </div>
     <div class="col-6 col-md-4 col-lg-3">
-        <a href="{% url 'merchant:portal_airtime' %}" class="action-card">
-            <div class="action-icon bg-warning bg-opacity-10 text-warning">
+        <a href="{% url 'merchant:portal_airtime' %}" class="quick-action airtime">
+            <div class="icon-box icon-airtime">
                 <i class="fas fa-mobile-alt"></i>
             </div>
-            <div class="action-title">Airtime</div>
-            <div class="action-desc">Buy airtime</div>
+            <h6>Airtime</h6>
+            <small>Buy airtime</small>
         </a>
     </div>
     <div class="col-6 col-md-4 col-lg-3">
-        <a href="{% url 'merchant:portal_data' %}" class="action-card">
-            <div class="action-icon bg-info bg-opacity-10 text-info">
+        <a href="{% url 'merchant:portal_data' %}" class="quick-action data">
+            <div class="icon-box icon-data">
                 <i class="fas fa-wifi"></i>
             </div>
-            <div class="action-title">Data</div>
-            <div class="action-desc">Buy data bundle</div>
+            <h6>Data</h6>
+            <small>Buy data bundle</small>
         </a>
     </div>
     <div class="col-6 col-md-4 col-lg-3">
-        <a href="{% url 'merchant:portal_bills' %}" class="action-card">
-            <div class="action-icon bg-secondary bg-opacity-10 text-secondary">
+        <a href="{% url 'merchant:portal_bills' %}" class="quick-action bills">
+            <div class="icon-box icon-bills">
                 <i class="fas fa-file-invoice-dollar"></i>
             </div>
-            <div class="action-title">Bills</div>
-            <div class="action-desc">Pay bills</div>
+            <h6>Bills</h6>
+            <small>Pay bills</small>
         </a>
     </div>
     <div class="col-6 col-md-4 col-lg-3">
-        <a href="{% url 'merchant:portal_customer_register' %}" class="action-card">
-            <div class="action-icon bg-dark bg-opacity-10 text-dark">
+        <a href="{% url 'merchant:portal_customer_register' %}" class="quick-action register">
+            <div class="icon-box icon-register">
                 <i class="fas fa-user-plus"></i>
             </div>
-            <div class="action-title">Register</div>
-            <div class="action-desc">New customer</div>
+            <h6>Register</h6>
+            <small>New customer</small>
         </a>
     </div>
     <div class="col-6 col-md-4 col-lg-3">
-        <a href="{% url 'merchant:portal_transfer' %}" class="action-card">
-            <div class="action-icon bg-purple bg-opacity-10" style="color: #6f42c1; background-color: rgba(111,66,193,0.1);">
+        <a href="{% url 'merchant:portal_transfer' %}" class="quick-action bank">
+            <div class="icon-box icon-bank">
                 <i class="fas fa-university"></i>
             </div>
-            <div class="action-title">Bank Transfer</div>
-            <div class="action-desc">Other banks</div>
+            <h6>Bank Transfer</h6>
+            <small>Other banks</small>
         </a>
     </div>
 </div>

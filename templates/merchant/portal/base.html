@@ -15,13 +15,18 @@
     <!-- Custom Merchant Portal Styles -->
     <style>
         :root {
-            --primary-color: #0d6efd;
+            --primary-color: #667eea;
+            --primary-dark: #764ba2;
             --secondary-color: #6c757d;
-            --success-color: #198754;
-            --warning-color: #ffc107;
-            --danger-color: #dc3545;
-            --sidebar-bg: #1a1a2e;
-            --sidebar-hover: #16213e;
+            --success-color: #10b981;
+            --success-light: #34d399;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --info-color: #06b6d4;
+            --purple-color: #8b5cf6;
+            --pink-color: #ec4899;
+            --sidebar-bg: linear-gradient(180deg, #1e1b4b 0%, #312e81 50%, #4c1d95 100%);
+            --sidebar-hover: rgba(255,255,255,0.1);
         }
         
         body {
@@ -312,7 +317,246 @@
         /* Alerts */
         .alert {
             border: none;
+            border-radius: 12px;
+        }
+        .alert-success {
+            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+            color: #065f46;
+        }
+        .alert-danger {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+            color: #991b1b;
+        }
+        .alert-warning {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            color: #92400e;
+        }
+        .alert-info {
+            background: linear-gradient(135deg, #cffafe 0%, #a5f3fc 100%);
+            color: #0e7490;
+        }
+        
+        /* Colorful Buttons */
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+            border: none;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-color) 100%);
+        }
+        .btn-success {
+            background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+            border: none;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+        }
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5);
+        }
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444 0%, #f87171 100%);
+            border: none;
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+        }
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(239, 68, 68, 0.5);
+        }
+        .btn-warning {
+            background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+            border: none;
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
+        }
+        .btn-warning:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(245, 158, 11, 0.5);
+            color: #fff;
+        }
+        .btn-info {
+            background: linear-gradient(135deg, #06b6d4 0%, #22d3ee 100%);
+            border: none;
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(6, 182, 212, 0.4);
+        }
+        .btn-info:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(6, 182, 212, 0.5);
+            color: #fff;
+        }
+        
+        /* Colorful Form Controls */
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.25);
+        }
+        .form-control, .form-select {
             border-radius: 10px;
+            border: 2px solid #e5e7eb;
+            padding: 12px 16px;
+            transition: all 0.3s ease;
+        }
+        .form-control:hover, .form-select:hover {
+            border-color: #d1d5db;
+        }
+        .form-label {
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 8px;
+        }
+        
+        /* Colorful Cards */
+        .card {
+            border: none;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+        }
+        .card:hover {
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+        }
+        .card-header {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            border-bottom: 1px solid #e5e7eb;
+            border-radius: 16px 16px 0 0 !important;
+            font-weight: 600;
+        }
+        
+        /* Colorful Tables */
+        .table {
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .table thead th {
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            color: #fff;
+            font-weight: 600;
+            padding: 14px 16px;
+            border: none;
+        }
+        .table tbody tr {
+            transition: all 0.2s ease;
+        }
+        .table tbody tr:hover {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        }
+        .table tbody td {
+            padding: 14px 16px;
+            vertical-align: middle;
+        }
+        
+        /* Colorful Badges */
+        .badge {
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+        .badge.bg-success, .badge.bg-completed {
+            background: linear-gradient(135deg, #10b981 0%, #34d399 100%) !important;
+        }
+        .badge.bg-danger, .badge.bg-failed {
+            background: linear-gradient(135deg, #ef4444 0%, #f87171 100%) !important;
+        }
+        .badge.bg-warning, .badge.bg-pending {
+            background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%) !important;
+            color: #fff !important;
+        }
+        .badge.bg-info {
+            background: linear-gradient(135deg, #06b6d4 0%, #22d3ee 100%) !important;
+        }
+        .badge.bg-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        }
+        
+        /* Form Section Styling */
+        .form-section {
+            background: #fff;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            border: 1px solid #f1f5f9;
+        }
+        .form-section .section-title {
+            font-weight: 700;
+            font-size: 1.25rem;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid #e5e7eb;
+            color: #1f2937;
+        }
+        .form-section .section-title i {
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-right: 10px;
+        }
+        
+        /* Page Header Styling */
+        .page-header {
+            background: linear-gradient(135deg, #fff 0%, #f8fafc 100%);
+            padding: 20px 24px;
+            border-radius: 16px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .page-header h4 {
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 4px;
+            background: linear-gradient(135deg, #1e40af 0%, #7c3aed 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        /* Stats Card Enhancements */
+        .stats-card {
+            background: #fff;
+            border-radius: 20px;
+            padding: 24px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            border: 1px solid #f1f5f9;
+            transition: all 0.3s ease;
+        }
+        .stats-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+        }
+        
+        /* Input Group Styling */
+        .input-group-text {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            border: 2px solid #e5e7eb;
+            border-right: none;
+            border-radius: 10px 0 0 10px;
+            color: var(--primary-color);
+        }
+        .input-group .form-control {
+            border-left: none;
+            border-radius: 0 10px 10px 0;
+        }
+        .input-group .form-control:focus {
+            border-color: #e5e7eb;
+        }
+        
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, var(--primary-dark), var(--primary-color));
         }
     </style>
     {% block extra_css %}{% endblock %}
@@ -416,6 +660,12 @@
                     <a class="nav-link {% if request.resolver_match.url_name == 'portal_change_pin' %}active{% endif %}" href="{% url 'merchant:portal_change_pin' %}">
                         <i class="fas fa-key"></i>
                         <span>Change PIN</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'portal_change_password' %}active{% endif %}" href="{% url 'merchant:portal_change_password' %}">
+                        <i class="fas fa-lock"></i>
+                        <span>Change Password</span>
                     </a>
                 </li>
                 <li class="nav-item">
