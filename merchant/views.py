@@ -518,7 +518,13 @@ def merchant_login(request):
             username = form.cleaned_data['username']
             password = form.cleaned_data['password']
             
-            user = authenticate(request, username=username, password=password)
+            # Try to find user by username first, then authenticate with email
+            try:
+                from accounts.models import User
+                merchant_user = User.objects.get(username=username)
+                user = authenticate(request, email=merchant_user.email, password=password)
+            except User.DoesNotExist:
+                user = None
             
             if user is not None:
                 # Check if user has merchant profile

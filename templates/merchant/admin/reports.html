@@ -1,0 +1,158 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block content %}
+<div class="midde_cont">
+    <div class="container-fluid">
+        <div class="row column_title">
+            <div class="col-md-12">
+                <div class="page_title">
+                    <h2>Merchant Reports</h2>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Summary Cards -->
+        <div class="row column1">
+            <div class="col-md-3">
+                <div class="white_shd full margin_bottom_30">
+                    <div class="full price_table padding_inset">
+                        <div class="text-center">
+                            <i class="fas fa-store fa-2x text-primary mb-2"></i>
+                            <h5>Active Merchants</h5>
+                            <h2>{{ active_merchants }}</h2>
+                            <small class="text-muted">of {{ total_merchants }} total</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-3">
+                <div class="white_shd full margin_bottom_30">
+                    <div class="full price_table padding_inset">
+                        <div class="text-center">
+                            <i class="fas fa-calendar-day fa-2x text-success mb-2"></i>
+                            <h5>Today's Transactions</h5>
+                            <h2>{{ today.count|default:0 }}</h2>
+                            <small class="text-muted">₦{{ today.total_amount|default:0|floatformat:2|intcomma }}</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-3">
+                <div class="white_shd full margin_bottom_30">
+                    <div class="full price_table padding_inset">
+                        <div class="text-center">
+                            <i class="fas fa-calendar-alt fa-2x text-info mb-2"></i>
+                            <h5>Monthly Transactions</h5>
+                            <h2>{{ month.count|default:0 }}</h2>
+                            <small class="text-muted">₦{{ month.total_amount|default:0|floatformat:2|intcomma }}</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-3">
+                <div class="white_shd full margin_bottom_30">
+                    <div class="full price_table padding_inset">
+                        <div class="text-center">
+                            <i class="fas fa-coins fa-2x text-warning mb-2"></i>
+                            <h5>Monthly Commission</h5>
+                            <h2>₦{{ month.total_commission|default:0|floatformat:2|intcomma }}</h2>
+                            <small class="text-muted">Today: ₦{{ today.total_commission|default:0|floatformat:2|intcomma }}</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <!-- Top Merchants -->
+            <div class="col-md-6">
+                <div class="white_shd full margin_bottom_30">
+                    <div class="full graph_head">
+                        <div class="heading1 margin_0">
+                            <h2>Top Merchants (This Month)</h2>
+                        </div>
+                    </div>
+                    <div class="table_section padding_inset">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Merchant</th>
+                                        <th>Transactions</th>
+                                        <th>Volume</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for merchant in top_merchants %}
+                                    <tr>
+                                        <td>{{ forloop.counter }}</td>
+                                        <td>
+                                            <strong>{{ merchant.merchant_name }}</strong><br>
+                                            <small class="text-muted">{{ merchant.merchant_id }}</small>
+                                        </td>
+                                        <td>{{ merchant.trx_count|default:0 }}</td>
+                                        <td>₦{{ merchant.trx_volume|default:0|floatformat:2|intcomma }}</td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="4" class="text-center py-4">
+                                            <p class="text-muted">No transaction data this month</p>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Transaction Type Breakdown -->
+            <div class="col-md-6">
+                <div class="white_shd full margin_bottom_30">
+                    <div class="full graph_head">
+                        <div class="heading1 margin_0">
+                            <h2>Transaction Types (This Month)</h2>
+                        </div>
+                    </div>
+                    <div class="table_section padding_inset">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Type</th>
+                                        <th>Count</th>
+                                        <th>Total Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in type_breakdown %}
+                                    <tr>
+                                        <td>
+                                            <span class="badge bg-info">{{ item.transaction_type|title }}</span>
+                                        </td>
+                                        <td>{{ item.count|intcomma }}</td>
+                                        <td>₦{{ item.total|floatformat:2|intcomma }}</td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="3" class="text-center py-4">
+                                            <p class="text-muted">No transaction data this month</p>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

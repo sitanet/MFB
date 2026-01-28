@@ -554,7 +554,9 @@ def login(request):
         try:
             # Check if email exists
             try:
-                db_user = User.objects.get(email=email)
+                db_user = User.objects.filter(email=email).first()
+                if db_user is None:
+                    raise User.DoesNotExist
                 print(f"[DEBUG] Email found → user_id={db_user.id}")
             except User.DoesNotExist:
                 print(f"[DEBUG] Email '{email}' does NOT exist")

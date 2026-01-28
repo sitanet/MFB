@@ -1,0 +1,188 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block content %}
+<div class="midde_cont">
+    <div class="container-fluid">
+        <div class="row column_title">
+            <div class="col-md-12">
+                <div class="page_title">
+                    <h2>All Merchant Transactions</h2>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Summary Cards -->
+        <div class="row column1">
+            <div class="col-md-4">
+                <div class="white_shd full margin_bottom_30">
+                    <div class="full price_table padding_inset">
+                        <div class="text-center">
+                            <i class="fas fa-exchange-alt fa-2x text-primary mb-2"></i>
+                            <h5>Total Transactions</h5>
+                            <h2>{{ summary.total_count|default:0|intcomma }}</h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="white_shd full margin_bottom_30">
+                    <div class="full price_table padding_inset">
+                        <div class="text-center">
+                            <i class="fas fa-money-bill-wave fa-2x text-success mb-2"></i>
+                            <h5>Total Volume</h5>
+                            <h2>₦{{ summary.total_amount|default:0|floatformat:2|intcomma }}</h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="white_shd full margin_bottom_30">
+                    <div class="full price_table padding_inset">
+                        <div class="text-center">
+                            <i class="fas fa-coins fa-2x text-warning mb-2"></i>
+                            <h5>Total Commission</h5>
+                            <h2>₦{{ summary.total_commission|default:0|floatformat:2|intcomma }}</h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row column1">
+            <div class="col-md-12">
+                <div class="white_shd full margin_bottom_30">
+                    <div class="full graph_head">
+                        <div class="heading1 margin_0">
+                            <h2>Transactions</h2>
+                        </div>
+                    </div>
+                    
+                    <!-- Filters -->
+                    <div class="p-3 border-bottom">
+                        <form method="get" class="row g-2">
+                            <div class="col-md-2">
+                                <select name="merchant" class="form-select">
+                                    <option value="">All Merchants</option>
+                                    {% for m in merchants %}
+                                    <option value="{{ m.id }}" {% if request.GET.merchant == m.id|stringformat:"i" %}selected{% endif %}>
+                                        {{ m.merchant_name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <select name="type" class="form-select">
+                                    <option value="">All Types</option>
+                                    {% for value, label in transaction_types %}
+                                    <option value="{{ value }}" {% if request.GET.type == value %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <select name="status" class="form-select">
+                                    <option value="">All Status</option>
+                                    {% for value, label in status_choices %}
+                                    <option value="{{ value }}" {% if request.GET.status == value %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <input type="date" name="date_from" class="form-control" 
+                                       placeholder="From" value="{{ request.GET.date_from }}">
+                            </div>
+                            <div class="col-md-2">
+                                <input type="date" name="date_to" class="form-control" 
+                                       placeholder="To" value="{{ request.GET.date_to }}">
+                            </div>
+                            <div class="col-md-2">
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="fas fa-filter"></i> Filter
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <div class="table_section padding_inset">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Reference</th>
+                                        <th>Merchant</th>
+                                        <th>Type</th>
+                                        <th>Amount</th>
+                                        <th>Commission</th>
+                                        <th>Status</th>
+                                        <th>Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for trx in transactions %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ trx.reference }}</strong>
+                                        </td>
+                                        <td>
+                                            {{ trx.merchant.merchant_name }}<br>
+                                            <small class="text-muted">{{ trx.merchant.merchant_id }}</small>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-info">{{ trx.get_transaction_type_display }}</span>
+                                        </td>
+                                        <td>₦{{ trx.amount|floatformat:2|intcomma }}</td>
+                                        <td>₦{{ trx.commission|floatformat:2|intcomma }}</td>
+                                        <td>
+                                            {% if trx.status == 'completed' %}
+                                            <span class="badge bg-success">Completed</span>
+                                            {% elif trx.status == 'pending' %}
+                                            <span class="badge bg-warning">Pending</span>
+                                            {% elif trx.status == 'failed' %}
+                                            <span class="badge bg-danger">Failed</span>
+                                            {% else %}
+                                            <span class="badge bg-secondary">{{ trx.status }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ trx.created_at|date:"M d, Y H:i" }}</td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="7" class="text-center py-4">
+                                            <i class="fas fa-exchange-alt fa-3x text-muted mb-3"></i>
+                                            <p class="text-muted">No transactions found</p>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <!-- Pagination -->
+                        {% if transactions.has_other_pages %}
+                        <nav class="mt-3">
+                            <ul class="pagination justify-content-center">
+                                {% if transactions.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ transactions.previous_page_number }}&merchant={{ request.GET.merchant }}&type={{ request.GET.type }}&status={{ request.GET.status }}&date_from={{ request.GET.date_from }}&date_to={{ request.GET.date_to }}">Previous</a>
+                                </li>
+                                {% endif %}
+                                
+                                <li class="page-item disabled">
+                                    <span class="page-link">Page {{ transactions.number }} of {{ transactions.paginator.num_pages }}</span>
+                                </li>
+                                
+                                {% if transactions.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ transactions.next_page_number }}&merchant={{ request.GET.merchant }}&type={{ request.GET.type }}&status={{ request.GET.status }}&date_from={{ request.GET.date_from }}&date_to={{ request.GET.date_to }}">Next</a>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
