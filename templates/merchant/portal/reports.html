@@ -1,0 +1,164 @@
+{% extends 'merchant/portal/base.html' %}
+{% load humanize %}
+
+{% block title %}Reports{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h4>Transaction Reports</h4>
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'merchant:portal_dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item active">Reports</li>
+        </ol>
+    </nav>
+</div>
+
+<!-- Date Filter -->
+<div class="stats-card mb-4">
+    <form method="get" class="row g-3 align-items-end">
+        <div class="col-md-4">
+            <label class="form-label">From Date</label>
+            <input type="date" name="date_from" class="form-control" value="{{ request.GET.date_from }}">
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">To Date</label>
+            <input type="date" name="date_to" class="form-control" value="{{ request.GET.date_to }}">
+        </div>
+        <div class="col-md-4">
+            <button type="submit" class="btn btn-primary me-2">
+                <i class="fas fa-filter me-1"></i>Filter
+            </button>
+            <a href="{% url 'merchant:portal_reports' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-times"></i> Reset
+            </a>
+        </div>
+    </form>
+</div>
+
+<!-- Summary Cards -->
+<div class="row g-4 mb-4">
+    <div class="col-md-4">
+        <div class="balance-card">
+            <span class="balance-label">Total Transactions</span>
+            <h3 class="balance-amount mb-0">{{ summary.total_count|default:0 }}</h3>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stats-card h-100">
+            <div class="d-flex align-items-center">
+                <div class="stats-icon bg-success bg-opacity-10 text-success me-3">
+                    <i class="fas fa-naira-sign"></i>
+                </div>
+                <div>
+                    <small class="text-muted">Total Volume</small>
+                    <h4 class="mb-0">₦{{ summary.total_amount|floatformat:2|intcomma|default:"0.00" }}</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stats-card h-100">
+            <div class="d-flex align-items-center">
+                <div class="stats-icon bg-warning bg-opacity-10 text-warning me-3">
+                    <i class="fas fa-coins"></i>
+                </div>
+                <div>
+                    <small class="text-muted">Commission Earned</small>
+                    <h4 class="mb-0 text-success">₦{{ summary.total_commission|floatformat:2|intcomma|default:"0.00" }}</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Transaction Breakdown -->
+<div class="row">
+    <div class="col-md-8">
+        <div class="stats-card">
+            <h5 class="mb-4">Transaction Breakdown by Type</h5>
+            
+            {% if type_breakdown %}
+            <div class="table-responsive">
+                <table class="table">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Transaction Type</th>
+                            <th class="text-center">Count</th>
+                            <th class="text-end">Total Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in type_breakdown %}
+                        <tr>
+                            <td>
+                                <span class="badge 
+                                    {% if item.transaction_type == 'deposit' %}bg-success
+                                    {% elif item.transaction_type == 'withdrawal' %}bg-danger
+                                    {% elif item.transaction_type == 'airtime' %}bg-warning
+                                    {% elif item.transaction_type == 'data' %}bg-info
+                                    {% else %}bg-primary{% endif %} me-2">
+                                    {{ item.count }}
+                                </span>
+                                {{ item.transaction_type|title }}
+                            </td>
+                            <td class="text-center">{{ item.count }}</td>
+                            <td class="text-end"><strong>₦{{ item.total|floatformat:2|intcomma }}</strong></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot class="table-light">
+                        <tr>
+                            <th>Total</th>
+                            <th class="text-center">{{ summary.total_count }}</th>
+                            <th class="text-end">₦{{ summary.total_amount|floatformat:2|intcomma }}</th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-4 text-muted">
+                <i class="fas fa-chart-pie fa-3x mb-3"></i>
+                <p>No transaction data for this period</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <!-- This Month Quick Stats -->
+        <div class="stats-card mb-4">
+            <h6 class="mb-3">This Month Overview</h6>
+            <div class="d-flex justify-content-between mb-3 pb-3 border-bottom">
+                <span class="text-muted">Transactions</span>
+                <strong>{{ stats.month.count }}</strong>
+            </div>
+            <div class="d-flex justify-content-between mb-3 pb-3 border-bottom">
+                <span class="text-muted">Volume</span>
+                <strong>₦{{ stats.month.amount|floatformat:0|intcomma }}</strong>
+            </div>
+            <div class="d-flex justify-content-between">
+                <span class="text-muted">Commission</span>
+                <strong class="text-success">₦{{ stats.month.commission|floatformat:2|intcomma }}</strong>
+            </div>
+        </div>
+        
+        <!-- Today's Stats -->
+        <div class="stats-card">
+            <h6 class="mb-3">Today's Activity</h6>
+            <div class="d-flex justify-content-between mb-3 pb-3 border-bottom">
+                <span class="text-muted">Transactions</span>
+                <strong>{{ stats.today.count }}</strong>
+            </div>
+            <div class="d-flex justify-content-between mb-3 pb-3 border-bottom">
+                <span class="text-muted">Volume</span>
+                <strong>₦{{ stats.today.amount|floatformat:0|intcomma }}</strong>
+            </div>
+            <div class="d-flex justify-content-between">
+                <span class="text-muted">Commission</span>
+                <strong class="text-success">₦{{ stats.today.commission|floatformat:2|intcomma }}</strong>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

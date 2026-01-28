@@ -1,0 +1,295 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block content %}
+<div class="midde_cont">
+    <div class="container-fluid">
+        <div class="row column_title">
+            <div class="col-md-12">
+                <div class="page_title d-flex justify-content-between align-items-center">
+                    <h2>Merchant Details</h2>
+                    <a href="{% url 'merchant:merchant_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to List
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <!-- Merchant Info -->
+            <div class="col-md-8">
+                <div class="white_shd full margin_bottom_30">
+                    <div class="full graph_head d-flex justify-content-between align-items-center">
+                        <div class="heading1 margin_0">
+                            <h2>{{ merchant.merchant_name }}</h2>
+                        </div>
+                        <div>
+                            <a href="{% url 'merchant:merchant_update' merchant.id %}" class="btn btn-sm btn-primary">
+                                <i class="fas fa-edit"></i> Edit
+                            </a>
+                            {% if merchant.status == 'pending' %}
+                            <form action="{% url 'merchant:merchant_activate' merchant.id %}" method="post" style="display:inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-success">
+                                    <i class="fas fa-check"></i> Activate
+                                </button>
+                            </form>
+                            {% elif merchant.status == 'active' %}
+                            <form action="{% url 'merchant:merchant_suspend' merchant.id %}" method="post" style="display:inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-warning" 
+                                        onclick="return confirm('Are you sure you want to suspend this merchant?')">
+                                    <i class="fas fa-pause"></i> Suspend
+                                </button>
+                            </form>
+                            {% elif merchant.status == 'suspended' %}
+                            <form action="{% url 'merchant:merchant_activate' merchant.id %}" method="post" style="display:inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-success">
+                                    <i class="fas fa-play"></i> Reactivate
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="p-4">
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <table class="table table-borderless">
+                                    <tr>
+                                        <td class="text-muted">Merchant ID:</td>
+                                        <td><strong>{{ merchant.merchant_id }}</strong></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Merchant Code:</td>
+                                        <td><strong>{{ merchant.merchant_code }}</strong></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Type:</td>
+                                        <td><span class="badge bg-info">{{ merchant.get_merchant_type_display }}</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Status:</td>
+                                        <td>
+                                            {% if merchant.status == 'active' %}
+                                            <span class="badge bg-success">Active</span>
+                                            {% elif merchant.status == 'pending' %}
+                                            <span class="badge bg-warning">Pending Approval</span>
+                                            {% elif merchant.status == 'suspended' %}
+                                            <span class="badge bg-danger">Suspended</span>
+                                            {% else %}
+                                            <span class="badge bg-secondary">{{ merchant.status }}</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Created:</td>
+                                        <td>{{ merchant.created_at|date:"M d, Y H:i" }}</td>
+                                    </tr>
+                                </table>
+                            </div>
+                            <div class="col-md-6">
+                                <table class="table table-borderless">
+                                    <tr>
+                                        <td class="text-muted">Business Name:</td>
+                                        <td>{{ merchant.business_name|default:"-" }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Phone:</td>
+                                        <td>{{ merchant.business_phone|default:"-" }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Email:</td>
+                                        <td>{{ merchant.business_email|default:"-" }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Address:</td>
+                                        <td>{{ merchant.address|default:"-" }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Location:</td>
+                                        <td>{{ merchant.city|default:"" }}, {{ merchant.state|default:"" }}</td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <h5 class="mb-3">Float Account</h5>
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <table class="table table-borderless">
+                                    <tr>
+                                        <td class="text-muted">GL Number:</td>
+                                        <td><code>{{ merchant.float_gl_no }}</code></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Account Number:</td>
+                                        <td><code>{{ merchant.float_ac_no }}</code></td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <h5 class="mb-3">Transaction Limits</h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <table class="table table-borderless">
+                                    <tr>
+                                        <td class="text-muted">Daily Limit:</td>
+                                        <td><strong>₦{{ merchant.daily_transaction_limit|floatformat:2|intcomma }}</strong></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Single Transaction Limit:</td>
+                                        <td><strong>₦{{ merchant.single_transaction_limit|floatformat:2|intcomma }}</strong></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Commission Rate:</td>
+                                        <td><strong>{{ merchant.commission_rate }}%</strong></td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Recent Transactions -->
+                <div class="white_shd full margin_bottom_30">
+                    <div class="full graph_head d-flex justify-content-between align-items-center">
+                        <div class="heading1 margin_0">
+                            <h2>Recent Transactions</h2>
+                        </div>
+                        <a href="{% url 'merchant:merchant_transactions_admin' merchant.id %}" class="btn btn-sm btn-outline-primary">
+                            View All
+                        </a>
+                    </div>
+                    <div class="table_section">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Reference</th>
+                                    <th>Type</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                    <th>Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for trx in recent_transactions %}
+                                <tr>
+                                    <td><code>{{ trx.transaction_ref }}</code></td>
+                                    <td><span class="badge bg-primary">{{ trx.get_transaction_type_display }}</span></td>
+                                    <td><strong>₦{{ trx.amount|floatformat:2|intcomma }}</strong></td>
+                                    <td>
+                                        {% if trx.status == 'completed' %}
+                                        <span class="badge bg-success">Completed</span>
+                                        {% elif trx.status == 'pending' %}
+                                        <span class="badge bg-warning">Pending</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">{{ trx.status }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ trx.created_at|date:"M d, H:i" }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted">No transactions yet</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Stats Sidebar -->
+            <div class="col-md-4">
+                <!-- Float Balance -->
+                <div class="white_shd full margin_bottom_30">
+                    <div class="full graph_head">
+                        <div class="heading1 margin_0">
+                            <h2>Float Balance</h2>
+                        </div>
+                    </div>
+                    <div class="p-4 text-center">
+                        <h2 class="text-success mb-0">₦{{ stats.float_balance|floatformat:2|intcomma }}</h2>
+                        <small class="text-muted">Available Balance</small>
+                    </div>
+                </div>
+                
+                <!-- Today's Stats -->
+                <div class="white_shd full margin_bottom_30">
+                    <div class="full graph_head">
+                        <div class="heading1 margin_0">
+                            <h2>Today's Performance</h2>
+                        </div>
+                    </div>
+                    <div class="p-4">
+                        <div class="row text-center">
+                            <div class="col-6 border-end">
+                                <h4 class="mb-0">{{ stats.today.count }}</h4>
+                                <small class="text-muted">Transactions</small>
+                            </div>
+                            <div class="col-6">
+                                <h4 class="mb-0">₦{{ stats.today.amount|floatformat:0|intcomma }}</h4>
+                                <small class="text-muted">Volume</small>
+                            </div>
+                        </div>
+                        <hr>
+                        <div class="text-center">
+                            <small class="text-muted">Commission Earned</small>
+                            <h5 class="text-success mb-0">₦{{ stats.today.commission|floatformat:2|intcomma }}</h5>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- This Month -->
+                <div class="white_shd full margin_bottom_30">
+                    <div class="full graph_head">
+                        <div class="heading1 margin_0">
+                            <h2>This Month</h2>
+                        </div>
+                    </div>
+                    <div class="p-4">
+                        <div class="row text-center">
+                            <div class="col-6 border-end">
+                                <h4 class="mb-0">{{ stats.month.count }}</h4>
+                                <small class="text-muted">Transactions</small>
+                            </div>
+                            <div class="col-6">
+                                <h4 class="mb-0">₦{{ stats.month.amount|floatformat:0|intcomma }}</h4>
+                                <small class="text-muted">Volume</small>
+                            </div>
+                        </div>
+                        <hr>
+                        <div class="text-center">
+                            <small class="text-muted">Commission Earned</small>
+                            <h5 class="text-success mb-0">₦{{ stats.month.commission|floatformat:2|intcomma }}</h5>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Quick Links -->
+                <div class="white_shd full margin_bottom_30">
+                    <div class="full graph_head">
+                        <div class="heading1 margin_0">
+                            <h2>Quick Links</h2>
+                        </div>
+                    </div>
+                    <div class="p-3">
+                        <a href="{% url 'merchant:merchant_transactions_admin' merchant.id %}" class="btn btn-outline-primary btn-block mb-2 w-100">
+                            <i class="fas fa-list me-2"></i>View All Transactions
+                        </a>
+                        <a href="{% url 'merchant:merchant_activity_admin' merchant.id %}" class="btn btn-outline-info btn-block mb-2 w-100">
+                            <i class="fas fa-history me-2"></i>Activity Log
+                        </a>
+                        <a href="{% url 'merchant:merchant_update' merchant.id %}" class="btn btn-outline-secondary btn-block w-100">
+                            <i class="fas fa-edit me-2"></i>Edit Merchant
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

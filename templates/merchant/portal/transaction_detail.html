@@ -1,0 +1,198 @@
+{% extends 'merchant/portal/base.html' %}
+{% load humanize %}
+
+{% block title %}Transaction Details{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h4>Transaction Details</h4>
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'merchant:portal_dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'merchant:portal_transactions' %}">Transactions</a></li>
+            <li class="breadcrumb-item active">{{ transaction.transaction_ref }}</li>
+        </ol>
+    </nav>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="stats-card mb-4">
+            <div class="d-flex justify-content-between align-items-start mb-4">
+                <div>
+                    <h5 class="mb-1">{{ transaction.get_transaction_type_display }}</h5>
+                    <span class="text-muted">Reference: <code>{{ transaction.transaction_ref }}</code></span>
+                </div>
+                {% if transaction.status == 'completed' %}
+                <span class="badge bg-success fs-6"><i class="fas fa-check me-1"></i>Completed</span>
+                {% elif transaction.status == 'pending' %}
+                <span class="badge bg-warning fs-6"><i class="fas fa-clock me-1"></i>Pending</span>
+                {% elif transaction.status == 'failed' %}
+                <span class="badge bg-danger fs-6"><i class="fas fa-times me-1"></i>Failed</span>
+                {% elif transaction.status == 'reversed' %}
+                <span class="badge bg-secondary fs-6"><i class="fas fa-undo me-1"></i>Reversed</span>
+                {% endif %}
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <table class="table table-borderless">
+                        <tr>
+                            <td class="text-muted">Amount:</td>
+                            <td><strong class="fs-4">₦{{ transaction.amount|floatformat:2|intcomma }}</strong></td>
+                        </tr>
+                        {% if transaction.charge > 0 %}
+                        <tr>
+                            <td class="text-muted">Charge:</td>
+                            <td>₦{{ transaction.charge|floatformat:2|intcomma }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if transaction.commission > 0 %}
+                        <tr>
+                            <td class="text-muted">Commission:</td>
+                            <td class="text-success">₦{{ transaction.commission|floatformat:2|intcomma }}</td>
+                        </tr>
+                        {% endif %}
+                        <tr>
+                            <td class="text-muted">Date:</td>
+                            <td>{{ transaction.created_at|date:"F d, Y H:i:s" }}</td>
+                        </tr>
+                        {% if transaction.completed_at %}
+                        <tr>
+                            <td class="text-muted">Completed:</td>
+                            <td>{{ transaction.completed_at|date:"F d, Y H:i:s" }}</td>
+                        </tr>
+                        {% endif %}
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    {% if transaction.customer_name %}
+                    <h6 class="text-muted mb-2">Customer Details</h6>
+                    <table class="table table-borderless">
+                        <tr>
+                            <td class="text-muted">Name:</td>
+                            <td><strong>{{ transaction.customer_name }}</strong></td>
+                        </tr>
+                        {% if transaction.customer_account %}
+                        <tr>
+                            <td class="text-muted">Account:</td>
+                            <td><code>{{ transaction.customer_account }}</code></td>
+                        </tr>
+                        {% endif %}
+                        {% if transaction.customer_phone %}
+                        <tr>
+                            <td class="text-muted">Phone:</td>
+                            <td>{{ transaction.customer_phone }}</td>
+                        </tr>
+                        {% endif %}
+                    </table>
+                    {% endif %}
+                    
+                    {% if transaction.beneficiary_name %}
+                    <h6 class="text-muted mb-2">Beneficiary Details</h6>
+                    <table class="table table-borderless">
+                        <tr>
+                            <td class="text-muted">Name:</td>
+                            <td><strong>{{ transaction.beneficiary_name }}</strong></td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Account:</td>
+                            <td><code>{{ transaction.beneficiary_account }}</code></td>
+                        </tr>
+                        {% if transaction.beneficiary_bank %}
+                        <tr>
+                            <td class="text-muted">Bank:</td>
+                            <td>{{ transaction.beneficiary_bank }}</td>
+                        </tr>
+                        {% endif %}
+                    </table>
+                    {% endif %}
+                    
+                    {% if transaction.phone_number %}
+                    <h6 class="text-muted mb-2">Service Details</h6>
+                    <table class="table table-borderless">
+                        <tr>
+                            <td class="text-muted">Phone:</td>
+                            <td><strong>{{ transaction.phone_number }}</strong></td>
+                        </tr>
+                        {% if transaction.service_provider %}
+                        <tr>
+                            <td class="text-muted">Provider:</td>
+                            <td>{{ transaction.service_provider }}</td>
+                        </tr>
+                        {% endif %}
+                    </table>
+                    {% endif %}
+                </div>
+            </div>
+            
+            {% if transaction.narration %}
+            <div class="mt-3 p-3 bg-light rounded">
+                <strong>Narration:</strong> {{ transaction.narration }}
+            </div>
+            {% endif %}
+            
+            {% if transaction.response_message %}
+            <div class="mt-3">
+                <strong>Response:</strong>
+                <div class="p-3 {% if transaction.status == 'completed' %}bg-success{% else %}bg-danger{% endif %} bg-opacity-10 rounded">
+                    {{ transaction.response_message }}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Float Balance Changes -->
+        {% if transaction.float_balance_before is not None %}
+        <div class="stats-card">
+            <h6 class="mb-3">Float Balance Movement</h6>
+            <div class="row text-center">
+                <div class="col-4">
+                    <small class="text-muted d-block">Before</small>
+                    <strong>₦{{ transaction.float_balance_before|floatformat:2|intcomma }}</strong>
+                </div>
+                <div class="col-4">
+                    <i class="fas fa-arrow-right fa-2x text-muted"></i>
+                </div>
+                <div class="col-4">
+                    <small class="text-muted d-block">After</small>
+                    <strong>₦{{ transaction.float_balance_after|floatformat:2|intcomma }}</strong>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="stats-card mb-4">
+            <h6 class="mb-3">Actions</h6>
+            <a href="{% url 'merchant:portal_transactions' %}" class="btn btn-outline-primary w-100 mb-2">
+                <i class="fas fa-list me-2"></i>Back to Transactions
+            </a>
+            <button class="btn btn-outline-secondary w-100" onclick="window.print()">
+                <i class="fas fa-print me-2"></i>Print Receipt
+            </button>
+        </div>
+        
+        <div class="stats-card">
+            <h6 class="mb-3">Transaction Summary</h6>
+            <div class="d-flex justify-content-between mb-2">
+                <span class="text-muted">Type</span>
+                <span>{{ transaction.get_transaction_type_display }}</span>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+                <span class="text-muted">Amount</span>
+                <span>₦{{ transaction.amount|floatformat:2|intcomma }}</span>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+                <span class="text-muted">Status</span>
+                <span>{{ transaction.get_status_display }}</span>
+            </div>
+            <div class="d-flex justify-content-between">
+                <span class="text-muted">Date</span>
+                <span>{{ transaction.created_at|date:"M d, Y" }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,193 @@
+{% extends 'merchant/portal/base.html' %}
+{% load humanize %}
+
+{% block title %}Customer Withdrawal{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h4>Customer Withdrawal</h4>
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'merchant:portal_dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item active">Withdrawal</li>
+        </ol>
+    </nav>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="form-section">
+            <h5 class="section-title">
+                <i class="fas fa-arrow-up text-danger me-2"></i>
+                Withdraw Funds
+            </h5>
+            
+            <form method="post" id="withdrawalForm">
+                {% csrf_token %}
+                
+                <!-- Customer Account -->
+                <div class="mb-4">
+                    <label for="customer_account" class="form-label">Customer Account Number</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="customer_account" name="customer_account" 
+                               placeholder="Enter account number (e.g., 202011)" required>
+                        <button class="btn btn-outline-primary" type="button" id="validateBtn">
+                            <i class="fas fa-search"></i> Validate
+                        </button>
+                    </div>
+                    <div class="form-text">Enter the customer's GL number + Account number</div>
+                </div>
+                
+                <!-- Customer Details (shown after validation) -->
+                <div class="card bg-light mb-4 d-none" id="customerDetails">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <small class="text-muted">Customer Name</small>
+                                <p class="mb-2 fw-bold" id="customerName">-</p>
+                            </div>
+                            <div class="col-md-6">
+                                <small class="text-muted">Available Balance</small>
+                                <p class="mb-2 fw-bold text-success" id="customerBalance">-</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Amount -->
+                <div class="mb-4">
+                    <label for="amount" class="form-label">Amount to Withdraw</label>
+                    <div class="input-group">
+                        <span class="input-group-text">₦</span>
+                        <input type="number" class="form-control" id="amount" name="amount" 
+                               min="100" step="0.01" placeholder="0.00" required>
+                    </div>
+                    <div class="form-text text-danger d-none" id="balanceWarning">
+                        <i class="fas fa-exclamation-triangle"></i> Amount exceeds customer balance
+                    </div>
+                </div>
+                
+                <!-- Narration -->
+                <div class="mb-4">
+                    <label for="narration" class="form-label">Narration (Optional)</label>
+                    <input type="text" class="form-control" id="narration" name="narration" 
+                           placeholder="Enter transaction description">
+                </div>
+                
+                <!-- Transaction PIN -->
+                <div class="mb-4">
+                    <label for="transaction_pin" class="form-label">Transaction PIN</label>
+                    <input type="password" class="form-control" id="transaction_pin" name="transaction_pin" 
+                           maxlength="6" placeholder="Enter your PIN" required>
+                </div>
+                
+                <hr>
+                
+                <div class="d-flex justify-content-between align-items-center">
+                    <a href="{% url 'merchant:portal_dashboard' %}" class="btn btn-light">
+                        <i class="fas fa-arrow-left me-2"></i> Back
+                    </a>
+                    <button type="submit" class="btn btn-danger" id="submitBtn" disabled>
+                        <i class="fas fa-check me-2"></i> Process Withdrawal
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <!-- Float Balance -->
+        <div class="balance-card mb-4">
+            <span class="balance-label">Your Float Balance</span>
+            <h3 class="balance-amount">₦{{ float_balance|floatformat:2|intcomma }}</h3>
+            <small class="opacity-75">Funds will be added to your float</small>
+        </div>
+        
+        <!-- Instructions -->
+        <div class="stats-card">
+            <h6 class="mb-3"><i class="fas fa-info-circle me-2"></i>Instructions</h6>
+            <ul class="list-unstyled mb-0">
+                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Enter customer account number</li>
+                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Validate to check balance</li>
+                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Enter withdrawal amount</li>
+                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Confirm with your PIN</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    var customerValidated = false;
+    var customerBalanceAmount = 0;
+    
+    // Validate customer account
+    $('#validateBtn').click(function() {
+        var account = $('#customer_account').val();
+        if (!account) {
+            alert('Please enter account number');
+            return;
+        }
+        
+        var btn = $(this);
+        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+        
+        $.get("{% url 'merchant:api_validate_customer' %}", {account: account}, function(data) {
+            if (data.success) {
+                $('#customerName').text(data.customer.name);
+                customerBalanceAmount = parseFloat(data.customer.balance);
+                $('#customerBalance').text('₦' + customerBalanceAmount.toLocaleString('en-NG', {minimumFractionDigits: 2}));
+                $('#customerDetails').removeClass('d-none');
+                customerValidated = true;
+                updateSubmitButton();
+            } else {
+                alert(data.message || 'Customer not found');
+                $('#customerDetails').addClass('d-none');
+                customerValidated = false;
+                updateSubmitButton();
+            }
+        }).fail(function() {
+            alert('Error validating customer');
+        }).always(function() {
+            btn.prop('disabled', false).html('<i class="fas fa-search"></i> Validate');
+        });
+    });
+    
+    // Re-validate when account changes
+    $('#customer_account').on('change', function() {
+        customerValidated = false;
+        $('#customerDetails').addClass('d-none');
+        updateSubmitButton();
+    });
+    
+    function updateSubmitButton() {
+        var amount = parseFloat($('#amount').val()) || 0;
+        var pin = $('#transaction_pin').val();
+        var balanceOk = amount <= customerBalanceAmount;
+        
+        // Show/hide balance warning
+        if (amount > 0 && !balanceOk) {
+            $('#balanceWarning').removeClass('d-none');
+        } else {
+            $('#balanceWarning').addClass('d-none');
+        }
+        
+        $('#submitBtn').prop('disabled', !customerValidated || amount < 100 || !pin || !balanceOk);
+    }
+    
+    $('#amount, #transaction_pin').on('input', updateSubmitButton);
+    
+    // Form submission confirmation
+    $('#withdrawalForm').on('submit', function(e) {
+        var amount = parseFloat($('#amount').val());
+        var customerName = $('#customerName').text();
+        
+        if (!confirm('Confirm withdrawal of ₦' + amount.toLocaleString('en-NG', {minimumFractionDigits: 2}) + ' for ' + customerName + '?')) {
+            e.preventDefault();
+        }
+    });
+});
+</script>
+{% endblock %}

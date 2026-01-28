@@ -1,0 +1,159 @@
+{% extends 'merchant/portal/base.html' %}
+{% load humanize %}
+
+{% block title %}My Profile{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h4>My Profile</h4>
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'merchant:portal_dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item active">Profile</li>
+        </ol>
+    </nav>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="stats-card mb-4">
+            <div class="d-flex align-items-center mb-4">
+                <div class="me-4">
+                    <div class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" 
+                         style="width: 80px; height: 80px;">
+                        <i class="fas fa-store fa-2x text-primary"></i>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="mb-1">{{ merchant.merchant_name }}</h4>
+                    <span class="badge bg-{{ merchant.status }}">
+                        {% if merchant.status == 'active' %}Active{% else %}{{ merchant.get_status_display }}{% endif %}
+                    </span>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <h6 class="text-muted mb-3">Merchant Information</h6>
+                    <table class="table table-borderless">
+                        <tr>
+                            <td class="text-muted">Merchant ID:</td>
+                            <td><code>{{ merchant.merchant_id }}</code></td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Merchant Code:</td>
+                            <td><code>{{ merchant.merchant_code }}</code></td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Type:</td>
+                            <td>{{ merchant.get_merchant_type_display }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Member Since:</td>
+                            <td>{{ merchant.created_at|date:"F d, Y" }}</td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="text-muted mb-3">Business Details</h6>
+                    <table class="table table-borderless">
+                        <tr>
+                            <td class="text-muted">Business Name:</td>
+                            <td>{{ merchant.business_name|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Phone:</td>
+                            <td>{{ merchant.business_phone|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Email:</td>
+                            <td>{{ merchant.business_email|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Address:</td>
+                            <td>{{ merchant.address|default:"-" }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Float Account -->
+        <div class="stats-card mb-4">
+            <h6 class="mb-3">Float Account Details</h6>
+            <div class="row">
+                <div class="col-md-6">
+                    <table class="table table-borderless">
+                        <tr>
+                            <td class="text-muted">GL Number:</td>
+                            <td><code>{{ merchant.float_gl_no }}</code></td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Account Number:</td>
+                            <td><code>{{ merchant.float_ac_no }}</code></td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <div class="text-end">
+                        <small class="text-muted d-block">Current Balance</small>
+                        <h3 class="text-success mb-0">₦{{ stats.float_balance|floatformat:2|intcomma }}</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Transaction Limits -->
+        <div class="stats-card">
+            <h6 class="mb-3">Transaction Limits</h6>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="border rounded p-3 text-center">
+                        <small class="text-muted d-block">Daily Limit</small>
+                        <strong>₦{{ merchant.daily_transaction_limit|floatformat:2|intcomma }}</strong>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="border rounded p-3 text-center">
+                        <small class="text-muted d-block">Per Transaction Limit</small>
+                        <strong>₦{{ merchant.single_transaction_limit|floatformat:2|intcomma }}</strong>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="border rounded p-3 text-center">
+                        <small class="text-muted d-block">Commission Rate</small>
+                        <strong>{{ merchant.commission_rate }}%</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <!-- Quick Actions -->
+        <div class="stats-card mb-4">
+            <h6 class="mb-3">Quick Actions</h6>
+            <a href="{% url 'merchant:portal_change_pin' %}" class="btn btn-outline-primary w-100 mb-2">
+                <i class="fas fa-key me-2"></i>Change Transaction PIN
+            </a>
+            <a href="{% url 'merchant:portal_reports' %}" class="btn btn-outline-secondary w-100">
+                <i class="fas fa-chart-bar me-2"></i>View Reports
+            </a>
+        </div>
+        
+        <!-- Contact Person -->
+        {% if merchant.contact_person_name %}
+        <div class="stats-card">
+            <h6 class="mb-3">Contact Person</h6>
+            <p class="mb-1"><strong>{{ merchant.contact_person_name }}</strong></p>
+            {% if merchant.contact_person_phone %}
+            <p class="mb-1 text-muted"><i class="fas fa-phone me-2"></i>{{ merchant.contact_person_phone }}</p>
+            {% endif %}
+            {% if merchant.contact_person_email %}
+            <p class="mb-0 text-muted"><i class="fas fa-envelope me-2"></i>{{ merchant.contact_person_email }}</p>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

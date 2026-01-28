@@ -1,0 +1,234 @@
+{% extends 'merchant/portal/base.html' %}
+{% load humanize %}
+
+{% block title %}Pay Bills{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h4>Pay Bills</h4>
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'merchant:portal_dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item active">Bills</li>
+        </ol>
+    </nav>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="form-section">
+            <h5 class="section-title">
+                <i class="fas fa-file-invoice-dollar text-secondary me-2"></i>
+                Bill Payment
+            </h5>
+            
+            <form method="post" id="billForm">
+                {% csrf_token %}
+                
+                <!-- Bill Category -->
+                <div class="mb-4">
+                    <label class="form-label">Select Category</label>
+                    <div class="row g-2">
+                        <div class="col-4 col-md-2">
+                            <input type="radio" class="btn-check" name="category" id="electricity" value="electricity" required>
+                            <label class="btn btn-outline-secondary w-100 py-3" for="electricity">
+                                <i class="fas fa-bolt d-block mb-1"></i>
+                                <small>Electricity</small>
+                            </label>
+                        </div>
+                        <div class="col-4 col-md-2">
+                            <input type="radio" class="btn-check" name="category" id="cable_tv" value="cable_tv">
+                            <label class="btn btn-outline-secondary w-100 py-3" for="cable_tv">
+                                <i class="fas fa-tv d-block mb-1"></i>
+                                <small>Cable TV</small>
+                            </label>
+                        </div>
+                        <div class="col-4 col-md-2">
+                            <input type="radio" class="btn-check" name="category" id="internet" value="internet">
+                            <label class="btn btn-outline-secondary w-100 py-3" for="internet">
+                                <i class="fas fa-wifi d-block mb-1"></i>
+                                <small>Internet</small>
+                            </label>
+                        </div>
+                        <div class="col-4 col-md-2">
+                            <input type="radio" class="btn-check" name="category" id="water" value="water">
+                            <label class="btn btn-outline-secondary w-100 py-3" for="water">
+                                <i class="fas fa-tint d-block mb-1"></i>
+                                <small>Water</small>
+                            </label>
+                        </div>
+                        <div class="col-4 col-md-2">
+                            <input type="radio" class="btn-check" name="category" id="betting" value="betting">
+                            <label class="btn btn-outline-secondary w-100 py-3" for="betting">
+                                <i class="fas fa-futbol d-block mb-1"></i>
+                                <small>Betting</small>
+                            </label>
+                        </div>
+                        <div class="col-4 col-md-2">
+                            <input type="radio" class="btn-check" name="category" id="education" value="education">
+                            <label class="btn btn-outline-secondary w-100 py-3" for="education">
+                                <i class="fas fa-graduation-cap d-block mb-1"></i>
+                                <small>Education</small>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Biller -->
+                <div class="mb-4">
+                    <label for="biller" class="form-label">Select Biller</label>
+                    <select class="form-select" id="biller" name="biller" required>
+                        <option value="">-- Select Category First --</option>
+                    </select>
+                </div>
+                
+                <!-- Customer ID / Meter Number -->
+                <div class="mb-4">
+                    <label for="customer_id" class="form-label" id="customer_id_label">Customer ID / Meter Number</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="customer_id" name="customer_id" 
+                               placeholder="Enter meter/smart card number" required>
+                        <button class="btn btn-outline-primary" type="button" id="validateBtn">
+                            <i class="fas fa-search"></i> Validate
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Customer Details (shown after validation) -->
+                <div class="card bg-light mb-4 d-none" id="billerDetails">
+                    <div class="card-body">
+                        <p class="mb-1"><strong>Customer Name:</strong> <span id="billerCustomerName">-</span></p>
+                        <p class="mb-0"><strong>Account Status:</strong> <span id="billerStatus">-</span></p>
+                    </div>
+                </div>
+                
+                <!-- Amount -->
+                <div class="mb-4">
+                    <label for="amount" class="form-label">Amount</label>
+                    <div class="input-group">
+                        <span class="input-group-text">₦</span>
+                        <input type="number" class="form-control" id="amount" name="amount" 
+                               min="100" step="0.01" placeholder="0.00" required>
+                    </div>
+                </div>
+                
+                <!-- Transaction PIN -->
+                <div class="mb-4">
+                    <label for="transaction_pin" class="form-label">Transaction PIN</label>
+                    <input type="password" class="form-control" id="transaction_pin" name="transaction_pin" 
+                           maxlength="6" placeholder="Enter your PIN" required>
+                </div>
+                
+                <hr>
+                
+                <div class="d-flex justify-content-between align-items-center">
+                    <a href="{% url 'merchant:portal_dashboard' %}" class="btn btn-light">
+                        <i class="fas fa-arrow-left me-2"></i> Back
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-paper-plane me-2"></i> Pay Bill
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <!-- Float Balance -->
+        <div class="balance-card mb-4">
+            <span class="balance-label">Your Float Balance</span>
+            <h3 class="balance-amount">₦{{ float_balance|floatformat:2|intcomma }}</h3>
+        </div>
+        
+        <!-- Instructions -->
+        <div class="stats-card">
+            <h6 class="mb-3"><i class="fas fa-info-circle me-2"></i>Instructions</h6>
+            <ul class="list-unstyled mb-0">
+                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Select bill category</li>
+                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Choose your biller</li>
+                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Enter customer ID</li>
+                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Validate and pay</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Sample billers (would be fetched from API in production)
+    var billers = {
+        'electricity': [
+            {value: 'ekedc_prepaid', label: 'EKEDC - Prepaid'},
+            {value: 'ekedc_postpaid', label: 'EKEDC - Postpaid'},
+            {value: 'ikedc_prepaid', label: 'IKEDC - Prepaid'},
+            {value: 'ikedc_postpaid', label: 'IKEDC - Postpaid'},
+            {value: 'kedco_prepaid', label: 'KEDCO - Prepaid'},
+        ],
+        'cable_tv': [
+            {value: 'dstv', label: 'DSTV'},
+            {value: 'gotv', label: 'GOTV'},
+            {value: 'startimes', label: 'StarTimes'},
+        ],
+        'internet': [
+            {value: 'smile', label: 'Smile'},
+            {value: 'spectranet', label: 'Spectranet'},
+        ],
+        'water': [
+            {value: 'lagos_water', label: 'Lagos Water Corporation'},
+        ],
+        'betting': [
+            {value: 'bet9ja', label: 'Bet9ja'},
+            {value: 'betway', label: 'Betway'},
+            {value: 'sportybet', label: 'SportyBet'},
+        ],
+        'education': [
+            {value: 'waec', label: 'WAEC'},
+            {value: 'jamb', label: 'JAMB'},
+        ]
+    };
+    
+    // Load billers when category is selected
+    $('input[name="category"]').change(function() {
+        var category = $(this).val();
+        var options = billers[category] || [];
+        var $select = $('#biller');
+        
+        $select.empty().append('<option value="">-- Select Biller --</option>');
+        
+        options.forEach(function(biller) {
+            $select.append('<option value="' + biller.value + '">' + biller.label + '</option>');
+        });
+        
+        // Update label based on category
+        if (category === 'electricity') {
+            $('#customer_id_label').text('Meter Number');
+            $('#customer_id').attr('placeholder', 'Enter meter number');
+        } else if (category === 'cable_tv') {
+            $('#customer_id_label').text('Smart Card Number');
+            $('#customer_id').attr('placeholder', 'Enter smart card number');
+        } else {
+            $('#customer_id_label').text('Customer ID');
+            $('#customer_id').attr('placeholder', 'Enter customer ID');
+        }
+        
+        $('#billerDetails').addClass('d-none');
+    });
+    
+    // Validate customer (mock)
+    $('#validateBtn').click(function() {
+        var customerId = $('#customer_id').val();
+        if (!customerId) {
+            alert('Please enter customer ID');
+            return;
+        }
+        
+        // Mock validation
+        $('#billerCustomerName').text('John Doe');
+        $('#billerStatus').text('Active');
+        $('#billerDetails').removeClass('d-none');
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,187 @@
+{% extends 'merchant/portal/base.html' %}
+{% load humanize %}
+
+{% block title %}Transfer Out{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h4>Bank Transfer</h4>
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'merchant:portal_dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item active">Transfer Out</li>
+        </ol>
+    </nav>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="form-section">
+            <h5 class="section-title">
+                <i class="fas fa-university text-primary me-2"></i>
+                Transfer to Other Banks
+            </h5>
+            
+            <form method="post" id="transferForm">
+                {% csrf_token %}
+                
+                <!-- Bank Selection -->
+                <div class="mb-4">
+                    <label for="beneficiary_bank" class="form-label">Select Bank</label>
+                    <select class="form-select" id="beneficiary_bank" name="beneficiary_bank" required>
+                        <option value="">-- Select Bank --</option>
+                        {% for bank in banks %}
+                        <option value="{{ bank.bank_code }}">{{ bank.bank_name }}</option>
+                        {% empty %}
+                        <option value="000">Access Bank</option>
+                        <option value="058">GTBank</option>
+                        <option value="011">First Bank</option>
+                        <option value="033">UBA</option>
+                        <option value="057">Zenith Bank</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Account Number -->
+                <div class="mb-4">
+                    <label for="beneficiary_account" class="form-label">Account Number</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="beneficiary_account" name="beneficiary_account" 
+                               maxlength="10" placeholder="Enter 10-digit account number" required>
+                        <button class="btn btn-outline-primary" type="button" id="validateBtn">
+                            <i class="fas fa-search"></i> Validate
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Beneficiary Details (shown after validation) -->
+                <div class="card bg-light mb-4 d-none" id="beneficiaryDetails">
+                    <div class="card-body">
+                        <p class="mb-0"><strong>Account Name:</strong> <span id="beneficiaryName">-</span></p>
+                    </div>
+                </div>
+                
+                <!-- Amount -->
+                <div class="mb-4">
+                    <label for="amount" class="form-label">Amount</label>
+                    <div class="input-group">
+                        <span class="input-group-text">₦</span>
+                        <input type="number" class="form-control" id="amount" name="amount" 
+                               min="100" step="0.01" placeholder="0.00" required>
+                    </div>
+                </div>
+                
+                <!-- Narration -->
+                <div class="mb-4">
+                    <label for="narration" class="form-label">Narration</label>
+                    <input type="text" class="form-control" id="narration" name="narration" 
+                           maxlength="100" placeholder="Enter transfer description" required>
+                </div>
+                
+                <!-- Transaction PIN -->
+                <div class="mb-4">
+                    <label for="transaction_pin" class="form-label">Transaction PIN</label>
+                    <input type="password" class="form-control" id="transaction_pin" name="transaction_pin" 
+                           maxlength="6" placeholder="Enter your PIN" required>
+                </div>
+                
+                <hr>
+                
+                <div class="d-flex justify-content-between align-items-center">
+                    <a href="{% url 'merchant:portal_dashboard' %}" class="btn btn-light">
+                        <i class="fas fa-arrow-left me-2"></i> Back
+                    </a>
+                    <button type="submit" class="btn btn-primary" id="submitBtn" disabled>
+                        <i class="fas fa-paper-plane me-2"></i> Transfer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <!-- Float Balance -->
+        <div class="balance-card mb-4">
+            <span class="balance-label">Your Float Balance</span>
+            <h3 class="balance-amount">₦{{ float_balance|floatformat:2|intcomma }}</h3>
+        </div>
+        
+        <!-- Transfer Info -->
+        <div class="stats-card mb-4">
+            <h6 class="mb-3"><i class="fas fa-info-circle me-2"></i>Transfer Info</h6>
+            <div class="d-flex justify-content-between mb-2">
+                <span class="text-muted">Transfer Fee:</span>
+                <strong>₦50.00</strong>
+            </div>
+            <div class="d-flex justify-content-between">
+                <span class="text-muted">Processing Time:</span>
+                <strong>Instant</strong>
+            </div>
+        </div>
+        
+        <!-- Instructions -->
+        <div class="stats-card">
+            <h6 class="mb-3"><i class="fas fa-lightbulb me-2"></i>Tips</h6>
+            <ul class="list-unstyled mb-0 small">
+                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Double-check account number</li>
+                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Validate before transferring</li>
+                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Keep your PIN secure</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    var accountValidated = false;
+    
+    // Validate account
+    $('#validateBtn').click(function() {
+        var bank = $('#beneficiary_bank').val();
+        var account = $('#beneficiary_account').val();
+        
+        if (!bank) {
+            alert('Please select a bank');
+            return;
+        }
+        if (!account || account.length !== 10) {
+            alert('Please enter a valid 10-digit account number');
+            return;
+        }
+        
+        var btn = $(this);
+        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+        
+        // Mock validation - in production this would call the API
+        setTimeout(function() {
+            // Mock response
+            $('#beneficiaryName').text('JOHN DOE');
+            $('#beneficiaryDetails').removeClass('d-none');
+            accountValidated = true;
+            updateSubmitButton();
+            
+            btn.prop('disabled', false).html('<i class="fas fa-search"></i> Validate');
+        }, 1500);
+    });
+    
+    // Reset validation when account or bank changes
+    $('#beneficiary_account, #beneficiary_bank').on('change', function() {
+        accountValidated = false;
+        $('#beneficiaryDetails').addClass('d-none');
+        updateSubmitButton();
+    });
+    
+    function updateSubmitButton() {
+        var amount = parseFloat($('#amount').val()) || 0;
+        var pin = $('#transaction_pin').val();
+        var narration = $('#narration').val();
+        
+        $('#submitBtn').prop('disabled', !accountValidated || amount < 100 || !pin || !narration);
+    }
+    
+    $('#amount, #transaction_pin, #narration').on('input', updateSubmitButton);
+});
+</script>
+{% endblock %}

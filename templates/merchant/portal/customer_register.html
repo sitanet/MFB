@@ -1,0 +1,170 @@
+{% extends 'merchant/portal/base.html' %}
+{% load humanize %}
+
+{% block title %}Register Customer{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h4>Register New Customer</h4>
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'merchant:portal_dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item active">Register Customer</li>
+        </ol>
+    </nav>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="form-section">
+            <h5 class="section-title">
+                <i class="fas fa-user-plus text-dark me-2"></i>
+                Customer Registration Form
+            </h5>
+            
+            <form method="post" id="registerForm">
+                {% csrf_token %}
+                
+                <!-- Personal Information -->
+                <h6 class="text-muted mb-3">Personal Information</h6>
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label class="form-label">First Name *</label>
+                            <input type="text" class="form-control" name="first_name" required>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label class="form-label">Middle Name</label>
+                            <input type="text" class="form-control" name="middle_name">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label class="form-label">Last Name *</label>
+                            <input type="text" class="form-control" name="last_name" required>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Phone Number *</label>
+                            <input type="tel" class="form-control" name="phone_no" placeholder="08012345678" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Email Address</label>
+                            <input type="email" class="form-control" name="email" placeholder="customer@email.com">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label class="form-label">Date of Birth</label>
+                            <input type="date" class="form-control" name="dob">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label class="form-label">Gender *</label>
+                            <select class="form-select" name="gender" required>
+                                <option value="">Select Gender</option>
+                                <option value="M">Male</option>
+                                <option value="F">Female</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label class="form-label">BVN</label>
+                            <input type="text" class="form-control" name="bvn" maxlength="11" placeholder="11-digit BVN">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="form-label">Address</label>
+                    <textarea class="form-control" name="address" rows="2" placeholder="Customer address"></textarea>
+                </div>
+                
+                <!-- Account Information -->
+                <h6 class="text-muted mb-3 mt-4">Account Information</h6>
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Account Type *</label>
+                            <select class="form-select" name="account_type" required>
+                                <option value="">Select Account Type</option>
+                                {% for type in account_types %}
+                                <option value="{{ type.account.gl_no }}">{{ type.get_display_name }}</option>
+                                {% empty %}
+                                <option value="20201">Savings Account</option>
+                                <option value="20101">Current Account</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Initial Deposit (Optional)</label>
+                            <div class="input-group">
+                                <span class="input-group-text">₦</span>
+                                <input type="number" class="form-control" name="initial_deposit" min="0" step="0.01" placeholder="0.00">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Confirmation -->
+                <h6 class="text-muted mb-3 mt-4">Confirmation</h6>
+                <div class="mb-4">
+                    <label class="form-label">Your Transaction PIN *</label>
+                    <input type="password" class="form-control" name="transaction_pin" maxlength="6" 
+                           placeholder="Enter your merchant PIN to confirm" required>
+                    <div class="form-text">Enter your merchant PIN to authorize this registration</div>
+                </div>
+                
+                <hr>
+                
+                <div class="d-flex justify-content-between align-items-center">
+                    <a href="{% url 'merchant:portal_dashboard' %}" class="btn btn-light">
+                        <i class="fas fa-arrow-left me-2"></i> Back
+                    </a>
+                    <button type="submit" class="btn btn-dark">
+                        <i class="fas fa-user-plus me-2"></i> Register Customer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <!-- Instructions -->
+        <div class="stats-card mb-4">
+            <h6 class="mb-3"><i class="fas fa-info-circle me-2"></i>Registration Guidelines</h6>
+            <ul class="list-unstyled mb-0 small">
+                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Fields marked * are required</li>
+                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Verify customer identity</li>
+                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>BVN helps with KYC compliance</li>
+                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Initial deposit is optional</li>
+            </ul>
+        </div>
+        
+        <!-- Required Documents -->
+        <div class="stats-card">
+            <h6 class="mb-3"><i class="fas fa-file-alt me-2"></i>Required Documents</h6>
+            <ul class="list-unstyled mb-0 small text-muted">
+                <li class="mb-2"><i class="fas fa-id-card me-2"></i>Valid ID (NIN, Voter's Card, etc.)</li>
+                <li class="mb-2"><i class="fas fa-home me-2"></i>Proof of Address (Utility bill)</li>
+                <li class="mb-2"><i class="fas fa-camera me-2"></i>Passport Photograph</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,69 @@
+{% extends 'merchant/portal/base.html' %}
+
+{% block title %}Change PIN{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h4>Change Transaction PIN</h4>
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'merchant:portal_dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'merchant:portal_profile' %}">Profile</a></li>
+            <li class="breadcrumb-item active">Change PIN</li>
+        </ol>
+    </nav>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="stats-card">
+            <h5 class="mb-4 text-center">
+                <i class="fas fa-key text-primary me-2"></i>
+                Change Your Transaction PIN
+            </h5>
+            
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="mb-4">
+                    <label for="current_pin" class="form-label">Current PIN</label>
+                    <input type="password" class="form-control" id="current_pin" name="current_pin" 
+                           maxlength="6" placeholder="Enter current PIN" required>
+                </div>
+                
+                <div class="mb-4">
+                    <label for="new_pin" class="form-label">New PIN</label>
+                    <input type="password" class="form-control" id="new_pin" name="new_pin" 
+                           maxlength="6" placeholder="Enter new PIN (4-6 digits)" required>
+                    <div class="form-text">PIN must be 4-6 digits</div>
+                </div>
+                
+                <div class="mb-4">
+                    <label for="confirm_pin" class="form-label">Confirm New PIN</label>
+                    <input type="password" class="form-control" id="confirm_pin" name="confirm_pin" 
+                           maxlength="6" placeholder="Confirm new PIN" required>
+                </div>
+                
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-check me-2"></i>Change PIN
+                    </button>
+                    <a href="{% url 'merchant:portal_profile' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Profile
+                    </a>
+                </div>
+            </form>
+        </div>
+        
+        <div class="alert alert-info mt-4">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong>Security Tips:</strong>
+            <ul class="mb-0 mt-2">
+                <li>Never share your PIN with anyone</li>
+                <li>Use a unique PIN that's hard to guess</li>
+                <li>Avoid using birthdays or simple patterns</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}

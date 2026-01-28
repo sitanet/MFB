@@ -129,6 +129,7 @@ INSTALLED_APPS = [
     'adverts',
     'audit_trail',
     'chat',
+    'merchant',
 ]
 
 

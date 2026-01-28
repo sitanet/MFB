@@ -1,0 +1,150 @@
+{% extends 'merchant/portal/base.html' %}
+{% load humanize %}
+
+{% block title %}Buy Airtime{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h4>Buy Airtime</h4>
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'merchant:portal_dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item active">Airtime</li>
+        </ol>
+    </nav>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="form-section">
+            <h5 class="section-title">
+                <i class="fas fa-mobile-alt text-warning me-2"></i>
+                Purchase Airtime
+            </h5>
+            
+            <form method="post" id="airtimeForm">
+                {% csrf_token %}
+                
+                <!-- Network Selection -->
+                <div class="mb-4">
+                    <label class="form-label">Select Network</label>
+                    <div class="row g-2">
+                        <div class="col-3">
+                            <input type="radio" class="btn-check" name="network" id="mtn" value="mtn" required>
+                            <label class="btn btn-outline-warning w-100 py-3" for="mtn">
+                                <strong>MTN</strong>
+                            </label>
+                        </div>
+                        <div class="col-3">
+                            <input type="radio" class="btn-check" name="network" id="glo" value="glo">
+                            <label class="btn btn-outline-success w-100 py-3" for="glo">
+                                <strong>GLO</strong>
+                            </label>
+                        </div>
+                        <div class="col-3">
+                            <input type="radio" class="btn-check" name="network" id="airtel" value="airtel">
+                            <label class="btn btn-outline-danger w-100 py-3" for="airtel">
+                                <strong>Airtel</strong>
+                            </label>
+                        </div>
+                        <div class="col-3">
+                            <input type="radio" class="btn-check" name="network" id="9mobile" value="9mobile">
+                            <label class="btn btn-outline-info w-100 py-3" for="9mobile">
+                                <strong>9Mobile</strong>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Phone Number -->
+                <div class="mb-4">
+                    <label for="phone_number" class="form-label">Phone Number</label>
+                    <input type="tel" class="form-control" id="phone_number" name="phone_number" 
+                           placeholder="08012345678" maxlength="11" required>
+                </div>
+                
+                <!-- Amount -->
+                <div class="mb-4">
+                    <label class="form-label">Amount</label>
+                    <div class="row g-2 mb-2">
+                        <div class="col-4 col-md-2">
+                            <button type="button" class="btn btn-outline-secondary w-100 amount-btn" data-amount="50">₦50</button>
+                        </div>
+                        <div class="col-4 col-md-2">
+                            <button type="button" class="btn btn-outline-secondary w-100 amount-btn" data-amount="100">₦100</button>
+                        </div>
+                        <div class="col-4 col-md-2">
+                            <button type="button" class="btn btn-outline-secondary w-100 amount-btn" data-amount="200">₦200</button>
+                        </div>
+                        <div class="col-4 col-md-2">
+                            <button type="button" class="btn btn-outline-secondary w-100 amount-btn" data-amount="500">₦500</button>
+                        </div>
+                        <div class="col-4 col-md-2">
+                            <button type="button" class="btn btn-outline-secondary w-100 amount-btn" data-amount="1000">₦1,000</button>
+                        </div>
+                        <div class="col-4 col-md-2">
+                            <button type="button" class="btn btn-outline-secondary w-100 amount-btn" data-amount="2000">₦2,000</button>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <span class="input-group-text">₦</span>
+                        <input type="number" class="form-control" id="amount" name="amount" 
+                               min="50" placeholder="Or enter amount" required>
+                    </div>
+                </div>
+                
+                <!-- Transaction PIN -->
+                <div class="mb-4">
+                    <label for="transaction_pin" class="form-label">Transaction PIN</label>
+                    <input type="password" class="form-control" id="transaction_pin" name="transaction_pin" 
+                           maxlength="6" placeholder="Enter your PIN" required>
+                </div>
+                
+                <hr>
+                
+                <div class="d-flex justify-content-between align-items-center">
+                    <a href="{% url 'merchant:portal_dashboard' %}" class="btn btn-light">
+                        <i class="fas fa-arrow-left me-2"></i> Back
+                    </a>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-paper-plane me-2"></i> Buy Airtime
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <!-- Float Balance -->
+        <div class="balance-card mb-4">
+            <span class="balance-label">Your Float Balance</span>
+            <h3 class="balance-amount">₦{{ float_balance|floatformat:2|intcomma }}</h3>
+        </div>
+        
+        <!-- Instructions -->
+        <div class="stats-card">
+            <h6 class="mb-3"><i class="fas fa-info-circle me-2"></i>Instructions</h6>
+            <ul class="list-unstyled mb-0">
+                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Select network provider</li>
+                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Enter recipient phone number</li>
+                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Select or enter amount</li>
+                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Confirm with your PIN</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Quick amount buttons
+    $('.amount-btn').click(function() {
+        var amount = $(this).data('amount');
+        $('#amount').val(amount);
+        $('.amount-btn').removeClass('btn-primary').addClass('btn-outline-secondary');
+        $(this).removeClass('btn-outline-secondary').addClass('btn-primary');
+    });
+});
+</script>
+{% endblock %}

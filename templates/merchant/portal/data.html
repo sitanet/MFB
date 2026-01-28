@@ -1,0 +1,180 @@
+{% extends 'merchant/portal/base.html' %}
+{% load humanize %}
+
+{% block title %}Buy Data{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h4>Buy Data</h4>
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'merchant:portal_dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item active">Data</li>
+        </ol>
+    </nav>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="form-section">
+            <h5 class="section-title">
+                <i class="fas fa-wifi text-info me-2"></i>
+                Purchase Data Bundle
+            </h5>
+            
+            <form method="post" id="dataForm">
+                {% csrf_token %}
+                
+                <!-- Network Selection -->
+                <div class="mb-4">
+                    <label class="form-label">Select Network</label>
+                    <div class="row g-2">
+                        <div class="col-3">
+                            <input type="radio" class="btn-check" name="network" id="mtn" value="mtn" required>
+                            <label class="btn btn-outline-warning w-100 py-3" for="mtn">
+                                <strong>MTN</strong>
+                            </label>
+                        </div>
+                        <div class="col-3">
+                            <input type="radio" class="btn-check" name="network" id="glo" value="glo">
+                            <label class="btn btn-outline-success w-100 py-3" for="glo">
+                                <strong>GLO</strong>
+                            </label>
+                        </div>
+                        <div class="col-3">
+                            <input type="radio" class="btn-check" name="network" id="airtel" value="airtel">
+                            <label class="btn btn-outline-danger w-100 py-3" for="airtel">
+                                <strong>Airtel</strong>
+                            </label>
+                        </div>
+                        <div class="col-3">
+                            <input type="radio" class="btn-check" name="network" id="9mobile" value="9mobile">
+                            <label class="btn btn-outline-info w-100 py-3" for="9mobile">
+                                <strong>9Mobile</strong>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Phone Number -->
+                <div class="mb-4">
+                    <label for="phone_number" class="form-label">Phone Number</label>
+                    <input type="tel" class="form-control" id="phone_number" name="phone_number" 
+                           placeholder="08012345678" maxlength="11" required>
+                </div>
+                
+                <!-- Data Plan -->
+                <div class="mb-4">
+                    <label for="data_plan" class="form-label">Select Data Plan</label>
+                    <select class="form-select" id="data_plan" name="data_plan" required>
+                        <option value="">-- Select Network First --</option>
+                    </select>
+                </div>
+                
+                <!-- Amount Display -->
+                <div class="mb-4">
+                    <label class="form-label">Amount</label>
+                    <div class="input-group">
+                        <span class="input-group-text">₦</span>
+                        <input type="text" class="form-control" id="amount" readonly placeholder="0.00">
+                    </div>
+                </div>
+                
+                <!-- Transaction PIN -->
+                <div class="mb-4">
+                    <label for="transaction_pin" class="form-label">Transaction PIN</label>
+                    <input type="password" class="form-control" id="transaction_pin" name="transaction_pin" 
+                           maxlength="6" placeholder="Enter your PIN" required>
+                </div>
+                
+                <hr>
+                
+                <div class="d-flex justify-content-between align-items-center">
+                    <a href="{% url 'merchant:portal_dashboard' %}" class="btn btn-light">
+                        <i class="fas fa-arrow-left me-2"></i> Back
+                    </a>
+                    <button type="submit" class="btn btn-info">
+                        <i class="fas fa-paper-plane me-2"></i> Buy Data
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <!-- Float Balance -->
+        <div class="balance-card mb-4">
+            <span class="balance-label">Your Float Balance</span>
+            <h3 class="balance-amount">₦{{ float_balance|floatformat:2|intcomma }}</h3>
+        </div>
+        
+        <!-- Instructions -->
+        <div class="stats-card">
+            <h6 class="mb-3"><i class="fas fa-info-circle me-2"></i>Instructions</h6>
+            <ul class="list-unstyled mb-0">
+                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Select network provider</li>
+                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Enter recipient phone number</li>
+                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Choose a data plan</li>
+                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Confirm with your PIN</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Sample data plans (would be fetched from API in production)
+    var dataPlans = {
+        'mtn': [
+            {value: 'mtn_500mb', label: '500MB - 30 Days', price: 500},
+            {value: 'mtn_1gb', label: '1GB - 30 Days', price: 1000},
+            {value: 'mtn_2gb', label: '2GB - 30 Days', price: 1200},
+            {value: 'mtn_3gb', label: '3GB - 30 Days', price: 1500},
+            {value: 'mtn_5gb', label: '5GB - 30 Days', price: 2500},
+            {value: 'mtn_10gb', label: '10GB - 30 Days', price: 5000},
+        ],
+        'glo': [
+            {value: 'glo_500mb', label: '500MB - 30 Days', price: 500},
+            {value: 'glo_1gb', label: '1GB - 30 Days', price: 1000},
+            {value: 'glo_2gb', label: '2GB - 30 Days', price: 1200},
+            {value: 'glo_5gb', label: '5GB - 30 Days', price: 2500},
+        ],
+        'airtel': [
+            {value: 'airtel_500mb', label: '500MB - 30 Days', price: 500},
+            {value: 'airtel_1gb', label: '1GB - 30 Days', price: 1000},
+            {value: 'airtel_2gb', label: '2GB - 30 Days', price: 1200},
+            {value: 'airtel_5gb', label: '5GB - 30 Days', price: 2500},
+        ],
+        '9mobile': [
+            {value: '9mobile_500mb', label: '500MB - 30 Days', price: 500},
+            {value: '9mobile_1gb', label: '1GB - 30 Days', price: 1000},
+            {value: '9mobile_2gb', label: '2GB - 30 Days', price: 1500},
+        ]
+    };
+    
+    // Load data plans when network is selected
+    $('input[name="network"]').change(function() {
+        var network = $(this).val();
+        var plans = dataPlans[network] || [];
+        var $select = $('#data_plan');
+        
+        $select.empty().append('<option value="">-- Select Data Plan --</option>');
+        
+        plans.forEach(function(plan) {
+            $select.append('<option value="' + plan.value + '" data-price="' + plan.price + '">' + 
+                          plan.label + ' - ₦' + plan.price.toLocaleString() + '</option>');
+        });
+        
+        $('#amount').val('');
+    });
+    
+    // Update amount when plan is selected
+    $('#data_plan').change(function() {
+        var price = $(this).find(':selected').data('price') || 0;
+        $('#amount').val(price.toLocaleString('en-NG', {minimumFractionDigits: 2}));
+    });
+});
+</script>
+{% endblock %}

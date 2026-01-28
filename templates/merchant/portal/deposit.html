@@ -1,0 +1,178 @@
+{% extends 'merchant/portal/base.html' %}
+{% load humanize %}
+
+{% block title %}Customer Deposit{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h4>Customer Deposit</h4>
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'merchant:portal_dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item active">Deposit</li>
+        </ol>
+    </nav>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="form-section">
+            <h5 class="section-title">
+                <i class="fas fa-arrow-down text-success me-2"></i>
+                Deposit Funds
+            </h5>
+            
+            <form method="post" id="depositForm">
+                {% csrf_token %}
+                
+                <!-- Customer Account -->
+                <div class="mb-4">
+                    <label for="customer_account" class="form-label">Customer Account Number</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="customer_account" name="customer_account" 
+                               placeholder="Enter account number (e.g., 202011)" required>
+                        <button class="btn btn-outline-primary" type="button" id="validateBtn">
+                            <i class="fas fa-search"></i> Validate
+                        </button>
+                    </div>
+                    <div class="form-text">Enter the customer's GL number + Account number</div>
+                </div>
+                
+                <!-- Customer Details (shown after validation) -->
+                <div class="card bg-light mb-4 d-none" id="customerDetails">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <small class="text-muted">Customer Name</small>
+                                <p class="mb-2 fw-bold" id="customerName">-</p>
+                            </div>
+                            <div class="col-md-6">
+                                <small class="text-muted">Account Balance</small>
+                                <p class="mb-2 fw-bold text-success" id="customerBalance">-</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Amount -->
+                <div class="mb-4">
+                    <label for="amount" class="form-label">Amount to Deposit</label>
+                    <div class="input-group">
+                        <span class="input-group-text">₦</span>
+                        <input type="number" class="form-control" id="amount" name="amount" 
+                               min="100" step="0.01" placeholder="0.00" required>
+                    </div>
+                </div>
+                
+                <!-- Narration -->
+                <div class="mb-4">
+                    <label for="narration" class="form-label">Narration (Optional)</label>
+                    <input type="text" class="form-control" id="narration" name="narration" 
+                           placeholder="Enter transaction description">
+                </div>
+                
+                <!-- Transaction PIN -->
+                <div class="mb-4">
+                    <label for="transaction_pin" class="form-label">Transaction PIN</label>
+                    <input type="password" class="form-control" id="transaction_pin" name="transaction_pin" 
+                           maxlength="6" placeholder="Enter your PIN" required>
+                </div>
+                
+                <hr>
+                
+                <div class="d-flex justify-content-between align-items-center">
+                    <a href="{% url 'merchant:portal_dashboard' %}" class="btn btn-light">
+                        <i class="fas fa-arrow-left me-2"></i> Back
+                    </a>
+                    <button type="submit" class="btn btn-success" id="submitBtn" disabled>
+                        <i class="fas fa-check me-2"></i> Process Deposit
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <!-- Float Balance -->
+        <div class="balance-card mb-4">
+            <span class="balance-label">Your Float Balance</span>
+            <h3 class="balance-amount">₦{{ float_balance|floatformat:2|intcomma }}</h3>
+        </div>
+        
+        <!-- Instructions -->
+        <div class="stats-card">
+            <h6 class="mb-3"><i class="fas fa-info-circle me-2"></i>Instructions</h6>
+            <ul class="list-unstyled mb-0">
+                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Enter customer account number</li>
+                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Click validate to verify account</li>
+                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Enter deposit amount</li>
+                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Confirm with your PIN</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    var customerValidated = false;
+    
+    // Validate customer account
+    $('#validateBtn').click(function() {
+        var account = $('#customer_account').val();
+        if (!account) {
+            alert('Please enter account number');
+            return;
+        }
+        
+        var btn = $(this);
+        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+        
+        $.get("{% url 'merchant:api_validate_customer' %}", {account: account}, function(data) {
+            if (data.success) {
+                $('#customerName').text(data.customer.name);
+                $('#customerBalance').text('₦' + parseFloat(data.customer.balance).toLocaleString('en-NG', {minimumFractionDigits: 2}));
+                $('#customerDetails').removeClass('d-none');
+                customerValidated = true;
+                updateSubmitButton();
+            } else {
+                alert(data.message || 'Customer not found');
+                $('#customerDetails').addClass('d-none');
+                customerValidated = false;
+                updateSubmitButton();
+            }
+        }).fail(function() {
+            alert('Error validating customer');
+        }).always(function() {
+            btn.prop('disabled', false).html('<i class="fas fa-search"></i> Validate');
+        });
+    });
+    
+    // Re-validate when account changes
+    $('#customer_account').on('change', function() {
+        customerValidated = false;
+        $('#customerDetails').addClass('d-none');
+        updateSubmitButton();
+    });
+    
+    function updateSubmitButton() {
+        var amount = parseFloat($('#amount').val()) || 0;
+        var pin = $('#transaction_pin').val();
+        $('#submitBtn').prop('disabled', !customerValidated || amount < 100 || !pin);
+    }
+    
+    $('#amount, #transaction_pin').on('input', updateSubmitButton);
+    
+    // Form submission confirmation
+    $('#depositForm').on('submit', function(e) {
+        var amount = parseFloat($('#amount').val());
+        var customerName = $('#customerName').text();
+        
+        if (!confirm('Confirm deposit of ₦' + amount.toLocaleString('en-NG', {minimumFractionDigits: 2}) + ' to ' + customerName + '?')) {
+            e.preventDefault();
+        }
+    });
+});
+</script>
+{% endblock %}
