@@ -14,6 +14,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST, require_GET
+from django.views.decorators.csrf import csrf_exempt
 from django.core.paginator import Paginator
 from django.db.models import Sum, Count, Q
 from django.utils import timezone
@@ -510,6 +511,7 @@ def merchant_service_config(request):
 # MERCHANT PORTAL VIEWS - For merchant's own interface
 # ==============================================================================
 
+@csrf_exempt
 def merchant_login(request):
     """Merchant portal login"""
     # Check if this is an API request (mobile app)
