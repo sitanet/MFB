@@ -212,11 +212,12 @@ class DepositForm(forms.Form):
     """Form for customer deposit"""
     customer_account = forms.CharField(
     max_length=20,
-    widget=forms.TextInput(attrs={
-        'class': 'form-control',
-        'placeholder': 'Enter GL/AC number'
-        })
-    )
+    error_messages={
+        'max_length': 'Account number must not exceed 20 characters'
+    },
+    widget=forms.TextInput(attrs={'class': 'form-control'})
+)
+
 
     amount = forms.DecimalField(
         widget=forms.NumberInput(attrs={'class': 'form-control'}),
