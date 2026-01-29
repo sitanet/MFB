@@ -544,8 +544,11 @@ def merchant_login(request):
         try:
             from accounts.models import User
             merchant_user = User.objects.get(username=username)
+            print(f"[DEBUG] Found user: {merchant_user.username}, email: {merchant_user.email}")
             user = authenticate(request, email=merchant_user.email, password=password)
+            print(f"[DEBUG] Authentication result: {user}")
         except User.DoesNotExist:
+            print(f"[DEBUG] User not found with username: {username}")
             user = None
         
         if user is not None:

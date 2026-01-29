@@ -211,8 +211,13 @@ class CustomerRegistrationForm(forms.Form):
 class DepositForm(forms.Form):
     """Form for customer deposit"""
     customer_account = forms.CharField(
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter GL/AC number'})
+    max_length=20,
+    widget=forms.TextInput(attrs={
+        'class': 'form-control',
+        'placeholder': 'Enter GL/AC number'
+        })
     )
+
     amount = forms.DecimalField(
         widget=forms.NumberInput(attrs={'class': 'form-control'}),
         validators=[MinValueValidator(Decimal('100.00'))]
