@@ -278,7 +278,7 @@ class MerchantTransaction(models.Model):
     service_provider = models.CharField(max_length=100, blank=True, null=True)
     service_type = models.CharField(max_length=50, blank=True, null=True)
     service_reference = models.CharField(max_length=100, blank=True, null=True)
-    phone_number = models.CharField(max_length=20, blank=True, null=True)
+    phone_number = models.CharField(max_length=30, blank=True, null=True)
     
     # Status and response
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
