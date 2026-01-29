@@ -639,16 +639,30 @@ def merchant_logout(request):
 def merchant_required(view_func):
     """Decorator to ensure user is a merchant"""
     def wrapper(request, *args, **kwargs):
+        # Check if this is an API request
+        is_api_request = (
+            request.headers.get('X-Requested-With') == 'XMLHttpRequest' or
+            request.content_type == 'application/json' or
+            request.headers.get('Accept') == 'application/json' or
+            '/api/' in request.path
+        )
+        
         if not request.user.is_authenticated:
+            if is_api_request:
+                return JsonResponse({'success': False, 'message': 'Authentication required'}, status=401)
             return redirect('merchant:portal_login')
         
         try:
             merchant = request.user.merchant_profile
             if merchant.status != 'active':
+                if is_api_request:
+                    return JsonResponse({'success': False, 'message': 'Merchant account is not active'}, status=403)
                 messages.error(request, 'Your merchant account is not active')
                 return redirect('merchant:portal_login')
             request.merchant = merchant
         except Merchant.DoesNotExist:
+            if is_api_request:
+                return JsonResponse({'success': False, 'message': 'No merchant account found'}, status=403)
             messages.error(request, 'No merchant account found')
             return redirect('merchant:portal_login')
         
