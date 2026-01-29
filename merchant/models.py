@@ -266,7 +266,7 @@ class MerchantTransaction(models.Model):
     )
     customer_name = models.CharField(max_length=200, blank=True, null=True)
     customer_phone = models.CharField(max_length=30, blank=True, null=True)
-    customer_account = models.CharField(max_length=20, blank=True, null=True)
+    customer_account = models.CharField(max_length=30, blank=True, null=True)
     
     # Beneficiary details (for transfers)
     beneficiary_name = models.CharField(max_length=200, blank=True, null=True)
