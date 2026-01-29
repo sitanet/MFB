@@ -210,25 +210,38 @@ class CustomerRegistrationForm(forms.Form):
 
 class DepositForm(forms.Form):
     """Form for customer deposit"""
-    customer_account = forms.CharField(
-    max_length=20,
-    error_messages={
-        'max_length': 'Account number must not exceed 20 characters'
-    },
-    widget=forms.TextInput(attrs={'class': 'form-control'})
-)
 
+    customer_account = forms.CharField(
+        max_length=20,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter GL/AC number'
+        }),
+        error_messages={
+            'max_length': 'Account number must not exceed 20 characters'
+        }
+    )
 
     amount = forms.DecimalField(
         widget=forms.NumberInput(attrs={'class': 'form-control'}),
         validators=[MinValueValidator(Decimal('100.00'))]
     )
+
     narration = forms.CharField(
+        max_length=200,   # ✅ matches MerchantTransaction.narration
+        required=False,
         widget=forms.TextInput(attrs={'class': 'form-control'}),
-        required=False
+        error_messages={
+            'max_length': 'Narration must not exceed 200 characters'
+        }
     )
+
     transaction_pin = forms.CharField(
-        widget=forms.PasswordInput(attrs={'class': 'form-control'})
+        max_length=20,    # ✅ typical safe PIN length
+        widget=forms.PasswordInput(attrs={'class': 'form-control'}),
+        error_messages={
+            'max_length': 'Transaction PIN is too long'
+        }
     )
 
 
