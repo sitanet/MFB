@@ -23,9 +23,9 @@ def generate_merchant_code():
 
 
 def generate_transaction_ref(prefix='TRX'):
-    """Generate a unique transaction reference"""
-    timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-    random_part = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+    """Generate a unique transaction reference (max 20 chars)"""
+    timestamp = datetime.now().strftime('%y%m%d%H%M%S')
+    random_part = ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
     return f"{prefix}{timestamp}{random_part}"
 
 

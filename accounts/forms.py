@@ -88,6 +88,20 @@ class UserForm(forms.ModelForm):
         required=False,
         widget=forms.TextInput(attrs={'placeholder': 'Enter AC Number'})
     )
+    
+    # Transaction PIN
+    transaction_pin = forms.CharField(
+        required=False,
+        min_length=4,
+        max_length=6,
+        widget=forms.PasswordInput(attrs={'placeholder': 'Enter 4-6 digit PIN'})
+    )
+    confirm_pin = forms.CharField(
+        required=False,
+        min_length=4,
+        max_length=6,
+        widget=forms.PasswordInput(attrs={'placeholder': 'Confirm PIN'})
+    )
 
     class Meta:
         model = User
@@ -126,6 +140,16 @@ class UserForm(forms.ModelForm):
         if not branch:
             raise forms.ValidationError("Branch selection is required!")
 
+        # PIN validation
+        pin = cleaned_data.get('transaction_pin')
+        confirm_pin = cleaned_data.get('confirm_pin')
+        
+        if pin or confirm_pin:
+            if pin != confirm_pin:
+                raise forms.ValidationError("Transaction PINs do not match!")
+            if pin and not pin.isdigit():
+                raise forms.ValidationError("Transaction PIN must be numeric!")
+
         return cleaned_data
 
     def save(self, commit=True):
@@ -135,6 +159,7 @@ class UserForm(forms.ModelForm):
         user = super().save(commit=False)
         password = self.cleaned_data.get('password')
         branch = self.cleaned_data.get('branch')
+        pin = self.cleaned_data.get('transaction_pin')
         
         # Set password securely
         user.set_password(password)
@@ -142,6 +167,10 @@ class UserForm(forms.ModelForm):
         # Convert branch object to branch_id for storage
         if branch:
             user.branch_id = str(branch.id)
+
+        # Set transaction PIN if provided
+        if pin:
+            user.set_transaction_pin(pin)
 
         # Auto-generate activation_code if role is Customer
         if user.role == User.CUSTOMER and branch:

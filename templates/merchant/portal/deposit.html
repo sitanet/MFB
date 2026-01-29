@@ -22,7 +22,7 @@
                 Deposit Funds
             </h5>
             
-            <form method="post" id="depositForm">
+            <form method="post" id="depositForm" data-requires-pin="true">
                 {% csrf_token %}
                 
                 <!-- Customer Account -->
@@ -71,13 +71,6 @@
                            placeholder="Enter transaction description">
                 </div>
                 
-                <!-- Transaction PIN -->
-                <div class="mb-4">
-                    <label for="transaction_pin" class="form-label">Transaction PIN</label>
-                    <input type="password" class="form-control" id="transaction_pin" name="transaction_pin" 
-                           maxlength="6" placeholder="Enter your PIN" required>
-                </div>
-                
                 <hr>
                 
                 <div class="d-flex justify-content-between align-items-center">
@@ -111,6 +104,8 @@
         </div>
     </div>
 </div>
+
+{% include 'merchant/portal/includes/pin_modal.html' %}
 {% endblock %}
 
 {% block extra_js %}
@@ -158,21 +153,10 @@ $(document).ready(function() {
     
     function updateSubmitButton() {
         var amount = parseFloat($('#amount').val()) || 0;
-        var pin = $('#transaction_pin').val();
-        $('#submitBtn').prop('disabled', !customerValidated || amount < 100 || !pin);
+        $('#submitBtn').prop('disabled', !customerValidated || amount < 100);
     }
     
-    $('#amount, #transaction_pin').on('input', updateSubmitButton);
-    
-    // Form submission confirmation
-    $('#depositForm').on('submit', function(e) {
-        var amount = parseFloat($('#amount').val());
-        var customerName = $('#customerName').text();
-        
-        if (!confirm('Confirm deposit of ₦' + amount.toLocaleString('en-NG', {minimumFractionDigits: 2}) + ' to ' + customerName + '?')) {
-            e.preventDefault();
-        }
-    });
+    $('#amount').on('input', updateSubmitButton);
 });
 </script>
 {% endblock %}

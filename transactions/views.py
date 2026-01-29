@@ -113,6 +113,15 @@ def deposit(request, uuid):
         return HttpResponse("You cannot post any transaction. Session is closed.")
 
     if request.method == 'POST':
+        # Verify transaction PIN
+        transaction_pin = request.POST.get('transaction_pin')
+        if not transaction_pin:
+            messages.error(request, 'Transaction PIN is required.')
+            return redirect('deposit', uuid=uuid)
+        if not request.user.check_transaction_pin(transaction_pin):
+            messages.error(request, 'Invalid transaction PIN.')
+            return redirect('deposit', uuid=uuid)
+            
         form = MemtransForm(request.POST)
         if form.is_valid():
             try:
@@ -330,6 +339,15 @@ def withdraw(request, uuid):
         return HttpResponse("You cannot post any transaction. Session is closed.")
 
     if request.method == 'POST':
+        # Verify transaction PIN
+        transaction_pin = request.POST.get('transaction_pin')
+        if not transaction_pin:
+            messages.error(request, 'Transaction PIN is required.')
+            return redirect('withdraw', uuid=uuid)
+        if not request.user.check_transaction_pin(transaction_pin):
+            messages.error(request, 'Invalid transaction PIN.')
+            return redirect('withdraw', uuid=uuid)
+            
         form = MemtransForm(request.POST)
         if form.is_valid():
             form.cleaned_data['branch'] = user_branch
@@ -542,6 +560,15 @@ def income(request, uuid):
         return HttpResponse("You cannot post any transaction. Session is closed.")
     
     if request.method == 'POST':
+        # Verify transaction PIN
+        transaction_pin = request.POST.get('transaction_pin')
+        if not transaction_pin:
+            messages.error(request, 'Transaction PIN is required.')
+            return redirect('income', uuid=uuid)
+        if not request.user.check_transaction_pin(transaction_pin):
+            messages.error(request, 'Invalid transaction PIN.')
+            return redirect('income', uuid=uuid)
+            
         form = MemtransForm(request.POST)
         if form.is_valid():
             # Replace branch code with Branch instance before saving
@@ -705,6 +732,15 @@ def expense(request, uuid):
         return redirect('dashboard')  # Redirect to appropriate page
 
     if request.method == 'POST':
+        # Verify transaction PIN
+        transaction_pin = request.POST.get('transaction_pin')
+        if not transaction_pin:
+            messages.error(request, 'Transaction PIN is required.')
+            return redirect('expense', uuid=uuid)
+        if not request.user.check_transaction_pin(transaction_pin):
+            messages.error(request, 'Invalid transaction PIN.')
+            return redirect('expense', uuid=uuid)
+            
         form = MemtransForm(request.POST)
         if form.is_valid():
             # Use the branch from form or fallback to customer's branch

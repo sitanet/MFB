@@ -713,6 +713,15 @@ def loan_disbursement(request, uuid):
         return HttpResponse("You cannot post any transaction. Session is closed.")
     else:
         if request.method == 'POST':
+            # Verify transaction PIN
+            transaction_pin = request.POST.get('transaction_pin')
+            if not transaction_pin:
+                messages.error(request, 'Transaction PIN is required.')
+                return redirect('loan_disbursement', uuid=uuid)
+            if not request.user.check_transaction_pin(transaction_pin):
+                messages.error(request, 'Invalid transaction PIN.')
+                return redirect('loan_disbursement', uuid=uuid)
+                
             form = MemtransForm(request.POST, request.FILES)
             if form.is_valid():
                 try:

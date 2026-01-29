@@ -265,15 +265,16 @@ def merchant_detail(request, merchant_id):
 def merchant_update(request, merchant_id):
     """Update merchant details (FinanceFlex Admin)"""
     merchant = get_object_or_404(Merchant, id=merchant_id)
+    branch = request.user.get_branch()
     
     if request.method == 'POST':
-        form = MerchantUpdateForm(request.POST, instance=merchant)
+        form = MerchantUpdateForm(request.POST, instance=merchant, branch=branch)
         if form.is_valid():
             form.save()
             messages.success(request, 'Merchant updated successfully')
             return redirect('merchant:merchant_detail', merchant_id=merchant.id)
     else:
-        form = MerchantUpdateForm(instance=merchant)
+        form = MerchantUpdateForm(instance=merchant, branch=branch)
     
     context = {
         'form': form,
@@ -691,7 +692,7 @@ def portal_deposit(request):
             account_number = form.cleaned_data['customer_account'][:20]
             amount = form.cleaned_data['amount']
             narration = (form.cleaned_data.get('narration') or '')[:200]
-            pin = form.cleaned_data['transaction_pin']
+            pin = request.POST.get('transaction_pin', '')
 
             # Verify transaction PIN
             if not merchant.check_transaction_pin(pin):
@@ -753,7 +754,7 @@ def portal_withdrawal(request):
             account_number = form.cleaned_data['customer_account']
             amount = form.cleaned_data['amount']
             narration = form.cleaned_data.get('narration', '')
-            pin = form.cleaned_data['transaction_pin']
+            pin = request.POST.get('transaction_pin', '')
             
             # Verify PIN
             if not merchant.check_transaction_pin(pin):

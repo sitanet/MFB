@@ -1,0 +1,104 @@
+<!-- Transaction PIN Modal -->
+<div class="modal fade" id="pinModal" tabindex="-1" aria-labelledby="pinModalLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="pinModalLabel">Enter Transaction PIN</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted mb-3">Please enter your 4-6 digit transaction PIN to confirm this transaction.</p>
+                <div class="mb-3">
+                    <label for="transaction_pin" class="form-label">Transaction PIN</label>
+                    <input type="password" class="form-control form-control-lg text-center" 
+                           id="transaction_pin" name="transaction_pin" 
+                           maxlength="6" minlength="4" 
+                           pattern="[0-9]*" inputmode="numeric"
+                           placeholder="****" required>
+                    <div class="invalid-feedback" id="pinError"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirmPinBtn">
+                    <span class="spinner-border spinner-border-sm d-none" id="pinSpinner" role="status"></span>
+                    Confirm
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const pinModal = new bootstrap.Modal(document.getElementById('pinModal'));
+    const pinInput = document.getElementById('transaction_pin');
+    const confirmBtn = document.getElementById('confirmPinBtn');
+    const pinSpinner = document.getElementById('pinSpinner');
+    const pinError = document.getElementById('pinError');
+    let targetForm = null;
+
+    // Intercept form submission
+    document.querySelectorAll('form[data-requires-pin="true"]').forEach(function(form) {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            targetForm = form;
+            pinInput.value = '';
+            pinInput.classList.remove('is-invalid');
+            pinError.textContent = '';
+            pinModal.show();
+            setTimeout(() => pinInput.focus(), 500);
+        });
+    });
+
+    // Handle PIN confirmation
+    confirmBtn.addEventListener('click', function() {
+        const pin = pinInput.value.trim();
+        
+        if (!pin || pin.length < 4) {
+            pinInput.classList.add('is-invalid');
+            pinError.textContent = 'Please enter a valid PIN (4-6 digits)';
+            return;
+        }
+        
+        if (!/^\d+$/.test(pin)) {
+            pinInput.classList.add('is-invalid');
+            pinError.textContent = 'PIN must contain only numbers';
+            return;
+        }
+
+        // Add PIN to form as hidden field
+        let hiddenPin = targetForm.querySelector('input[name="transaction_pin"]');
+        if (!hiddenPin) {
+            hiddenPin = document.createElement('input');
+            hiddenPin.type = 'hidden';
+            hiddenPin.name = 'transaction_pin';
+            targetForm.appendChild(hiddenPin);
+        }
+        hiddenPin.value = pin;
+
+        // Show loading state
+        confirmBtn.disabled = true;
+        pinSpinner.classList.remove('d-none');
+
+        // Submit the form
+        targetForm.submit();
+    });
+
+    // Allow Enter key to confirm
+    pinInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            confirmBtn.click();
+        }
+    });
+
+    // Reset modal state when hidden
+    document.getElementById('pinModal').addEventListener('hidden.bs.modal', function() {
+        confirmBtn.disabled = false;
+        pinSpinner.classList.add('d-none');
+        pinInput.value = '';
+        pinInput.classList.remove('is-invalid');
+    });
+});
+</script>

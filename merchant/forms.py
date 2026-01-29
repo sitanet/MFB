@@ -76,6 +76,13 @@ class MerchantRegistrationForm(forms.ModelForm):
 class MerchantUpdateForm(forms.ModelForm):
     """Form for updating merchant details"""
     
+    float_account = forms.ChoiceField(
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        label='Float Account',
+        help_text='Select an existing account for merchant float'
+    )
+    
     class Meta:
         model = Merchant
         fields = [
@@ -105,6 +112,35 @@ class MerchantUpdateForm(forms.ModelForm):
             'commission_rate': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'status': forms.Select(attrs={'class': 'form-select'}),
         }
+
+    def __init__(self, *args, branch=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        from customers.models import Customer
+        
+        if branch:
+            customers = Customer.objects.filter(branch=branch).order_by('gl_no', 'ac_no')
+        else:
+            customers = Customer.objects.all().order_by('gl_no', 'ac_no')
+        
+        choices = [('', '---------')]
+        for c in customers:
+            label = f"{c.gl_no}{c.ac_no} - {c.first_name} {c.last_name or ''}"
+            choices.append((c.gl_no, label))
+        
+        self.fields['float_account'].choices = choices
+        
+        if self.instance and self.instance.pk and self.instance.float_gl_no:
+            self.fields['float_account'].initial = self.instance.float_gl_no
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        float_account = self.cleaned_data.get('float_account')
+        if float_account:
+            instance.float_gl_no = float_account
+            instance.float_ac_no = '1'
+        if commit:
+            instance.save()
+        return instance
 
 
 class MerchantLoginForm(forms.Form):
@@ -228,19 +264,11 @@ class DepositForm(forms.Form):
     )
 
     narration = forms.CharField(
-        max_length=200,   # ✅ matches MerchantTransaction.narration
+        max_length=200,
         required=False,
         widget=forms.TextInput(attrs={'class': 'form-control'}),
         error_messages={
             'max_length': 'Narration must not exceed 200 characters'
-        }
-    )
-
-    transaction_pin = forms.CharField(
-        max_length=20,    # ✅ typical safe PIN length
-        widget=forms.PasswordInput(attrs={'class': 'form-control'}),
-        error_messages={
-            'max_length': 'Transaction PIN is too long'
         }
     )
 
@@ -257,9 +285,6 @@ class WithdrawalForm(forms.Form):
     narration = forms.CharField(
         widget=forms.TextInput(attrs={'class': 'form-control'}),
         required=False
-    )
-    transaction_pin = forms.CharField(
-        widget=forms.PasswordInput(attrs={'class': 'form-control'})
     )
 
 
@@ -279,9 +304,6 @@ class TransferForm(forms.Form):
         widget=forms.TextInput(attrs={'class': 'form-control'}),
         max_length=100
     )
-    transaction_pin = forms.CharField(
-        widget=forms.PasswordInput(attrs={'class': 'form-control'})
-    )
 
 
 class InternalTransferForm(forms.Form):
@@ -296,9 +318,6 @@ class InternalTransferForm(forms.Form):
     narration = forms.CharField(
         widget=forms.TextInput(attrs={'class': 'form-control'}),
         max_length=100
-    )
-    transaction_pin = forms.CharField(
-        widget=forms.PasswordInput(attrs={'class': 'form-control'})
     )
 
 
@@ -327,9 +346,6 @@ class BillPaymentForm(forms.Form):
         widget=forms.NumberInput(attrs={'class': 'form-control'}),
         validators=[MinValueValidator(Decimal('100.00'))]
     )
-    transaction_pin = forms.CharField(
-        widget=forms.PasswordInput(attrs={'class': 'form-control'})
-    )
 
 
 class AirtimeForm(forms.Form):
@@ -352,9 +368,6 @@ class AirtimeForm(forms.Form):
         widget=forms.NumberInput(attrs={'class': 'form-control'}),
         validators=[MinValueValidator(Decimal('50.00'))]
     )
-    transaction_pin = forms.CharField(
-        widget=forms.PasswordInput(attrs={'class': 'form-control'})
-    )
 
 
 class DataForm(forms.Form):
@@ -375,9 +388,6 @@ class DataForm(forms.Form):
     )
     data_plan = forms.CharField(
         widget=forms.Select(attrs={'class': 'form-select'})
-    )
-    transaction_pin = forms.CharField(
-        widget=forms.PasswordInput(attrs={'class': 'form-control'})
     )
 
 

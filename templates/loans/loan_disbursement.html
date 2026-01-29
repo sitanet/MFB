@@ -17,7 +17,7 @@
 
     <div class="container">
         <a href="{% url 'loans' %}" style="color: green; font-weight: bold; text-align: right; display: block;">Loans Menu</a>
-        <form method="POST" enctype="multipart/form-data">
+        <form method="POST" enctype="multipart/form-data" data-requires-pin="true">
             {% csrf_token %}
             {% if messages %}
             <ul class="messages">
@@ -182,4 +182,6 @@
         });
     });
 </script>
+
+{% include 'includes/pin_modal.html' %}
 {% endblock %}

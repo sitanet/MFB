@@ -30,7 +30,7 @@
             <!-- Main Form Card -->
             <div class="card border-0 shadow-sm">
                 <div class="card-body p-4">
-                    <form method="POST">
+                    <form method="POST" data-requires-pin="true">
                         {% csrf_token %}
                         
                         {% if messages %}
@@ -532,5 +532,7 @@
     .card { transition: transform 0.2s; }
     .btn-group .btn { border-radius: 0.5rem !important; margin-right: 0.25rem; }
 </style>
+
+{% include 'includes/pin_modal.html' %}
 
 {% endblock %}
