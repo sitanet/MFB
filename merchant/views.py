@@ -677,7 +677,6 @@ def portal_dashboard(request):
 from decimal import Decimal
 from django.shortcuts import render, redirect
 from django.contrib import messages
-from django.core.validators import MinValueValidator
 
 @merchant_required
 def portal_deposit(request):
@@ -688,6 +687,7 @@ def portal_deposit(request):
         form = DepositForm(request.POST)
 
         if form.is_valid():
+            # Enforce DB-safe lengths
             account_number = form.cleaned_data['customer_account'][:20]
             amount = form.cleaned_data['amount']
             narration = (form.cleaned_data.get('narration') or '')[:200]
@@ -721,6 +721,7 @@ def portal_deposit(request):
                     request,
                     f'Deposit successful. Reference: {trx.transaction_ref}'
                 )
+
                 return redirect(
                     'merchant:portal_transaction_detail',
                     trx_ref=trx.transaction_ref
@@ -739,7 +740,6 @@ def portal_deposit(request):
     }
 
     return render(request, 'merchant/portal/deposit.html', context)
-
 
 
 @merchant_required
