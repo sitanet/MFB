@@ -681,63 +681,13 @@ from django.contrib import messages
 
 @merchant_required
 def portal_deposit(request):
-    """Customer deposit"""
+    """Customer deposit - TEMPORARILY DISABLED"""
     merchant = request.merchant
-
-    if request.method == 'POST':
-        form = DepositForm(request.POST)
-
-        if form.is_valid():
-            # Enforce DB-safe lengths
-            account_number = form.cleaned_data['customer_account'][:20]
-            amount = form.cleaned_data['amount']
-            narration = (form.cleaned_data.get('narration') or '')[:200]
-            pin = request.POST.get('transaction_pin', '')
-
-            # Verify transaction PIN
-            if not merchant.check_transaction_pin(pin):
-                messages.error(request, 'Invalid transaction PIN')
-                return redirect('merchant:portal_deposit')
-
-            # Find customer
-            customer = find_customer_by_account(
-                merchant.branch,
-                account_number
-            )
-
-            if not customer:
-                messages.error(request, 'Customer account not found')
-                return redirect('merchant:portal_deposit')
-
-            try:
-                trx = process_merchant_deposit(
-                    merchant=merchant,
-                    customer=customer,
-                    amount=amount,
-                    narration=narration,
-                    request=request
-                )
-
-                messages.success(
-                    request,
-                    f'Deposit successful. Reference: {trx.transaction_ref}'
-                )
-
-                return redirect(
-                    'merchant:portal_transaction_detail',
-                    trx_ref=trx.transaction_ref
-                )
-
-            except Exception as e:
-                messages.error(request, str(e))
-
-    else:
-        form = DepositForm()
-
+    
     context = {
         'merchant': merchant,
-        'form': form,
         'float_balance': get_merchant_float_balance(merchant),
+        'coming_soon': True,
     }
 
     return render(request, 'merchant/portal/deposit.html', context)
@@ -1301,3 +1251,433 @@ def api_get_float_balance(request):
         'success': True,
         'balance': str(balance)
     })
+
+
+# ==============================================================================
+# MOBILE APP API ENDPOINTS
+# ==============================================================================
+
+@csrf_exempt
+@require_POST
+def api_withdrawal_initiate(request):
+    """API: Initiate withdrawal and send OTP to customer"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'message': 'Authentication required'}, status=401)
+    
+    try:
+        merchant = request.user.merchant_profile
+    except Merchant.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Merchant account not found'}, status=404)
+    
+    if merchant.status != 'active':
+        return JsonResponse({'success': False, 'message': 'Merchant account is not active'}, status=403)
+    
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON'}, status=400)
+    
+    account_number = data.get('customer_account', '')
+    amount = data.get('amount')
+    narration = data.get('narration', '')
+    pin = data.get('transaction_pin', '')
+    
+    # Validate inputs
+    if not account_number or not amount or not pin:
+        return JsonResponse({'success': False, 'message': 'Missing required fields'}, status=400)
+    
+    # Verify merchant PIN
+    if not merchant.check_transaction_pin(pin):
+        return JsonResponse({'success': False, 'message': 'Invalid transaction PIN'}, status=400)
+    
+    # Find customer
+    customer = find_customer_by_account(merchant.branch, account_number)
+    if not customer:
+        return JsonResponse({'success': False, 'message': 'Customer account not found'}, status=404)
+    
+    # Check if customer has phone number
+    if not customer.phone_no:
+        return JsonResponse({'success': False, 'message': 'Customer has no phone number registered'}, status=400)
+    
+    # Generate OTP
+    from .models import MerchantWithdrawalOTP
+    from accounts.utils import send_sms
+    from datetime import timedelta
+    
+    otp_code = MerchantWithdrawalOTP.generate_otp()
+    expires_at = timezone.now() + timedelta(minutes=5)
+    
+    otp_record = MerchantWithdrawalOTP.objects.create(
+        merchant=merchant,
+        customer_account=account_number,
+        customer_phone=customer.phone_no,
+        amount=amount,
+        narration=narration,
+        otp_code=otp_code,
+        expires_at=expires_at
+    )
+    
+    # Send OTP via SMS and Email
+    sms_message = f"Your withdrawal OTP is {otp_code}. Amount: NGN{amount}. Valid for 5 minutes."
+    sms_sent = False
+    email_sent = False
+    
+    try:
+        send_sms(customer.phone_no, sms_message)
+        sms_sent = True
+    except:
+        pass
+    
+    if customer.email:
+        try:
+            from django.core.mail import EmailMessage
+            from django.conf import settings
+            
+            email = EmailMessage(
+                "Withdrawal OTP - FinanceFlex",
+                f"Your withdrawal OTP is: {otp_code}\nAmount: NGN {amount:,.2f}\nValid for 5 minutes.",
+                settings.DEFAULT_FROM_EMAIL,
+                [customer.email]
+            )
+            email.send()
+            email_sent = True
+        except:
+            pass
+    
+    if not sms_sent and not email_sent:
+        otp_record.delete()
+        return JsonResponse({'success': False, 'message': 'Failed to send OTP'}, status=500)
+    
+    masked_phone = f"***{customer.phone_no[-4:]}" if len(customer.phone_no) >= 4 else "****"
+    
+    return JsonResponse({
+        'success': True,
+        'message': 'OTP sent successfully',
+        'otp_id': otp_record.id,
+        'masked_phone': masked_phone,
+        'customer_name': f"{customer.first_name} {customer.last_name}",
+        'amount': str(amount),
+        'expires_in': 300  # seconds
+    })
+
+
+@csrf_exempt
+@require_POST
+def api_withdrawal_verify(request):
+    """API: Verify OTP and complete withdrawal"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'message': 'Authentication required'}, status=401)
+    
+    try:
+        merchant = request.user.merchant_profile
+    except Merchant.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Merchant account not found'}, status=404)
+    
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON'}, status=400)
+    
+    otp_id = data.get('otp_id')
+    otp_code = data.get('otp_code', '')
+    
+    if not otp_id or not otp_code:
+        return JsonResponse({'success': False, 'message': 'OTP ID and code required'}, status=400)
+    
+    from .models import MerchantWithdrawalOTP
+    
+    try:
+        otp_record = MerchantWithdrawalOTP.objects.get(id=otp_id, merchant=merchant)
+    except MerchantWithdrawalOTP.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Invalid OTP session'}, status=404)
+    
+    if not otp_record.is_valid():
+        return JsonResponse({'success': False, 'message': 'OTP has expired'}, status=400)
+    
+    if not otp_record.verify(otp_code):
+        return JsonResponse({'success': False, 'message': 'Invalid OTP code'}, status=400)
+    
+    # Process withdrawal
+    customer = find_customer_by_account(merchant.branch, otp_record.customer_account)
+    if not customer:
+        return JsonResponse({'success': False, 'message': 'Customer not found'}, status=404)
+    
+    try:
+        trx = process_merchant_withdrawal(
+            merchant, customer, otp_record.amount, otp_record.narration, request
+        )
+        return JsonResponse({
+            'success': True,
+            'message': 'Withdrawal successful',
+            'transaction_ref': trx.transaction_ref,
+            'amount': str(trx.amount),
+            'customer_name': f"{customer.first_name} {customer.last_name}"
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=400)
+
+
+@csrf_exempt
+def api_dashboard(request):
+    """API: Get merchant dashboard data"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'message': 'Authentication required'}, status=401)
+    
+    try:
+        merchant = request.user.merchant_profile
+    except Merchant.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Merchant account not found'}, status=404)
+    
+    stats = get_merchant_dashboard_stats(merchant)
+    
+    # Recent transactions
+    recent_transactions = MerchantTransaction.all_objects.filter(
+        merchant=merchant
+    ).order_by('-created_at')[:10]
+    
+    transactions_data = [{
+        'id': t.id,
+        'reference': t.transaction_ref,
+        'type': t.transaction_type,
+        'type_display': t.get_transaction_type_display(),
+        'amount': str(t.amount),
+        'status': t.status,
+        'customer_name': t.customer_name,
+        'created_at': t.created_at.isoformat(),
+    } for t in recent_transactions]
+    
+    return JsonResponse({
+        'success': True,
+        'merchant': {
+            'id': merchant.id,
+            'merchant_id': merchant.merchant_id,
+            'merchant_code': merchant.merchant_code,
+            'merchant_name': merchant.merchant_name,
+            'business_name': merchant.business_name,
+            'status': merchant.status,
+        },
+        'float_balance': str(get_merchant_float_balance(merchant)),
+        'stats': stats,
+        'recent_transactions': transactions_data,
+    })
+
+
+@csrf_exempt
+def api_transactions(request):
+    """API: Get merchant transactions list"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'message': 'Authentication required'}, status=401)
+    
+    try:
+        merchant = request.user.merchant_profile
+    except Merchant.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Merchant account not found'}, status=404)
+    
+    transactions = MerchantTransaction.all_objects.filter(merchant=merchant)
+    
+    # Filters
+    trx_type = request.GET.get('type')
+    status = request.GET.get('status')
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
+    page = int(request.GET.get('page', 1))
+    limit = int(request.GET.get('limit', 20))
+    
+    if trx_type:
+        transactions = transactions.filter(transaction_type=trx_type)
+    if status:
+        transactions = transactions.filter(status=status)
+    if date_from:
+        transactions = transactions.filter(created_at__date__gte=date_from)
+    if date_to:
+        transactions = transactions.filter(created_at__date__lte=date_to)
+    
+    transactions = transactions.order_by('-created_at')
+    
+    # Pagination
+    total = transactions.count()
+    offset = (page - 1) * limit
+    transactions = transactions[offset:offset + limit]
+    
+    transactions_data = [{
+        'id': t.id,
+        'reference': t.transaction_ref,
+        'type': t.transaction_type,
+        'type_display': t.get_transaction_type_display(),
+        'amount': str(t.amount),
+        'charge': str(t.charge),
+        'commission': str(t.commission),
+        'status': t.status,
+        'customer_name': t.customer_name,
+        'customer_account': t.customer_account,
+        'narration': t.narration,
+        'created_at': t.created_at.isoformat(),
+    } for t in transactions]
+    
+    return JsonResponse({
+        'success': True,
+        'transactions': transactions_data,
+        'pagination': {
+            'page': page,
+            'limit': limit,
+            'total': total,
+            'pages': (total + limit - 1) // limit,
+        }
+    })
+
+
+@csrf_exempt
+def api_transaction_detail(request, trx_ref):
+    """API: Get transaction details"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'message': 'Authentication required'}, status=401)
+    
+    try:
+        merchant = request.user.merchant_profile
+    except Merchant.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Merchant account not found'}, status=404)
+    
+    try:
+        trx = MerchantTransaction.objects.get(merchant=merchant, transaction_ref=trx_ref)
+    except MerchantTransaction.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Transaction not found'}, status=404)
+    
+    return JsonResponse({
+        'success': True,
+        'transaction': {
+            'id': trx.id,
+            'reference': trx.transaction_ref,
+            'type': trx.transaction_type,
+            'type_display': trx.get_transaction_type_display(),
+            'amount': str(trx.amount),
+            'charge': str(trx.charge),
+            'commission': str(trx.commission),
+            'status': trx.status,
+            'customer_name': trx.customer_name,
+            'customer_account': trx.customer_account,
+            'customer_phone': trx.customer_phone,
+            'narration': trx.narration,
+            'float_balance_before': str(trx.float_balance_before) if trx.float_balance_before else None,
+            'float_balance_after': str(trx.float_balance_after) if trx.float_balance_after else None,
+            'created_at': trx.created_at.isoformat(),
+            'completed_at': trx.completed_at.isoformat() if trx.completed_at else None,
+        }
+    })
+
+
+@csrf_exempt
+def api_profile(request):
+    """API: Get/Update merchant profile"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'message': 'Authentication required'}, status=401)
+    
+    try:
+        merchant = request.user.merchant_profile
+    except Merchant.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Merchant account not found'}, status=404)
+    
+    return JsonResponse({
+        'success': True,
+        'profile': {
+            'merchant_id': merchant.merchant_id,
+            'merchant_code': merchant.merchant_code,
+            'merchant_name': merchant.merchant_name,
+            'merchant_type': merchant.merchant_type,
+            'business_name': merchant.business_name,
+            'business_address': merchant.business_address,
+            'business_phone': merchant.business_phone,
+            'business_email': merchant.business_email,
+            'contact_person_name': merchant.contact_person_name,
+            'contact_person_phone': merchant.contact_person_phone,
+            'state': merchant.state,
+            'lga': merchant.lga,
+            'city': merchant.city,
+            'status': merchant.status,
+            'daily_transaction_limit': str(merchant.daily_transaction_limit),
+            'single_transaction_limit': str(merchant.single_transaction_limit),
+            'created_at': merchant.created_at.isoformat(),
+        }
+    })
+
+
+@csrf_exempt
+@require_POST
+def api_change_pin(request):
+    """API: Change transaction PIN"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'message': 'Authentication required'}, status=401)
+    
+    try:
+        merchant = request.user.merchant_profile
+    except Merchant.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Merchant account not found'}, status=404)
+    
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON'}, status=400)
+    
+    current_pin = data.get('current_pin', '')
+    new_pin = data.get('new_pin', '')
+    
+    if not current_pin or not new_pin:
+        return JsonResponse({'success': False, 'message': 'Current and new PIN required'}, status=400)
+    
+    if not merchant.check_transaction_pin(current_pin):
+        return JsonResponse({'success': False, 'message': 'Current PIN is incorrect'}, status=400)
+    
+    if len(new_pin) < 4:
+        return JsonResponse({'success': False, 'message': 'PIN must be at least 4 digits'}, status=400)
+    
+    merchant.set_transaction_pin(new_pin)
+    merchant.save()
+    
+    log_merchant_activity(
+        merchant=merchant,
+        activity_type='pin_change',
+        description='Transaction PIN changed via API',
+        request=request
+    )
+    
+    return JsonResponse({'success': True, 'message': 'PIN changed successfully'})
+
+
+@csrf_exempt
+@require_POST
+def api_change_password(request):
+    """API: Change merchant user password"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'message': 'Authentication required'}, status=401)
+    
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON'}, status=400)
+    
+    current_password = data.get('current_password', '')
+    new_password = data.get('new_password', '')
+    
+    if not current_password or not new_password:
+        return JsonResponse({'success': False, 'message': 'Current and new password required'}, status=400)
+    
+    if not request.user.check_password(current_password):
+        return JsonResponse({'success': False, 'message': 'Current password is incorrect'}, status=400)
+    
+    if len(new_password) < 8:
+        return JsonResponse({'success': False, 'message': 'Password must be at least 8 characters'}, status=400)
+    
+    request.user.set_password(new_password)
+    request.user.save()
+    
+    try:
+        merchant = request.user.merchant_profile
+        log_merchant_activity(
+            merchant=merchant,
+            activity_type='profile_update',
+            description='Password changed via API',
+            request=request
+        )
+    except:
+        pass
+    
+    return JsonResponse({'success': True, 'message': 'Password changed successfully'})

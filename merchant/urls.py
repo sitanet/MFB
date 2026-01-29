@@ -63,8 +63,20 @@ urlpatterns = [
     path('portal/change-password/', views.portal_change_password, name='portal_change_password'),
     
     # ==============================================================================
-    # API ENDPOINTS
+    # API ENDPOINTS (Web)
     # ==============================================================================
     path('api/validate-customer/', views.api_validate_customer, name='api_validate_customer'),
     path('api/float-balance/', views.api_get_float_balance, name='api_get_float_balance'),
+    
+    # ==============================================================================
+    # MOBILE APP API ENDPOINTS
+    # ==============================================================================
+    path('api/dashboard/', views.api_dashboard, name='api_dashboard'),
+    path('api/withdrawal/initiate/', views.api_withdrawal_initiate, name='api_withdrawal_initiate'),
+    path('api/withdrawal/verify/', views.api_withdrawal_verify, name='api_withdrawal_verify'),
+    path('api/transactions/', views.api_transactions, name='api_transactions'),
+    path('api/transactions/<str:trx_ref>/', views.api_transaction_detail, name='api_transaction_detail'),
+    path('api/profile/', views.api_profile, name='api_profile'),
+    path('api/change-pin/', views.api_change_pin, name='api_change_pin'),
+    path('api/change-password/', views.api_change_password, name='api_change_password'),
 ]
