@@ -674,45 +674,72 @@ def portal_dashboard(request):
     return render(request, 'merchant/portal/dashboard.html', context)
 
 
+from decimal import Decimal
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.core.validators import MinValueValidator
+
 @merchant_required
 def portal_deposit(request):
     """Customer deposit"""
     merchant = request.merchant
-    
+
     if request.method == 'POST':
         form = DepositForm(request.POST)
+
         if form.is_valid():
-            account_number = form.cleaned_data['customer_account']
+            account_number = form.cleaned_data['customer_account'][:20]
             amount = form.cleaned_data['amount']
-            narration = form.cleaned_data.get('narration', '')
+            narration = (form.cleaned_data.get('narration') or '')[:200]
             pin = form.cleaned_data['transaction_pin']
-            
-            # Verify PIN
+
+            # Verify transaction PIN
             if not merchant.check_transaction_pin(pin):
                 messages.error(request, 'Invalid transaction PIN')
                 return redirect('merchant:portal_deposit')
-            
+
             # Find customer
-            customer = find_customer_by_account(merchant.branch, account_number)
+            customer = find_customer_by_account(
+                merchant.branch,
+                account_number
+            )
+
             if not customer:
                 messages.error(request, 'Customer account not found')
                 return redirect('merchant:portal_deposit')
-            
+
             try:
-                trx = process_merchant_deposit(merchant, customer, amount, narration, request)
-                messages.success(request, f'Deposit successful. Reference: {trx.transaction_ref}')
-                return redirect('merchant:portal_transaction_detail', trx_ref=trx.transaction_ref)
+                trx = process_merchant_deposit(
+                    merchant=merchant,
+                    customer=customer,
+                    amount=amount,
+                    narration=narration,
+                    request=request
+                )
+
+                messages.success(
+                    request,
+                    f'Deposit successful. Reference: {trx.transaction_ref}'
+                )
+                return redirect(
+                    'merchant:portal_transaction_detail',
+                    trx_ref=trx.transaction_ref
+                )
+
             except Exception as e:
                 messages.error(request, str(e))
+
     else:
         form = DepositForm()
-    
+
     context = {
         'merchant': merchant,
         'form': form,
         'float_balance': get_merchant_float_balance(merchant),
     }
+
     return render(request, 'merchant/portal/deposit.html', context)
+
 
 
 @merchant_required
