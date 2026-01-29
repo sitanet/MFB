@@ -1,0 +1,147 @@
+{% extends 'merchant/portal/base.html' %}
+{% load humanize %}
+
+{% block title %}Verify Withdrawal OTP{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h4>Verify Withdrawal OTP</h4>
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'merchant:portal_dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'merchant:portal_withdrawal' %}">Withdrawal</a></li>
+            <li class="breadcrumb-item active">Verify OTP</li>
+        </ol>
+    </nav>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="form-section">
+            <h5 class="section-title text-center">
+                <i class="fas fa-shield-alt text-primary me-2"></i>
+                Enter Customer OTP
+            </h5>
+            
+            <div class="alert alert-info mb-4">
+                <i class="fas fa-info-circle me-2"></i>
+                An OTP has been sent to the customer's registered phone and email. 
+                Ask the customer for this OTP to complete the withdrawal.
+            </div>
+            
+            <!-- Transaction Summary -->
+            <div class="card bg-light mb-4">
+                <div class="card-body">
+                    <h6 class="card-title mb-3">Transaction Details</h6>
+                    <div class="row">
+                        <div class="col-6">
+                            <small class="text-muted">Account Number</small>
+                            <p class="mb-2 fw-bold">{{ otp_record.customer_account }}</p>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Amount</small>
+                            <p class="mb-2 fw-bold text-danger">₦{{ otp_record.amount|floatformat:2|intcomma }}</p>
+                        </div>
+                    </div>
+                    {% if otp_record.narration %}
+                    <div class="row">
+                        <div class="col-12">
+                            <small class="text-muted">Narration</small>
+                            <p class="mb-0">{{ otp_record.narration }}</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <form method="post" id="otpForm">
+                {% csrf_token %}
+                
+                <div class="mb-4">
+                    <label for="otp_code" class="form-label">Enter 6-digit OTP</label>
+                    <input type="text" 
+                           class="form-control form-control-lg text-center" 
+                           id="otp_code" 
+                           name="otp_code" 
+                           maxlength="6" 
+                           pattern="[0-9]{6}"
+                           placeholder="------"
+                           required
+                           autofocus
+                           style="letter-spacing: 0.5em; font-size: 1.5rem;">
+                    <div class="form-text text-center">
+                        OTP expires in <span id="countdown" class="fw-bold text-danger">5:00</span>
+                    </div>
+                </div>
+                
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary btn-lg" id="verifyBtn">
+                        <i class="fas fa-check me-2"></i> Verify & Complete Withdrawal
+                    </button>
+                    <a href="{% url 'merchant:portal_withdrawal' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times me-2"></i> Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <!-- Float Balance -->
+        <div class="balance-card mb-4">
+            <span class="balance-label">Your Float Balance</span>
+            <h3 class="balance-amount">₦{{ float_balance|floatformat:2|intcomma }}</h3>
+        </div>
+        
+        <!-- Instructions -->
+        <div class="stats-card">
+            <h6 class="mb-3"><i class="fas fa-info-circle me-2"></i>Instructions</h6>
+            <ul class="list-unstyled mb-0">
+                <li class="mb-2"><i class="fas fa-sms text-primary me-2"></i> OTP sent via SMS</li>
+                <li class="mb-2"><i class="fas fa-envelope text-primary me-2"></i> OTP sent via Email</li>
+                <li class="mb-2"><i class="fas fa-clock text-warning me-2"></i> Valid for 5 minutes</li>
+                <li class="mb-2"><i class="fas fa-user text-info me-2"></i> Ask customer for OTP</li>
+                <li class="mb-2"><i class="fas fa-lock text-danger me-2"></i> Do not share OTP with others</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Countdown timer
+    var expiresAt = new Date("{{ otp_record.expires_at|date:'c' }}");
+    
+    function updateCountdown() {
+        var now = new Date();
+        var diff = expiresAt - now;
+        
+        if (diff <= 0) {
+            $('#countdown').text('EXPIRED');
+            $('#verifyBtn').prop('disabled', true).text('OTP Expired');
+            $('#otp_code').prop('disabled', true);
+            return;
+        }
+        
+        var minutes = Math.floor(diff / 60000);
+        var seconds = Math.floor((diff % 60000) / 1000);
+        $('#countdown').text(minutes + ':' + (seconds < 10 ? '0' : '') + seconds);
+    }
+    
+    updateCountdown();
+    setInterval(updateCountdown, 1000);
+    
+    // Auto-submit when 6 digits entered
+    $('#otp_code').on('input', function() {
+        var val = $(this).val().replace(/\D/g, '');
+        $(this).val(val);
+        
+        if (val.length === 6) {
+            $('#verifyBtn').focus();
+        }
+    });
+});
+</script>
+{% endblock %}

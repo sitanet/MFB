@@ -486,3 +486,60 @@ class MerchantServiceConfig(models.Model):
             return self.commission_value
         else:
             return (amount * self.commission_value) / 100
+
+
+class MerchantWithdrawalOTP(models.Model):
+    """
+    OTP model for merchant withdrawal verification.
+    Used when customer without app needs to withdraw via merchant.
+    """
+    STATUS_CHOICES = (
+        ('pending', 'Pending'),
+        ('verified', 'Verified'),
+        ('expired', 'Expired'),
+    )
+    
+    merchant = models.ForeignKey(
+        Merchant, on_delete=models.CASCADE, related_name='withdrawal_otps'
+    )
+    customer_account = models.CharField(max_length=20)
+    customer_phone = models.CharField(max_length=20)
+    amount = models.DecimalField(max_digits=15, decimal_places=2)
+    narration = models.CharField(max_length=200, blank=True, null=True)
+    otp_code = models.CharField(max_length=6)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    verified_at = models.DateTimeField(null=True, blank=True)
+    
+    objects = TenantManager()
+    all_objects = models.Manager()
+    
+    class Meta:
+        verbose_name = "Merchant Withdrawal OTP"
+        verbose_name_plural = "Merchant Withdrawal OTPs"
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"OTP {self.otp_code} for {self.customer_account}"
+    
+    def is_valid(self):
+        """Check if OTP is still valid (not expired and not used)"""
+        return self.status == 'pending' and timezone.now() < self.expires_at
+    
+    def verify(self, otp_code):
+        """Verify the OTP code"""
+        if not self.is_valid():
+            return False
+        if self.otp_code == otp_code:
+            self.status = 'verified'
+            self.verified_at = timezone.now()
+            self.save()
+            return True
+        return False
+    
+    @classmethod
+    def generate_otp(cls):
+        """Generate a 6-digit OTP"""
+        import random
+        return ''.join([str(random.randint(0, 9)) for _ in range(6)])

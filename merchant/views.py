@@ -745,7 +745,7 @@ def portal_deposit(request):
 
 @merchant_required
 def portal_withdrawal(request):
-    """Customer withdrawal"""
+    """Customer withdrawal - Step 1: Initiate and send OTP"""
     merchant = request.merchant
     
     if request.method == 'POST':
@@ -756,7 +756,7 @@ def portal_withdrawal(request):
             narration = form.cleaned_data.get('narration', '')
             pin = request.POST.get('transaction_pin', '')
             
-            # Verify PIN
+            # Verify merchant PIN
             if not merchant.check_transaction_pin(pin):
                 messages.error(request, 'Invalid transaction PIN')
                 return redirect('merchant:portal_withdrawal')
@@ -767,12 +767,91 @@ def portal_withdrawal(request):
                 messages.error(request, 'Customer account not found')
                 return redirect('merchant:portal_withdrawal')
             
+            # Check if customer has phone number
+            if not customer.phone_no:
+                messages.error(request, 'Customer does not have a phone number registered')
+                return redirect('merchant:portal_withdrawal')
+            
+            # Generate OTP and send SMS
+            from .models import MerchantWithdrawalOTP
+            from accounts.utils import send_sms
+            from datetime import timedelta
+            
+            otp_code = MerchantWithdrawalOTP.generate_otp()
+            expires_at = timezone.now() + timedelta(minutes=5)
+            
+            # Create OTP record
+            otp_record = MerchantWithdrawalOTP.objects.create(
+                merchant=merchant,
+                customer_account=account_number,
+                customer_phone=customer.phone_no,
+                amount=amount,
+                narration=narration,
+                otp_code=otp_code,
+                expires_at=expires_at
+            )
+            
+            # Send OTP via SMS and Email
+            sms_message = f"Your withdrawal OTP is {otp_code}. Amount: NGN{amount}. Valid for 5 minutes. Do not share with anyone."
+            sms_sent = False
+            email_sent = False
+            
+            # Send SMS
             try:
-                trx = process_merchant_withdrawal(merchant, customer, amount, narration, request)
-                messages.success(request, f'Withdrawal successful. Reference: {trx.transaction_ref}')
-                return redirect('merchant:portal_transaction_detail', trx_ref=trx.transaction_ref)
+                send_sms(customer.phone_no, sms_message)
+                sms_sent = True
             except Exception as e:
-                messages.error(request, str(e))
+                print(f"SMS sending failed: {e}")
+            
+            # Send Email
+            if customer.email:
+                try:
+                    from django.core.mail import EmailMessage
+                    from django.conf import settings
+                    
+                    email_subject = "Withdrawal OTP - FinanceFlex"
+                    email_body = f"""
+Dear {customer.first_name},
+
+Your withdrawal OTP is: {otp_code}
+
+Transaction Details:
+- Amount: NGN {amount:,.2f}
+- Merchant: {merchant.merchant_name}
+
+This OTP is valid for 5 minutes. Do not share this code with anyone.
+
+If you did not initiate this transaction, please contact us immediately.
+
+Best regards,
+FinanceFlex Team
+                    """
+                    email = EmailMessage(
+                        email_subject,
+                        email_body.strip(),
+                        settings.DEFAULT_FROM_EMAIL,
+                        [customer.email]
+                    )
+                    email.send()
+                    email_sent = True
+                except Exception as e:
+                    print(f"Email sending failed: {e}")
+            
+            # Check if at least one delivery method succeeded
+            if not sms_sent and not email_sent:
+                messages.error(request, 'Failed to send OTP. Please try again.')
+                otp_record.delete()
+                return redirect('merchant:portal_withdrawal')
+            
+            # Build notification message
+            notifications = []
+            if sms_sent:
+                notifications.append(f"phone ...{customer.phone_no[-4:]}")
+            if email_sent:
+                notifications.append(f"email ...{customer.email[-10:]}" if len(customer.email) > 10 else "email")
+            
+            messages.info(request, f'OTP sent to customer {" and ".join(notifications)}')
+            return redirect('merchant:portal_withdrawal_verify', otp_id=otp_record.id)
     else:
         form = WithdrawalForm()
     
@@ -782,6 +861,62 @@ def portal_withdrawal(request):
         'float_balance': get_merchant_float_balance(merchant),
     }
     return render(request, 'merchant/portal/withdrawal.html', context)
+
+
+@merchant_required
+def portal_withdrawal_verify(request, otp_id):
+    """Customer withdrawal - Step 2: Verify OTP and complete withdrawal"""
+    merchant = request.merchant
+    
+    from .models import MerchantWithdrawalOTP
+    
+    try:
+        otp_record = MerchantWithdrawalOTP.objects.get(id=otp_id, merchant=merchant)
+    except MerchantWithdrawalOTP.DoesNotExist:
+        messages.error(request, 'Invalid or expired OTP session')
+        return redirect('merchant:portal_withdrawal')
+    
+    # Check if OTP is still valid
+    if not otp_record.is_valid():
+        messages.error(request, 'OTP has expired. Please initiate a new withdrawal.')
+        return redirect('merchant:portal_withdrawal')
+    
+    if request.method == 'POST':
+        otp_code = request.POST.get('otp_code', '')
+        
+        if otp_record.verify(otp_code):
+            # OTP verified, process withdrawal
+            customer = find_customer_by_account(merchant.branch, otp_record.customer_account)
+            if not customer:
+                messages.error(request, 'Customer account not found')
+                return redirect('merchant:portal_withdrawal')
+            
+            try:
+                trx = process_merchant_withdrawal(
+                    merchant, 
+                    customer, 
+                    otp_record.amount, 
+                    otp_record.narration, 
+                    request
+                )
+                messages.success(request, f'Withdrawal successful. Reference: {trx.transaction_ref}')
+                return redirect('merchant:portal_transaction_detail', trx_ref=trx.transaction_ref)
+            except Exception as e:
+                messages.error(request, str(e))
+                return redirect('merchant:portal_withdrawal')
+        else:
+            messages.error(request, 'Invalid OTP. Please try again.')
+    
+    # Mask phone number for display
+    masked_phone = f"***{otp_record.customer_phone[-4:]}" if len(otp_record.customer_phone) >= 4 else "****"
+    
+    context = {
+        'merchant': merchant,
+        'otp_record': otp_record,
+        'masked_phone': masked_phone,
+        'float_balance': get_merchant_float_balance(merchant),
+    }
+    return render(request, 'merchant/portal/withdrawal_verify.html', context)
 
 
 @merchant_required

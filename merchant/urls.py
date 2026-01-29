@@ -40,6 +40,7 @@ urlpatterns = [
     # Transactions
     path('portal/deposit/', views.portal_deposit, name='portal_deposit'),
     path('portal/withdrawal/', views.portal_withdrawal, name='portal_withdrawal'),
+    path('portal/withdrawal/verify/<int:otp_id>/', views.portal_withdrawal_verify, name='portal_withdrawal_verify'),
     path('portal/transfer/', views.portal_transfer, name='portal_transfer'),
     path('portal/internal-transfer/', views.portal_internal_transfer, name='portal_internal_transfer'),
     path('portal/airtime/', views.portal_airtime, name='portal_airtime'),
