@@ -147,6 +147,13 @@ class MerchantRegistrationForm(forms.ModelForm):
 class MerchantUpdateForm(forms.ModelForm):
     """Form for updating merchant details"""
     
+    gl_account = forms.ChoiceField(
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        label='GL Account',
+        help_text='Select the GL account for this merchant'
+    )
+    
     psb_wallet_account = forms.CharField(
         required=False,
         max_length=20,
@@ -193,6 +200,33 @@ class MerchantUpdateForm(forms.ModelForm):
 
     def __init__(self, *args, branch=None, **kwargs):
         super().__init__(*args, **kwargs)
+        from accounts_admin.models import Account
+        
+        # Get GL accounts for merchant - GL starts with '20', exclude GLs ending with 0
+        if branch:
+            accounts = Account.objects.filter(
+                branch=branch,
+                gl_no__startswith='20'
+            ).exclude(
+                gl_no__endswith='0'
+            ).order_by('gl_no')
+        else:
+            accounts = Account.all_objects.filter(
+                gl_no__startswith='20'
+            ).exclude(
+                gl_no__endswith='0'
+            ).order_by('gl_no')
+        
+        choices = [('', '-- Select GL Account --')]
+        for acc in accounts:
+            label = f"{acc.gl_no} - {acc.gl_name}"
+            choices.append((acc.gl_no, label))
+        
+        self.fields['gl_account'].choices = choices
+        
+        # Set initial value if merchant already has gl_no
+        if self.instance and self.instance.pk and self.instance.gl_no:
+            self.fields['gl_account'].initial = self.instance.gl_no
 
 
 class MerchantLoginForm(forms.Form):

@@ -143,6 +143,36 @@
                                 </div>
                             </div>
                             
+                            <!-- Merchant Account Section -->
+                            <h5 class="mb-4">
+                                <i class="fas fa-credit-card text-primary me-2"></i>Merchant Account
+                                {% if merchant.gl_no and merchant.ac_no %}
+                                <span class="badge bg-success ms-2"><i class="fas fa-check-circle"></i> {{ merchant.gl_no }}{{ merchant.ac_no }}</span>
+                                {% else %}
+                                <span class="badge bg-warning ms-2"><i class="fas fa-exclamation-triangle"></i> No Account Yet</span>
+                                {% endif %}
+                            </h5>
+                            
+                            {% if merchant.gl_no and merchant.ac_no %}
+                            <div class="alert alert-info mb-4">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>GL Number:</strong> {{ merchant.gl_no }} | 
+                                <strong>Account Number:</strong> {{ merchant.ac_no }} |
+                                <strong>Full Account:</strong> <code>{{ merchant.gl_no }}{{ merchant.ac_no }}</code>
+                            </div>
+                            {% else %}
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">GL Account *</label>
+                                        {{ form.gl_account }}
+                                        <small class="text-muted">Select GL account. Account number will be auto-generated on save.</small>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            <!-- KYC Section -->
                             <h5 class="mb-4">
                                 <i class="fas fa-id-card text-info me-2"></i>KYC Information (For 9PSB Wallet)
                                 {% if has_wallet %}

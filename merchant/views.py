@@ -400,6 +400,12 @@ def merchant_update(request, merchant_id):
     if request.method == 'POST':
         form = MerchantUpdateForm(request.POST, instance=merchant, branch=branch)
         if form.is_valid():
+            # Handle GL account selection for merchants without gl_no/ac_no
+            gl_account = form.cleaned_data.get('gl_account')
+            if gl_account and not merchant.gl_no:
+                merchant.gl_no = gl_account
+                # ac_no will be auto-generated in model save()
+            
             merchant = form.save()
             
             # Check if wallet was manually entered
