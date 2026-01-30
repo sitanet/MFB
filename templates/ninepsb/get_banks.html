@@ -51,10 +51,10 @@
                                         <td>{{ forloop.counter }}</td>
                                         <td>
                                             <i class="fas fa-university text-primary me-2"></i>
-                                            {{ bank.bankName|default:bank.name }}
+                                            {{ bank.bankName|default:bank.BankName|default:bank.name }}
                                         </td>
-                                        <td><code>{{ bank.bankCode|default:bank.code }}</code></td>
-                                        <td><code>{{ bank.nipCode|default:bank.nip_code|default:"-" }}</code></td>
+                                        <td><code>{{ bank.bankCode|default:bank.BankCode|default:bank.code }}</code></td>
+                                        <td><code>{{ bank.nipCode|default:bank.BankLongCode|default:bank.nip_code|default:"-" }}</code></td>
                                     </tr>
                                     {% endfor %}
                                 </tbody>

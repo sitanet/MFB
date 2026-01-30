@@ -175,13 +175,23 @@ def get_banks_view(request):
     """
     9PSB Get Banks - Fetch list of all banks.
     """
-    banks = None
+    banks = []
     error_message = None
     
     try:
         waas = WAASService()
         result = waas.get_banks()
-        banks = result.get('data', result)
+        # Handle different response formats
+        banks_data = result.get('data', result)
+        if isinstance(banks_data, dict):
+            banks = banks_data.get('bankList', banks_data.get('banks', []))
+        elif isinstance(banks_data, list):
+            banks = banks_data
+        else:
+            banks = []
+        
+        if not isinstance(banks, list):
+            banks = []
     except Exception as e:
         error_message = str(e)
         messages.error(request, f"Failed to fetch banks: {error_message}")
@@ -203,15 +213,26 @@ def other_bank_enquiry_view(request):
     account_no = None
     bank_code = None
     error_message = None
-    banks = None
+    banks = []
     
     # Always fetch banks for the dropdown
     try:
         waas = WAASService()
         result = waas.get_banks()
-        banks = result.get('data', [])
+        # Handle different response formats
+        banks_data = result.get('data', result)
+        if isinstance(banks_data, dict):
+            banks = banks_data.get('bankList', banks_data.get('banks', []))
+        elif isinstance(banks_data, list):
+            banks = banks_data
+        else:
+            banks = []
+        
+        if not isinstance(banks, list):
+            banks = []
     except Exception as e:
         messages.warning(request, f"Could not load banks list: {str(e)}")
+        banks = []
     
     if request.method == 'POST':
         account_no = request.POST.get('account_no', '').strip()
