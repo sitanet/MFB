@@ -384,12 +384,26 @@ class WAASService:
         except ValueError:
             raise Exception("Invalid JSON response from WAAS authentication.")
         
-        if data.get("status") != "SUCCESS":
+        # Handle different response formats - check for success indicators
+        status = data.get("status", "").upper()
+        message = data.get("message", "").lower()
+        
+        # Check if authentication was successful (handle various response formats)
+        is_success = (
+            status == "SUCCESS" or
+            status == "SUCCESSFUL" or
+            message == "successful" or
+            message == "success" or
+            "successful" in message
+        )
+        
+        if not is_success:
             raise Exception(f"WAAS authentication failed: {data.get('message', 'Unknown error')}")
         
-        token = data.get("accessToken")
+        # Try different field names for access token
+        token = data.get("accessToken") or data.get("access_token") or data.get("token")
         if not token:
-            raise Exception("WAAS authentication succeeded but no access token returned.")
+            raise Exception(f"WAAS authentication succeeded but no access token returned. Response: {data}")
         
         # Cache token for 55 minutes
         expires_in = data.get("expiresIn", 3600)
@@ -466,7 +480,18 @@ class WAASService:
         
         data = self._make_request("POST", "/open_wallet", payload)
         
-        if data.get("status") != "SUCCESS":
+        # Handle different response formats
+        status = data.get("status", "").upper()
+        message = data.get("message", "").lower()
+        
+        is_success = (
+            status == "SUCCESS" or
+            status == "SUCCESSFUL" or
+            "successful" in message or
+            "success" in message
+        )
+        
+        if not is_success:
             raise Exception(f"Wallet opening failed: {data.get('message', 'Unknown error')}")
         
         return data
