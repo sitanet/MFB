@@ -14,4 +14,7 @@ urlpatterns = [
     path("wallet-transactions/", views.wallet_transactions_view, name="wallet_transactions"),
     path("get-banks/", views.get_banks_view, name="get_banks"),
     path("other-bank-enquiry/", views.other_bank_enquiry_view, name="other_bank_enquiry"),
+    
+    # 9PSB Webhook (for inflow notifications)
+    path("webhook/", views.psb_webhook_handler, name="webhook"),
 ]

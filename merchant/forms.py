@@ -33,6 +33,13 @@ class MerchantRegistrationForm(forms.ModelForm):
         help_text='Select the GL account for this merchant'
     )
     
+    float_gl_account = forms.ChoiceField(
+        required=True,
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        label='Float GL Account',
+        help_text='Select the Float GL account for 9PSB wallet transactions'
+    )
+    
     class Meta:
         model = Merchant
         fields = [
@@ -92,6 +99,7 @@ class MerchantRegistrationForm(forms.ModelForm):
             choices.append((acc.gl_no, label))
         
         self.fields['gl_account'].choices = choices
+        self.fields['float_gl_account'].choices = choices
 
     def clean(self):
         cleaned_data = super().clean()
@@ -152,6 +160,13 @@ class MerchantUpdateForm(forms.ModelForm):
         widget=forms.Select(attrs={'class': 'form-select'}),
         label='GL Account',
         help_text='Select the GL account for this merchant'
+    )
+    
+    float_gl_account = forms.ChoiceField(
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        label='Float GL Account',
+        help_text='Select the Float GL account for 9PSB wallet transactions'
     )
     
     psb_wallet_account = forms.CharField(
@@ -223,10 +238,15 @@ class MerchantUpdateForm(forms.ModelForm):
             choices.append((acc.gl_no, label))
         
         self.fields['gl_account'].choices = choices
+        self.fields['float_gl_account'].choices = choices
         
         # Set initial value if merchant already has gl_no
         if self.instance and self.instance.pk and self.instance.gl_no:
             self.fields['gl_account'].initial = self.instance.gl_no
+        
+        # Set initial value for float GL account
+        if self.instance and self.instance.pk and self.instance.float_gl_no:
+            self.fields['float_gl_account'].initial = self.instance.float_gl_no
 
 
 class MerchantLoginForm(forms.Form):

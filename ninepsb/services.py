@@ -705,6 +705,25 @@ class WAASService:
             except Exception as e2:
                 logger.error(f"wallet_enquiry also failed: {e2}")
                 raise e
+    
+    def notification_requery(self, session_id: str, account_number: str) -> dict:
+        """
+        Confirm an inflow credit/transfer webhook notification.
+        Use this to verify webhook notifications are legitimate.
+        
+        Args:
+            session_id: SessionId from notification (nipsessionid or externalReference)
+            account_number: Customer's wallet account number
+        
+        Returns:
+            dict with notification confirmation
+        """
+        payload = {
+            "sessionID": session_id,
+            "accountNumber": account_number
+        }
+        data = self._make_request("POST", "/notification_requery", payload)
+        return data
 
 
 def get_all_wallets_report() -> list:
@@ -785,7 +804,262 @@ def get_all_wallets_report() -> list:
     return results
 
 
+def merchant_wallet_transfer_out(merchant, amount, recipient_account, recipient_name, 
+                                  recipient_bank_code, narration, transaction_ref=None) -> dict:
+    """
+    Transfer from merchant 9PSB wallet to other bank and debit the float account.
+    
+    Args:
+        merchant: Merchant model instance
+        amount: Transfer amount
+        recipient_account: Destination account number
+        recipient_name: Destination account name
+        recipient_bank_code: Destination bank code
+        narration: Transaction description
+        transaction_ref: Optional unique reference (auto-generated if not provided)
+    
+    Returns:
+        dict with transfer result
+    """
+    import logging
+    from decimal import Decimal
+    from datetime import datetime
+    from django.utils import timezone
+    from django.db import transaction as db_transaction
+    from transactions.models import Memtrans
+    
+    logger = logging.getLogger(__name__)
+    
+    if not merchant.psb_wallet_account:
+        raise Exception("Merchant does not have a 9PSB wallet")
+    
+    if not merchant.float_gl_no or not merchant.float_ac_no:
+        raise Exception("Merchant float account not configured")
+    
+    # Generate transaction reference if not provided
+    if not transaction_ref:
+        transaction_ref = f"WOB{merchant.merchant_code}{datetime.now().strftime('%Y%m%d%H%M%S%f')[:20]}"
+    
+    amount = Decimal(str(amount))
+    
+    # Check float account balance first
+    float_balance = merchant.get_float_balance()
+    if float_balance < amount:
+        raise Exception(f"Insufficient float balance. Available: {float_balance}, Required: {amount}")
+    
+    waas = WAASService()
+    
+    try:
+        with db_transaction.atomic():
+            # 1. DEBIT merchant's main FinanceFlex account
+            if merchant.gl_no and merchant.ac_no:
+                Memtrans.all_objects.create(
+                    branch=merchant.branch,
+                    gl_no=merchant.gl_no,
+                    ac_no=merchant.ac_no,
+                    trx_date=timezone.now().date(),
+                    ses_date=timezone.now().date(),
+                    app_date=timezone.now().date(),
+                    amount=-amount,  # Negative for debit
+                    description=f"9PSB Transfer Out: {narration}",
+                    reference=transaction_ref,
+                    trx_type='DR',
+                    error='A',
+                    posted_by=f"9PSB-TRANSFER",
+                )
+            
+            # 2. CREDIT the float account in FinanceFlex (money going OUT of wallet)
+            Memtrans.all_objects.create(
+                branch=merchant.branch,
+                gl_no=merchant.float_gl_no,
+                ac_no=merchant.float_ac_no,
+                trx_date=timezone.now().date(),
+                ses_date=timezone.now().date(),
+                app_date=timezone.now().date(),
+                amount=amount,  # Positive for credit
+                description=f"9PSB Transfer Out: {narration}",
+                reference=transaction_ref + "-FLT",
+                trx_type='CR',
+                error='A',
+                posted_by=f"9PSB-TRANSFER",
+            )
+            
+            # 3. Make the 9PSB transfer (debit wallet to destination)
+            result = waas.transfer_to_other_bank(
+                transaction_ref=transaction_ref,
+                amount=float(amount),
+                sender_account=merchant.psb_wallet_account,
+                sender_name=merchant.psb_wallet_name or merchant.merchant_name,
+                recipient_account=recipient_account,
+                recipient_name=recipient_name,
+                recipient_bank_code=recipient_bank_code,
+                narration=narration
+            )
+            
+            # Check if transfer was successful
+            response_code = result.get('responseCode', result.get('code', '99'))
+            
+            if response_code not in ['00', '09', '96', '97', '98', '99']:
+                # Transfer failed, rollback will happen automatically
+                raise Exception(f"Transfer failed: {result.get('message', 'Unknown error')}")
+            
+            logger.info(f"Merchant {merchant.merchant_id} transfer successful: {transaction_ref}")
+            
+            return {
+                'success': True,
+                'transaction_ref': transaction_ref,
+                'response_code': response_code,
+                'message': result.get('message', 'Transfer initiated'),
+                'raw_response': result
+            }
+            
+    except Exception as e:
+        logger.error(f"Merchant wallet transfer failed: {e}")
+        raise
 
+
+def merchant_wallet_debit(merchant, amount, narration, transaction_ref=None) -> dict:
+    """
+    Debit merchant 9PSB wallet and update float account.
+    
+    Args:
+        merchant: Merchant model instance
+        amount: Debit amount
+        narration: Transaction description
+        transaction_ref: Optional unique reference
+    
+    Returns:
+        dict with debit result
+    """
+    import logging
+    from decimal import Decimal
+    from datetime import datetime
+    from django.utils import timezone
+    from django.db import transaction as db_transaction
+    from transactions.models import Memtrans
+    
+    logger = logging.getLogger(__name__)
+    
+    if not merchant.psb_wallet_account:
+        raise Exception("Merchant does not have a 9PSB wallet")
+    
+    if not transaction_ref:
+        transaction_ref = f"WDB{merchant.merchant_code}{datetime.now().strftime('%Y%m%d%H%M%S%f')[:20]}"
+    
+    amount = Decimal(str(amount))
+    waas = WAASService()
+    
+    try:
+        with db_transaction.atomic():
+            # Debit the 9PSB wallet
+            result = waas.debit_wallet(
+                account_no=merchant.psb_wallet_account,
+                amount=str(amount),
+                transaction_id=transaction_ref,
+                narration=narration
+            )
+            
+            # If successful and float account configured, CREDIT float account (money going out of wallet)
+            if merchant.float_gl_no and merchant.float_ac_no:
+                Memtrans.all_objects.create(
+                    branch=merchant.branch,
+                    gl_no=merchant.float_gl_no,
+                    ac_no=merchant.float_ac_no,
+                    trx_date=timezone.now().date(),
+                    ses_date=timezone.now().date(),
+                    app_date=timezone.now().date(),
+                    amount=amount,  # Positive for credit (money leaving wallet)
+                    description=f"9PSB Wallet Debit: {narration}",
+                    reference=transaction_ref,
+                    trx_type='CR',
+                    error='A',
+                    posted_by=f"9PSB-DEBIT",
+                )
+            
+            logger.info(f"Merchant {merchant.merchant_id} wallet debit successful: {transaction_ref}")
+            
+            return {
+                'success': True,
+                'transaction_ref': transaction_ref,
+                'message': result.get('message', 'Debit successful'),
+                'raw_response': result
+            }
+            
+    except Exception as e:
+        logger.error(f"Merchant wallet debit failed: {e}")
+        raise
+
+
+def merchant_wallet_credit(merchant, amount, narration, transaction_ref=None) -> dict:
+    """
+    Credit merchant 9PSB wallet and update float account.
+    
+    Args:
+        merchant: Merchant model instance
+        amount: Credit amount
+        narration: Transaction description
+        transaction_ref: Optional unique reference
+    
+    Returns:
+        dict with credit result
+    """
+    import logging
+    from decimal import Decimal
+    from datetime import datetime
+    from django.utils import timezone
+    from django.db import transaction as db_transaction
+    from transactions.models import Memtrans
+    
+    logger = logging.getLogger(__name__)
+    
+    if not merchant.psb_wallet_account:
+        raise Exception("Merchant does not have a 9PSB wallet")
+    
+    if not transaction_ref:
+        transaction_ref = f"WCR{merchant.merchant_code}{datetime.now().strftime('%Y%m%d%H%M%S%f')[:20]}"
+    
+    amount = Decimal(str(amount))
+    waas = WAASService()
+    
+    try:
+        with db_transaction.atomic():
+            # Credit the 9PSB wallet
+            result = waas.credit_wallet(
+                account_no=merchant.psb_wallet_account,
+                amount=str(amount),
+                transaction_id=transaction_ref,
+                narration=narration
+            )
+            
+            # If successful and float account configured, DEBIT float account (money coming into wallet)
+            if merchant.float_gl_no and merchant.float_ac_no:
+                Memtrans.all_objects.create(
+                    branch=merchant.branch,
+                    gl_no=merchant.float_gl_no,
+                    ac_no=merchant.float_ac_no,
+                    trx_date=timezone.now().date(),
+                    ses_date=timezone.now().date(),
+                    app_date=timezone.now().date(),
+                    amount=-amount,  # Negative for debit (money entering wallet)
+                    description=f"9PSB Wallet Credit: {narration}",
+                    reference=transaction_ref,
+                    trx_type='DR',
+                    error='A',
+                    posted_by=f"9PSB-CREDIT",
+                )
+            
+            logger.info(f"Merchant {merchant.merchant_id} wallet credit successful: {transaction_ref}")
+            
+            return {
+                'success': True,
+                'transaction_ref': transaction_ref,
+                'message': result.get('message', 'Credit successful'),
+                'raw_response': result
+            }
+            
+    except Exception as e:
+        logger.error(f"Merchant wallet credit failed: {e}")
+        raise
 
 
 # Helper function for merchant wallet creation

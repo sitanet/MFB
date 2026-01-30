@@ -185,6 +185,16 @@
                                         {% endif %}
                                     </div>
                                 </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Float GL Account (9PSB) *</label>
+                                        {{ form.float_gl_account }}
+                                        <small class="text-muted">Select the Float GL account for 9PSB wallet transactions (credit/debit mirror)</small>
+                                        {% if form.float_gl_account.errors %}
+                                        <div class="text-danger small">{{ form.float_gl_account.errors }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
                             </div>
                             
                             <h5 class="mb-4">Transaction Settings</h5>

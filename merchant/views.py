@@ -206,6 +206,11 @@ def merchant_create(request):
                     if gl_account:
                         merchant.gl_no = gl_account
                     
+                    # Set Float GL account for 9PSB wallet transactions
+                    float_gl_account = form.cleaned_data.get('float_gl_account')
+                    if float_gl_account:
+                        merchant.float_gl_no = float_gl_account
+                    
                     # Create user account for merchant portal
                     user_data = {
                         'merchant_name': form.cleaned_data['merchant_name'],
