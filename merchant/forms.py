@@ -71,18 +71,16 @@ class MerchantRegistrationForm(forms.ModelForm):
         from accounts_admin.models import Account
         
         # Get GL accounts for merchant - liability accounts (current and savings)
-        # Filter: Liabilities (type=2), GL starts with '20', exclude GLs ending with 0
+        # Filter: GL starts with '20', exclude GLs ending with 0
         if branch:
             accounts = Account.objects.filter(
                 branch=branch,
-                account_type=Account.LIABILITIES,
                 gl_no__startswith='20'
             ).exclude(
                 gl_no__endswith='0'
             ).order_by('gl_no')
         else:
             accounts = Account.all_objects.filter(
-                account_type=Account.LIABILITIES,
                 gl_no__startswith='20'
             ).exclude(
                 gl_no__endswith='0'

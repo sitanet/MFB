@@ -484,9 +484,14 @@ class WAASService:
         # Add optional fields
         if merchant_data.get("bvn"):
             payload["bvn"] = merchant_data["bvn"]
+            # Request Tier 2 if BVN is provided
+            payload["tier"] = "2"
         
         if merchant_data.get("nin"):
             payload["nationalIdentityNo"] = merchant_data["nin"]
+            # Request Tier 3 if both BVN and NIN are provided
+            if merchant_data.get("bvn"):
+                payload["tier"] = "3"
             if merchant_data.get("ninUserId"):
                 payload["ninUserId"] = merchant_data["ninUserId"]
         
