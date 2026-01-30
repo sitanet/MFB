@@ -131,6 +131,20 @@
                                 </div>
                             </div>
                             
+                            <h5 class="mb-4"><i class="fas fa-university text-primary me-2"></i>Merchant Account</h5>
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">GL Account *</label>
+                                        {{ form.gl_account }}
+                                        <small class="text-muted">Select the GL account for this merchant. Account number will be auto-generated.</small>
+                                        {% if form.gl_account.errors %}
+                                        <div class="text-danger small">{{ form.gl_account.errors }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            
                             <h5 class="mb-4">Transaction Settings</h5>
                             <div class="row mb-4">
                                 <div class="col-md-4">

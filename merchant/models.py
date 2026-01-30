@@ -85,7 +85,17 @@ class Merchant(models.Model):
     city = models.CharField(max_length=100, blank=True, null=True)
     address = models.TextField(blank=True, null=True)
     
-    # Float account details
+    # Merchant account number (like customer gl_no/ac_no - used for transactions)
+    gl_no = models.CharField(
+        max_length=10, blank=True, null=True,
+        help_text="GL number for merchant account"
+    )
+    ac_no = models.CharField(
+        max_length=10, blank=True, null=True,
+        help_text="Account number for merchant"
+    )
+    
+    # Float account details (mirrors the merchant account)
     float_gl_no = models.CharField(
         max_length=10, blank=True, null=True,
         help_text="GL number for merchant float account"
@@ -199,6 +209,39 @@ class Merchant(models.Model):
 
     def __str__(self):
         return f"{self.merchant_name} ({self.merchant_id})"
+
+    def save(self, *args, **kwargs):
+        # Generate account number if not set
+        if not self.ac_no:
+            self.ac_no = self._generate_account_number()
+        
+        # Set default GL number for merchants (e.g., 20700 for merchant accounts)
+        if not self.gl_no:
+            self.gl_no = '20700'  # Default merchant GL - adjust based on your chart of accounts
+        
+        # Mirror to float account
+        if self.gl_no and not self.float_gl_no:
+            self.float_gl_no = self.gl_no
+        if self.ac_no and not self.float_ac_no:
+            self.float_ac_no = self.ac_no
+        
+        super().save(*args, **kwargs)
+    
+    def _generate_account_number(self):
+        """Generate unique 5-digit account number for merchant"""
+        import random
+        while True:
+            # Generate random 5-digit number
+            ac_no = str(random.randint(10000, 99999))
+            # Check if it's unique within this branch
+            if not Merchant.all_objects.filter(ac_no=ac_no, branch=self.branch).exists():
+                return ac_no
+    
+    def get_account_number(self):
+        """Return full account number (GL + AC)"""
+        if self.gl_no and self.ac_no:
+            return f"{self.gl_no}{self.ac_no}"
+        return None
 
     def set_transaction_pin(self, raw_pin):
         """Hash and set transaction PIN"""

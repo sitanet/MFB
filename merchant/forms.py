@@ -26,6 +26,13 @@ class MerchantRegistrationForm(forms.ModelForm):
         widget=forms.PasswordInput(attrs={'class': 'form-control'})
     )
     
+    gl_account = forms.ChoiceField(
+        required=True,
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        label='GL Account',
+        help_text='Select the GL account for this merchant'
+    )
+    
     class Meta:
         model = Merchant
         fields = [
@@ -58,6 +65,23 @@ class MerchantRegistrationForm(forms.ModelForm):
             'single_transaction_limit': forms.NumberInput(attrs={'class': 'form-control'}),
             'commission_rate': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
         }
+
+    def __init__(self, *args, branch=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        from accounts_admin.models import Account
+        
+        # Get GL accounts for merchant - typically liability accounts (20xxx)
+        if branch:
+            accounts = Account.objects.filter(branch=branch).order_by('gl_no')
+        else:
+            accounts = Account.all_objects.all().order_by('gl_no')
+        
+        choices = [('', '-- Select GL Account --')]
+        for acc in accounts:
+            label = f"{acc.gl_no} - {acc.gl_name}"
+            choices.append((acc.gl_no, label))
+        
+        self.fields['gl_account'].choices = choices
 
     def clean(self):
         cleaned_data = super().clean()

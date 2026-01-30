@@ -178,8 +178,10 @@ def merchant_list(request):
 @login_required
 def merchant_create(request):
     """Create a new merchant (FinanceFlex Admin)"""
+    branch = request.user.get_branch()
+    
     if request.method == 'POST':
-        form = MerchantRegistrationForm(request.POST)
+        form = MerchantRegistrationForm(request.POST, branch=branch)
         if form.is_valid():
             try:
                 with transaction.atomic():
@@ -187,8 +189,6 @@ def merchant_create(request):
                     merchant_id = generate_merchant_id()
                     merchant_code = generate_merchant_code()
                     
-                    # Get branch from logged-in user
-                    branch = request.user.get_branch()
                     if not branch:
                         messages.error(request, 'Unable to determine branch')
                         return redirect('merchant:merchant_list')
@@ -201,6 +201,11 @@ def merchant_create(request):
                     merchant.created_by = request.user
                     merchant.status = 'pending'
                     
+                    # Set GL account from form selection (ac_no auto-generated in model save)
+                    gl_account = form.cleaned_data.get('gl_account')
+                    if gl_account:
+                        merchant.gl_no = gl_account
+                    
                     # Create user account for merchant portal
                     user_data = {
                         'merchant_name': form.cleaned_data['merchant_name'],
@@ -211,11 +216,6 @@ def merchant_create(request):
                     }
                     user = create_merchant_user(user_data, branch, request.user)
                     merchant.user = user
-                    
-                    # Create float account
-                    float_gl_no, float_ac_no = create_merchant_float_account(merchant, branch)
-                    merchant.float_gl_no = float_gl_no
-                    merchant.float_ac_no = float_ac_no
                     
                     # Set transaction PIN
                     merchant.set_transaction_pin(form.cleaned_data['transaction_pin'])
@@ -267,7 +267,7 @@ def merchant_create(request):
             except Exception as e:
                 messages.error(request, f'Error creating merchant: {str(e)}')
     else:
-        form = MerchantRegistrationForm()
+        form = MerchantRegistrationForm(branch=branch)
     
     context = {'form': form}
     return render(request, 'merchant/admin/merchant_create.html', context)
