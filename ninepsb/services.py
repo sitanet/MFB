@@ -406,7 +406,10 @@ class WAASService:
             raise Exception(f"WAAS authentication succeeded but no access token returned. Response: {data}")
         
         # Cache token for 55 minutes
-        expires_in = data.get("expiresIn", 3600)
+        try:
+            expires_in = int(data.get("expiresIn") or data.get("expires_in") or 3600)
+        except (TypeError, ValueError):
+            expires_in = 3600
         cache.set(cache_key, token, timeout=min(expires_in - 300, 3300))
         self._token = token
         return token
