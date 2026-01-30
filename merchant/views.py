@@ -402,6 +402,15 @@ def merchant_update(request, merchant_id):
         if form.is_valid():
             merchant = form.save()
             
+            # Check if wallet was manually entered
+            if merchant.psb_wallet_account and not had_wallet:
+                # Admin manually entered wallet account - just save it
+                merchant.psb_wallet_status = 'active'
+                merchant.psb_wallet_created_at = timezone.now()
+                merchant.save(update_fields=['psb_wallet_status', 'psb_wallet_created_at'])
+                messages.success(request, f'Merchant updated. 9PSB Wallet linked: {merchant.psb_wallet_account}')
+                return redirect('merchant:merchant_detail', merchant_id=merchant.id)
+            
             # If merchant doesn't have wallet yet, try to create one
             if not had_wallet and not merchant.psb_wallet_account:
                 # Check if we have required fields for wallet creation

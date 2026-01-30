@@ -120,6 +120,14 @@ class MerchantUpdateForm(forms.ModelForm):
         help_text='Select an existing account for merchant float'
     )
     
+    psb_wallet_account = forms.CharField(
+        required=False,
+        max_length=20,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '10-digit 9PSB account number'}),
+        label='9PSB Wallet Account',
+        help_text='Enter existing 9PSB wallet account number (if already created)'
+    )
+    
     class Meta:
         model = Merchant
         fields = [
@@ -129,7 +137,7 @@ class MerchantUpdateForm(forms.ModelForm):
             'state', 'lga', 'city', 'address',
             'bvn', 'nin', 'date_of_birth', 'gender',
             'daily_transaction_limit', 'single_transaction_limit', 'commission_rate',
-            'status'
+            'status', 'psb_wallet_account'
         ]
         widgets = {
             'merchant_name': forms.TextInput(attrs={'class': 'form-control'}),
@@ -153,6 +161,7 @@ class MerchantUpdateForm(forms.ModelForm):
             'single_transaction_limit': forms.NumberInput(attrs={'class': 'form-control'}),
             'commission_rate': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'status': forms.Select(attrs={'class': 'form-select'}),
+            'psb_wallet_account': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '10-digit 9PSB account'}),
         }
 
     def __init__(self, *args, branch=None, **kwargs):

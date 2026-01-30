@@ -195,6 +195,18 @@
                                 </div>
                             </div>
                             
+                            {% if not has_wallet %}
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label"><i class="fas fa-university text-info me-1"></i>9PSB Wallet Account (Manual Entry)</label>
+                                        {{ form.psb_wallet_account }}
+                                        <small class="text-muted">If wallet already exists, enter the 10-digit account number here to link it.</small>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                            
                             <h5 class="mb-4">Float Account</h5>
                             <div class="row mb-4">
                                 <div class="col-md-6">
