@@ -103,6 +103,70 @@
             </div>
         </div>
         
+        <!-- 9PSB Wallet Account -->
+        <div class="stats-card mb-4">
+            <h6 class="mb-3">
+                <i class="fas fa-university text-info me-2"></i>9PSB Wallet Account
+            </h6>
+            {% if merchant.psb_wallet_account %}
+            <div class="row">
+                <div class="col-md-6">
+                    <table class="table table-borderless">
+                        <tr>
+                            <td class="text-muted">Account Number:</td>
+                            <td><code class="fs-5">{{ merchant.psb_wallet_account }}</code></td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Account Name:</td>
+                            <td>{{ merchant.psb_wallet_name|default:merchant.merchant_name }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Bank:</td>
+                            <td>9 Payment Service Bank</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Wallet Tier:</td>
+                            <td><span class="badge bg-primary">Tier {{ merchant.psb_wallet_tier|default:"1" }}</span></td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Status:</td>
+                            <td>
+                                {% if merchant.psb_wallet_status == 'active' %}
+                                <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>Active</span>
+                                {% elif merchant.psb_wallet_status == 'suspended' %}
+                                <span class="badge bg-danger"><i class="fas fa-ban me-1"></i>Suspended</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ merchant.psb_wallet_status|default:"Active"|title }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <div class="bg-info bg-opacity-10 rounded p-4 text-center">
+                        <small class="text-muted d-block mb-1">Wallet Balance</small>
+                        <h2 class="text-info mb-2">₦{{ psb_wallet_balance|default:"0.00"|floatformat:2|intcomma }}</h2>
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle me-1"></i>
+                            This is your 9PSB wallet for receiving transfers
+                        </small>
+                    </div>
+                </div>
+            </div>
+            <div class="alert alert-info mt-3 mb-0">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>How to receive funds:</strong> Share your account number <strong>{{ merchant.psb_wallet_account }}</strong> 
+                with customers. They can transfer from any bank to your 9PSB wallet.
+            </div>
+            {% else %}
+            <div class="alert alert-warning mb-0">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <strong>No Wallet Found:</strong> Your 9PSB wallet has not been created yet. 
+                Please contact your administrator to set up your wallet account.
+            </div>
+            {% endif %}
+        </div>
+        
         <!-- Transaction Limits -->
         <div class="stats-card">
             <h6 class="mb-3">Transaction Limits</h6>

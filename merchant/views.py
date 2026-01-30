@@ -810,10 +810,25 @@ def portal_dashboard(request):
         merchant=merchant
     ).order_by('-created_at')[:5]
     
+    # Get 9PSB wallet balance if wallet exists
+    psb_wallet_balance = None
+    psb_wallet_error = None
+    if merchant.psb_wallet_account:
+        try:
+            from ninepsb.services import WAASService
+            waas = WAASService()
+            wallet_info = waas.wallet_enquiry(merchant.psb_wallet_account)
+            wallet_data = wallet_info.get('data', {})
+            psb_wallet_balance = wallet_data.get('availableBalance') or wallet_data.get('balance', '0.00')
+        except Exception as e:
+            psb_wallet_error = str(e)
+    
     context = {
         'merchant': merchant,
         'stats': stats,
         'recent_transactions': recent_transactions,
+        'psb_wallet_balance': psb_wallet_balance,
+        'psb_wallet_error': psb_wallet_error,
     }
     return render(request, 'merchant/portal/dashboard.html', context)
 
@@ -1265,9 +1280,24 @@ def portal_reports(request):
 def portal_profile(request):
     """Merchant profile"""
     merchant = request.merchant
+    stats = get_merchant_dashboard_stats(merchant)
+    
+    # Get 9PSB wallet balance if wallet exists
+    psb_wallet_balance = None
+    if merchant.psb_wallet_account:
+        try:
+            from ninepsb.services import WAASService
+            waas = WAASService()
+            wallet_info = waas.wallet_enquiry(merchant.psb_wallet_account)
+            wallet_data = wallet_info.get('data', {})
+            psb_wallet_balance = wallet_data.get('availableBalance') or wallet_data.get('balance', '0.00')
+        except Exception:
+            psb_wallet_balance = "0.00"
     
     context = {
         'merchant': merchant,
+        'stats': stats,
+        'psb_wallet_balance': psb_wallet_balance,
     }
     return render(request, 'merchant/portal/profile.html', context)
 
