@@ -131,6 +131,48 @@
                                 </div>
                             </div>
                             
+                            <h5 class="mb-4"><i class="fas fa-id-card text-info me-2"></i>KYC Information (For 9PSB Wallet)</h5>
+                            <div class="row mb-4">
+                                <div class="col-md-3">
+                                    <div class="mb-3">
+                                        <label class="form-label">BVN *</label>
+                                        {{ form.bvn }}
+                                        <small class="text-muted">11-digit Bank Verification Number</small>
+                                        {% if form.bvn.errors %}
+                                        <div class="text-danger small">{{ form.bvn.errors }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="mb-3">
+                                        <label class="form-label">NIN</label>
+                                        {{ form.nin }}
+                                        <small class="text-muted">11-digit National ID Number</small>
+                                        {% if form.nin.errors %}
+                                        <div class="text-danger small">{{ form.nin.errors }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="mb-3">
+                                        <label class="form-label">Date of Birth *</label>
+                                        {{ form.date_of_birth }}
+                                        {% if form.date_of_birth.errors %}
+                                        <div class="text-danger small">{{ form.date_of_birth.errors }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="mb-3">
+                                        <label class="form-label">Gender *</label>
+                                        {{ form.gender }}
+                                        {% if form.gender.errors %}
+                                        <div class="text-danger small">{{ form.gender.errors }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            
                             <h5 class="mb-4"><i class="fas fa-university text-primary me-2"></i>Merchant Account</h5>
                             <div class="row mb-4">
                                 <div class="col-md-6">

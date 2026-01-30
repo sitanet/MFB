@@ -70,11 +70,23 @@ class MerchantRegistrationForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         from accounts_admin.models import Account
         
-        # Get GL accounts for merchant - typically liability accounts (20xxx)
+        # Get GL accounts for merchant - liability accounts (current and savings)
+        # Filter: Liabilities (type=2), GL starts with '20', exclude GLs ending with 0
         if branch:
-            accounts = Account.objects.filter(branch=branch).order_by('gl_no')
+            accounts = Account.objects.filter(
+                branch=branch,
+                acc_type=Account.LIABILITIES,
+                gl_no__startswith='20'
+            ).exclude(
+                gl_no__endswith='0'
+            ).order_by('gl_no')
         else:
-            accounts = Account.all_objects.all().order_by('gl_no')
+            accounts = Account.all_objects.filter(
+                acc_type=Account.LIABILITIES,
+                gl_no__startswith='20'
+            ).exclude(
+                gl_no__endswith='0'
+            ).order_by('gl_no')
         
         choices = [('', '-- Select GL Account --')]
         for acc in accounts:
