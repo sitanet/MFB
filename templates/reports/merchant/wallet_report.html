@@ -140,23 +140,19 @@
                 <td>{{ merchant.psb_wallet_tier|default:"-" }}</td>
                 {% if refresh_from_psb %}
                 <td>
-                    {% with live=wallet_live_data|default_if_none:""|dictsort:merchant.psb_wallet_account %}
-                    {% if merchant.psb_wallet_account and wallet_live_data %}
-                        {% for acc, data in wallet_live_data.items %}
-                            {% if acc == merchant.psb_wallet_account %}
-                                {% if data.balance %}
-                                    <strong>₦{{ data.balance|floatformat:2|intcomma }}</strong>
-                                {% elif data.error %}
-                                    <span class="text-danger">{{ data.error }}</span>
-                                {% else %}
-                                    -
-                                {% endif %}
+                    {% if merchant.psb_wallet_account %}
+                        {% with live_data=merchant.live_balance %}
+                            {% if live_data %}
+                                <strong>₦{{ live_data|floatformat:2|intcomma }}</strong>
+                            {% elif merchant.live_error %}
+                                <span class="text-danger text-truncate" style="max-width:100px" title="{{ merchant.live_error }}">Error</span>
+                            {% else %}
+                                -
                             {% endif %}
-                        {% endfor %}
+                        {% endwith %}
                     {% else %}
                         -
                     {% endif %}
-                    {% endwith %}
                 </td>
                 {% endif %}
                 <td>

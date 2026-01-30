@@ -6901,8 +6901,20 @@ def merchant_wallet_report(request):
     without_wallet = total_merchants - with_wallet
     active_wallets = merchants.filter(psb_wallet_status='active').count()
     
+    # Attach live data to merchant objects
+    merchants_list = list(merchants)
+    if refresh_from_psb and wallet_live_data:
+        for merchant in merchants_list:
+            if merchant.psb_wallet_account and merchant.psb_wallet_account in wallet_live_data:
+                live = wallet_live_data[merchant.psb_wallet_account]
+                merchant.live_balance = live.get('balance')
+                merchant.live_error = live.get('error')
+            else:
+                merchant.live_balance = None
+                merchant.live_error = None
+    
     context = {
-        'merchants': merchants,
+        'merchants': merchants_list,
         'total_merchants': total_merchants,
         'with_wallet': with_wallet,
         'without_wallet': without_wallet,

@@ -684,8 +684,11 @@ class WAASService:
         import logging
         logger = logging.getLogger(__name__)
         
+        if not bvn:
+            raise Exception("BVN is required")
+        
         payload = {"bvn": bvn}
-        logger.info(f"Fetching wallet by BVN: {bvn[:4]}****")
+        logger.info(f"Fetching wallet by BVN: {bvn[:4] if len(bvn) >= 4 else bvn}****")
         
         try:
             data = self._make_request("POST", "/get_wallet", payload)
