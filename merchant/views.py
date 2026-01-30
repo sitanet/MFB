@@ -405,13 +405,13 @@ def merchant_update(request, merchant_id):
             # If merchant doesn't have wallet yet, try to create one
             if not had_wallet and not merchant.psb_wallet_account:
                 # Check if we have required fields for wallet creation
-                can_create_wallet = (
-                    (merchant.bvn or merchant.nin) and
-                    merchant.date_of_birth and
-                    merchant.gender and
-                    merchant.business_phone and
-                    (merchant.address or merchant.business_address)
-                )
+                has_bvn_or_nin = bool(merchant.bvn or merchant.nin)
+                has_dob = bool(merchant.date_of_birth)
+                has_gender = bool(merchant.gender)
+                has_phone = bool(merchant.business_phone)
+                has_address = bool(merchant.address or merchant.business_address)
+                
+                can_create_wallet = has_bvn_or_nin and has_dob and has_gender and has_phone and has_address
                 
                 if can_create_wallet:
                     try:
@@ -419,34 +419,56 @@ def merchant_update(request, merchant_id):
                         wallet_result = create_merchant_wallet(merchant)
                         
                         # Update merchant with wallet details
-                        merchant.psb_wallet_account = wallet_result.get('account_number')
-                        merchant.psb_wallet_name = wallet_result.get('account_name')
-                        merchant.psb_wallet_status = wallet_result.get('status', 'active')
-                        merchant.psb_wallet_tier = wallet_result.get('tier', '1')
-                        merchant.psb_wallet_created_at = timezone.now()
-                        merchant.save(update_fields=[
-                            'psb_wallet_account', 'psb_wallet_name',
-                            'psb_wallet_status', 'psb_wallet_tier', 'psb_wallet_created_at'
-                        ])
-                        
-                        messages.success(
-                            request,
-                            f'Merchant updated successfully. 9PSB Wallet created: {merchant.psb_wallet_account}'
-                        )
+                        account_number = wallet_result.get('account_number')
+                        if account_number:
+                            merchant.psb_wallet_account = account_number
+                            merchant.psb_wallet_name = wallet_result.get('account_name') or merchant.merchant_name
+                            merchant.psb_wallet_status = wallet_result.get('status', 'active')
+                            merchant.psb_wallet_tier = wallet_result.get('tier', '1')
+                            merchant.psb_wallet_created_at = timezone.now()
+                            merchant.save(update_fields=[
+                                'psb_wallet_account', 'psb_wallet_name',
+                                'psb_wallet_status', 'psb_wallet_tier', 'psb_wallet_created_at'
+                            ])
+                            
+                            messages.success(
+                                request,
+                                f'Merchant updated successfully. 9PSB Wallet created: {merchant.psb_wallet_account}'
+                            )
+                        else:
+                            messages.warning(
+                                request,
+                                f'Merchant updated. Wallet API returned no account number. Response: {wallet_result.get("message", "Unknown")}'
+                            )
                     except Exception as wallet_e:
                         import logging
+                        import traceback
                         logger = logging.getLogger(__name__)
                         logger.error(f"Failed to create 9PSB wallet for merchant {merchant.merchant_id}: {wallet_e}")
+                        logger.error(traceback.format_exc())
                         messages.warning(
                             request,
                             f'Merchant updated successfully. However, 9PSB wallet creation failed: {str(wallet_e)}'
                         )
                 else:
                     messages.success(request, 'Merchant updated successfully')
-                    if not merchant.psb_wallet_account:
+                    # Show what's missing
+                    missing = []
+                    if not has_bvn_or_nin:
+                        missing.append("BVN or NIN")
+                    if not has_dob:
+                        missing.append("Date of Birth")
+                    if not has_gender:
+                        missing.append("Gender")
+                    if not has_phone:
+                        missing.append("Business Phone")
+                    if not has_address:
+                        missing.append("Address")
+                    
+                    if missing:
                         messages.info(
                             request,
-                            'To create 9PSB wallet, please provide: BVN or NIN, Date of Birth, Gender, Phone, and Address'
+                            f'To create 9PSB wallet, please provide: {", ".join(missing)}'
                         )
             else:
                 messages.success(request, 'Merchant updated successfully')

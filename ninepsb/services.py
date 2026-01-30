@@ -646,7 +646,10 @@ def create_merchant_wallet(merchant) -> dict:
     Returns:
         dict with wallet details
     """
+    import logging
     from datetime import datetime
+    
+    logger = logging.getLogger(__name__)
     
     waas = WAASService()
     
@@ -681,16 +684,41 @@ def create_merchant_wallet(merchant) -> dict:
     if merchant.nin:
         wallet_data["nin"] = merchant.nin
     
+    logger.info(f"Creating wallet for merchant {merchant.merchant_id} with data: {wallet_data}")
+    
     result = waas.open_wallet(wallet_data)
     
-    # Extract account details from response
+    logger.info(f"Wallet API response for merchant {merchant.merchant_id}: {result}")
+    
+    # Extract account details from response - handle various response formats
     account_data = result.get("data", {})
     
+    # Try different possible field names for account number
+    account_number = (
+        account_data.get("accountNo") or 
+        account_data.get("accountNumber") or
+        account_data.get("account_number") or
+        account_data.get("walletAccountNo") or
+        result.get("accountNo") or
+        result.get("accountNumber")
+    )
+    
+    # Try different possible field names for account name
+    account_name = (
+        account_data.get("accountName") or
+        account_data.get("account_name") or
+        account_data.get("name") or
+        result.get("accountName") or
+        merchant.merchant_name
+    )
+    
+    logger.info(f"Extracted account_number: {account_number}, account_name: {account_name}")
+    
     return {
-        "account_number": account_data.get("accountNo") or account_data.get("accountNumber"),
-        "account_name": account_data.get("accountName") or merchant.merchant_name,
+        "account_number": account_number,
+        "account_name": account_name,
         "status": "active",
-        "tier": account_data.get("tier", "1"),
+        "tier": account_data.get("tier") or result.get("tier") or "1",
         "message": result.get("message", "Wallet created successfully"),
         "raw_response": result
     }
