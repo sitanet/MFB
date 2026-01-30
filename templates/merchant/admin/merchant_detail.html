@@ -128,17 +128,21 @@
                             </div>
                         </div>
                         
-                        <h5 class="mb-3">Float Account</h5>
+                        <h5 class="mb-3"><i class="fas fa-credit-card text-primary me-2"></i>Merchant Account</h5>
                         <div class="row mb-4">
                             <div class="col-md-6">
                                 <table class="table table-borderless">
                                     <tr>
                                         <td class="text-muted">GL Number:</td>
-                                        <td><code>{{ merchant.float_gl_no }}</code></td>
+                                        <td><code>{{ merchant.gl_no }}</code></td>
                                     </tr>
                                     <tr>
                                         <td class="text-muted">Account Number:</td>
-                                        <td><code>{{ merchant.float_ac_no }}</code></td>
+                                        <td><code>{{ merchant.ac_no }}</code></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Full Account:</td>
+                                        <td><strong class="text-primary">{{ merchant.gl_no }}{{ merchant.ac_no }}</strong></td>
                                     </tr>
                                 </table>
                             </div>
@@ -292,16 +296,16 @@
             
             <!-- Stats Sidebar -->
             <div class="col-md-4">
-                <!-- Float Balance -->
+                <!-- Merchant Account Balance -->
                 <div class="white_shd full margin_bottom_30">
                     <div class="full graph_head">
                         <div class="heading1 margin_0">
-                            <h2>Float Balance</h2>
+                            <h2>Account Balance</h2>
                         </div>
                     </div>
                     <div class="p-4 text-center">
-                        <h2 class="text-success mb-0">₦{{ stats.float_balance|floatformat:2|intcomma }}</h2>
-                        <small class="text-muted">Available Balance</small>
+                        <h2 class="text-success mb-0">₦{{ stats.account_balance|floatformat:2|intcomma }}</h2>
+                        <small class="text-muted">{{ merchant.gl_no }}{{ merchant.ac_no }}</small>
                     </div>
                 </div>
                 

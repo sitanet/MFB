@@ -147,13 +147,6 @@ class MerchantRegistrationForm(forms.ModelForm):
 class MerchantUpdateForm(forms.ModelForm):
     """Form for updating merchant details"""
     
-    float_account = forms.ChoiceField(
-        required=False,
-        widget=forms.Select(attrs={'class': 'form-select'}),
-        label='Float Account',
-        help_text='Select an existing account for merchant float'
-    )
-    
     psb_wallet_account = forms.CharField(
         required=False,
         max_length=20,
@@ -200,32 +193,6 @@ class MerchantUpdateForm(forms.ModelForm):
 
     def __init__(self, *args, branch=None, **kwargs):
         super().__init__(*args, **kwargs)
-        from customers.models import Customer
-        
-        if branch:
-            customers = Customer.objects.filter(branch=branch).order_by('gl_no', 'ac_no')
-        else:
-            customers = Customer.objects.all().order_by('gl_no', 'ac_no')
-        
-        choices = [('', '---------')]
-        for c in customers:
-            label = f"{c.gl_no}{c.ac_no} - {c.first_name} {c.last_name or ''}"
-            choices.append((c.gl_no, label))
-        
-        self.fields['float_account'].choices = choices
-        
-        if self.instance and self.instance.pk and self.instance.float_gl_no:
-            self.fields['float_account'].initial = self.instance.float_gl_no
-
-    def save(self, commit=True):
-        instance = super().save(commit=False)
-        float_account = self.cleaned_data.get('float_account')
-        if float_account:
-            instance.float_gl_no = float_account
-            instance.float_ac_no = '1'
-        if commit:
-            instance.save()
-        return instance
 
 
 class MerchantLoginForm(forms.Form):

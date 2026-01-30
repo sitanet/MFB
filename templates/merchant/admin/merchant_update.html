@@ -207,29 +207,6 @@
                             </div>
                             {% endif %}
                             
-                            <h5 class="mb-4">Float Account</h5>
-                            <div class="row mb-4">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label class="form-label">Float Account (GL)</label>
-                                        {{ form.float_account }}
-                                        <small class="text-muted">Select an existing account. Account number will be set to 1.</small>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="mb-3">
-                                        <label class="form-label">Current GL No</label>
-                                        <input type="text" class="form-control" value="{{ merchant.float_gl_no|default:'-' }}" readonly>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="mb-3">
-                                        <label class="form-label">Current AC No</label>
-                                        <input type="text" class="form-control" value="{{ merchant.float_ac_no|default:'-' }}" readonly>
-                                    </div>
-                                </div>
-                            </div>
-                            
                             <h5 class="mb-4">Transaction Settings</h5>
                             <div class="row mb-4">
                                 <div class="col-md-4">

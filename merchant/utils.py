@@ -30,7 +30,7 @@ def generate_transaction_ref(prefix='TRX'):
 
 
 def get_merchant_float_balance(merchant):
-    """Get current float balance for a merchant"""
+    """Get current float balance for a merchant (legacy - uses float_gl_no/float_ac_no)"""
     from transactions.models import Memtrans
     from django.db.models import Sum
     
@@ -41,6 +41,24 @@ def get_merchant_float_balance(merchant):
         branch=merchant.branch,
         gl_no=merchant.float_gl_no,
         ac_no=merchant.float_ac_no,
+        error='A'
+    ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+    
+    return balance
+
+
+def get_merchant_account_balance(merchant):
+    """Get current account balance for a merchant (uses gl_no/ac_no)"""
+    from transactions.models import Memtrans
+    from django.db.models import Sum
+    
+    if not merchant.gl_no or not merchant.ac_no:
+        return Decimal('0.00')
+    
+    balance = Memtrans.all_objects.filter(
+        branch=merchant.branch,
+        gl_no=merchant.gl_no,
+        ac_no=merchant.ac_no,
         error='A'
     ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
     
@@ -426,11 +444,12 @@ def get_merchant_dashboard_stats(merchant):
         total=Sum('amount')
     )
     
-    # Float balance
-    float_balance = get_merchant_float_balance(merchant)
+    # Account balance (using merchant's gl_no/ac_no)
+    account_balance = get_merchant_account_balance(merchant)
     
     return {
-        'float_balance': float_balance,
+        'account_balance': account_balance,
+        'float_balance': account_balance,  # Keep for backward compatibility
         'today': {
             'count': today_stats['count'] or 0,
             'amount': today_stats['total_amount'] or Decimal('0.00'),
