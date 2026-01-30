@@ -131,6 +131,81 @@
                             </div>
                         </div>
                         
+                        <!-- 9PSB Wallet Section -->
+                        <h5 class="mb-3">
+                            <i class="fas fa-university text-info me-2"></i>9PSB Wallet Account
+                        </h5>
+                        <div class="row mb-4">
+                            {% if merchant.psb_wallet_account %}
+                            <div class="col-md-6">
+                                <table class="table table-borderless">
+                                    <tr>
+                                        <td class="text-muted">Account Number:</td>
+                                        <td><code class="fs-5 text-primary">{{ merchant.psb_wallet_account }}</code></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Account Name:</td>
+                                        <td><strong>{{ merchant.psb_wallet_name|default:merchant.merchant_name }}</strong></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Bank:</td>
+                                        <td>9 Payment Service Bank</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Wallet Tier:</td>
+                                        <td><span class="badge bg-primary">Tier {{ merchant.psb_wallet_tier|default:"1" }}</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Status:</td>
+                                        <td>
+                                            {% if merchant.psb_wallet_status == 'active' %}
+                                            <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>Active</span>
+                                            {% elif merchant.psb_wallet_status == 'suspended' %}
+                                            <span class="badge bg-danger"><i class="fas fa-ban me-1"></i>Suspended</span>
+                                            {% elif merchant.psb_wallet_status == 'inactive' %}
+                                            <span class="badge bg-warning"><i class="fas fa-pause me-1"></i>Inactive</span>
+                                            {% else %}
+                                            <span class="badge bg-secondary">{{ merchant.psb_wallet_status|default:"Active"|title }}</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Created:</td>
+                                        <td>{{ merchant.psb_wallet_created_at|date:"M d, Y H:i"|default:"-" }}</td>
+                                    </tr>
+                                </table>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="bg-info bg-opacity-10 rounded p-4 text-center">
+                                    <small class="text-muted d-block mb-1">Wallet Balance</small>
+                                    <h2 class="text-info mb-2">₦{{ psb_wallet_balance|default:"0.00"|floatformat:2|intcomma }}</h2>
+                                    {% if psb_wallet_error %}
+                                    <small class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>{{ psb_wallet_error }}</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% else %}
+                            <div class="col-12">
+                                <div class="alert alert-warning d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <i class="fas fa-exclamation-triangle me-2"></i>
+                                        <strong>No Wallet:</strong> This merchant does not have a 9PSB wallet yet.
+                                        {% if not merchant.bvn and not merchant.nin %}
+                                        <br><small>Please add BVN/NIN, Date of Birth, and Gender to create wallet.</small>
+                                        {% endif %}
+                                    </div>
+                                    <form action="{% url 'merchant:merchant_create_wallet' merchant.id %}" method="post" style="display:inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-info btn-sm" 
+                                                {% if not merchant.bvn and not merchant.nin %}disabled{% endif %}>
+                                            <i class="fas fa-plus me-1"></i> Create Wallet
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                        
                         <h5 class="mb-3">Transaction Limits</h5>
                         <div class="row">
                             <div class="col-md-6">
@@ -214,6 +289,30 @@
                     <div class="p-4 text-center">
                         <h2 class="text-success mb-0">₦{{ stats.float_balance|floatformat:2|intcomma }}</h2>
                         <small class="text-muted">Available Balance</small>
+                    </div>
+                </div>
+                
+                <!-- 9PSB Wallet Balance -->
+                <div class="white_shd full margin_bottom_30">
+                    <div class="full graph_head" style="background: linear-gradient(135deg, #0891b2, #22d3ee);">
+                        <div class="heading1 margin_0">
+                            <h2 style="color: #fff;"><i class="fas fa-university me-2"></i>9PSB Wallet</h2>
+                        </div>
+                    </div>
+                    <div class="p-4 text-center">
+                        {% if merchant.psb_wallet_account %}
+                        <h2 class="text-info mb-1">₦{{ psb_wallet_balance|default:"0.00"|floatformat:2|intcomma }}</h2>
+                        <code class="d-block mb-2">{{ merchant.psb_wallet_account }}</code>
+                        <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>{{ merchant.psb_wallet_status|default:"Active"|title }}</span>
+                        {% else %}
+                        <div class="text-warning mb-2">
+                            <i class="fas fa-exclamation-triangle fa-2x"></i>
+                        </div>
+                        <p class="text-muted mb-2">No Wallet</p>
+                        <a href="{% url 'merchant:merchant_update' merchant.id %}" class="btn btn-sm btn-outline-info">
+                            <i class="fas fa-plus me-1"></i>Setup Wallet
+                        </a>
+                        {% endif %}
                     </div>
                 </div>
                 
