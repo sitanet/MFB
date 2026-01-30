@@ -134,6 +134,58 @@
                                 </div>
                             </div>
                             
+                            <h5 class="mb-4">
+                                <i class="fas fa-id-card text-info me-2"></i>KYC Information (For 9PSB Wallet)
+                                {% if has_wallet %}
+                                <span class="badge bg-success ms-2"><i class="fas fa-check-circle"></i> Wallet Created</span>
+                                {% else %}
+                                <span class="badge bg-warning ms-2"><i class="fas fa-exclamation-triangle"></i> No Wallet Yet</span>
+                                {% endif %}
+                            </h5>
+                            
+                            {% if has_wallet %}
+                            <div class="alert alert-info mb-4">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>Wallet Account:</strong> {{ merchant.psb_wallet_account }} | 
+                                <strong>Name:</strong> {{ merchant.psb_wallet_name }} |
+                                <strong>Status:</strong> {{ merchant.psb_wallet_status|title }}
+                            </div>
+                            {% else %}
+                            <div class="alert alert-warning mb-4">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                Fill in BVN or NIN, Date of Birth, Gender, Phone, and Address to auto-create 9PSB wallet on save.
+                            </div>
+                            {% endif %}
+                            
+                            <div class="row mb-4">
+                                <div class="col-md-3">
+                                    <div class="mb-3">
+                                        <label class="form-label">BVN</label>
+                                        {{ form.bvn }}
+                                        <small class="text-muted">11-digit Bank Verification Number</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="mb-3">
+                                        <label class="form-label">NIN</label>
+                                        {{ form.nin }}
+                                        <small class="text-muted">11-digit National ID Number</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="mb-3">
+                                        <label class="form-label">Date of Birth</label>
+                                        {{ form.date_of_birth }}
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="mb-3">
+                                        <label class="form-label">Gender</label>
+                                        {{ form.gender }}
+                                    </div>
+                                </div>
+                            </div>
+                            
                             <h5 class="mb-4">Float Account</h5>
                             <div class="row mb-4">
                                 <div class="col-md-6">

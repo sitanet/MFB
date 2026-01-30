@@ -127,6 +127,7 @@ class MerchantUpdateForm(forms.ModelForm):
             'business_address', 'business_phone', 'business_email',
             'contact_person_name', 'contact_person_phone', 'contact_person_email',
             'state', 'lga', 'city', 'address',
+            'bvn', 'nin', 'date_of_birth', 'gender',
             'daily_transaction_limit', 'single_transaction_limit', 'commission_rate',
             'status'
         ]
@@ -144,6 +145,10 @@ class MerchantUpdateForm(forms.ModelForm):
             'lga': forms.TextInput(attrs={'class': 'form-control'}),
             'city': forms.TextInput(attrs={'class': 'form-control'}),
             'address': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'bvn': forms.TextInput(attrs={'class': 'form-control', 'maxlength': '11', 'placeholder': '11-digit BVN'}),
+            'nin': forms.TextInput(attrs={'class': 'form-control', 'maxlength': '11', 'placeholder': '11-digit NIN'}),
+            'date_of_birth': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'gender': forms.Select(attrs={'class': 'form-select'}),
             'daily_transaction_limit': forms.NumberInput(attrs={'class': 'form-control'}),
             'single_transaction_limit': forms.NumberInput(attrs={'class': 'form-control'}),
             'commission_rate': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),

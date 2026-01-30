@@ -395,12 +395,62 @@ def merchant_update(request, merchant_id):
     """Update merchant details (FinanceFlex Admin)"""
     merchant = get_object_or_404(Merchant, id=merchant_id)
     branch = request.user.get_branch()
+    had_wallet = bool(merchant.psb_wallet_account)
     
     if request.method == 'POST':
         form = MerchantUpdateForm(request.POST, instance=merchant, branch=branch)
         if form.is_valid():
-            form.save()
-            messages.success(request, 'Merchant updated successfully')
+            merchant = form.save()
+            
+            # If merchant doesn't have wallet yet, try to create one
+            if not had_wallet and not merchant.psb_wallet_account:
+                # Check if we have required fields for wallet creation
+                can_create_wallet = (
+                    (merchant.bvn or merchant.nin) and
+                    merchant.date_of_birth and
+                    merchant.gender and
+                    merchant.business_phone and
+                    (merchant.address or merchant.business_address)
+                )
+                
+                if can_create_wallet:
+                    try:
+                        from ninepsb.services import create_merchant_wallet
+                        wallet_result = create_merchant_wallet(merchant)
+                        
+                        # Update merchant with wallet details
+                        merchant.psb_wallet_account = wallet_result.get('account_number')
+                        merchant.psb_wallet_name = wallet_result.get('account_name')
+                        merchant.psb_wallet_status = wallet_result.get('status', 'active')
+                        merchant.psb_wallet_tier = wallet_result.get('tier', '1')
+                        merchant.psb_wallet_created_at = timezone.now()
+                        merchant.save(update_fields=[
+                            'psb_wallet_account', 'psb_wallet_name',
+                            'psb_wallet_status', 'psb_wallet_tier', 'psb_wallet_created_at'
+                        ])
+                        
+                        messages.success(
+                            request,
+                            f'Merchant updated successfully. 9PSB Wallet created: {merchant.psb_wallet_account}'
+                        )
+                    except Exception as wallet_e:
+                        import logging
+                        logger = logging.getLogger(__name__)
+                        logger.error(f"Failed to create 9PSB wallet for merchant {merchant.merchant_id}: {wallet_e}")
+                        messages.warning(
+                            request,
+                            f'Merchant updated successfully. However, 9PSB wallet creation failed: {str(wallet_e)}'
+                        )
+                else:
+                    messages.success(request, 'Merchant updated successfully')
+                    if not merchant.psb_wallet_account:
+                        messages.info(
+                            request,
+                            'To create 9PSB wallet, please provide: BVN or NIN, Date of Birth, Gender, Phone, and Address'
+                        )
+            else:
+                messages.success(request, 'Merchant updated successfully')
+            
             return redirect('merchant:merchant_detail', merchant_id=merchant.id)
     else:
         form = MerchantUpdateForm(instance=merchant, branch=branch)
@@ -408,6 +458,7 @@ def merchant_update(request, merchant_id):
     context = {
         'form': form,
         'merchant': merchant,
+        'has_wallet': had_wallet,
     }
     return render(request, 'merchant/admin/merchant_update.html', context)
 
