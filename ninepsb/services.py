@@ -337,6 +337,365 @@ class PSBService:
         return data
 
 
+# ==========================================================
+# 🏦 8. WAAS SERVICE CLASS (Wallet as a Service)
+# ==========================================================
+class WAASService:
+    """
+    9PSB Wallet as a Service (WAAS) API Integration.
+    Used for merchant wallet operations.
+    """
+    
+    def __init__(self):
+        self.base_url = getattr(settings, 'NINEPSB_API_BASE', 'http://102.216.128.75:9090/waas/api/v1')
+        self.username = getattr(settings, 'NINEPSB_USERNAME', '')
+        self.password = getattr(settings, 'NINEPSB_PASSWORD', '')
+        self.client_id = getattr(settings, 'NINEPSB_CLIENT_ID', '')
+        self.client_secret = getattr(settings, 'NINEPSB_CLIENT_SECRET', '')
+        self.timeout = getattr(settings, 'NINEPSB_API_TIMEOUT', 30)
+        self._token = None
+    
+    def _get_token(self):
+        """Authenticate with WAAS API and get access token."""
+        if self._token:
+            return self._token
+        
+        cache_key = "waas_access_token"
+        token = cache.get(cache_key)
+        if token:
+            self._token = token
+            return token
+        
+        url = f"{self.base_url}/authenticate"
+        payload = {
+            "username": self.username,
+            "password": self.password,
+            "clientId": self.client_id,
+            "clientSecret": self.client_secret
+        }
+        headers = {"Content-Type": "application/json"}
+        
+        try:
+            response = requests.post(url, json=payload, headers=headers, timeout=self.timeout)
+            response.raise_for_status()
+            data = response.json()
+        except requests.RequestException as e:
+            raise Exception(f"WAAS authentication network error: {str(e)}")
+        except ValueError:
+            raise Exception("Invalid JSON response from WAAS authentication.")
+        
+        if data.get("status") != "SUCCESS":
+            raise Exception(f"WAAS authentication failed: {data.get('message', 'Unknown error')}")
+        
+        token = data.get("accessToken")
+        if not token:
+            raise Exception("WAAS authentication succeeded but no access token returned.")
+        
+        # Cache token for 55 minutes
+        expires_in = data.get("expiresIn", 3600)
+        cache.set(cache_key, token, timeout=min(expires_in - 300, 3300))
+        self._token = token
+        return token
+    
+    def _make_request(self, method, endpoint, payload=None):
+        """Make authenticated request to WAAS API."""
+        url = f"{self.base_url}{endpoint}"
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self._get_token()}"
+        }
+        
+        try:
+            if method.upper() == "POST":
+                response = requests.post(url, json=payload, headers=headers, timeout=self.timeout)
+            else:
+                response = requests.get(url, headers=headers, timeout=self.timeout)
+            response.raise_for_status()
+            return response.json()
+        except requests.RequestException as e:
+            raise Exception(f"WAAS API request failed: {str(e)}")
+    
+    def open_wallet(self, merchant_data: dict) -> dict:
+        """
+        Open a new 9PSB wallet for a merchant.
+        
+        Args:
+            merchant_data: dict containing:
+                - transactionTrackingRef: Unique reference
+                - lastName: Last name
+                - otherNames: Other names
+                - phoneNo: Phone number
+                - gender: 0 (Male) or 1 (Female)
+                - dateOfBirth: Date in dd/MM/yyyy format
+                - address: Address
+                - bvn: Bank Verification Number (optional if NIN provided)
+                - nin: National ID Number (optional if BVN provided)
+                - ninUserId: NIN User ID (required if NIN provided)
+                - email: Email address (optional)
+        
+        Returns:
+            dict with wallet account details
+        """
+        payload = {
+            "transactionTrackingRef": merchant_data.get("transactionTrackingRef"),
+            "lastName": merchant_data.get("lastName"),
+            "otherNames": merchant_data.get("otherNames"),
+            "phoneNo": merchant_data.get("phoneNo"),
+            "gender": int(merchant_data.get("gender", 0)),
+            "dateOfBirth": merchant_data.get("dateOfBirth"),
+            "address": merchant_data.get("address"),
+        }
+        
+        # Add optional fields
+        if merchant_data.get("bvn"):
+            payload["bvn"] = merchant_data["bvn"]
+        
+        if merchant_data.get("nin"):
+            payload["nationalIdentityNo"] = merchant_data["nin"]
+            if merchant_data.get("ninUserId"):
+                payload["ninUserId"] = merchant_data["ninUserId"]
+        
+        if merchant_data.get("email"):
+            payload["email"] = merchant_data["email"]
+        
+        if merchant_data.get("accountName"):
+            payload["accountName"] = merchant_data["accountName"]
+        
+        if merchant_data.get("placeOfBirth"):
+            payload["placeOfBirth"] = merchant_data["placeOfBirth"]
+        
+        data = self._make_request("POST", "/open_wallet", payload)
+        
+        if data.get("status") != "SUCCESS":
+            raise Exception(f"Wallet opening failed: {data.get('message', 'Unknown error')}")
+        
+        return data
+    
+    def wallet_enquiry(self, account_no: str) -> dict:
+        """Fetch wallet details by account number."""
+        payload = {"accountNo": account_no}
+        data = self._make_request("POST", "/wallet_enquiry", payload)
+        
+        if data.get("status") != "SUCCESS":
+            raise Exception(f"Wallet enquiry failed: {data.get('message', 'Unknown error')}")
+        
+        return data
+    
+    def wallet_status(self, account_no: str) -> dict:
+        """Fetch wallet status by account number."""
+        payload = {"accountNo": account_no}
+        data = self._make_request("POST", "/wallet_status", payload)
+        
+        if data.get("status") != "SUCCESS":
+            raise Exception(f"Wallet status check failed: {data.get('message', 'Unknown error')}")
+        
+        return data
+    
+    def change_wallet_status(self, account_number: str, new_status: str) -> dict:
+        """
+        Change wallet status.
+        
+        Args:
+            account_number: Wallet account number
+            new_status: ACTIVE or SUSPENDED
+        """
+        payload = {
+            "accountNumber": account_number,
+            "accountStatus": new_status
+        }
+        data = self._make_request("POST", "/change_wallet_status", payload)
+        
+        if data.get("status") != "SUCCESS":
+            raise Exception(f"Wallet status change failed: {data.get('message', 'Unknown error')}")
+        
+        return data
+    
+    def debit_wallet(self, account_no: str, amount: str, transaction_id: str, 
+                     narration: str, merchant_fee: dict = None) -> dict:
+        """Debit a wallet account."""
+        payload = {
+            "accountNo": account_no,
+            "totalAmount": str(amount),
+            "transactionId": transaction_id,
+            "narration": narration,
+            "merchant": merchant_fee or {"isFee": False}
+        }
+        data = self._make_request("POST", "/debit/transfer", payload)
+        
+        if data.get("status") != "SUCCESS":
+            raise Exception(f"Wallet debit failed: {data.get('message', 'Unknown error')}")
+        
+        return data
+    
+    def credit_wallet(self, account_no: str, amount: str, transaction_id: str,
+                      narration: str, merchant_fee: dict = None) -> dict:
+        """Credit a wallet account."""
+        payload = {
+            "accountNo": account_no,
+            "totalAmount": str(amount),
+            "transactionId": transaction_id,
+            "narration": narration,
+            "merchant": merchant_fee or {"isFee": False}
+        }
+        data = self._make_request("POST", "/credit/transfer", payload)
+        
+        if data.get("status") != "SUCCESS":
+            raise Exception(f"Wallet credit failed: {data.get('message', 'Unknown error')}")
+        
+        return data
+    
+    def wallet_transactions(self, account_number: str, from_date: str, 
+                           to_date: str, number_of_items: int = 50) -> dict:
+        """Fetch wallet transaction history."""
+        payload = {
+            "accountNumber": account_number,
+            "fromDate": from_date,
+            "toDate": to_date,
+            "numberOfItems": str(number_of_items)
+        }
+        data = self._make_request("POST", "/wallet_transactions", payload)
+        
+        if data.get("status") != "SUCCESS":
+            raise Exception(f"Wallet transactions fetch failed: {data.get('message', 'Unknown error')}")
+        
+        return data
+    
+    def transaction_status(self, transaction_id: str, amount: int, 
+                          transaction_type: str, transaction_date: str,
+                          account_no: str) -> dict:
+        """Query transaction status."""
+        payload = {
+            "transactionId": transaction_id,
+            "amount": amount,
+            "transactionType": transaction_type,
+            "transactionDate": transaction_date,
+            "accountNo": account_no
+        }
+        data = self._make_request("POST", "/wallet_requery", payload)
+        return data
+    
+    def get_banks(self) -> dict:
+        """Fetch list of all banks."""
+        data = self._make_request("GET", "/get_banks")
+        
+        if data.get("status") != "SUCCESS":
+            raise Exception(f"Get banks failed: {data.get('message', 'Unknown error')}")
+        
+        return data
+    
+    def transfer_to_other_bank(self, transaction_ref: str, amount: float,
+                               sender_account: str, sender_name: str,
+                               recipient_account: str, recipient_name: str,
+                               recipient_bank_code: str, narration: str) -> dict:
+        """Transfer from wallet to other bank."""
+        payload = {
+            "transaction": {"reference": transaction_ref},
+            "order": {
+                "amount": float(amount),
+                "currency": "NGN",
+                "country": "NGA"
+            },
+            "customer": {
+                "account": {
+                    "number": recipient_account,
+                    "bank": recipient_bank_code,
+                    "name": recipient_name,
+                    "senderaccountnumber": sender_account,
+                    "sendername": sender_name
+                }
+            },
+            "merchant": {},
+            "transactionType": "OTHER_BANKS",
+            "narration": narration
+        }
+        data = self._make_request("POST", "/wallet_other_banks", payload)
+        return data
+    
+    def other_bank_enquiry(self, account_number: str, bank_code: str) -> dict:
+        """Verify account details of other bank's account."""
+        payload = {
+            "customer": {
+                "account": {
+                    "number": account_number,
+                    "bank": bank_code
+                }
+            }
+        }
+        data = self._make_request("POST", "/other_banks_enquiry", payload)
+        
+        if data.get("status") != "SUCCESS":
+            raise Exception(f"Bank enquiry failed: {data.get('message', 'Unknown error')}")
+        
+        return data
+    
+    def get_wallet_by_bvn(self, bvn: str) -> dict:
+        """Fetch wallet information using BVN."""
+        payload = {"bvn": bvn}
+        data = self._make_request("POST", "/get_wallet", payload)
+        return data
+
+
+# Helper function for merchant wallet creation
+def create_merchant_wallet(merchant) -> dict:
+    """
+    Create a 9PSB wallet for a merchant.
+    
+    Args:
+        merchant: Merchant model instance
+    
+    Returns:
+        dict with wallet details
+    """
+    from datetime import datetime
+    
+    waas = WAASService()
+    
+    # Parse merchant name
+    name_parts = merchant.merchant_name.split()
+    last_name = name_parts[-1] if name_parts else "Merchant"
+    other_names = " ".join(name_parts[:-1]) if len(name_parts) > 1 else "Merchant"
+    
+    # Format date of birth
+    dob_formatted = merchant.date_of_birth.strftime("%d/%m/%Y") if merchant.date_of_birth else ""
+    
+    # Generate unique tracking reference
+    tracking_ref = f"MRC{merchant.merchant_code}{datetime.now().strftime('%Y%m%d%H%M%S')}"
+    
+    wallet_data = {
+        "transactionTrackingRef": tracking_ref,
+        "lastName": last_name,
+        "otherNames": other_names,
+        "accountName": merchant.merchant_name,
+        "phoneNo": merchant.business_phone,
+        "gender": merchant.gender or "0",
+        "dateOfBirth": dob_formatted,
+        "address": merchant.address or merchant.business_address or "Nigeria",
+        "email": merchant.business_email,
+    }
+    
+    # Add BVN if available
+    if merchant.bvn:
+        wallet_data["bvn"] = merchant.bvn
+    
+    # Add NIN if available
+    if merchant.nin:
+        wallet_data["nin"] = merchant.nin
+    
+    result = waas.open_wallet(wallet_data)
+    
+    # Extract account details from response
+    account_data = result.get("data", {})
+    
+    return {
+        "account_number": account_data.get("accountNo") or account_data.get("accountNumber"),
+        "account_name": account_data.get("accountName") or merchant.merchant_name,
+        "status": "active",
+        "tier": account_data.get("tier", "1"),
+        "message": result.get("message", "Wallet created successfully"),
+        "raw_response": result
+    }
+
+
 
 
 

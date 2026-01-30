@@ -6825,3 +6825,136 @@ def asset_disposal_report(request):
         'disposal_count': disposals.count(),
     }
     return render(request, 'reports/fixed_asset/asset_disposal_report.html', context)
+
+
+# ==============================================================================
+# MERCHANT WALLET REPORTS
+# ==============================================================================
+
+@login_required(login_url='login')
+@user_passes_test(check_role_admin)
+def merchant_wallet_report(request):
+    """Report of all merchants and their 9PSB wallets"""
+    from merchant.models import Merchant
+    from accounts.utils import get_company_branch_ids
+    from django.db.models import Q, Count
+    
+    branch_ids = get_company_branch_ids(request.user)
+    
+    # Get all merchants with wallet info
+    merchants = Merchant.objects.filter(branch_id__in=branch_ids)
+    
+    # Apply filters
+    status = request.GET.get('status')
+    wallet_status = request.GET.get('wallet_status')
+    has_wallet = request.GET.get('has_wallet')
+    search = request.GET.get('search')
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
+    
+    if status:
+        merchants = merchants.filter(status=status)
+    
+    if wallet_status:
+        merchants = merchants.filter(psb_wallet_status=wallet_status)
+    
+    if has_wallet == 'yes':
+        merchants = merchants.filter(psb_wallet_account__isnull=False).exclude(psb_wallet_account='')
+    elif has_wallet == 'no':
+        merchants = merchants.filter(Q(psb_wallet_account__isnull=True) | Q(psb_wallet_account=''))
+    
+    if search:
+        merchants = merchants.filter(
+            Q(merchant_name__icontains=search) |
+            Q(merchant_id__icontains=search) |
+            Q(psb_wallet_account__icontains=search) |
+            Q(business_name__icontains=search)
+        )
+    
+    if date_from:
+        merchants = merchants.filter(created_at__date__gte=date_from)
+    
+    if date_to:
+        merchants = merchants.filter(created_at__date__lte=date_to)
+    
+    # Order by most recent
+    merchants = merchants.order_by('-created_at')
+    
+    # Summary stats
+    total_merchants = merchants.count()
+    with_wallet = merchants.filter(psb_wallet_account__isnull=False).exclude(psb_wallet_account='').count()
+    without_wallet = total_merchants - with_wallet
+    active_wallets = merchants.filter(psb_wallet_status='active').count()
+    
+    context = {
+        'merchants': merchants,
+        'total_merchants': total_merchants,
+        'with_wallet': with_wallet,
+        'without_wallet': without_wallet,
+        'active_wallets': active_wallets,
+        'status_choices': Merchant.STATUS_CHOICES,
+        'wallet_status_choices': [
+            ('active', 'Active'),
+            ('inactive', 'Inactive'),
+            ('suspended', 'Suspended'),
+            ('pending', 'Pending'),
+        ],
+    }
+    return render(request, 'reports/merchant/wallet_report.html', context)
+
+
+@login_required(login_url='login')
+@user_passes_test(check_role_admin)
+def merchant_wallet_transactions_report(request):
+    """Report of merchant wallet transactions"""
+    from merchant.models import Merchant, MerchantTransaction
+    from accounts.utils import get_company_branch_ids
+    from django.db.models import Sum, Count
+    
+    branch_ids = get_company_branch_ids(request.user)
+    
+    # Filters
+    merchant_id = request.GET.get('merchant')
+    transaction_type = request.GET.get('type')
+    status = request.GET.get('status')
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
+    
+    transactions = MerchantTransaction.objects.filter(branch_id__in=branch_ids)
+    
+    if merchant_id:
+        transactions = transactions.filter(merchant_id=merchant_id)
+    
+    if transaction_type:
+        transactions = transactions.filter(transaction_type=transaction_type)
+    
+    if status:
+        transactions = transactions.filter(status=status)
+    
+    if date_from:
+        transactions = transactions.filter(created_at__date__gte=date_from)
+    
+    if date_to:
+        transactions = transactions.filter(created_at__date__lte=date_to)
+    
+    transactions = transactions.select_related('merchant').order_by('-created_at')
+    
+    # Summary
+    summary = transactions.aggregate(
+        total_count=Count('id'),
+        total_amount=Sum('amount'),
+        total_commission=Sum('commission'),
+        total_charge=Sum('charge')
+    )
+    
+    # Merchants list for filter
+    merchants = Merchant.objects.filter(branch_id__in=branch_ids).order_by('merchant_name')
+    
+    context = {
+        'transactions': transactions[:500],  # Limit for performance
+        'summary': summary,
+        'merchants': merchants,
+        'transaction_types': MerchantTransaction.TRANSACTION_TYPES,
+        'status_choices': MerchantTransaction.STATUS_CHOICES,
+    }
+    return render(request, 'reports/merchant/wallet_transactions_report.html', context)

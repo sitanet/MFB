@@ -95,6 +95,53 @@ class Merchant(models.Model):
         help_text="Account number for merchant float account"
     )
     
+    # KYC Details for 9PSB Wallet
+    bvn = models.CharField(
+        max_length=11, blank=True, null=True,
+        help_text="Bank Verification Number"
+    )
+    nin = models.CharField(
+        max_length=11, blank=True, null=True,
+        help_text="National Identification Number"
+    )
+    date_of_birth = models.DateField(
+        null=True, blank=True,
+        help_text="Date of Birth for KYC"
+    )
+    gender = models.CharField(
+        max_length=10, blank=True, null=True,
+        choices=[('0', 'Male'), ('1', 'Female')],
+        help_text="Gender (0: Male, 1: Female)"
+    )
+    
+    # 9PSB Wallet Details
+    psb_wallet_account = models.CharField(
+        max_length=20, blank=True, null=True,
+        help_text="9PSB Wallet Account Number"
+    )
+    psb_wallet_name = models.CharField(
+        max_length=200, blank=True, null=True,
+        help_text="9PSB Wallet Account Name"
+    )
+    psb_wallet_status = models.CharField(
+        max_length=20, blank=True, null=True,
+        choices=[
+            ('active', 'Active'),
+            ('inactive', 'Inactive'),
+            ('suspended', 'Suspended'),
+            ('pending', 'Pending'),
+        ],
+        help_text="9PSB Wallet Status"
+    )
+    psb_wallet_tier = models.CharField(
+        max_length=10, blank=True, null=True,
+        help_text="9PSB Wallet Tier (1, 2, or 3)"
+    )
+    psb_wallet_created_at = models.DateTimeField(
+        null=True, blank=True,
+        help_text="When 9PSB wallet was created"
+    )
+    
     # Transaction limits
     daily_transaction_limit = models.DecimalField(
         max_digits=15, decimal_places=2, default=500000.00,

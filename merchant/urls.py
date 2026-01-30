@@ -20,6 +20,8 @@ urlpatterns = [
     path('<int:merchant_id>/suspend/', views.merchant_suspend, name='merchant_suspend'),
     path('<int:merchant_id>/transactions/', views.merchant_transactions_admin, name='merchant_transactions_admin'),
     path('<int:merchant_id>/activity/', views.merchant_activity_admin, name='merchant_activity_admin'),
+    path('<int:merchant_id>/create-wallet/', views.merchant_create_wallet, name='merchant_create_wallet'),
+    path('<int:merchant_id>/wallet-balance/', views.merchant_wallet_balance, name='merchant_wallet_balance'),
     
     # All Merchants Transactions & Reports
     path('transactions/all/', views.all_merchant_transactions, name='all_transactions'),

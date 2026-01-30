@@ -1,0 +1,150 @@
+{% extends 'reports/base_report.html' %}
+{% load humanize %}
+
+{% block report_icon %}exchange-alt{% endblock %}
+{% block report_title %}Merchant Wallet Transactions Report{% endblock %}
+
+{% block report_filter %}
+<div class="report-filter-card">
+    <h5 class="filter-title"><i class="fas fa-filter"></i> Filter Options</h5>
+    <form method="get" class="row g-3">
+        <div class="col-md-3">
+            <label class="form-label">Merchant</label>
+            <select name="merchant" class="form-select">
+                <option value="">All Merchants</option>
+                {% for m in merchants %}
+                <option value="{{ m.id }}" {% if request.GET.merchant == m.id|stringformat:"i" %}selected{% endif %}>
+                    {{ m.merchant_name }} ({{ m.merchant_id }})
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Transaction Type</label>
+            <select name="type" class="form-select">
+                <option value="">All Types</option>
+                {% for value, label in transaction_types %}
+                <option value="{{ value }}" {% if request.GET.type == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Status</label>
+            <select name="status" class="form-select">
+                <option value="">All Status</option>
+                {% for value, label in status_choices %}
+                <option value="{{ value }}" {% if request.GET.status == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">From Date</label>
+            <input type="date" name="date_from" class="form-control" value="{{ request.GET.date_from }}">
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">To Date</label>
+            <input type="date" name="date_to" class="form-control" value="{{ request.GET.date_to }}">
+        </div>
+        <div class="col-md-1 d-flex align-items-end">
+            <button type="submit" class="btn btn-generate w-100">
+                <i class="fas fa-search"></i>
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block report_content %}
+<!-- Company Header -->
+<div class="report-company-header">
+    <div class="company-name">FinanceFlex</div>
+    <div class="report-name">Merchant Wallet Transactions Report</div>
+    <div class="report-period">Generated: {% now "F d, Y H:i" %}</div>
+</div>
+
+<!-- Summary Cards -->
+<div class="report-summary">
+    <div class="summary-row">
+        <div class="summary-card total-count">
+            <div class="label">Total Transactions</div>
+            <div class="value">{{ summary.total_count|intcomma|default:"0" }}</div>
+        </div>
+        <div class="summary-card total-balance">
+            <div class="label">Total Amount</div>
+            <div class="value">₦{{ summary.total_amount|floatformat:2|intcomma|default:"0.00" }}</div>
+        </div>
+        <div class="summary-card total-credit">
+            <div class="label">Total Commission</div>
+            <div class="value">₦{{ summary.total_commission|floatformat:2|intcomma|default:"0.00" }}</div>
+        </div>
+        <div class="summary-card total-debit">
+            <div class="label">Total Charges</div>
+            <div class="value">₦{{ summary.total_charge|floatformat:2|intcomma|default:"0.00" }}</div>
+        </div>
+    </div>
+</div>
+
+<!-- Data Table -->
+{% if transactions %}
+<div class="table-responsive">
+    <table class="report-table">
+        <thead>
+            <tr>
+                <th>S/N</th>
+                <th>Date</th>
+                <th>Reference</th>
+                <th>Merchant</th>
+                <th>Type</th>
+                <th>Customer</th>
+                <th class="text-right">Amount</th>
+                <th class="text-right">Commission</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for trx in transactions %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>{{ trx.created_at|date:"M d, Y H:i" }}</td>
+                <td><code>{{ trx.transaction_ref }}</code></td>
+                <td>{{ trx.merchant.merchant_name }}</td>
+                <td>
+                    <span class="badge bg-info">{{ trx.get_transaction_type_display }}</span>
+                </td>
+                <td>{{ trx.customer_name|default:"-" }}</td>
+                <td class="text-right"><strong>₦{{ trx.amount|floatformat:2|intcomma }}</strong></td>
+                <td class="text-right">₦{{ trx.commission|floatformat:2|intcomma }}</td>
+                <td>
+                    {% if trx.status == 'completed' %}
+                    <span class="badge bg-success">Completed</span>
+                    {% elif trx.status == 'pending' %}
+                    <span class="badge bg-warning">Pending</span>
+                    {% elif trx.status == 'failed' %}
+                    <span class="badge bg-danger">Failed</span>
+                    {% elif trx.status == 'reversed' %}
+                    <span class="badge bg-secondary">Reversed</span>
+                    {% else %}
+                    <span class="badge bg-secondary">{{ trx.status }}</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="6" class="text-right"><strong>Totals:</strong></td>
+                <td class="text-right"><strong>₦{{ summary.total_amount|floatformat:2|intcomma|default:"0.00" }}</strong></td>
+                <td class="text-right"><strong>₦{{ summary.total_commission|floatformat:2|intcomma|default:"0.00" }}</strong></td>
+                <td></td>
+            </tr>
+        </tfoot>
+    </table>
+</div>
+{% else %}
+<div class="report-empty">
+    <i class="fas fa-inbox"></i>
+    <h4>No transactions found</h4>
+    <p>Try adjusting your filter criteria</p>
+</div>
+{% endif %}
+{% endblock %}

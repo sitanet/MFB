@@ -78,4 +78,8 @@ urlpatterns = [
     path('fixed-asset/register/', views.asset_register_report, name='asset_register_report'),
     path('fixed-asset/depreciation-schedule/', views.asset_depreciation_schedule, name='asset_depreciation_schedule'),
     path('fixed-asset/disposal/', views.asset_disposal_report, name='asset_disposal_report'),
+    
+    # Merchant Wallet Reports
+    path('merchant-wallet/', views.merchant_wallet_report, name='merchant_wallet_report'),
+    path('merchant-wallet-transactions/', views.merchant_wallet_transactions_report, name='merchant_wallet_transactions_report'),
 ]

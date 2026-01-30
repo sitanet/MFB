@@ -222,7 +222,46 @@ def merchant_create(request):
                     
                     merchant.save()
                     
-                    messages.success(request, f'Merchant created successfully. Merchant ID: {merchant_id}')
+                    # Create 9PSB Wallet for merchant
+                    wallet_created = False
+                    wallet_error = None
+                    try:
+                        from ninepsb.services import create_merchant_wallet
+                        wallet_result = create_merchant_wallet(merchant)
+                        
+                        # Update merchant with wallet details
+                        merchant.psb_wallet_account = wallet_result.get('account_number')
+                        merchant.psb_wallet_name = wallet_result.get('account_name')
+                        merchant.psb_wallet_status = wallet_result.get('status', 'active')
+                        merchant.psb_wallet_tier = wallet_result.get('tier', '1')
+                        merchant.psb_wallet_created_at = timezone.now()
+                        merchant.save(update_fields=[
+                            'psb_wallet_account', 'psb_wallet_name', 
+                            'psb_wallet_status', 'psb_wallet_tier', 'psb_wallet_created_at'
+                        ])
+                        wallet_created = True
+                    except Exception as wallet_e:
+                        wallet_error = str(wallet_e)
+                        # Log the error but don't fail merchant creation
+                        import logging
+                        logger = logging.getLogger(__name__)
+                        logger.error(f"Failed to create 9PSB wallet for merchant {merchant_id}: {wallet_e}")
+                    
+                    # Prepare success message
+                    if wallet_created:
+                        messages.success(
+                            request, 
+                            f'Merchant created successfully. Merchant ID: {merchant_id}. '
+                            f'9PSB Wallet: {merchant.psb_wallet_account}'
+                        )
+                    else:
+                        messages.warning(
+                            request, 
+                            f'Merchant created successfully. Merchant ID: {merchant_id}. '
+                            f'However, 9PSB wallet creation failed: {wallet_error}. '
+                            f'You can retry wallet creation from the merchant detail page.'
+                        )
+                    
                     return redirect('merchant:merchant_detail', merchant_id=merchant.id)
                     
             except Exception as e:
@@ -252,13 +291,103 @@ def merchant_detail(request, merchant_id):
         merchant=merchant
     ).order_by('-created_at')[:10]
     
+    # Get 9PSB wallet balance if wallet exists
+    psb_wallet_balance = None
+    psb_wallet_error = None
+    if merchant.psb_wallet_account:
+        try:
+            from ninepsb.services import WAASService
+            waas = WAASService()
+            wallet_info = waas.wallet_enquiry(merchant.psb_wallet_account)
+            wallet_data = wallet_info.get('data', {})
+            psb_wallet_balance = wallet_data.get('availableBalance') or wallet_data.get('balance', '0.00')
+        except Exception as e:
+            psb_wallet_error = str(e)
+    
     context = {
         'merchant': merchant,
         'stats': stats,
         'recent_transactions': recent_transactions,
         'recent_activity': recent_activity,
+        'psb_wallet_balance': psb_wallet_balance,
+        'psb_wallet_error': psb_wallet_error,
     }
     return render(request, 'merchant/admin/merchant_detail.html', context)
+
+
+@login_required
+@require_POST
+def merchant_create_wallet(request, merchant_id):
+    """Retry creating 9PSB wallet for merchant (FinanceFlex Admin)"""
+    merchant = get_object_or_404(Merchant, id=merchant_id)
+    
+    if merchant.psb_wallet_account:
+        messages.warning(request, 'Merchant already has a 9PSB wallet')
+        return redirect('merchant:merchant_detail', merchant_id=merchant.id)
+    
+    # Check required fields
+    if not merchant.bvn and not merchant.nin:
+        messages.error(request, 'BVN or NIN is required for wallet creation')
+        return redirect('merchant:merchant_detail', merchant_id=merchant.id)
+    
+    if not merchant.date_of_birth:
+        messages.error(request, 'Date of Birth is required for wallet creation')
+        return redirect('merchant:merchant_detail', merchant_id=merchant.id)
+    
+    if not merchant.business_phone:
+        messages.error(request, 'Business phone is required for wallet creation')
+        return redirect('merchant:merchant_detail', merchant_id=merchant.id)
+    
+    try:
+        from ninepsb.services import create_merchant_wallet
+        wallet_result = create_merchant_wallet(merchant)
+        
+        # Update merchant with wallet details
+        merchant.psb_wallet_account = wallet_result.get('account_number')
+        merchant.psb_wallet_name = wallet_result.get('account_name')
+        merchant.psb_wallet_status = wallet_result.get('status', 'active')
+        merchant.psb_wallet_tier = wallet_result.get('tier', '1')
+        merchant.psb_wallet_created_at = timezone.now()
+        merchant.save(update_fields=[
+            'psb_wallet_account', 'psb_wallet_name',
+            'psb_wallet_status', 'psb_wallet_tier', 'psb_wallet_created_at'
+        ])
+        
+        messages.success(
+            request,
+            f'9PSB Wallet created successfully. Account: {merchant.psb_wallet_account}'
+        )
+    except Exception as e:
+        messages.error(request, f'Failed to create 9PSB wallet: {str(e)}')
+    
+    return redirect('merchant:merchant_detail', merchant_id=merchant.id)
+
+
+@login_required
+@require_GET
+def merchant_wallet_balance(request, merchant_id):
+    """Get merchant 9PSB wallet balance (API endpoint)"""
+    merchant = get_object_or_404(Merchant, id=merchant_id)
+    
+    if not merchant.psb_wallet_account:
+        return JsonResponse({'success': False, 'message': 'No wallet found'})
+    
+    try:
+        from ninepsb.services import WAASService
+        waas = WAASService()
+        wallet_info = waas.wallet_enquiry(merchant.psb_wallet_account)
+        wallet_data = wallet_info.get('data', {})
+        
+        return JsonResponse({
+            'success': True,
+            'balance': wallet_data.get('availableBalance') or wallet_data.get('balance', '0.00'),
+            'account_name': wallet_data.get('accountName'),
+            'account_number': merchant.psb_wallet_account,
+            'status': wallet_data.get('status'),
+            'tier': wallet_data.get('tier'),
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)})
 
 
 @login_required

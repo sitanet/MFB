@@ -33,6 +33,7 @@ class MerchantRegistrationForm(forms.ModelForm):
             'business_address', 'business_phone', 'business_email',
             'contact_person_name', 'contact_person_phone', 'contact_person_email',
             'state', 'lga', 'city', 'address',
+            'bvn', 'nin', 'date_of_birth', 'gender',
             'daily_transaction_limit', 'single_transaction_limit', 'commission_rate'
         ]
         widgets = {
@@ -49,6 +50,10 @@ class MerchantRegistrationForm(forms.ModelForm):
             'lga': forms.TextInput(attrs={'class': 'form-control'}),
             'city': forms.TextInput(attrs={'class': 'form-control'}),
             'address': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'bvn': forms.TextInput(attrs={'class': 'form-control', 'maxlength': '11', 'placeholder': '11-digit BVN'}),
+            'nin': forms.TextInput(attrs={'class': 'form-control', 'maxlength': '11', 'placeholder': '11-digit NIN'}),
+            'date_of_birth': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'gender': forms.Select(attrs={'class': 'form-select'}),
             'daily_transaction_limit': forms.NumberInput(attrs={'class': 'form-control'}),
             'single_transaction_limit': forms.NumberInput(attrs={'class': 'form-control'}),
             'commission_rate': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
@@ -60,6 +65,12 @@ class MerchantRegistrationForm(forms.ModelForm):
         confirm_password = cleaned_data.get('confirm_password')
         pin = cleaned_data.get('transaction_pin')
         confirm_pin = cleaned_data.get('confirm_pin')
+        bvn = cleaned_data.get('bvn')
+        nin = cleaned_data.get('nin')
+        date_of_birth = cleaned_data.get('date_of_birth')
+        gender = cleaned_data.get('gender')
+        business_phone = cleaned_data.get('business_phone')
+        address = cleaned_data.get('address')
         
         if password and confirm_password and password != confirm_password:
             raise forms.ValidationError("Passwords do not match")
@@ -69,6 +80,32 @@ class MerchantRegistrationForm(forms.ModelForm):
         
         if pin and not pin.isdigit():
             raise forms.ValidationError("Transaction PIN must be numeric")
+        
+        # Validate BVN/NIN - at least one is required for 9PSB wallet
+        if not bvn and not nin:
+            raise forms.ValidationError("Either BVN or NIN is required for wallet creation")
+        
+        if bvn and (len(bvn) != 11 or not bvn.isdigit()):
+            raise forms.ValidationError("BVN must be exactly 11 digits")
+        
+        if nin and (len(nin) != 11 or not nin.isdigit()):
+            raise forms.ValidationError("NIN must be exactly 11 digits")
+        
+        # Date of birth is required for wallet
+        if not date_of_birth:
+            raise forms.ValidationError("Date of Birth is required for wallet creation")
+        
+        # Gender is required for wallet
+        if not gender:
+            raise forms.ValidationError("Gender is required for wallet creation")
+        
+        # Phone number is required
+        if not business_phone:
+            raise forms.ValidationError("Business phone number is required for wallet creation")
+        
+        # Address is required
+        if not address:
+            raise forms.ValidationError("Address is required for wallet creation")
         
         return cleaned_data
 

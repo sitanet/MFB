@@ -1,0 +1,159 @@
+{% extends 'reports/base_report.html' %}
+{% load humanize %}
+
+{% block report_icon %}wallet{% endblock %}
+{% block report_title %}Merchant Wallet Report{% endblock %}
+
+{% block report_filter %}
+<div class="report-filter-card">
+    <h5 class="filter-title"><i class="fas fa-filter"></i> Filter Options</h5>
+    <form method="get" class="row g-3">
+        <div class="col-md-3">
+            <label class="form-label">Merchant Status</label>
+            <select name="status" class="form-select">
+                <option value="">All Status</option>
+                {% for value, label in status_choices %}
+                <option value="{{ value }}" {% if request.GET.status == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Wallet Status</label>
+            <select name="wallet_status" class="form-select">
+                <option value="">All Wallet Status</option>
+                {% for value, label in wallet_status_choices %}
+                <option value="{{ value }}" {% if request.GET.wallet_status == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Has Wallet</label>
+            <select name="has_wallet" class="form-select">
+                <option value="">All</option>
+                <option value="yes" {% if request.GET.has_wallet == 'yes' %}selected{% endif %}>Yes</option>
+                <option value="no" {% if request.GET.has_wallet == 'no' %}selected{% endif %}>No</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">From Date</label>
+            <input type="date" name="date_from" class="form-control" value="{{ request.GET.date_from }}">
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">To Date</label>
+            <input type="date" name="date_to" class="form-control" value="{{ request.GET.date_to }}">
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Search</label>
+            <input type="text" name="search" class="form-control" placeholder="Name, ID, Wallet Account..." value="{{ request.GET.search }}">
+        </div>
+        <div class="col-md-2 d-flex align-items-end">
+            <button type="submit" class="btn btn-generate w-100">
+                <i class="fas fa-search me-2"></i>Filter
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block report_content %}
+<!-- Company Header -->
+<div class="report-company-header">
+    <div class="company-name">FinanceFlex</div>
+    <div class="report-name">Merchant 9PSB Wallet Report</div>
+    <div class="report-period">Generated: {% now "F d, Y H:i" %}</div>
+</div>
+
+<!-- Summary Cards -->
+<div class="report-summary">
+    <div class="summary-row">
+        <div class="summary-card total-count">
+            <div class="label">Total Merchants</div>
+            <div class="value">{{ total_merchants|intcomma }}</div>
+        </div>
+        <div class="summary-card total-credit">
+            <div class="label">With Wallet</div>
+            <div class="value">{{ with_wallet|intcomma }}</div>
+        </div>
+        <div class="summary-card total-debit">
+            <div class="label">Without Wallet</div>
+            <div class="value">{{ without_wallet|intcomma }}</div>
+        </div>
+        <div class="summary-card total-balance">
+            <div class="label">Active Wallets</div>
+            <div class="value">{{ active_wallets|intcomma }}</div>
+        </div>
+    </div>
+</div>
+
+<!-- Data Table -->
+{% if merchants %}
+<div class="table-responsive">
+    <table class="report-table">
+        <thead>
+            <tr>
+                <th>S/N</th>
+                <th>Merchant ID</th>
+                <th>Merchant Name</th>
+                <th>Business Phone</th>
+                <th>Wallet Account</th>
+                <th>Wallet Name</th>
+                <th>Wallet Status</th>
+                <th>Tier</th>
+                <th>Status</th>
+                <th>Created Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for merchant in merchants %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td><strong>{{ merchant.merchant_id }}</strong></td>
+                <td>{{ merchant.merchant_name }}</td>
+                <td>{{ merchant.business_phone|default:"-" }}</td>
+                <td>
+                    {% if merchant.psb_wallet_account %}
+                    <span class="badge bg-success">{{ merchant.psb_wallet_account }}</span>
+                    {% else %}
+                    <span class="badge bg-secondary">No Wallet</span>
+                    {% endif %}
+                </td>
+                <td>{{ merchant.psb_wallet_name|default:"-" }}</td>
+                <td>
+                    {% if merchant.psb_wallet_status == 'active' %}
+                    <span class="badge bg-success">Active</span>
+                    {% elif merchant.psb_wallet_status == 'suspended' %}
+                    <span class="badge bg-danger">Suspended</span>
+                    {% elif merchant.psb_wallet_status == 'inactive' %}
+                    <span class="badge bg-warning">Inactive</span>
+                    {% elif merchant.psb_wallet_status == 'pending' %}
+                    <span class="badge bg-info">Pending</span>
+                    {% else %}
+                    <span class="badge bg-secondary">-</span>
+                    {% endif %}
+                </td>
+                <td>{{ merchant.psb_wallet_tier|default:"-" }}</td>
+                <td>
+                    {% if merchant.status == 'active' %}
+                    <span class="badge bg-success">Active</span>
+                    {% elif merchant.status == 'suspended' %}
+                    <span class="badge bg-danger">Suspended</span>
+                    {% elif merchant.status == 'pending' %}
+                    <span class="badge bg-warning">Pending</span>
+                    {% else %}
+                    <span class="badge bg-secondary">{{ merchant.status }}</span>
+                    {% endif %}
+                </td>
+                <td>{{ merchant.created_at|date:"M d, Y" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="report-empty">
+    <i class="fas fa-inbox"></i>
+    <h4>No merchants found</h4>
+    <p>Try adjusting your filter criteria</p>
+</div>
+{% endif %}
+{% endblock %}
