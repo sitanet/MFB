@@ -416,6 +416,9 @@ class WAASService:
     
     def _make_request(self, method, endpoint, payload=None):
         """Make authenticated request to WAAS API."""
+        import logging
+        logger = logging.getLogger(__name__)
+        
         url = f"{self.base_url}{endpoint}"
         headers = {
             "Content-Type": "application/json",
@@ -427,8 +430,23 @@ class WAASService:
                 response = requests.post(url, json=payload, headers=headers, timeout=self.timeout)
             else:
                 response = requests.get(url, headers=headers, timeout=self.timeout)
-            response.raise_for_status()
-            return response.json()
+            
+            # Log response for debugging
+            logger.info(f"WAAS API {endpoint} response status: {response.status_code}")
+            
+            # Try to get response body even on error
+            try:
+                response_data = response.json()
+            except ValueError:
+                response_data = {"raw_text": response.text}
+            
+            # If error status, include response in exception
+            if response.status_code >= 400:
+                logger.error(f"WAAS API error response: {response_data}")
+                error_msg = response_data.get('message', response.text)
+                raise Exception(f"WAAS API error ({response.status_code}): {error_msg}")
+            
+            return response_data
         except requests.RequestException as e:
             raise Exception(f"WAAS API request failed: {str(e)}")
     
