@@ -31,9 +31,8 @@
                                 <select class="form-select" id="bank_code" name="bank_code" required>
                                     <option value="">-- Select Bank --</option>
                                     {% for bank in banks %}
-                                    <option value="{{ bank.bankCode|default:bank.BankCode|default:bank.code }}" 
-                                            {% if bank_code == bank.bankCode or bank_code == bank.BankCode or bank_code == bank.code %}selected{% endif %}>
-                                        {{ bank.bankName|default:bank.BankName|default:bank.name }}
+                                    <option value="{{ bank.bankCode }}" {% if bank_code == bank.bankCode %}selected{% endif %}>
+                                        {{ bank.bankName }}
                                     </option>
                                     {% endfor %}
                                 </select>
