@@ -155,6 +155,10 @@
                             {% if user|has_permission:'asset_reports' %}
                             <li><a href="{% url 'fixed_asset_report' %}">><span>Fixed Asset Report</span></a></li>
                             {% endif %}
+                            {% if is_admin_user or user|has_permission:'manage_merchants' %}
+                            <li><a href="{% url 'merchant_wallet_report' %}">><span>Merchant Wallet Report</span></a></li>
+                            <li><a href="{% url 'merchant_wallet_transactions_report' %}">><span>Merchant Wallet Transactions</span></a></li>
+                            {% endif %}
                       </ul>
                 </li>
                 {% endif %}
@@ -191,6 +195,7 @@
                             <li><a href="{% url 'merchant:merchant_create' %}">><span>Add Merchant</span></a></li>
                             <li><a href="{% url 'merchant:all_transactions' %}">><span>Merchant Transactions</span></a></li>
                             <li><a href="{% url 'merchant:reports_admin' %}">><span>Merchant Reports</span></a></li>
+                            <li><a href="{% url 'merchant_wallet_report' %}">><span>9PSB Wallet Report</span></a></li>
                             <li><a href="{% url 'merchant:service_config' %}">><span>Service Config</span></a></li>
                       </ul>
                 </li>
