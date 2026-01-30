@@ -75,14 +75,14 @@ class MerchantRegistrationForm(forms.ModelForm):
         if branch:
             accounts = Account.objects.filter(
                 branch=branch,
-                acc_type=Account.LIABILITIES,
+                account_type=Account.LIABILITIES,
                 gl_no__startswith='20'
             ).exclude(
                 gl_no__endswith='0'
             ).order_by('gl_no')
         else:
             accounts = Account.all_objects.filter(
-                acc_type=Account.LIABILITIES,
+                account_type=Account.LIABILITIES,
                 gl_no__startswith='20'
             ).exclude(
                 gl_no__endswith='0'
