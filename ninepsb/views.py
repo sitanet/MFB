@@ -173,7 +173,7 @@ def wallet_transactions_view(request):
 @staff_member_required
 def get_banks_view(request):
     """
-    9PSB Get Banks - Fetch list of all banks.
+    9PSB Get Banks - Fetch list of all banks (Admin HTML view).
     """
     banks = []
     error_message = None
@@ -201,6 +201,38 @@ def get_banks_view(request):
         'error_message': error_message,
     }
     return render(request, 'ninepsb/get_banks.html', context)
+
+
+def api_get_banks(request):
+    """
+    9PSB Get Banks API - Returns JSON list of all banks for mobile app.
+    """
+    try:
+        waas = WAASService()
+        result = waas.get_banks()
+        
+        # Handle different response formats from 9PSB
+        banks_data = result.get('data', result)
+        if isinstance(banks_data, dict):
+            banks = banks_data.get('bankList', banks_data.get('banks', []))
+        elif isinstance(banks_data, list):
+            banks = banks_data
+        else:
+            banks = []
+        
+        if not isinstance(banks, list):
+            banks = []
+        
+        return JsonResponse({
+            'success': True,
+            'banks': banks
+        })
+    except Exception as e:
+        logger.error(f"Failed to fetch banks: {e}")
+        return JsonResponse({
+            'success': False,
+            'message': str(e)
+        }, status=500)
 
 
 @login_required(login_url='login')
