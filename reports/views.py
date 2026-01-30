@@ -6841,6 +6841,21 @@ def merchant_wallet_report(request):
     
     branch_ids = get_company_branch_ids(request.user)
     
+    # Check if user wants to refresh wallet data from 9PSB
+    refresh_from_psb = request.GET.get('refresh') == '1'
+    wallet_live_data = {}
+    
+    if refresh_from_psb:
+        try:
+            from ninepsb.services import get_all_wallets_report
+            live_data = get_all_wallets_report()
+            for item in live_data:
+                if item.get('account_number'):
+                    wallet_live_data[item['account_number']] = item
+            messages.success(request, f"Refreshed data for {len(wallet_live_data)} wallets from 9PSB")
+        except Exception as e:
+            messages.error(request, f"Failed to fetch live data from 9PSB: {str(e)}")
+    
     # Get all merchants with wallet info
     merchants = Merchant.objects.filter(branch_id__in=branch_ids)
     
@@ -6899,6 +6914,8 @@ def merchant_wallet_report(request):
             ('suspended', 'Suspended'),
             ('pending', 'Pending'),
         ],
+        'wallet_live_data': wallet_live_data,
+        'refresh_from_psb': refresh_from_psb,
     }
     return render(request, 'reports/merchant/wallet_report.html', context)
 

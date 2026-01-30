@@ -704,6 +704,87 @@ class WAASService:
                 raise e
 
 
+def get_all_wallets_report() -> list:
+    """
+    Fetch all wallets from local DB and get current details from 9PSB.
+    Returns a list of wallet details.
+    """
+    import logging
+    from customers.models import Customer
+    from merchant.models import Merchant
+    
+    logger = logging.getLogger(__name__)
+    waas = WAASService()
+    results = []
+    
+    # Get all customers with wallet accounts
+    customers_with_wallets = Customer.all_objects.filter(
+        wallet_account__isnull=False
+    ).exclude(wallet_account='')
+    
+    logger.info(f"Found {customers_with_wallets.count()} customers with wallets")
+    
+    for customer in customers_with_wallets:
+        try:
+            wallet_data = waas.wallet_enquiry(customer.wallet_account)
+            data = wallet_data.get("data", {})
+            results.append({
+                "type": "customer",
+                "name": customer.get_full_name(),
+                "account_number": customer.wallet_account,
+                "balance": data.get("availableBalance") or data.get("balance"),
+                "status": data.get("status") or data.get("accountStatus"),
+                "tier": data.get("tier"),
+                "phone": customer.phone_no,
+                "email": customer.email,
+                "raw_response": wallet_data
+            })
+        except Exception as e:
+            logger.error(f"Failed to fetch wallet for customer {customer.wallet_account}: {e}")
+            results.append({
+                "type": "customer",
+                "name": customer.get_full_name(),
+                "account_number": customer.wallet_account,
+                "error": str(e)
+            })
+    
+    # Get all merchants with PSB wallets
+    merchants_with_wallets = Merchant.all_objects.filter(
+        psb_wallet_account__isnull=False
+    ).exclude(psb_wallet_account='')
+    
+    logger.info(f"Found {merchants_with_wallets.count()} merchants with wallets")
+    
+    for merchant in merchants_with_wallets:
+        try:
+            wallet_data = waas.wallet_enquiry(merchant.psb_wallet_account)
+            data = wallet_data.get("data", {})
+            results.append({
+                "type": "merchant",
+                "name": merchant.merchant_name,
+                "account_number": merchant.psb_wallet_account,
+                "balance": data.get("availableBalance") or data.get("balance"),
+                "status": data.get("status") or data.get("accountStatus"),
+                "tier": data.get("tier"),
+                "phone": merchant.business_phone,
+                "email": merchant.business_email,
+                "raw_response": wallet_data
+            })
+        except Exception as e:
+            logger.error(f"Failed to fetch wallet for merchant {merchant.psb_wallet_account}: {e}")
+            results.append({
+                "type": "merchant",
+                "name": merchant.merchant_name,
+                "account_number": merchant.psb_wallet_account,
+                "error": str(e)
+            })
+    
+    return results
+
+
+
+
+
 # Helper function for merchant wallet creation
 def create_merchant_wallet(merchant) -> dict:
     """
