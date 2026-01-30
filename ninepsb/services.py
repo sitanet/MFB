@@ -676,9 +676,27 @@ class WAASService:
     
     def get_wallet_by_bvn(self, bvn: str) -> dict:
         """Fetch wallet information using BVN."""
+        import logging
+        logger = logging.getLogger(__name__)
+        
         payload = {"bvn": bvn}
-        data = self._make_request("POST", "/get_wallet", payload)
-        return data
+        logger.info(f"Fetching wallet by BVN: {bvn[:4]}****")
+        
+        try:
+            data = self._make_request("POST", "/get_wallet", payload)
+            logger.info(f"get_wallet response: {data}")
+            return data
+        except Exception as e:
+            logger.error(f"get_wallet_by_bvn failed: {e}")
+            # Try alternative endpoint
+            try:
+                logger.info("Trying /wallet_enquiry endpoint...")
+                data = self._make_request("POST", "/wallet_enquiry", {"bvn": bvn})
+                logger.info(f"wallet_enquiry response: {data}")
+                return data
+            except Exception as e2:
+                logger.error(f"wallet_enquiry also failed: {e2}")
+                raise e
 
 
 # Helper function for merchant wallet creation
@@ -769,26 +787,37 @@ def create_merchant_wallet(merchant) -> dict:
             # Try to get existing wallet by BVN
             if merchant.bvn:
                 try:
+                    logger.info(f"Attempting to fetch existing wallet for BVN {merchant.bvn[:4]}****")
                     existing_wallet = waas.get_wallet_by_bvn(merchant.bvn)
+                    logger.info(f"Existing wallet response: {existing_wallet}")
+                    
                     wallet_data = existing_wallet.get("data", {})
+                    # Also check top level response
                     account_number = (
                         wallet_data.get("accountNo") or 
                         wallet_data.get("accountNumber") or
-                        wallet_data.get("account_number")
+                        wallet_data.get("account_number") or
+                        existing_wallet.get("accountNo") or
+                        existing_wallet.get("accountNumber")
                     )
+                    
+                    logger.info(f"Extracted account number from existing wallet: {account_number}")
+                    
                     if account_number:
                         return {
                             "account_number": account_number,
-                            "account_name": wallet_data.get("accountName") or merchant.merchant_name,
-                            "status": wallet_data.get("status", "active"),
-                            "tier": wallet_data.get("tier", "1"),
+                            "account_name": wallet_data.get("accountName") or existing_wallet.get("accountName") or merchant.merchant_name,
+                            "status": wallet_data.get("status") or existing_wallet.get("status") or "active",
+                            "tier": wallet_data.get("tier") or existing_wallet.get("tier") or "1",
                             "message": "Existing wallet retrieved",
                             "raw_response": existing_wallet
                         }
+                    else:
+                        logger.error(f"No account number in response. Full response: {existing_wallet}")
                 except Exception as fetch_e:
                     logger.error(f"Failed to fetch existing wallet: {fetch_e}")
             
-            raise Exception(f"Wallet already exists for this BVN/NIN. Please contact 9PSB support to retrieve account details.")
+            raise Exception(f"Wallet already exists for this BVN/NIN but could not retrieve details. Please contact 9PSB support.")
         else:
             raise
     
