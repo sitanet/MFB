@@ -200,6 +200,24 @@
                       </ul>
                 </li>
                 {% endif %}
+                
+                <!-- 9PSB WAAS Operations -->
+                {% if is_admin_user or user|has_permission:'manage_merchants' %}
+                <li>
+                      <a href="#ninepsb_menu" data-toggle="collapse" aria-expanded="false"
+                            class="dropdown-toggle">
+                            <i class="fas fa-wallet" style="color: #28a745;"></i> <span>9PSB WAAS</span>
+                      </a>
+                      <ul class="collapse list-unstyled" id="ninepsb_menu">
+                            <li><a href="{% url 'ninepsb:wallet_enquiry' %}">><span>Wallet Enquiry</span></a></li>
+                            <li><a href="{% url 'ninepsb:wallet_status' %}">><span>Wallet Status</span></a></li>
+                            <li><a href="{% url 'ninepsb:change_wallet_status' %}">><span>Change Wallet Status</span></a></li>
+                            <li><a href="{% url 'ninepsb:wallet_transactions' %}">><span>Transaction History</span></a></li>
+                            <li><a href="{% url 'ninepsb:other_bank_enquiry' %}">><span>Other Bank Enquiry</span></a></li>
+                            <li><a href="{% url 'ninepsb:get_banks' %}">><span>Bank List</span></a></li>
+                      </ul>
+                </li>
+                {% endif %}
 
                 {% if is_admin_user or user|has_permission:'view_users' or user|has_permission:'account_settings' %}
                 <li>

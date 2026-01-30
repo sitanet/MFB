@@ -1,0 +1,168 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block content %}
+<div class="midde_cont">
+    <div class="container-fluid">
+        <!-- Page Header -->
+        <div class="row column_title">
+            <div class="col-md-12">
+                <div class="page_title">
+                    <h2><i class="fas fa-history text-success"></i> Wallet Transaction History</h2>
+                    <p class="text-muted">View 9PSB wallet transaction history</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter Form -->
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Search Transactions</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="post" class="row g-3">
+                            {% csrf_token %}
+                            <div class="col-md-3">
+                                <label for="account_no" class="form-label fw-semibold">
+                                    Wallet Account Number <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="account_no" 
+                                       name="account_no" 
+                                       placeholder="Enter account number"
+                                       value="{{ account_no|default:request.GET.account_no|default:'' }}"
+                                       required>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="from_date" class="form-label fw-semibold">
+                                    From Date <span class="text-danger">*</span>
+                                </label>
+                                <input type="date" 
+                                       class="form-control" 
+                                       id="from_date" 
+                                       name="from_date" 
+                                       value="{{ from_date }}"
+                                       required>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="to_date" class="form-label fw-semibold">
+                                    To Date <span class="text-danger">*</span>
+                                </label>
+                                <input type="date" 
+                                       class="form-control" 
+                                       id="to_date" 
+                                       name="to_date" 
+                                       value="{{ to_date }}"
+                                       required>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="num_items" class="form-label fw-semibold">No. of Items</label>
+                                <select class="form-select" id="num_items" name="num_items">
+                                    <option value="20">20</option>
+                                    <option value="50" selected>50</option>
+                                    <option value="100">100</option>
+                                    <option value="200">200</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3 d-flex align-items-end">
+                                <button type="submit" class="btn btn-success w-100">
+                                    <i class="fas fa-search me-2"></i>Fetch Transactions
+                                </button>
+                            </div>
+                        </form>
+                        
+                        {% if error_message %}
+                        <div class="alert alert-danger mt-3">
+                            <i class="fas fa-exclamation-circle me-2"></i>{{ error_message }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results -->
+        {% if transactions %}
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white py-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">
+                                <i class="fas fa-list text-success me-2"></i>Transactions for {{ account_no }}
+                            </h5>
+                            <button onclick="window.print()" class="btn btn-outline-secondary btn-sm">
+                                <i class="fas fa-print me-1"></i> Print
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover table-striped mb-0">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>S/N</th>
+                                        <th>Date</th>
+                                        <th>Reference</th>
+                                        <th>Narration</th>
+                                        <th>Type</th>
+                                        <th class="text-end">Amount</th>
+                                        <th class="text-end">Balance</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for trx in transactions.transactions|default:transactions %}
+                                    <tr>
+                                        <td>{{ forloop.counter }}</td>
+                                        <td>{{ trx.transactionDate|default:trx.date|default:"-" }}</td>
+                                        <td><small>{{ trx.reference|default:trx.transactionId|default:"-" }}</small></td>
+                                        <td>{{ trx.narration|default:trx.description|default:"-" }}</td>
+                                        <td>
+                                            {% if trx.type == 'CREDIT' or trx.transactionType == 'CREDIT' %}
+                                            <span class="badge bg-success">CREDIT</span>
+                                            {% elif trx.type == 'DEBIT' or trx.transactionType == 'DEBIT' %}
+                                            <span class="badge bg-danger">DEBIT</span>
+                                            {% else %}
+                                            <span class="badge bg-secondary">{{ trx.type|default:trx.transactionType|default:"-" }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end">
+                                            {% if trx.type == 'CREDIT' or trx.transactionType == 'CREDIT' %}
+                                            <span class="text-success fw-bold">+₦{{ trx.amount|floatformat:2|intcomma }}</span>
+                                            {% else %}
+                                            <span class="text-danger fw-bold">-₦{{ trx.amount|floatformat:2|intcomma }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end">₦{{ trx.balance|default:trx.runningBalance|default:"0"|floatformat:2|intcomma }}</td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="7" class="text-center py-4">No transactions found</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body text-center py-5">
+                        <i class="fas fa-history fa-4x text-muted mb-3"></i>
+                        <h4 class="text-muted">Wallet Transaction History</h4>
+                        <p class="text-muted">Enter wallet details and date range to fetch transactions</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

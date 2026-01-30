@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block content %}
+<div class="midde_cont">
+    <div class="container-fluid">
+        <!-- Page Header -->
+        <div class="row column_title">
+            <div class="col-md-12">
+                <div class="page_title">
+                    <h2><i class="fas fa-info-circle text-info"></i> 9PSB Wallet Status</h2>
+                    <p class="text-muted">Check wallet status by account number</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Form -->
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0"><i class="fas fa-search me-2"></i>Check Status</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="post">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label for="account_no" class="form-label fw-semibold">
+                                    Wallet Account Number <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" 
+                                       class="form-control form-control-lg" 
+                                       id="account_no" 
+                                       name="account_no" 
+                                       placeholder="Enter account number"
+                                       value="{{ account_no|default:'' }}"
+                                       required>
+                            </div>
+                            <button type="submit" class="btn btn-info btn-lg w-100">
+                                <i class="fas fa-check-circle me-2"></i>Check Status
+                            </button>
+                        </form>
+                        
+                        {% if error_message %}
+                        <div class="alert alert-danger mt-3">
+                            <i class="fas fa-exclamation-circle me-2"></i>{{ error_message }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results -->
+            <div class="col-md-8">
+                {% if status_data %}
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="fas fa-check-circle me-2"></i>Wallet Status</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-bordered">
+                                <tbody>
+                                    <tr>
+                                        <th class="bg-light" style="width: 35%;">Account Number</th>
+                                        <td>{{ status_data.accountNo|default:account_no }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th class="bg-light">Status</th>
+                                        <td>
+                                            {% with status=status_data.status|default:status_data.accountStatus %}
+                                            {% if status == 'ACTIVE' or status == 'active' %}
+                                            <span class="badge bg-success px-3 py-2"><i class="fas fa-check me-1"></i>Active</span>
+                                            {% elif status == 'SUSPENDED' or status == 'suspended' %}
+                                            <span class="badge bg-danger px-3 py-2"><i class="fas fa-ban me-1"></i>Suspended</span>
+                                            {% else %}
+                                            <span class="badge bg-secondary px-3 py-2">{{ status }}</span>
+                                            {% endif %}
+                                            {% endwith %}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body text-center py-5">
+                        <i class="fas fa-info-circle fa-4x text-muted mb-3"></i>
+                        <h4 class="text-muted">Check Wallet Status</h4>
+                        <p class="text-muted">Enter an account number to check its status</p>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

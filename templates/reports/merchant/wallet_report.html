@@ -1,20 +1,23 @@
 {% extends 'reports/base_report.html' %}
 {% load humanize %}
 
-{% block report_icon %}wallet{% endblock %}
-{% block report_title %}Merchant Wallet Report{% endblock %}
+{% block report_icon %}fas fa-wallet{% endblock %}
+{% block report_title %}9PSB Wallet Report{% endblock %}
 
 {% block report_filter %}
 <div class="report-filter-card">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h5 class="filter-title mb-0"><i class="fas fa-filter"></i> Filter Options</h5>
-        <a href="?refresh=1" class="btn btn-info btn-sm">
-            <i class="fas fa-sync-alt"></i> Refresh from 9PSB
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h5 class="filter-title mb-0">
+            <i class="fas fa-filter text-primary"></i> Filter Options
+        </h5>
+        <a href="?refresh=1" class="btn btn-info">
+            <i class="fas fa-sync-alt me-1"></i> Refresh Live Data from 9PSB
         </a>
     </div>
+    
     <form method="get" class="row g-3">
-        <div class="col-md-3">
-            <label class="form-label">Merchant Status</label>
+        <div class="col-md-2">
+            <label class="form-label fw-semibold">Merchant Status</label>
             <select name="status" class="form-select">
                 <option value="">All Status</option>
                 {% for value, label in status_choices %}
@@ -22,8 +25,8 @@
                 {% endfor %}
             </select>
         </div>
-        <div class="col-md-3">
-            <label class="form-label">Wallet Status</label>
+        <div class="col-md-2">
+            <label class="form-label fw-semibold">Wallet Status</label>
             <select name="wallet_status" class="form-select">
                 <option value="">All Wallet Status</option>
                 {% for value, label in wallet_status_choices %}
@@ -32,7 +35,7 @@
             </select>
         </div>
         <div class="col-md-2">
-            <label class="form-label">Has Wallet</label>
+            <label class="form-label fw-semibold">Has Wallet</label>
             <select name="has_wallet" class="form-select">
                 <option value="">All</option>
                 <option value="yes" {% if request.GET.has_wallet == 'yes' %}selected{% endif %}>Yes</option>
@@ -40,21 +43,26 @@
             </select>
         </div>
         <div class="col-md-2">
-            <label class="form-label">From Date</label>
+            <label class="form-label fw-semibold">From Date</label>
             <input type="date" name="date_from" class="form-control" value="{{ request.GET.date_from }}">
         </div>
         <div class="col-md-2">
-            <label class="form-label">To Date</label>
+            <label class="form-label fw-semibold">To Date</label>
             <input type="date" name="date_to" class="form-control" value="{{ request.GET.date_to }}">
         </div>
+        <div class="col-md-2 d-flex align-items-end">
+            <button type="submit" class="btn btn-primary w-100">
+                <i class="fas fa-search me-1"></i> Filter
+            </button>
+        </div>
         <div class="col-md-4">
-            <label class="form-label">Search</label>
-            <input type="text" name="search" class="form-control" placeholder="Name, ID, Wallet Account..." value="{{ request.GET.search }}">
+            <label class="form-label fw-semibold">Search</label>
+            <input type="text" name="search" class="form-control" placeholder="Search by name, ID, wallet account..." value="{{ request.GET.search }}">
         </div>
         <div class="col-md-2 d-flex align-items-end">
-            <button type="submit" class="btn btn-generate w-100">
-                <i class="fas fa-search me-2"></i>Filter
-            </button>
+            <a href="{% url 'merchant_wallet_report' %}" class="btn btn-outline-secondary w-100">
+                <i class="fas fa-times me-1"></i> Clear
+            </a>
         </div>
     </form>
 </div>
@@ -62,121 +70,195 @@
 
 {% block report_content %}
 <!-- Company Header -->
-<div class="report-company-header">
-    <div class="company-name">FinanceFlex</div>
-    <div class="report-name">Merchant 9PSB Wallet Report</div>
-    <div class="report-period">Generated: {% now "F d, Y H:i" %}</div>
+<div class="report-company-header text-center mb-4">
+    <h2 class="company-name mb-1">Merchant 9PSB Wallet Report</h2>
+    <p class="text-muted mb-0">Generated: {% now "F d, Y H:i" %}</p>
 </div>
 
 <!-- Summary Cards -->
-<div class="report-summary">
-    <div class="summary-row">
-        <div class="summary-card total-count">
-            <div class="label">Total Merchants</div>
-            <div class="value">{{ total_merchants|intcomma }}</div>
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100" style="border-left: 4px solid #6c757d !important;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-1">Total Merchants</h6>
+                        <h3 class="mb-0 fw-bold">{{ total_merchants|intcomma }}</h3>
+                    </div>
+                    <div class="rounded-circle bg-secondary bg-opacity-10 p-3">
+                        <i class="fas fa-users fa-2x text-secondary"></i>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="summary-card total-credit">
-            <div class="label">With Wallet</div>
-            <div class="value">{{ with_wallet|intcomma }}</div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100" style="border-left: 4px solid #28a745 !important;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-1">With Wallet</h6>
+                        <h3 class="mb-0 fw-bold text-success">{{ with_wallet|intcomma }}</h3>
+                    </div>
+                    <div class="rounded-circle bg-success bg-opacity-10 p-3">
+                        <i class="fas fa-wallet fa-2x text-success"></i>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="summary-card total-debit">
-            <div class="label">Without Wallet</div>
-            <div class="value">{{ without_wallet|intcomma }}</div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100" style="border-left: 4px solid #dc3545 !important;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-1">Without Wallet</h6>
+                        <h3 class="mb-0 fw-bold text-danger">{{ without_wallet|intcomma }}</h3>
+                    </div>
+                    <div class="rounded-circle bg-danger bg-opacity-10 p-3">
+                        <i class="fas fa-exclamation-circle fa-2x text-danger"></i>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="summary-card total-balance">
-            <div class="label">Active Wallets</div>
-            <div class="value">{{ active_wallets|intcomma }}</div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100" style="border-left: 4px solid #17a2b8 !important;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-1">Active Wallets</h6>
+                        <h3 class="mb-0 fw-bold text-info">{{ active_wallets|intcomma }}</h3>
+                    </div>
+                    <div class="rounded-circle bg-info bg-opacity-10 p-3">
+                        <i class="fas fa-check-circle fa-2x text-info"></i>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
 <!-- Data Table -->
-{% if merchants %}
-<div class="table-responsive">
-    <table class="report-table">
-        <thead>
-            <tr>
-                <th>S/N</th>
-                <th>Merchant ID</th>
-                <th>Merchant Name</th>
-                <th>Business Phone</th>
-                <th>Wallet Account</th>
-                <th>Wallet Name</th>
-                <th>Wallet Status</th>
-                <th>Tier</th>
-                {% if refresh_from_psb %}<th>Live Balance</th>{% endif %}
-                <th>Status</th>
-                <th>Created Date</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for merchant in merchants %}
-            <tr>
-                <td>{{ forloop.counter }}</td>
-                <td><strong>{{ merchant.merchant_id }}</strong></td>
-                <td>{{ merchant.merchant_name }}</td>
-                <td>{{ merchant.business_phone|default:"-" }}</td>
-                <td>
-                    {% if merchant.psb_wallet_account %}
-                    <span class="badge bg-success">{{ merchant.psb_wallet_account }}</span>
-                    {% else %}
-                    <span class="badge bg-secondary">No Wallet</span>
-                    {% endif %}
-                </td>
-                <td>{{ merchant.psb_wallet_name|default:"-" }}</td>
-                <td>
-                    {% if merchant.psb_wallet_status == 'active' %}
-                    <span class="badge bg-success">Active</span>
-                    {% elif merchant.psb_wallet_status == 'suspended' %}
-                    <span class="badge bg-danger">Suspended</span>
-                    {% elif merchant.psb_wallet_status == 'inactive' %}
-                    <span class="badge bg-warning">Inactive</span>
-                    {% elif merchant.psb_wallet_status == 'pending' %}
-                    <span class="badge bg-info">Pending</span>
-                    {% else %}
-                    <span class="badge bg-secondary">-</span>
-                    {% endif %}
-                </td>
-                <td>{{ merchant.psb_wallet_tier|default:"-" }}</td>
-                {% if refresh_from_psb %}
-                <td>
-                    {% if merchant.psb_wallet_account %}
-                        {% with live_data=merchant.live_balance %}
-                            {% if live_data %}
-                                <strong>₦{{ live_data|floatformat:2|intcomma }}</strong>
-                            {% elif merchant.live_error %}
-                                <span class="text-danger text-truncate" style="max-width:100px" title="{{ merchant.live_error }}">Error</span>
-                            {% else %}
-                                -
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white py-3">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="fas fa-list text-primary me-2"></i>Merchant Wallet Details
+            </h5>
+            <span class="badge bg-primary">{{ merchants|length }} Records</span>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        {% if merchants %}
+        <div class="table-responsive">
+            <table class="table table-hover table-striped mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th class="py-3">S/N</th>
+                        <th class="py-3">Merchant ID</th>
+                        <th class="py-3">Merchant Name</th>
+                        <th class="py-3">Phone</th>
+                        <th class="py-3">Wallet Account</th>
+                        <th class="py-3">Wallet Status</th>
+                        <th class="py-3">Tier</th>
+                        {% if refresh_from_psb %}<th class="py-3">Live Balance</th>{% endif %}
+                        <th class="py-3">Status</th>
+                        <th class="py-3">Created</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for merchant in merchants %}
+                    <tr>
+                        <td class="py-3">{{ forloop.counter }}</td>
+                        <td class="py-3">
+                            <span class="fw-bold text-primary">{{ merchant.merchant_id }}</span>
+                            <br><small class="text-muted">{{ merchant.merchant_code }}</small>
+                        </td>
+                        <td class="py-3">
+                            <span class="fw-semibold">{{ merchant.merchant_name }}</span>
+                            {% if merchant.business_name %}
+                            <br><small class="text-muted">{{ merchant.business_name }}</small>
                             {% endif %}
-                        {% endwith %}
-                    {% else %}
-                        -
-                    {% endif %}
-                </td>
-                {% endif %}
-                <td>
-                    {% if merchant.status == 'active' %}
-                    <span class="badge bg-success">Active</span>
-                    {% elif merchant.status == 'suspended' %}
-                    <span class="badge bg-danger">Suspended</span>
-                    {% elif merchant.status == 'pending' %}
-                    <span class="badge bg-warning">Pending</span>
-                    {% else %}
-                    <span class="badge bg-secondary">{{ merchant.status }}</span>
-                    {% endif %}
-                </td>
-                <td>{{ merchant.created_at|date:"M d, Y" }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+                        </td>
+                        <td class="py-3">{{ merchant.business_phone|default:"-" }}</td>
+                        <td class="py-3">
+                            {% if merchant.psb_wallet_account %}
+                            <span class="badge bg-success bg-opacity-75 px-3 py-2">
+                                <i class="fas fa-wallet me-1"></i>{{ merchant.psb_wallet_account }}
+                            </span>
+                            {% else %}
+                            <span class="badge bg-secondary px-3 py-2">No Wallet</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3">
+                            {% if merchant.psb_wallet_status == 'active' %}
+                            <span class="badge bg-success px-3 py-2"><i class="fas fa-check me-1"></i>Active</span>
+                            {% elif merchant.psb_wallet_status == 'suspended' %}
+                            <span class="badge bg-danger px-3 py-2"><i class="fas fa-ban me-1"></i>Suspended</span>
+                            {% elif merchant.psb_wallet_status == 'inactive' %}
+                            <span class="badge bg-warning text-dark px-3 py-2"><i class="fas fa-pause me-1"></i>Inactive</span>
+                            {% elif merchant.psb_wallet_status == 'pending' %}
+                            <span class="badge bg-info px-3 py-2"><i class="fas fa-clock me-1"></i>Pending</span>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3">
+                            {% if merchant.psb_wallet_tier %}
+                            <span class="badge bg-primary rounded-pill px-3">Tier {{ merchant.psb_wallet_tier }}</span>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        {% if refresh_from_psb %}
+                        <td class="py-3">
+                            {% if merchant.psb_wallet_account %}
+                                {% if merchant.live_balance %}
+                                <span class="fw-bold text-success">₦{{ merchant.live_balance|floatformat:2|intcomma }}</span>
+                                {% elif merchant.live_error %}
+                                <span class="badge bg-danger" title="{{ merchant.live_error }}">
+                                    <i class="fas fa-exclamation-triangle me-1"></i>Error
+                                </span>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        {% endif %}
+                        <td class="py-3">
+                            {% if merchant.status == 'active' %}
+                            <span class="badge bg-success px-3 py-2">Active</span>
+                            {% elif merchant.status == 'suspended' %}
+                            <span class="badge bg-danger px-3 py-2">Suspended</span>
+                            {% elif merchant.status == 'pending' %}
+                            <span class="badge bg-warning text-dark px-3 py-2">Pending</span>
+                            {% elif merchant.status == 'inactive' %}
+                            <span class="badge bg-secondary px-3 py-2">Inactive</span>
+                            {% else %}
+                            <span class="badge bg-light text-dark px-3 py-2">{{ merchant.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3">
+                            <small>{{ merchant.created_at|date:"M d, Y" }}</small>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
+            <h4 class="text-muted">No Merchants Found</h4>
+            <p class="text-muted">Try adjusting your filter criteria or add new merchants.</p>
+            <a href="{% url 'merchant:merchant_create' %}" class="btn btn-primary mt-2">
+                <i class="fas fa-plus me-1"></i> Add Merchant
+            </a>
+        </div>
+        {% endif %}
+    </div>
 </div>
-{% else %}
-<div class="report-empty">
-    <i class="fas fa-inbox"></i>
-    <h4>No merchants found</h4>
-    <p>Try adjusting your filter criteria</p>
-</div>
-{% endif %}
 {% endblock %}

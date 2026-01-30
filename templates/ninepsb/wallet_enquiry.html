@@ -1,0 +1,213 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block content %}
+<div class="midde_cont">
+    <div class="container-fluid">
+        <!-- Page Header -->
+        <div class="row column_title">
+            <div class="col-md-12">
+                <div class="page_title">
+                    <h2><i class="fas fa-search text-primary"></i> 9PSB Wallet Enquiry</h2>
+                    <p class="text-muted">Fetch wallet details by account number</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Enquiry Form -->
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="fas fa-wallet me-2"></i>Enter Wallet Details</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="post">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label for="account_no" class="form-label fw-semibold">
+                                    Wallet Account Number <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" 
+                                       class="form-control form-control-lg" 
+                                       id="account_no" 
+                                       name="account_no" 
+                                       placeholder="Enter 10-digit account number"
+                                       maxlength="10"
+                                       value="{{ account_no|default:'' }}"
+                                       required>
+                                <small class="text-muted">Enter the 9PSB wallet account number</small>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-lg w-100">
+                                <i class="fas fa-search me-2"></i>Enquire Wallet
+                            </button>
+                        </form>
+                        
+                        {% if error_message %}
+                        <div class="alert alert-danger mt-3">
+                            <i class="fas fa-exclamation-circle me-2"></i>{{ error_message }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Quick Links -->
+                <div class="card border-0 shadow-sm mt-3">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0"><i class="fas fa-link me-2"></i>Quick Links</h6>
+                    </div>
+                    <div class="card-body">
+                        <a href="{% url 'ninepsb:wallet_status' %}" class="btn btn-outline-info btn-sm w-100 mb-2">
+                            <i class="fas fa-info-circle me-1"></i> Wallet Status
+                        </a>
+                        <a href="{% url 'ninepsb:wallet_transactions' %}" class="btn btn-outline-success btn-sm w-100 mb-2">
+                            <i class="fas fa-history me-1"></i> Transaction History
+                        </a>
+                        <a href="{% url 'ninepsb:change_wallet_status' %}" class="btn btn-outline-warning btn-sm w-100 mb-2">
+                            <i class="fas fa-exchange-alt me-1"></i> Change Status
+                        </a>
+                        <a href="{% url 'ninepsb:other_bank_enquiry' %}" class="btn btn-outline-primary btn-sm w-100">
+                            <i class="fas fa-university me-1"></i> Other Bank Enquiry
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results -->
+            <div class="col-md-8">
+                {% if wallet_data %}
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-check-circle me-2"></i>Wallet Details
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- Summary Cards -->
+                        <div class="row mb-4">
+                            <div class="col-md-4">
+                                <div class="card bg-primary text-white">
+                                    <div class="card-body text-center">
+                                        <h6 class="text-white-50">Account Number</h6>
+                                        <h4 class="mb-0">{{ wallet_data.accountNo|default:wallet_data.accountNumber|default:account_no }}</h4>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card bg-success text-white">
+                                    <div class="card-body text-center">
+                                        <h6 class="text-white-50">Available Balance</h6>
+                                        <h4 class="mb-0">₦{{ wallet_data.availableBalance|default:wallet_data.balance|default:"0.00"|floatformat:2|intcomma }}</h4>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card bg-info text-white">
+                                    <div class="card-body text-center">
+                                        <h6 class="text-white-50">Account Tier</h6>
+                                        <h4 class="mb-0">Tier {{ wallet_data.tier|default:"1" }}</h4>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Details Table -->
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-striped">
+                                <tbody>
+                                    <tr>
+                                        <th class="bg-light" style="width: 35%;">Account Name</th>
+                                        <td>{{ wallet_data.accountName|default:wallet_data.name|default:"-" }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th class="bg-light">Account Number</th>
+                                        <td>{{ wallet_data.accountNo|default:wallet_data.accountNumber|default:account_no }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th class="bg-light">Phone Number</th>
+                                        <td>{{ wallet_data.phoneNo|default:wallet_data.phoneNumber|default:"-" }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th class="bg-light">Email</th>
+                                        <td>{{ wallet_data.email|default:"-" }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th class="bg-light">Available Balance</th>
+                                        <td class="fw-bold text-success">₦{{ wallet_data.availableBalance|default:wallet_data.balance|default:"0.00"|floatformat:2|intcomma }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th class="bg-light">Book Balance</th>
+                                        <td>₦{{ wallet_data.bookBalance|default:"0.00"|floatformat:2|intcomma }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th class="bg-light">Account Status</th>
+                                        <td>
+                                            {% with status=wallet_data.status|default:wallet_data.accountStatus|default:"unknown" %}
+                                            {% if status == 'ACTIVE' or status == 'active' %}
+                                            <span class="badge bg-success px-3 py-2"><i class="fas fa-check me-1"></i>Active</span>
+                                            {% elif status == 'SUSPENDED' or status == 'suspended' %}
+                                            <span class="badge bg-danger px-3 py-2"><i class="fas fa-ban me-1"></i>Suspended</span>
+                                            {% elif status == 'INACTIVE' or status == 'inactive' %}
+                                            <span class="badge bg-warning px-3 py-2"><i class="fas fa-pause me-1"></i>Inactive</span>
+                                            {% else %}
+                                            <span class="badge bg-secondary px-3 py-2">{{ status }}</span>
+                                            {% endif %}
+                                            {% endwith %}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th class="bg-light">Account Tier</th>
+                                        <td><span class="badge bg-primary px-3 py-2">Tier {{ wallet_data.tier|default:"1" }}</span></td>
+                                    </tr>
+                                    <tr>
+                                        <th class="bg-light">BVN</th>
+                                        <td>{{ wallet_data.bvn|default:"-" }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th class="bg-light">Date of Birth</th>
+                                        <td>{{ wallet_data.dateOfBirth|default:"-" }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th class="bg-light">Address</th>
+                                        <td>{{ wallet_data.address|default:"-" }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th class="bg-light">Daily Limit</th>
+                                        <td>₦{{ wallet_data.dailyLimit|default:"0.00"|floatformat:2|intcomma }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th class="bg-light">Single Transaction Limit</th>
+                                        <td>₦{{ wallet_data.singleTransactionLimit|default:"0.00"|floatformat:2|intcomma }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="d-flex gap-2 mt-3">
+                            <a href="{% url 'ninepsb:wallet_transactions' %}?account_no={{ account_no }}" class="btn btn-outline-primary">
+                                <i class="fas fa-history me-1"></i> View Transactions
+                            </a>
+                            <a href="{% url 'ninepsb:change_wallet_status' %}?account_no={{ account_no }}" class="btn btn-outline-warning">
+                                <i class="fas fa-exchange-alt me-1"></i> Change Status
+                            </a>
+                            <button onclick="window.print()" class="btn btn-outline-secondary">
+                                <i class="fas fa-print me-1"></i> Print
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body text-center py-5">
+                        <i class="fas fa-wallet fa-4x text-muted mb-3"></i>
+                        <h4 class="text-muted">Enter Wallet Account Number</h4>
+                        <p class="text-muted">Enter a 10-digit 9PSB wallet account number to view details</p>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

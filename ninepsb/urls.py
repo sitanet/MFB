@@ -1,14 +1,17 @@
 # ninepsb/urls.py
 from django.urls import path
 from . import views
-# from .views import test_bank_fetch_view, test_account_validation_view
+
+app_name = 'ninepsb'
 
 urlpatterns = [
-    # path("test-bank-fetch/", test_bank_fetch_view, name="test_bank_fetch"),
-    # path("test-account-validation/", test_account_validation_view, name="test_account_validation"),
-    # path("test/virtual-account/<int:customer_id>/", views.test_virtual_account_create, name="test_virtual_account_create"),
-    # path("fund-transfer/", views.fund_transfer_view, name="fund_transfer"),
-    # path("account-enquiry/", views.account_enquiry_view, name="account_enquiry"),
-
     path("test-account/", views.test_virtual_account, name="test_virtual_account"),
+    
+    # 9PSB WAAS Operations
+    path("wallet-enquiry/", views.wallet_enquiry_view, name="wallet_enquiry"),
+    path("wallet-status/", views.wallet_status_view, name="wallet_status"),
+    path("change-wallet-status/", views.change_wallet_status_view, name="change_wallet_status"),
+    path("wallet-transactions/", views.wallet_transactions_view, name="wallet_transactions"),
+    path("get-banks/", views.get_banks_view, name="get_banks"),
+    path("other-bank-enquiry/", views.other_bank_enquiry_view, name="other_bank_enquiry"),
 ]

@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block content %}
+<div class="midde_cont">
+    <div class="container-fluid">
+        <!-- Page Header -->
+        <div class="row column_title">
+            <div class="col-md-12">
+                <div class="page_title">
+                    <h2><i class="fas fa-exchange-alt text-warning"></i> Change Wallet Status</h2>
+                    <p class="text-muted">Activate or suspend a 9PSB wallet</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Form -->
+            <div class="col-md-5">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0"><i class="fas fa-cog me-2"></i>Update Status</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="post">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label for="account_no" class="form-label fw-semibold">
+                                    Wallet Account Number <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" 
+                                       class="form-control form-control-lg" 
+                                       id="account_no" 
+                                       name="account_no" 
+                                       placeholder="Enter account number"
+                                       value="{{ account_no|default:request.GET.account_no|default:'' }}"
+                                       required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="new_status" class="form-label fw-semibold">
+                                    New Status <span class="text-danger">*</span>
+                                </label>
+                                <select class="form-select form-select-lg" id="new_status" name="new_status" required>
+                                    <option value="">-- Select Status --</option>
+                                    <option value="ACTIVE" {% if new_status == 'ACTIVE' %}selected{% endif %}>
+                                        ACTIVE - Enable wallet operations
+                                    </option>
+                                    <option value="SUSPENDED" {% if new_status == 'SUSPENDED' %}selected{% endif %}>
+                                        SUSPENDED - Disable wallet operations
+                                    </option>
+                                </select>
+                            </div>
+                            
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong>Warning:</strong> Changing wallet status will immediately affect the customer's ability to perform transactions.
+                            </div>
+                            
+                            <button type="submit" class="btn btn-warning btn-lg w-100">
+                                <i class="fas fa-save me-2"></i>Update Status
+                            </button>
+                        </form>
+                        
+                        {% if error_message %}
+                        <div class="alert alert-danger mt-3">
+                            <i class="fas fa-exclamation-circle me-2"></i>{{ error_message }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results -->
+            <div class="col-md-7">
+                {% if result_data %}
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="fas fa-check-circle me-2"></i>Status Updated Successfully</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-circle me-2"></i>
+                            Wallet status has been changed to <strong>{{ new_status }}</strong>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-bordered">
+                                <tbody>
+                                    <tr>
+                                        <th class="bg-light" style="width: 35%;">Account Number</th>
+                                        <td>{{ account_no }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th class="bg-light">New Status</th>
+                                        <td>
+                                            {% if new_status == 'ACTIVE' %}
+                                            <span class="badge bg-success px-3 py-2"><i class="fas fa-check me-1"></i>ACTIVE</span>
+                                            {% else %}
+                                            <span class="badge bg-danger px-3 py-2"><i class="fas fa-ban me-1"></i>SUSPENDED</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body text-center py-5">
+                        <i class="fas fa-exchange-alt fa-4x text-muted mb-3"></i>
+                        <h4 class="text-muted">Change Wallet Status</h4>
+                        <p class="text-muted">Select a wallet and the new status to apply</p>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
