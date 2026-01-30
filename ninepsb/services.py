@@ -684,7 +684,7 @@ class WAASService:
 # Helper function for merchant wallet creation
 def create_merchant_wallet(merchant) -> dict:
     """
-    Create a 9PSB wallet for a merchant.
+    Create a 9PSB wallet for a merchant, or fetch existing wallet if already exists.
     
     Args:
         merchant: Merchant model instance
@@ -698,6 +698,32 @@ def create_merchant_wallet(merchant) -> dict:
     logger = logging.getLogger(__name__)
     
     waas = WAASService()
+    
+    # First, try to get existing wallet by BVN if available
+    if merchant.bvn:
+        try:
+            logger.info(f"Checking for existing wallet with BVN for merchant {merchant.merchant_id}")
+            existing_wallet = waas.get_wallet_by_bvn(merchant.bvn)
+            
+            if existing_wallet.get("status", "").upper() == "SUCCESS" or "successful" in existing_wallet.get("message", "").lower():
+                wallet_data = existing_wallet.get("data", {})
+                account_number = (
+                    wallet_data.get("accountNo") or 
+                    wallet_data.get("accountNumber") or
+                    wallet_data.get("account_number")
+                )
+                if account_number:
+                    logger.info(f"Found existing wallet for merchant {merchant.merchant_id}: {account_number}")
+                    return {
+                        "account_number": account_number,
+                        "account_name": wallet_data.get("accountName") or merchant.merchant_name,
+                        "status": wallet_data.get("status", "active"),
+                        "tier": wallet_data.get("tier", "1"),
+                        "message": "Existing wallet found",
+                        "raw_response": existing_wallet
+                    }
+        except Exception as e:
+            logger.info(f"No existing wallet found by BVN, will create new: {str(e)}")
     
     # Parse merchant name
     name_parts = merchant.merchant_name.split()
@@ -732,7 +758,39 @@ def create_merchant_wallet(merchant) -> dict:
     
     logger.info(f"Creating wallet for merchant {merchant.merchant_id} with data: {wallet_data}")
     
-    result = waas.open_wallet(wallet_data)
+    try:
+        result = waas.open_wallet(wallet_data)
+    except Exception as e:
+        error_msg = str(e).lower()
+        # If wallet already exists, try to fetch it
+        if "already exists" in error_msg or "wallet already" in error_msg:
+            logger.info(f"Wallet already exists for merchant {merchant.merchant_id}, fetching existing wallet...")
+            
+            # Try to get existing wallet by BVN
+            if merchant.bvn:
+                try:
+                    existing_wallet = waas.get_wallet_by_bvn(merchant.bvn)
+                    wallet_data = existing_wallet.get("data", {})
+                    account_number = (
+                        wallet_data.get("accountNo") or 
+                        wallet_data.get("accountNumber") or
+                        wallet_data.get("account_number")
+                    )
+                    if account_number:
+                        return {
+                            "account_number": account_number,
+                            "account_name": wallet_data.get("accountName") or merchant.merchant_name,
+                            "status": wallet_data.get("status", "active"),
+                            "tier": wallet_data.get("tier", "1"),
+                            "message": "Existing wallet retrieved",
+                            "raw_response": existing_wallet
+                        }
+                except Exception as fetch_e:
+                    logger.error(f"Failed to fetch existing wallet: {fetch_e}")
+            
+            raise Exception(f"Wallet already exists for this BVN/NIN. Please contact 9PSB support to retrieve account details.")
+        else:
+            raise
     
     logger.info(f"Wallet API response for merchant {merchant.merchant_id}: {result}")
     
