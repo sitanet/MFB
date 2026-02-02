@@ -1997,29 +1997,44 @@ def notification_create(request):
         title = request.POST.get('title', '').strip()
         message = request.POST.get('message', '').strip()
         notification_type = request.POST.get('notification_type', 'info')
-        merchant_id = request.POST.get('merchant_id')
+        target_type = request.POST.get('target_type', 'all')
+        merchant_ids = request.POST.getlist('merchant_ids')
         
         if not title or not message:
             messages.error(request, 'Title and message are required')
             return redirect('merchant:notification_create')
         
-        merchant = None
-        if merchant_id:
-            try:
-                merchant = Merchant.objects.get(id=merchant_id, branch=request.user.branch)
-            except Merchant.DoesNotExist:
-                pass
+        if target_type == 'all':
+            # Broadcast to all merchants
+            MerchantNotification.objects.create(
+                title=title,
+                message=message,
+                notification_type=notification_type,
+                merchant=None,
+                branch=request.user.branch,
+                created_by=request.user,
+            )
+            messages.success(request, 'Notification sent to all merchants')
+        else:
+            # Send to selected merchants
+            if not merchant_ids:
+                messages.error(request, 'Please select at least one merchant')
+                return redirect('merchant:notification_create')
+            
+            merchants = Merchant.objects.filter(id__in=merchant_ids, branch=request.user.branch)
+            count = 0
+            for merchant in merchants:
+                MerchantNotification.objects.create(
+                    title=title,
+                    message=message,
+                    notification_type=notification_type,
+                    merchant=merchant,
+                    branch=request.user.branch,
+                    created_by=request.user,
+                )
+                count += 1
+            messages.success(request, f'Notification sent to {count} merchant(s)')
         
-        MerchantNotification.objects.create(
-            title=title,
-            message=message,
-            notification_type=notification_type,
-            merchant=merchant,
-            branch=request.user.branch,
-            created_by=request.user,
-        )
-        
-        messages.success(request, 'Notification sent successfully')
         return redirect('merchant:notification_list')
     
     merchants = Merchant.objects.filter(branch=request.user.branch, status='active')
