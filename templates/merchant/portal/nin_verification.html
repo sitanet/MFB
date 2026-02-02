@@ -1,0 +1,303 @@
+{% extends 'merchant/portal/base.html' %}
+{% load humanize %}
+
+{% block title %}NIN Verification - Print Slip{% endblock %}
+
+{% block extra_css %}
+<style>
+    .nin-slip {
+        background: #fff;
+        border: 2px solid #000;
+        max-width: 800px;
+        margin: 0 auto;
+        font-family: Arial, sans-serif;
+    }
+    .nin-slip-header {
+        background: #f0f0f0;
+        padding: 15px;
+        border-bottom: 2px solid #000;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .nin-slip-header img {
+        height: 60px;
+    }
+    .nin-slip-header .title {
+        text-align: center;
+        flex: 1;
+    }
+    .nin-slip-header .title h4 {
+        margin: 0;
+        font-weight: bold;
+        color: #006400;
+    }
+    .nin-slip-header .title p {
+        margin: 0;
+        font-size: 12px;
+    }
+    .nin-slip-body {
+        padding: 0;
+    }
+    .nin-slip-body table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    .nin-slip-body td {
+        border: 1px solid #000;
+        padding: 10px;
+        vertical-align: top;
+    }
+    .nin-slip-body .label {
+        font-weight: bold;
+        font-size: 12px;
+        color: #333;
+    }
+    .nin-slip-body .value {
+        font-size: 14px;
+        min-height: 20px;
+    }
+    .nin-slip-footer {
+        background: #f0f0f0;
+        padding: 10px;
+        border-top: 2px solid #000;
+        font-size: 11px;
+    }
+    .nin-slip-footer .note {
+        color: #c00;
+    }
+    .nin-slip-contact {
+        background: #006400;
+        color: #fff;
+        padding: 8px;
+        display: flex;
+        justify-content: space-around;
+        font-size: 11px;
+    }
+    .nin-slip-contact a {
+        color: #fff;
+        text-decoration: none;
+    }
+    .photo-cell {
+        width: 120px;
+        text-align: center;
+    }
+    .photo-cell img {
+        max-width: 100px;
+        max-height: 120px;
+        border: 1px solid #ccc;
+    }
+    @media print {
+        .no-print {
+            display: none !important;
+        }
+        .nin-slip {
+            border: 2px solid #000 !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4 no-print">
+        <div class="col-12">
+            <h4><i class="fas fa-id-card me-2"></i>NIN Verification - Print Slip</h4>
+            <p class="text-muted">Verify NIN and print the National Identification Number Slip</p>
+        </div>
+    </div>
+
+    <!-- Verification Form -->
+    <div class="row mb-4 no-print">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0"><i class="fas fa-search me-2"></i>Enter NIN to Verify</h6>
+                </div>
+                <div class="card-body">
+                    {% if charge_amount %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-1"></i>
+                        <strong>Service Charge:</strong> ₦{{ charge_amount }} will be debited from your float balance per verification.
+                    </div>
+                    {% endif %}
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="id_nin" class="form-label">National Identification Number (NIN)</label>
+                            {{ form.nin }}
+                            {% if form.nin.errors %}
+                            <div class="text-danger small mt-1">{{ form.nin.errors.0 }}</div>
+                            {% endif %}
+                            <small class="text-muted">{{ form.nin.help_text }}</small>
+                        </div>
+                        <button type="submit" class="btn btn-primary" {% if not charge_amount %}disabled{% endif %}>
+                            <i class="fas fa-check-circle me-1"></i> Verify NIN {% if charge_amount %}(₦{{ charge_amount }}){% endif %}
+                        </button>
+                    </form>
+                    
+                    {% if error_message %}
+                    <div class="alert alert-danger mt-3">
+                        <i class="fas fa-exclamation-circle me-1"></i> {{ error_message }}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if nin_data %}
+    <!-- NIN Data Display -->
+    <div class="row mb-4 no-print">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h6 class="mb-0"><i class="fas fa-check-circle me-2"></i>NIN Verified Successfully</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 text-center mb-3">
+                            {% if nin_data.photo %}
+                            <img src="{{ nin_data.photo }}" alt="Photo" class="img-fluid rounded" style="max-width: 150px;">
+                            {% else %}
+                            <div class="bg-light p-4 rounded">
+                                <i class="fas fa-user fa-4x text-muted"></i>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-9">
+                            <div class="row">
+                                <div class="col-md-4 mb-2">
+                                    <strong>NIN:</strong><br>{{ nin_data.nin }}
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <strong>First Name:</strong><br>{{ nin_data.firstname }}
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <strong>Middle Name:</strong><br>{{ nin_data.middlename|default:"-" }}
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <strong>Surname:</strong><br>{{ nin_data.surname }}
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <strong>Gender:</strong><br>{{ nin_data.gender }}
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <strong>Date of Birth:</strong><br>{{ nin_data.birthdate }}
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <strong>Phone:</strong><br>{{ nin_data.telephoneno|default:"-" }}
+                                </div>
+                                <div class="col-md-8 mb-2">
+                                    <strong>Address:</strong><br>{{ nin_data.residence_address|default:"-" }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <button type="button" class="btn btn-primary" onclick="document.getElementById('ninSlipPreview').style.display='block'; this.style.display='none';">
+                            <i class="fas fa-eye me-1"></i> Preview NIN Slip
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- NIN Slip Preview -->
+    <div id="ninSlipPreview" style="display:none;">
+        <div class="mb-3 no-print">
+            <button type="button" class="btn btn-success" onclick="window.print();">
+                <i class="fas fa-print me-1"></i> Print Slip
+            </button>
+            <button type="button" class="btn btn-secondary ms-2" onclick="document.getElementById('ninSlipPreview').style.display='none';">
+                <i class="fas fa-times me-1"></i> Close Preview
+            </button>
+        </div>
+
+        <div class="nin-slip">
+            <!-- Header -->
+            <div class="nin-slip-header">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/7/79/Coat_of_arms_of_Nigeria.svg" alt="Coat of Arms" style="height:50px;">
+                <div class="title">
+                    <h4>National Identity Management System</h4>
+                    <p><strong>Federal Republic of Nigeria</strong></p>
+                    <p>National Identification Number Slip (NINS)</p>
+                </div>
+                <img src="https://nimc.gov.ng/wp-content/uploads/2020/10/nimc-logo.png" alt="NIMC" style="height:50px;" onerror="this.style.display='none'">
+            </div>
+
+            <!-- Body -->
+            <div class="nin-slip-body">
+                <table>
+                    <tr>
+                        <td style="width:25%">
+                            <div class="label">Tracking ID:</div>
+                            <div class="value">{{ nin_data.tracking_id|default:"-" }}</div>
+                        </td>
+                        <td style="width:25%">
+                            <div class="label">Surname:</div>
+                            <div class="value">{{ nin_data.surname }}</div>
+                        </td>
+                        <td rowspan="3" class="photo-cell">
+                            {% if nin_data.photo %}
+                            <img src="{{ nin_data.photo }}" alt="Photo">
+                            {% else %}
+                            <div style="width:100px;height:120px;background:#eee;display:flex;align-items:center;justify-content:center;">
+                                <span style="color:#999;">No Photo</span>
+                            </div>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <div class="label">NIN:</div>
+                            <div class="value"><strong>{{ nin_data.nin }}</strong></div>
+                        </td>
+                        <td>
+                            <div class="label">First Name:</div>
+                            <div class="value">{{ nin_data.firstname }}</div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <div class="label">Address:</div>
+                            <div class="value">{{ nin_data.residence_address|default:"-" }}, {{ nin_data.residence_town|default:"" }}, {{ nin_data.residence_state|default:"" }}</div>
+                        </td>
+                        <td>
+                            <div class="label">Middle Name:</div>
+                            <div class="value">{{ nin_data.middlename|default:"-" }}</div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="2">
+                            <div class="label">Gender:</div>
+                            <div class="value">{{ nin_data.gender }}</div>
+                        </td>
+                        <td>
+                            <div class="label">Date of Birth:</div>
+                            <div class="value">{{ nin_data.birthdate }}</div>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Footer -->
+            <div class="nin-slip-footer">
+                <p class="note"><strong>Note:</strong> The National Identification Number (NIN) is your identity. It is confidential and may only be released for legitimate transactions. You will be notified when your National Identity Card is ready (For any enquiries, please contact)</p>
+            </div>
+
+            <div class="nin-slip-contact">
+                <span><i class="fas fa-envelope"></i> helpdesk@nimc.gov.ng</span>
+                <span><i class="fas fa-globe"></i> www.nimc.gov.ng</span>
+                <span><i class="fas fa-phone"></i> 0700-CALL-NIMC</span>
+                <span>National Identity Management Commission<br>11 Sokode Crescent, Off Dalaba Street Zone 5, Wuse 900248, Abuja Nigeria</span>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

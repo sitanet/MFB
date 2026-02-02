@@ -487,6 +487,11 @@ TERMII_SENDER_ID = env("TERMII_SENDER_ID", default="FinanceFlex")
 TERMII_SMS_URL = env("TERMII_SMS_URL", default="https://api.ng.termii.com/api/sms/send")
 SMS_DELIVERY_WEBHOOK_URL = env("SMS_DELIVERY_WEBHOOK_URL", default=None)
 
+# =====================
+# 🆔 CheckMyNINBVN API
+# =====================
+CHECKMYNINBVN_API_KEY = env("CHECKMYNINBVN_API_KEY", default=None)
+
 
 
 

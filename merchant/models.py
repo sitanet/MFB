@@ -321,6 +321,7 @@ class MerchantTransaction(models.Model):
         ('data', 'Data Purchase'),
         ('float_topup', 'Float Top-up'),
         ('commission', 'Commission'),
+        ('nin_verification', 'NIN Verification'),
     )
     
     STATUS_CHOICES = (
@@ -760,3 +761,35 @@ class MerchantChatMessage(models.Model):
     def __str__(self):
         sender = "Merchant" if self.is_from_merchant else "Admin"
         return f"{sender}: {self.content[:50]}"
+
+
+class NINVerificationConfig(models.Model):
+    """
+    Configuration for NIN verification service charges
+    """
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    branch = models.OneToOneField(
+        Branch, on_delete=models.CASCADE, related_name='nin_verification_config'
+    )
+    is_enabled = models.BooleanField(default=True, help_text="Enable/disable NIN verification service")
+    charge_amount = models.DecimalField(
+        max_digits=10, decimal_places=2, default=200.00,
+        help_text="Amount to charge merchant per NIN verification"
+    )
+    income_gl_no = models.CharField(
+        max_length=20, blank=True, null=True,
+        help_text="GL number for income account (where charges go)"
+    )
+    income_ac_no = models.CharField(
+        max_length=20, blank=True, null=True,
+        help_text="Account number for income (where charges go)"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "NIN Verification Config"
+        verbose_name_plural = "NIN Verification Configs"
+    
+    def __str__(self):
+        return f"NIN Config - {self.branch.branch_name if self.branch else 'Default'}"

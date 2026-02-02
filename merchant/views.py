@@ -2396,3 +2396,112 @@ def chat_detail(request, conversation_id):
         'conversation': conversation,
         'messages_list': conversation.messages.all(),
     })
+
+
+# ==============================================================================
+# NIN VERIFICATION
+# ==============================================================================
+
+import requests
+from django.conf import settings
+from .utils import process_nin_verification_charge
+
+@merchant_required
+def portal_nin_verification(request):
+    """NIN Verification and Print Slip"""
+    merchant = request.merchant
+    nin_data = None
+    error_message = None
+    charge_amount = None
+    
+    # Get NIN config to show charge amount
+    from .models import NINVerificationConfig
+    try:
+        nin_config = NINVerificationConfig.objects.get(branch=merchant.branch)
+        charge_amount = nin_config.charge_amount
+        if not nin_config.is_enabled:
+            error_message = "NIN verification service is currently disabled."
+    except NINVerificationConfig.DoesNotExist:
+        error_message = "NIN verification service is not configured for this branch."
+    
+    if request.method == 'POST' and not error_message:
+        from .forms import NINVerificationForm
+        form = NINVerificationForm(request.POST)
+        if form.is_valid():
+            nin = form.cleaned_data['nin']
+            
+            # Process charge first
+            success, charge_message, trx_ref = process_nin_verification_charge(merchant, request)
+            
+            if not success:
+                error_message = charge_message
+            else:
+                # Call CheckMyNINBVN API
+                api_key = getattr(settings, 'CHECKMYNINBVN_API_KEY', None)
+                if not api_key:
+                    error_message = "NIN verification API key not configured. Please contact admin."
+                else:
+                    try:
+                        response = requests.post(
+                            'https://checkmyninbvn.com.ng/api/nin-verification',
+                            json={'nin': nin, 'consent': True},
+                            headers={
+                                'Content-Type': 'application/json',
+                                'x-api-key': api_key
+                            },
+                            timeout=30
+                        )
+                        result = response.json()
+                        
+                        if result.get('status') == 'success':
+                            nin_data = result.get('data', {})
+                            messages.success(request, f'NIN verified successfully. Charged: ₦{charge_amount}')
+                        else:
+                            error_message = result.get('message', 'NIN verification failed')
+                    except requests.exceptions.Timeout:
+                        error_message = "Request timed out. Please try again."
+                    except requests.exceptions.RequestException:
+                        error_message = "Connection error. Please try again."
+                    except Exception:
+                        error_message = "An error occurred during verification."
+    else:
+        from .forms import NINVerificationForm
+        form = NINVerificationForm()
+    
+    context = {
+        'merchant': merchant,
+        'form': form,
+        'nin_data': nin_data,
+        'error_message': error_message,
+        'charge_amount': charge_amount,
+        'float_balance': get_merchant_float_balance(merchant),
+    }
+    return render(request, 'merchant/portal/nin_verification.html', context)
+
+
+# ==============================================================================
+# NIN CONFIG (ADMIN)
+# ==============================================================================
+
+@login_required
+def nin_verification_config(request):
+    """Configure NIN verification service settings"""
+    from .models import NINVerificationConfig
+    from .forms import NINVerificationConfigForm
+    
+    branch = request.user.branch
+    config, created = NINVerificationConfig.objects.get_or_create(branch=branch)
+    
+    if request.method == 'POST':
+        form = NINVerificationConfigForm(request.POST, instance=config, branch=branch)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'NIN verification configuration updated successfully.')
+            return redirect('merchant:nin_verification_config')
+    else:
+        form = NINVerificationConfigForm(instance=config, branch=branch)
+    
+    return render(request, 'merchant/admin/nin_verification_config.html', {
+        'form': form,
+        'config': config,
+    })

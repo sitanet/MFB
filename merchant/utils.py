@@ -462,3 +462,102 @@ def get_merchant_dashboard_stats(merchant):
         },
         'type_breakdown': list(type_breakdown)
     }
+
+
+def process_nin_verification_charge(merchant, request=None):
+    """
+    Debit merchant for NIN verification service
+    Returns (success, message, transaction_ref)
+    """
+    from transactions.models import Memtrans
+    from .models import NINVerificationConfig, MerchantTransaction
+    from django.db import transaction as db_transaction
+    
+    # Get NIN config for branch
+    try:
+        nin_config = NINVerificationConfig.objects.get(branch=merchant.branch)
+    except NINVerificationConfig.DoesNotExist:
+        return False, "NIN verification service is not configured for this branch", None
+    
+    if not nin_config.is_enabled:
+        return False, "NIN verification service is currently disabled", None
+    
+    charge_amount = nin_config.charge_amount
+    
+    # Get merchant float balance
+    float_balance = get_merchant_float_balance(merchant)
+    
+    if float_balance < charge_amount:
+        return False, f"Insufficient balance. Required: ₦{charge_amount}, Available: ₦{float_balance}", None
+    
+    if not nin_config.income_gl_no:
+        return False, "Income GL account not configured for NIN verification", None
+    
+    transaction_ref = generate_transaction_ref('NIN')
+    session_date = merchant.branch.session_date or timezone.now().date()
+    
+    try:
+        with db_transaction.atomic():
+            # Debit merchant float account
+            Memtrans.all_objects.create(
+                branch=merchant.branch,
+                cust_branch=merchant.branch,
+                gl_no=merchant.float_gl_no,
+                ac_no=merchant.float_ac_no,
+                amount=charge_amount,
+                narration=f'NIN Verification Charge - {transaction_ref}',
+                type='D',
+                account_type='L',
+                ses_date=session_date,
+                app_date=session_date,
+                trx_no=transaction_ref,
+                code='NIN',
+                trx_type='NIN_VERIFICATION'
+            )
+            
+            # Credit income account
+            Memtrans.all_objects.create(
+                branch=merchant.branch,
+                cust_branch=merchant.branch,
+                gl_no=nin_config.income_gl_no,
+                ac_no=nin_config.income_ac_no or '0',
+                amount=charge_amount,
+                narration=f'NIN Verification Income - {merchant.merchant_name}',
+                type='C',
+                account_type='I',
+                ses_date=session_date,
+                app_date=session_date,
+                trx_no=transaction_ref,
+                code='NIN',
+                trx_type='NIN_VERIFICATION'
+            )
+            
+            # Create merchant transaction record
+            float_balance_after = get_merchant_float_balance(merchant)
+            MerchantTransaction.all_objects.create(
+                merchant=merchant,
+                branch=merchant.branch,
+                transaction_ref=transaction_ref,
+                transaction_type='nin_verification',
+                amount=charge_amount,
+                charge=Decimal('0.00'),
+                commission=Decimal('0.00'),
+                narration='NIN Verification Service',
+                status='completed',
+                float_balance_before=float_balance,
+                float_balance_after=float_balance_after,
+                completed_at=timezone.now()
+            )
+            
+            # Log activity
+            log_merchant_activity(
+                merchant=merchant,
+                activity_type='transaction',
+                description=f'NIN Verification charge of ₦{charge_amount}',
+                request=request
+            )
+            
+            return True, "Charge processed successfully", transaction_ref
+            
+    except Exception as e:
+        return False, f"Failed to process charge: {str(e)}", None

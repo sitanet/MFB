@@ -2,7 +2,7 @@ from django import forms
 from django.core.validators import MinValueValidator
 from decimal import Decimal
 
-from .models import Merchant, MerchantServiceConfig
+from .models import Merchant, MerchantServiceConfig, NINVerificationConfig
 
 
 class MerchantRegistrationForm(forms.ModelForm):
@@ -497,6 +497,29 @@ class DataForm(forms.Form):
     )
 
 
+class NINVerificationForm(forms.Form):
+    """Form for NIN verification"""
+    nin = forms.CharField(
+        max_length=11,
+        min_length=11,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter 11-digit NIN',
+            'maxlength': '11',
+            'pattern': '[0-9]{11}'
+        }),
+        help_text="Enter the 11-digit National Identification Number"
+    )
+    
+    def clean_nin(self):
+        nin = self.cleaned_data['nin']
+        if not nin.isdigit():
+            raise forms.ValidationError("NIN must contain only digits")
+        if len(nin) != 11:
+            raise forms.ValidationError("NIN must be exactly 11 digits")
+        return nin
+
+
 class MerchantServiceConfigForm(forms.ModelForm):
     """Form for configuring merchant services"""
     
@@ -519,3 +542,40 @@ class MerchantServiceConfigForm(forms.ModelForm):
             'min_amount': forms.NumberInput(attrs={'class': 'form-control'}),
             'max_amount': forms.NumberInput(attrs={'class': 'form-control'}),
         }
+
+
+class NINVerificationConfigForm(forms.ModelForm):
+    """Form for configuring NIN verification charges"""
+    
+    income_gl_no = forms.ChoiceField(
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        label='Income GL Account',
+        help_text='GL account where NIN verification charges will be credited'
+    )
+    
+    class Meta:
+        model = NINVerificationConfig
+        fields = ['is_enabled', 'charge_amount', 'income_gl_no', 'income_ac_no']
+        widgets = {
+            'is_enabled': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'charge_amount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'income_ac_no': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Account number'}),
+        }
+    
+    def __init__(self, *args, branch=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        from accounts_admin.models import Account
+        
+        # Get income GL accounts (typically starting with 40 or 50 for income)
+        if branch:
+            accounts = Account.objects.filter(branch=branch).order_by('gl_no')
+        else:
+            accounts = Account.all_objects.all().order_by('gl_no')
+        
+        choices = [('', '-- Select GL Account --')]
+        for acc in accounts:
+            label = f"{acc.gl_no} - {acc.gl_name}"
+            choices.append((acc.gl_no, label))
+        
+        self.fields['income_gl_no'].choices = choices

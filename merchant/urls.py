@@ -27,6 +27,7 @@ urlpatterns = [
     path('transactions/all/', views.all_merchant_transactions, name='all_transactions'),
     path('reports/', views.merchant_reports_admin, name='reports_admin'),
     path('service-config/', views.merchant_service_config, name='service_config'),
+    path('nin-config/', views.nin_verification_config, name='nin_verification_config'),
     
     # Notifications Management
     path('notifications/', views.notification_list, name='notification_list'),
@@ -71,6 +72,9 @@ urlpatterns = [
     path('portal/profile/', views.portal_profile, name='portal_profile'),
     path('portal/change-pin/', views.portal_change_pin, name='portal_change_pin'),
     path('portal/change-password/', views.portal_change_password, name='portal_change_password'),
+    
+    # NIN Verification
+    path('portal/nin-verification/', views.portal_nin_verification, name='portal_nin_verification'),
     
     # ==============================================================================
     # API ENDPOINTS (Web)

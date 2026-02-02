@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}NIN Verification Config{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h4><i class="fas fa-cog me-2"></i>NIN Verification Configuration</h4>
+            <p class="text-muted">Configure charges and income account for NIN verification service</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0"><i class="fas fa-id-card me-2"></i>NIN Verification Settings</h6>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                {{ form.is_enabled }}
+                                <label class="form-check-label" for="id_is_enabled">
+                                    <strong>Enable NIN Verification Service</strong>
+                                </label>
+                            </div>
+                            <small class="text-muted">Turn on/off NIN verification for merchants</small>
+                        </div>
+                        
+                        <hr>
+                        
+                        <div class="mb-3">
+                            <label for="id_charge_amount" class="form-label">Charge Amount (₦)</label>
+                            {{ form.charge_amount }}
+                            <small class="text-muted">Amount to debit from merchant per NIN verification</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="id_income_gl_no" class="form-label">Income GL Account</label>
+                            {{ form.income_gl_no }}
+                            <small class="text-muted">GL account where verification charges will be credited</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="id_income_ac_no" class="form-label">Income Account Number (Optional)</label>
+                            {{ form.income_ac_no }}
+                            <small class="text-muted">Specific account number within the GL (leave blank for GL default)</small>
+                        </div>
+                        
+                        <hr>
+                        
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i> Save Configuration
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Current Configuration</h6>
+                </div>
+                <div class="card-body">
+                    <table class="table table-bordered">
+                        <tr>
+                            <th>Status</th>
+                            <td>
+                                {% if config.is_enabled %}
+                                <span class="badge bg-success">Enabled</span>
+                                {% else %}
+                                <span class="badge bg-danger">Disabled</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Charge Amount</th>
+                            <td>₦{{ config.charge_amount|floatformat:2|intcomma }}</td>
+                        </tr>
+                        <tr>
+                            <th>Income GL</th>
+                            <td>{{ config.income_gl_no|default:"Not Set" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Income Account</th>
+                            <td>{{ config.income_ac_no|default:"Default" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Last Updated</th>
+                            <td>{{ config.updated_at|date:"M d, Y H:i" }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="card mt-3">
+                <div class="card-header bg-secondary text-white">
+                    <h6 class="mb-0"><i class="fas fa-question-circle me-2"></i>How It Works</h6>
+                </div>
+                <div class="card-body">
+                    <ol class="mb-0">
+                        <li>Merchant requests NIN verification</li>
+                        <li>System checks if merchant has sufficient balance</li>
+                        <li>If balance is sufficient, charge amount is debited from merchant's float account</li>
+                        <li>Charge is credited to the configured income GL account</li>
+                        <li>NIN verification API is called</li>
+                        <li>Results are displayed to merchant</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
