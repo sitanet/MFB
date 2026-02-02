@@ -2514,7 +2514,7 @@ def portal_nin_verification(request):
 @login_required
 @require_POST
 def reverse_merchant_transaction(request, transaction_id):
-    """Reverse a merchant transaction"""
+    """Reverse a merchant transaction - debit where credited, credit where debited"""
     from transactions.models import Memtrans
     from .models import MerchantTransaction
     
@@ -2532,36 +2532,55 @@ def reverse_merchant_transaction(request, transaction_id):
     
     merchant = trx.merchant
     session_date = merchant.branch.session_date or timezone.now().date()
-    reversal_ref = f"REV-{trx.transaction_ref}"
+    reversal_ref = f"REV{trx.transaction_ref[:17]}"  # Keep within 20 chars
     
     try:
         with transaction.atomic():
             # Get original Memtrans entries for this transaction
-            original_entries = Memtrans.all_objects.filter(trx_no=trx.transaction_ref)
+            original_entries = list(Memtrans.all_objects.filter(trx_no=trx.transaction_ref))
             
-            # Create reverse entries
-            for entry in original_entries:
-                # Reverse the type (D becomes C, C becomes D)
-                reverse_type = 'C' if entry.type == 'D' else 'D'
-                # Reverse the amount sign
-                reverse_amount = -entry.amount if entry.amount > 0 else abs(entry.amount)
-                
+            if original_entries:
+                # Create reverse entries for each original entry
+                for entry in original_entries:
+                    # Swap type: D becomes C, C becomes D
+                    reverse_type = 'C' if entry.type == 'D' else 'D'
+                    # Swap amount sign
+                    reverse_amount = -entry.amount
+                    
+                    Memtrans.all_objects.create(
+                        branch=entry.branch,
+                        cust_branch=entry.cust_branch,
+                        customer=entry.customer,
+                        gl_no=entry.gl_no,
+                        ac_no=entry.ac_no,
+                        amount=reverse_amount,
+                        description=f'REVERSAL: {entry.description or trx.transaction_ref}',
+                        error='A',
+                        type=reverse_type,
+                        account_type=entry.account_type,
+                        ses_date=session_date,
+                        app_date=session_date,
+                        trx_no=reversal_ref,
+                        code='REV',
+                        trx_type=f'REV_{entry.trx_type or "TRX"}'
+                    )
+            else:
+                # No original entries found - create basic reversal to merchant float
                 Memtrans.all_objects.create(
-                    branch=entry.branch,
-                    cust_branch=entry.cust_branch,
-                    customer=entry.customer,
-                    gl_no=entry.gl_no,
-                    ac_no=entry.ac_no,
-                    amount=reverse_amount,
-                    description=f'REVERSAL: {entry.description}',
+                    branch=merchant.branch,
+                    cust_branch=merchant.branch,
+                    gl_no=merchant.float_gl_no,
+                    ac_no=merchant.float_ac_no,
+                    amount=trx.amount,
+                    description=f'REVERSAL: {trx.transaction_ref}',
                     error='A',
-                    type=reverse_type,
-                    account_type=entry.account_type,
+                    type='C',
+                    account_type='L',
                     ses_date=session_date,
                     app_date=session_date,
                     trx_no=reversal_ref,
                     code='REV',
-                    trx_type=f'REVERSAL_{entry.trx_type}'
+                    trx_type='REVERSAL'
                 )
             
             # Update transaction status
@@ -2573,7 +2592,7 @@ def reverse_merchant_transaction(request, transaction_id):
             log_merchant_activity(
                 merchant=merchant,
                 activity_type='transaction',
-                description=f'Transaction {trx.transaction_ref} reversed by admin {request.user.username}',
+                description=f'Transaction {trx.transaction_ref} (₦{trx.amount}) reversed by admin {request.user.username}',
                 request=request,
                 transaction=trx
             )
