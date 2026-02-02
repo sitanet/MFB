@@ -241,6 +241,9 @@ class Merchant(models.Model):
         """Return full account number (GL + AC)"""
         if self.gl_no and self.ac_no:
             return f"{self.gl_no}{self.ac_no}"
+        # Fallback to customer's gl_no and ac_no if merchant's are not set
+        if self.customer and self.customer.gl_no and self.customer.ac_no:
+            return f"{self.customer.gl_no}{self.customer.ac_no}"
         return None
 
     def set_transaction_pin(self, raw_pin):

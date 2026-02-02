@@ -805,6 +805,8 @@ def merchant_login(request):
                             'merchant_name': merchant.merchant_name,
                             'business_name': merchant.business_name,
                             'status': merchant.status,
+                            'wallet_number': merchant.psb_wallet_account,
+                            'financeflex_account': merchant.get_account_number(),
                         }
                     })
                 
@@ -1515,7 +1517,9 @@ def api_get_float_balance(request):
     
     return JsonResponse({
         'success': True,
-        'balance': str(balance)
+        'balance': str(balance),
+        'wallet_number': merchant.psb_wallet_account,
+        'financeflex_account': merchant.get_account_number(),
     })
 
 
@@ -1721,6 +1725,8 @@ def api_dashboard(request):
             'merchant_name': merchant.merchant_name,
             'business_name': merchant.business_name,
             'status': merchant.status,
+            'wallet_number': merchant.psb_wallet_account,
+            'financeflex_account': merchant.get_account_number(),
         },
         'float_balance': str(get_merchant_float_balance(merchant)),
         'stats': stats,
@@ -1780,9 +1786,23 @@ def api_transactions(request):
         'created_at': t.created_at.isoformat(),
     } for t in transactions]
     
+    # Get today's stats
+    today = timezone.now().date()
+    today_transactions = MerchantTransaction.all_objects.filter(
+        merchant=merchant,
+        created_at__date=today,
+        status='completed'
+    )
+    today_count = today_transactions.count()
+    today_commission = today_transactions.aggregate(total=Sum('commission'))['total'] or Decimal('0.00')
+    
     return JsonResponse({
         'success': True,
         'transactions': transactions_data,
+        'stats': {
+            'today_count': today_count,
+            'today_commission': str(today_commission),
+        },
         'pagination': {
             'page': page,
             'limit': limit,
