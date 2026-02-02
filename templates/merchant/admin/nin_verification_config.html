@@ -8,12 +8,12 @@
     <div class="row mb-4">
         <div class="col-12">
             <h4><i class="fas fa-cog me-2"></i>NIN Verification Configuration</h4>
-            <p class="text-muted">Configure charges and income account for NIN verification service</p>
+            <p class="text-muted">Configure charges and accounts for NIN verification service</p>
         </div>
     </div>
 
     <div class="row">
-        <div class="col-md-6">
+        <div class="col-md-7">
             <div class="card">
                 <div class="card-header bg-primary text-white">
                     <h6 class="mb-0"><i class="fas fa-id-card me-2"></i>NIN Verification Settings</h6>
@@ -33,24 +33,56 @@
                         </div>
                         
                         <hr>
+                        <h6 class="text-muted mb-3">Charge Settings</h6>
                         
-                        <div class="mb-3">
-                            <label for="id_charge_amount" class="form-label">Charge Amount (₦)</label>
-                            {{ form.charge_amount }}
-                            <small class="text-muted">Amount to debit from merchant per NIN verification</small>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="id_api_cost" class="form-label">API Cost (₦)</label>
+                                {{ form.api_cost }}
+                                <small class="text-muted">Actual cost charged by CheckMyNINBVN API</small>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="id_merchant_charge" class="form-label">Merchant Charge (₦)</label>
+                                {{ form.merchant_charge }}
+                                <small class="text-muted">Amount to charge merchant</small>
+                            </div>
                         </div>
                         
-                        <div class="mb-3">
-                            <label for="id_income_gl_no" class="form-label">Income GL Account</label>
-                            {{ form.income_gl_no }}
-                            <small class="text-muted">GL account where verification charges will be credited</small>
+                        <hr>
+                        <h6 class="text-muted mb-3">API Cost Account</h6>
+                        
+                        <div class="row">
+                            <div class="col-md-8 mb-3">
+                                <label for="id_api_cost_gl_no" class="form-label">API Cost GL Account</label>
+                                {{ form.api_cost_gl_no }}
+                                <small class="text-muted">Where API cost portion is credited</small>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="id_api_cost_ac_no" class="form-label">Account No.</label>
+                                {{ form.api_cost_ac_no }}
+                            </div>
                         </div>
                         
-                        <div class="mb-3">
-                            <label for="id_income_ac_no" class="form-label">Income Account Number (Optional)</label>
-                            {{ form.income_ac_no }}
-                            <small class="text-muted">Specific account number within the GL (leave blank for GL default)</small>
+                        <hr>
+                        <h6 class="text-muted mb-3">Profit/Income Account</h6>
+                        
+                        <div class="row">
+                            <div class="col-md-8 mb-3">
+                                <label for="id_profit_gl_no" class="form-label">Profit GL Account</label>
+                                {{ form.profit_gl_no }}
+                                <small class="text-muted">Where profit/markup is credited</small>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="id_profit_ac_no" class="form-label">Account No.</label>
+                                {{ form.profit_ac_no }}
+                            </div>
                         </div>
+                        
+                        {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {{ form.non_field_errors }}
+                        </div>
+                        {% endif %}
                         
                         <hr>
                         
@@ -62,13 +94,13 @@
             </div>
         </div>
         
-        <div class="col-md-6">
+        <div class="col-md-5">
             <div class="card">
                 <div class="card-header bg-info text-white">
                     <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Current Configuration</h6>
                 </div>
                 <div class="card-body">
-                    <table class="table table-bordered">
+                    <table class="table table-bordered table-sm">
                         <tr>
                             <th>Status</th>
                             <td>
@@ -80,16 +112,24 @@
                             </td>
                         </tr>
                         <tr>
-                            <th>Charge Amount</th>
-                            <td>₦{{ config.charge_amount|floatformat:2|intcomma }}</td>
+                            <th>API Cost</th>
+                            <td>₦{{ config.api_cost|floatformat:2|intcomma }}</td>
                         </tr>
                         <tr>
-                            <th>Income GL</th>
-                            <td>{{ config.income_gl_no|default:"Not Set" }}</td>
+                            <th>Merchant Charge</th>
+                            <td>₦{{ config.merchant_charge|floatformat:2|intcomma }}</td>
+                        </tr>
+                        <tr class="table-success">
+                            <th>Profit per Verification</th>
+                            <td><strong>₦{{ config.profit_amount|floatformat:2|intcomma }}</strong></td>
                         </tr>
                         <tr>
-                            <th>Income Account</th>
-                            <td>{{ config.income_ac_no|default:"Default" }}</td>
+                            <th>API Cost GL</th>
+                            <td>{{ config.api_cost_gl_no|default:"Not Set" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Profit GL</th>
+                            <td>{{ config.profit_gl_no|default:"Not Set" }}</td>
                         </tr>
                         <tr>
                             <th>Last Updated</th>
@@ -104,13 +144,14 @@
                     <h6 class="mb-0"><i class="fas fa-question-circle me-2"></i>How It Works</h6>
                 </div>
                 <div class="card-body">
-                    <ol class="mb-0">
+                    <p><strong>Example:</strong> API Cost = ₦150, Merchant Charge = ₦200</p>
+                    <ol class="mb-0 small">
                         <li>Merchant requests NIN verification</li>
-                        <li>System checks if merchant has sufficient balance</li>
-                        <li>If balance is sufficient, charge amount is debited from merchant's float account</li>
-                        <li>Charge is credited to the configured income GL account</li>
-                        <li>NIN verification API is called</li>
-                        <li>Results are displayed to merchant</li>
+                        <li>System checks merchant has ₦200+ balance</li>
+                        <li>₦200 is debited from merchant's float</li>
+                        <li>₦150 credited to API Cost GL (expense)</li>
+                        <li>₦50 credited to Profit GL (income)</li>
+                        <li>NIN API is called and results shown</li>
                     </ol>
                 </div>
             </div>

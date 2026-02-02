@@ -117,10 +117,10 @@
                     <h6 class="mb-0"><i class="fas fa-search me-2"></i>Enter NIN to Verify</h6>
                 </div>
                 <div class="card-body">
-                    {% if charge_amount %}
+                    {% if merchant_charge %}
                     <div class="alert alert-info">
                         <i class="fas fa-info-circle me-1"></i>
-                        <strong>Service Charge:</strong> ₦{{ charge_amount }} will be debited from your float balance per verification.
+                        <strong>Service Charge:</strong> ₦{{ merchant_charge }} will be debited from your float balance per verification.
                     </div>
                     {% endif %}
                     
@@ -134,8 +134,8 @@
                             {% endif %}
                             <small class="text-muted">{{ form.nin.help_text }}</small>
                         </div>
-                        <button type="submit" class="btn btn-primary" {% if not charge_amount %}disabled{% endif %}>
-                            <i class="fas fa-check-circle me-1"></i> Verify NIN {% if charge_amount %}(₦{{ charge_amount }}){% endif %}
+                        <button type="submit" class="btn btn-primary" {% if not merchant_charge %}disabled{% endif %}>
+                            <i class="fas fa-check-circle me-1"></i> Verify NIN {% if merchant_charge %}(₦{{ merchant_charge }}){% endif %}
                         </button>
                     </form>
                     

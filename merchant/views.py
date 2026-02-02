@@ -2412,13 +2412,13 @@ def portal_nin_verification(request):
     merchant = request.merchant
     nin_data = None
     error_message = None
-    charge_amount = None
+    merchant_charge = None
     
     # Get NIN config to show charge amount
     from .models import NINVerificationConfig
     try:
         nin_config = NINVerificationConfig.objects.get(branch=merchant.branch)
-        charge_amount = nin_config.charge_amount
+        merchant_charge = nin_config.merchant_charge
         if not nin_config.is_enabled:
             error_message = "NIN verification service is currently disabled."
     except NINVerificationConfig.DoesNotExist:
@@ -2455,7 +2455,7 @@ def portal_nin_verification(request):
                         
                         if result.get('status') == 'success':
                             nin_data = result.get('data', {})
-                            messages.success(request, f'NIN verified successfully. Charged: ₦{charge_amount}')
+                            messages.success(request, f'NIN verified successfully. Charged: ₦{merchant_charge}')
                         else:
                             error_message = result.get('message', 'NIN verification failed')
                     except requests.exceptions.Timeout:
@@ -2473,7 +2473,7 @@ def portal_nin_verification(request):
         'form': form,
         'nin_data': nin_data,
         'error_message': error_message,
-        'charge_amount': charge_amount,
+        'merchant_charge': merchant_charge,
         'float_balance': get_merchant_float_balance(merchant),
     }
     return render(request, 'merchant/portal/nin_verification.html', context)

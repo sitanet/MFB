@@ -772,18 +772,37 @@ class NINVerificationConfig(models.Model):
         Branch, on_delete=models.CASCADE, related_name='nin_verification_config'
     )
     is_enabled = models.BooleanField(default=True, help_text="Enable/disable NIN verification service")
-    charge_amount = models.DecimalField(
+    
+    # Charges
+    api_cost = models.DecimalField(
+        max_digits=10, decimal_places=2, default=150.00,
+        help_text="Actual API cost charged by CheckMyNINBVN"
+    )
+    merchant_charge = models.DecimalField(
         max_digits=10, decimal_places=2, default=200.00,
         help_text="Amount to charge merchant per NIN verification"
     )
-    income_gl_no = models.CharField(
+    
+    # API Cost Account (where API cost portion goes)
+    api_cost_gl_no = models.CharField(
         max_length=20, blank=True, null=True,
-        help_text="GL number for income account (where charges go)"
+        help_text="GL number for API cost account"
     )
-    income_ac_no = models.CharField(
+    api_cost_ac_no = models.CharField(
         max_length=20, blank=True, null=True,
-        help_text="Account number for income (where charges go)"
+        help_text="Account number for API cost"
     )
+    
+    # Profit Account (where the profit/markup goes)
+    profit_gl_no = models.CharField(
+        max_length=20, blank=True, null=True,
+        help_text="GL number for profit/income account"
+    )
+    profit_ac_no = models.CharField(
+        max_length=20, blank=True, null=True,
+        help_text="Account number for profit/income"
+    )
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -793,3 +812,7 @@ class NINVerificationConfig(models.Model):
     
     def __str__(self):
         return f"NIN Config - {self.branch.branch_name if self.branch else 'Default'}"
+    
+    @property
+    def profit_amount(self):
+        return self.merchant_charge - self.api_cost

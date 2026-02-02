@@ -467,6 +467,7 @@ def get_merchant_dashboard_stats(merchant):
 def process_nin_verification_charge(merchant, request=None):
     """
     Debit merchant for NIN verification service
+    Splits charge into API cost and profit portions
     Returns (success, message, transaction_ref)
     """
     from transactions.models import Memtrans
@@ -482,29 +483,31 @@ def process_nin_verification_charge(merchant, request=None):
     if not nin_config.is_enabled:
         return False, "NIN verification service is currently disabled", None
     
-    charge_amount = nin_config.charge_amount
+    merchant_charge = nin_config.merchant_charge
+    api_cost = nin_config.api_cost
+    profit_amount = merchant_charge - api_cost
     
     # Get merchant float balance
     float_balance = get_merchant_float_balance(merchant)
     
-    if float_balance < charge_amount:
-        return False, f"Insufficient balance. Required: ₦{charge_amount}, Available: ₦{float_balance}", None
+    if float_balance < merchant_charge:
+        return False, f"Insufficient balance. Required: ₦{merchant_charge}, Available: ₦{float_balance}", None
     
-    if not nin_config.income_gl_no:
-        return False, "Income GL account not configured for NIN verification", None
+    if not nin_config.api_cost_gl_no:
+        return False, "API Cost GL account not configured for NIN verification", None
     
     transaction_ref = generate_transaction_ref('NIN')
     session_date = merchant.branch.session_date or timezone.now().date()
     
     try:
         with db_transaction.atomic():
-            # Debit merchant float account
+            # Debit merchant float account (full merchant charge)
             Memtrans.all_objects.create(
                 branch=merchant.branch,
                 cust_branch=merchant.branch,
                 gl_no=merchant.float_gl_no,
                 ac_no=merchant.float_ac_no,
-                amount=charge_amount,
+                amount=merchant_charge,
                 narration=f'NIN Verification Charge - {transaction_ref}',
                 type='D',
                 account_type='L',
@@ -515,22 +518,40 @@ def process_nin_verification_charge(merchant, request=None):
                 trx_type='NIN_VERIFICATION'
             )
             
-            # Credit income account
+            # Credit API cost account
             Memtrans.all_objects.create(
                 branch=merchant.branch,
                 cust_branch=merchant.branch,
-                gl_no=nin_config.income_gl_no,
-                ac_no=nin_config.income_ac_no or '0',
-                amount=charge_amount,
-                narration=f'NIN Verification Income - {merchant.merchant_name}',
+                gl_no=nin_config.api_cost_gl_no,
+                ac_no=nin_config.api_cost_ac_no or '0',
+                amount=api_cost,
+                narration=f'NIN API Cost - {merchant.merchant_name}',
                 type='C',
-                account_type='I',
+                account_type='E',
                 ses_date=session_date,
                 app_date=session_date,
                 trx_no=transaction_ref,
                 code='NIN',
                 trx_type='NIN_VERIFICATION'
             )
+            
+            # Credit profit account (if there's markup)
+            if profit_amount > 0 and nin_config.profit_gl_no:
+                Memtrans.all_objects.create(
+                    branch=merchant.branch,
+                    cust_branch=merchant.branch,
+                    gl_no=nin_config.profit_gl_no,
+                    ac_no=nin_config.profit_ac_no or '0',
+                    amount=profit_amount,
+                    narration=f'NIN Verification Income - {merchant.merchant_name}',
+                    type='C',
+                    account_type='I',
+                    ses_date=session_date,
+                    app_date=session_date,
+                    trx_no=transaction_ref,
+                    code='NIN',
+                    trx_type='NIN_VERIFICATION'
+                )
             
             # Create merchant transaction record
             float_balance_after = get_merchant_float_balance(merchant)
@@ -539,9 +560,9 @@ def process_nin_verification_charge(merchant, request=None):
                 branch=merchant.branch,
                 transaction_ref=transaction_ref,
                 transaction_type='nin_verification',
-                amount=charge_amount,
-                charge=Decimal('0.00'),
-                commission=Decimal('0.00'),
+                amount=merchant_charge,
+                charge=api_cost,
+                commission=profit_amount,
                 narration='NIN Verification Service',
                 status='completed',
                 float_balance_before=float_balance,
@@ -553,7 +574,7 @@ def process_nin_verification_charge(merchant, request=None):
             log_merchant_activity(
                 merchant=merchant,
                 activity_type='transaction',
-                description=f'NIN Verification charge of ₦{charge_amount}',
+                description=f'NIN Verification: Charged ₦{merchant_charge} (API: ₦{api_cost}, Profit: ₦{profit_amount})',
                 request=request
             )
             

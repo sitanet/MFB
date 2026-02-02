@@ -547,27 +547,36 @@ class MerchantServiceConfigForm(forms.ModelForm):
 class NINVerificationConfigForm(forms.ModelForm):
     """Form for configuring NIN verification charges"""
     
-    income_gl_no = forms.ChoiceField(
+    api_cost_gl_no = forms.ChoiceField(
         required=False,
         widget=forms.Select(attrs={'class': 'form-select'}),
-        label='Income GL Account',
-        help_text='GL account where NIN verification charges will be credited'
+        label='API Cost GL Account',
+        help_text='GL account for API cost portion'
+    )
+    
+    profit_gl_no = forms.ChoiceField(
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        label='Profit GL Account',
+        help_text='GL account for profit/markup portion'
     )
     
     class Meta:
         model = NINVerificationConfig
-        fields = ['is_enabled', 'charge_amount', 'income_gl_no', 'income_ac_no']
+        fields = ['is_enabled', 'api_cost', 'merchant_charge', 
+                  'api_cost_gl_no', 'api_cost_ac_no', 'profit_gl_no', 'profit_ac_no']
         widgets = {
             'is_enabled': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'charge_amount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'income_ac_no': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Account number'}),
+            'api_cost': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'merchant_charge': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'api_cost_ac_no': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Account number'}),
+            'profit_ac_no': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Account number'}),
         }
     
     def __init__(self, *args, branch=None, **kwargs):
         super().__init__(*args, **kwargs)
         from accounts_admin.models import Account
         
-        # Get income GL accounts (typically starting with 40 or 50 for income)
         if branch:
             accounts = Account.objects.filter(branch=branch).order_by('gl_no')
         else:
@@ -578,4 +587,15 @@ class NINVerificationConfigForm(forms.ModelForm):
             label = f"{acc.gl_no} - {acc.gl_name}"
             choices.append((acc.gl_no, label))
         
-        self.fields['income_gl_no'].choices = choices
+        self.fields['api_cost_gl_no'].choices = choices
+        self.fields['profit_gl_no'].choices = choices
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        api_cost = cleaned_data.get('api_cost') or 0
+        merchant_charge = cleaned_data.get('merchant_charge') or 0
+        
+        if merchant_charge < api_cost:
+            raise forms.ValidationError("Merchant charge must be greater than or equal to API cost")
+        
+        return cleaned_data
