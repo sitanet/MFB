@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block content %}
+<div class="midde_cont">
+    <div class="container-fluid">
+        <div class="row column_title">
+            <div class="col-md-12">
+                <div class="page_title">
+                    <h2>Merchant Chat Support</h2>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row column1">
+            <div class="col-md-12">
+                <div class="white_shd full margin_bottom_30">
+                    <div class="full graph_head d-flex justify-content-between align-items-center">
+                        <div class="heading1 margin_0">
+                            <h2>All Conversations</h2>
+                        </div>
+                        <div>
+                            <a href="?status=open" class="btn btn-sm {% if status_filter == 'open' %}btn-primary{% else %}btn-outline-primary{% endif %}">Open</a>
+                            <a href="?status=closed" class="btn btn-sm {% if status_filter == 'closed' %}btn-secondary{% else %}btn-outline-secondary{% endif %}">Closed</a>
+                            <a href="?" class="btn btn-sm {% if not status_filter %}btn-info{% else %}btn-outline-info{% endif %}">All</a>
+                        </div>
+                    </div>
+                    
+                    <div class="table_section padding_inset">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Merchant</th>
+                                        <th>Subject</th>
+                                        <th>Status</th>
+                                        <th>Unread</th>
+                                        <th>Last Updated</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for conv in conversations %}
+                                    <tr>
+                                        <td>{{ conv.merchant.merchant_name }}</td>
+                                        <td>{{ conv.subject }}</td>
+                                        <td>
+                                            {% if conv.status == 'open' %}
+                                            <span class="badge badge-success">Open</span>
+                                            {% else %}
+                                            <span class="badge badge-secondary">Closed</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% with unread=conv.unread_count_for_admin %}
+                                            {% if unread > 0 %}
+                                            <span class="badge badge-danger">{{ unread }}</span>
+                                            {% else %}
+                                            <span class="text-muted">0</span>
+                                            {% endif %}
+                                            {% endwith %}
+                                        </td>
+                                        <td>{{ conv.updated_at|naturaltime }}</td>
+                                        <td>
+                                            <a href="{% url 'merchant:chat_detail' conv.id %}" class="btn btn-sm btn-primary">
+                                                <i class="fas fa-comments"></i> View
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="6" class="text-center text-muted">No conversations found</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        {% if conversations.has_other_pages %}
+                        <nav aria-label="Page navigation">
+                            <ul class="pagination justify-content-center">
+                                {% if conversations.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ conversations.previous_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}">Previous</a>
+                                </li>
+                                {% endif %}
+                                <li class="page-item disabled">
+                                    <span class="page-link">Page {{ conversations.number }} of {{ conversations.paginator.num_pages }}</span>
+                                </li>
+                                {% if conversations.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ conversations.next_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}">Next</a>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
