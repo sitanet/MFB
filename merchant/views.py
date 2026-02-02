@@ -2614,6 +2614,97 @@ def reverse_merchant_transaction(request, transaction_id):
     return redirect('merchant:all_transactions')
 
 
+@csrf_exempt
+@require_POST
+def api_nin_verification(request):
+    """API endpoint for NIN verification (mobile app)"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'message': 'Authentication required'}, status=401)
+    
+    try:
+        merchant = request.user.merchant_profile
+    except Merchant.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Merchant account not found'}, status=404)
+    
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON'}, status=400)
+    
+    search_type = data.get('search_type', 'nin')
+    nin = data.get('nin')
+    phone = data.get('phone')
+    
+    # Validate input
+    if search_type == 'nin' and (not nin or len(nin) != 11):
+        return JsonResponse({'success': False, 'message': 'Invalid NIN. Must be 11 digits.'}, status=400)
+    if search_type == 'phone' and (not phone or len(phone) != 11):
+        return JsonResponse({'success': False, 'message': 'Invalid phone number. Must be 11 digits.'}, status=400)
+    
+    # Check NIN config
+    from .models import NINVerificationConfig
+    try:
+        nin_config = NINVerificationConfig.objects.get(branch=merchant.branch)
+        if not nin_config.is_enabled:
+            return JsonResponse({'success': False, 'message': 'NIN verification service is disabled'}, status=400)
+    except NINVerificationConfig.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'NIN service not configured'}, status=400)
+    
+    # Check API key
+    api_key = getattr(settings, 'CHECKMYNINBVN_API_KEY', None)
+    if not api_key:
+        return JsonResponse({'success': False, 'message': 'NIN API not configured'}, status=500)
+    
+    # Check API balance
+    balance_ok, api_balance = check_nin_api_balance(api_key, nin_config.api_cost)
+    if not balance_ok:
+        return JsonResponse({'success': False, 'message': 'Unable to verify API balance'}, status=500)
+    if api_balance < float(nin_config.api_cost):
+        return JsonResponse({'success': False, 'message': 'Insufficient API balance. Contact admin.'}, status=400)
+    
+    # Process merchant charge
+    success, charge_message, trx_ref = process_nin_verification_charge(merchant, request)
+    if not success:
+        return JsonResponse({'success': False, 'message': charge_message}, status=400)
+    
+    # Call CheckMyNINBVN API
+    try:
+        if search_type == 'nin':
+            api_url = 'https://checkmyninbvn.com.ng/api/nin-verification'
+            payload = {'nin': nin, 'consent': True}
+        else:
+            api_url = 'https://checkmyninbvn.com.ng/api/nin-phone'
+            payload = {'phone': phone, 'consent': True}
+        
+        response = requests.post(
+            api_url,
+            json=payload,
+            headers={
+                'Content-Type': 'application/json',
+                'x-api-key': api_key
+            },
+            timeout=30
+        )
+        result = response.json()
+        
+        if result.get('status') == 'success':
+            return JsonResponse({
+                'success': True,
+                'message': 'NIN verified successfully',
+                'nin_data': result.get('data', {}),
+                'charge': str(nin_config.merchant_charge),
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'message': result.get('message', 'NIN verification failed')
+            }, status=400)
+    except requests.exceptions.Timeout:
+        return JsonResponse({'success': False, 'message': 'Request timed out'}, status=500)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': 'Verification failed'}, status=500)
+
+
 @login_required
 def nin_verification_config(request):
     """Configure NIN verification service settings"""

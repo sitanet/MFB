@@ -76,6 +76,7 @@ urlpatterns = [
     
     # NIN Verification
     path('portal/nin-verification/', views.portal_nin_verification, name='portal_nin_verification'),
+    path('api/nin-verification/', views.api_nin_verification, name='api_nin_verification'),
     
     # ==============================================================================
     # API ENDPOINTS (Web)
