@@ -28,6 +28,7 @@ urlpatterns = [
     path('reports/', views.merchant_reports_admin, name='reports_admin'),
     path('service-config/', views.merchant_service_config, name='service_config'),
     path('nin-config/', views.nin_verification_config, name='nin_verification_config'),
+    path('transaction/<int:transaction_id>/reverse/', views.reverse_merchant_transaction, name='reverse_transaction'),
     
     # Notifications Management
     path('notifications/', views.notification_list, name='notification_list'),

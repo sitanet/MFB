@@ -2406,6 +2406,23 @@ import requests
 from django.conf import settings
 from .utils import process_nin_verification_charge
 
+def check_nin_api_balance(api_key, required_amount):
+    """Check if CheckMyNINBVN API has sufficient balance"""
+    try:
+        response = requests.get(
+            'https://checkmyninbvn.com.ng/api/balance',
+            headers={'x-api-key': api_key},
+            timeout=15
+        )
+        result = response.json()
+        if result.get('status') == 'success':
+            balance = result.get('data', {}).get('balance', 0)
+            return True, float(balance)
+        return False, 0
+    except Exception:
+        return False, 0
+
+
 @merchant_required
 def portal_nin_verification(request):
     """NIN Verification and Print Slip"""
@@ -2413,16 +2430,19 @@ def portal_nin_verification(request):
     nin_data = None
     error_message = None
     merchant_charge = None
+    api_balance = None
     
     # Get NIN config to show charge amount
     from .models import NINVerificationConfig
     try:
         nin_config = NINVerificationConfig.objects.get(branch=merchant.branch)
         merchant_charge = nin_config.merchant_charge
+        api_cost = nin_config.api_cost
         if not nin_config.is_enabled:
             error_message = "NIN verification service is currently disabled."
     except NINVerificationConfig.DoesNotExist:
         error_message = "NIN verification service is not configured for this branch."
+        api_cost = 0
     
     if request.method == 'POST' and not error_message:
         from .forms import NINVerificationForm
@@ -2430,40 +2450,48 @@ def portal_nin_verification(request):
         if form.is_valid():
             nin = form.cleaned_data['nin']
             
-            # Process charge first
-            success, charge_message, trx_ref = process_nin_verification_charge(merchant, request)
-            
-            if not success:
-                error_message = charge_message
+            # Check API key first
+            api_key = getattr(settings, 'CHECKMYNINBVN_API_KEY', None)
+            if not api_key:
+                error_message = "NIN verification API key not configured. Please contact admin."
             else:
-                # Call CheckMyNINBVN API
-                api_key = getattr(settings, 'CHECKMYNINBVN_API_KEY', None)
-                if not api_key:
-                    error_message = "NIN verification API key not configured. Please contact admin."
+                # Check API balance before processing
+                balance_ok, api_balance = check_nin_api_balance(api_key, api_cost)
+                if not balance_ok:
+                    error_message = "Unable to verify API balance. Please try again."
+                elif api_balance < float(api_cost):
+                    error_message = f"Insufficient API balance. Please contact admin to top up. (API Balance: ₦{api_balance:,.2f})"
                 else:
-                    try:
-                        response = requests.post(
-                            'https://checkmyninbvn.com.ng/api/nin-verification',
-                            json={'nin': nin, 'consent': True},
-                            headers={
-                                'Content-Type': 'application/json',
-                                'x-api-key': api_key
-                            },
-                            timeout=30
-                        )
-                        result = response.json()
-                        
-                        if result.get('status') == 'success':
-                            nin_data = result.get('data', {})
-                            messages.success(request, f'NIN verified successfully. Charged: ₦{merchant_charge}')
-                        else:
-                            error_message = result.get('message', 'NIN verification failed')
-                    except requests.exceptions.Timeout:
-                        error_message = "Request timed out. Please try again."
-                    except requests.exceptions.RequestException:
-                        error_message = "Connection error. Please try again."
-                    except Exception:
-                        error_message = "An error occurred during verification."
+                    # Process merchant charge
+                    success, charge_message, trx_ref = process_nin_verification_charge(merchant, request)
+                    
+                    if not success:
+                        error_message = charge_message
+                    else:
+                        # Call CheckMyNINBVN API
+                        try:
+                            response = requests.post(
+                                'https://checkmyninbvn.com.ng/api/nin-verification',
+                                json={'nin': nin, 'consent': True},
+                                headers={
+                                    'Content-Type': 'application/json',
+                                    'x-api-key': api_key
+                                },
+                                timeout=30
+                            )
+                            result = response.json()
+                            
+                            if result.get('status') == 'success':
+                                nin_data = result.get('data', {})
+                                messages.success(request, f'NIN verified successfully. Charged: ₦{merchant_charge}')
+                            else:
+                                error_message = result.get('message', 'NIN verification failed')
+                        except requests.exceptions.Timeout:
+                            error_message = "Request timed out. Please try again."
+                        except requests.exceptions.RequestException:
+                            error_message = "Connection error. Please try again."
+                        except Exception:
+                            error_message = "An error occurred during verification."
     else:
         from .forms import NINVerificationForm
         form = NINVerificationForm()
@@ -2482,6 +2510,81 @@ def portal_nin_verification(request):
 # ==============================================================================
 # NIN CONFIG (ADMIN)
 # ==============================================================================
+
+@login_required
+@require_POST
+def reverse_merchant_transaction(request, transaction_id):
+    """Reverse a merchant transaction"""
+    from transactions.models import Memtrans
+    from .models import MerchantTransaction
+    
+    trx = get_object_or_404(MerchantTransaction, id=transaction_id)
+    
+    # Check if already reversed
+    if trx.status == 'reversed':
+        messages.error(request, 'This transaction has already been reversed.')
+        return redirect('merchant:all_transactions')
+    
+    # Only completed transactions can be reversed
+    if trx.status != 'completed':
+        messages.error(request, 'Only completed transactions can be reversed.')
+        return redirect('merchant:all_transactions')
+    
+    merchant = trx.merchant
+    session_date = merchant.branch.session_date or timezone.now().date()
+    reversal_ref = f"REV-{trx.transaction_ref}"
+    
+    try:
+        with transaction.atomic():
+            # Get original Memtrans entries for this transaction
+            original_entries = Memtrans.all_objects.filter(trx_no=trx.transaction_ref)
+            
+            # Create reverse entries
+            for entry in original_entries:
+                # Reverse the type (D becomes C, C becomes D)
+                reverse_type = 'C' if entry.type == 'D' else 'D'
+                # Reverse the amount sign
+                reverse_amount = -entry.amount if entry.amount > 0 else abs(entry.amount)
+                
+                Memtrans.all_objects.create(
+                    branch=entry.branch,
+                    cust_branch=entry.cust_branch,
+                    customer=entry.customer,
+                    gl_no=entry.gl_no,
+                    ac_no=entry.ac_no,
+                    amount=reverse_amount,
+                    description=f'REVERSAL: {entry.description}',
+                    error='A',
+                    type=reverse_type,
+                    account_type=entry.account_type,
+                    ses_date=session_date,
+                    app_date=session_date,
+                    trx_no=reversal_ref,
+                    code='REV',
+                    trx_type=f'REVERSAL_{entry.trx_type}'
+                )
+            
+            # Update transaction status
+            trx.status = 'reversed'
+            trx.response_message = f'Reversed by {request.user.username} on {timezone.now().strftime("%Y-%m-%d %H:%M")}'
+            trx.save()
+            
+            # Log activity
+            log_merchant_activity(
+                merchant=merchant,
+                activity_type='transaction',
+                description=f'Transaction {trx.transaction_ref} reversed by admin {request.user.username}',
+                request=request,
+                transaction=trx
+            )
+            
+            messages.success(request, f'Transaction {trx.transaction_ref} has been reversed successfully.')
+    
+    except Exception as e:
+        messages.error(request, f'Failed to reverse transaction: {str(e)}')
+    
+    return redirect('merchant:all_transactions')
+
 
 @login_required
 def nin_verification_config(request):

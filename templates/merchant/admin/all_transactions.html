@@ -115,13 +115,14 @@
                                         <th>Commission</th>
                                         <th>Status</th>
                                         <th>Date</th>
+                                        <th>Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {% for trx in transactions %}
                                     <tr>
                                         <td>
-                                            <strong>{{ trx.reference }}</strong>
+                                            <strong>{{ trx.transaction_ref }}</strong>
                                         </td>
                                         <td>
                                             {{ trx.merchant.merchant_name }}<br>
@@ -139,15 +140,33 @@
                                             <span class="badge bg-warning">Pending</span>
                                             {% elif trx.status == 'failed' %}
                                             <span class="badge bg-danger">Failed</span>
+                                            {% elif trx.status == 'reversed' %}
+                                            <span class="badge bg-dark">Reversed</span>
                                             {% else %}
                                             <span class="badge bg-secondary">{{ trx.status }}</span>
                                             {% endif %}
                                         </td>
                                         <td>{{ trx.created_at|date:"M d, Y H:i" }}</td>
+                                        <td>
+                                            {% if trx.status == 'completed' %}
+                                            <form method="post" action="{% url 'merchant:reverse_transaction' trx.id %}" 
+                                                  style="display:inline;" 
+                                                  onsubmit="return confirm('Are you sure you want to reverse this transaction?\n\nRef: {{ trx.transaction_ref }}\nAmount: ₦{{ trx.amount }}\n\nThis action cannot be undone.');">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-danger" title="Reverse Transaction">
+                                                    <i class="fas fa-undo"></i> Reverse
+                                                </button>
+                                            </form>
+                                            {% elif trx.status == 'reversed' %}
+                                            <span class="text-muted small">Reversed</span>
+                                            {% else %}
+                                            <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
                                     </tr>
                                     {% empty %}
                                     <tr>
-                                        <td colspan="7" class="text-center py-4">
+                                        <td colspan="8" class="text-center py-4">
                                             <i class="fas fa-exchange-alt fa-3x text-muted mb-3"></i>
                                             <p class="text-muted">No transactions found</p>
                                         </td>
