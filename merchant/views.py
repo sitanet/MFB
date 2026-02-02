@@ -2495,11 +2495,16 @@ def nin_verification_config(request):
     if request.method == 'POST':
         form = NINVerificationConfigForm(request.POST, instance=config, branch=branch)
         if form.is_valid():
-            form.save()
+            config = form.save()
             messages.success(request, 'NIN verification configuration updated successfully.')
             return redirect('merchant:nin_verification_config')
+        else:
+            messages.error(request, 'Please correct the errors below.')
     else:
         form = NINVerificationConfigForm(instance=config, branch=branch)
+    
+    # Refresh config from database
+    config.refresh_from_db()
     
     return render(request, 'merchant/admin/nin_verification_config.html', {
         'form': form,

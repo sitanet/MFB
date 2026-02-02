@@ -547,20 +547,6 @@ class MerchantServiceConfigForm(forms.ModelForm):
 class NINVerificationConfigForm(forms.ModelForm):
     """Form for configuring NIN verification charges"""
     
-    api_cost_gl_no = forms.ChoiceField(
-        required=False,
-        widget=forms.Select(attrs={'class': 'form-select'}),
-        label='API Cost GL Account',
-        help_text='GL account for API cost portion'
-    )
-    
-    profit_gl_no = forms.ChoiceField(
-        required=False,
-        widget=forms.Select(attrs={'class': 'form-select'}),
-        label='Profit GL Account',
-        help_text='GL account for profit/markup portion'
-    )
-    
     class Meta:
         model = NINVerificationConfig
         fields = ['is_enabled', 'api_cost', 'merchant_charge', 
@@ -569,7 +555,9 @@ class NINVerificationConfigForm(forms.ModelForm):
             'is_enabled': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'api_cost': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'merchant_charge': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'api_cost_gl_no': forms.Select(attrs={'class': 'form-select'}),
             'api_cost_ac_no': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Account number'}),
+            'profit_gl_no': forms.Select(attrs={'class': 'form-select'}),
             'profit_ac_no': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Account number'}),
         }
     
@@ -587,8 +575,8 @@ class NINVerificationConfigForm(forms.ModelForm):
             label = f"{acc.gl_no} - {acc.gl_name}"
             choices.append((acc.gl_no, label))
         
-        self.fields['api_cost_gl_no'].choices = choices
-        self.fields['profit_gl_no'].choices = choices
+        self.fields['api_cost_gl_no'].widget.choices = choices
+        self.fields['profit_gl_no'].widget.choices = choices
     
     def clean(self):
         cleaned_data = super().clean()
