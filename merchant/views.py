@@ -22,7 +22,8 @@ from django.db import transaction
 
 from .models import (
     Merchant, MerchantTransaction, MerchantActivityLog,
-    MerchantCommission, MerchantServiceConfig
+    MerchantCommission, MerchantServiceConfig, MerchantNotification,
+    MerchantNotificationRead, MerchantChatConversation, MerchantChatMessage
 )
 from .forms import (
     MerchantRegistrationForm, MerchantUpdateForm, MerchantLoginForm,
@@ -1967,3 +1968,416 @@ def api_change_password(request):
         pass
     
     return JsonResponse({'success': True, 'message': 'Password changed successfully'})
+
+
+# ==============================================================================
+# NOTIFICATION MANAGEMENT (ADMIN)
+# ==============================================================================
+
+@login_required
+def notification_list(request):
+    """List all notifications sent by admin"""
+    notifications = MerchantNotification.objects.filter(
+        branch=request.user.branch
+    ).order_by('-created_at')
+    
+    paginator = Paginator(notifications, 20)
+    page = request.GET.get('page', 1)
+    notifications = paginator.get_page(page)
+    
+    return render(request, 'merchant/admin/notification_list.html', {
+        'notifications': notifications,
+    })
+
+
+@login_required
+def notification_create(request):
+    """Create and send a new notification"""
+    if request.method == 'POST':
+        title = request.POST.get('title', '').strip()
+        message = request.POST.get('message', '').strip()
+        notification_type = request.POST.get('notification_type', 'info')
+        merchant_id = request.POST.get('merchant_id')
+        
+        if not title or not message:
+            messages.error(request, 'Title and message are required')
+            return redirect('merchant:notification_create')
+        
+        merchant = None
+        if merchant_id:
+            try:
+                merchant = Merchant.objects.get(id=merchant_id, branch=request.user.branch)
+            except Merchant.DoesNotExist:
+                pass
+        
+        MerchantNotification.objects.create(
+            title=title,
+            message=message,
+            notification_type=notification_type,
+            merchant=merchant,
+            branch=request.user.branch,
+            created_by=request.user,
+        )
+        
+        messages.success(request, 'Notification sent successfully')
+        return redirect('merchant:notification_list')
+    
+    merchants = Merchant.objects.filter(branch=request.user.branch, status='active')
+    return render(request, 'merchant/admin/notification_create.html', {
+        'merchants': merchants,
+        'notification_types': MerchantNotification.NOTIFICATION_TYPES,
+    })
+
+
+# ==============================================================================
+# NOTIFICATION API (MOBILE APP)
+# ==============================================================================
+
+@csrf_exempt
+def api_notifications(request):
+    """API: Get notifications for merchant"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'message': 'Authentication required'}, status=401)
+    
+    try:
+        merchant = request.user.merchant_profile
+    except Merchant.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Merchant account not found'}, status=404)
+    
+    # Get notifications for this merchant (specific + broadcast)
+    notifications = MerchantNotification.objects.filter(
+        Q(merchant=merchant) | Q(merchant__isnull=True, branch=merchant.branch)
+    ).order_by('-created_at')[:50]
+    
+    # Get read notification IDs
+    read_ids = set(MerchantNotificationRead.objects.filter(
+        merchant=merchant
+    ).values_list('notification_id', flat=True))
+    
+    notifications_data = [{
+        'id': n.id,
+        'uuid': str(n.uuid),
+        'title': n.title,
+        'message': n.message,
+        'type': n.notification_type,
+        'is_read': n.id in read_ids,
+        'created_at': n.created_at.isoformat(),
+    } for n in notifications]
+    
+    unread_count = len([n for n in notifications_data if not n['is_read']])
+    
+    return JsonResponse({
+        'success': True,
+        'notifications': notifications_data,
+        'unread_count': unread_count,
+    })
+
+
+@csrf_exempt
+@require_POST
+def api_notification_read(request):
+    """API: Mark notification as read"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'message': 'Authentication required'}, status=401)
+    
+    try:
+        merchant = request.user.merchant_profile
+    except Merchant.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Merchant account not found'}, status=404)
+    
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON'}, status=400)
+    
+    notification_id = data.get('notification_id')
+    if not notification_id:
+        return JsonResponse({'success': False, 'message': 'Notification ID required'}, status=400)
+    
+    try:
+        notification = MerchantNotification.objects.get(id=notification_id)
+        MerchantNotificationRead.objects.get_or_create(
+            notification=notification,
+            merchant=merchant
+        )
+        return JsonResponse({'success': True, 'message': 'Marked as read'})
+    except MerchantNotification.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Notification not found'}, status=404)
+
+
+@csrf_exempt
+@require_POST
+def api_notifications_mark_all_read(request):
+    """API: Mark all notifications as read"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'message': 'Authentication required'}, status=401)
+    
+    try:
+        merchant = request.user.merchant_profile
+    except Merchant.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Merchant account not found'}, status=404)
+    
+    notifications = MerchantNotification.objects.filter(
+        Q(merchant=merchant) | Q(merchant__isnull=True, branch=merchant.branch)
+    )
+    
+    for notification in notifications:
+        MerchantNotificationRead.objects.get_or_create(
+            notification=notification,
+            merchant=merchant
+        )
+    
+    return JsonResponse({'success': True, 'message': 'All notifications marked as read'})
+
+
+# ==============================================================================
+# CHAT API (MOBILE APP)
+# ==============================================================================
+
+@csrf_exempt
+def api_chat_conversations(request):
+    """API: Get all chat conversations for merchant"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'message': 'Authentication required'}, status=401)
+    
+    try:
+        merchant = request.user.merchant_profile
+    except Merchant.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Merchant account not found'}, status=404)
+    
+    conversations = MerchantChatConversation.objects.filter(merchant=merchant)
+    
+    conversations_data = []
+    for conv in conversations:
+        last_message = conv.get_last_message()
+        conversations_data.append({
+            'id': conv.id,
+            'uuid': str(conv.uuid),
+            'subject': conv.subject,
+            'status': conv.status,
+            'unread_count': conv.unread_count_for_merchant(),
+            'last_message': last_message.content[:50] if last_message else None,
+            'last_message_at': last_message.created_at.isoformat() if last_message else None,
+            'created_at': conv.created_at.isoformat(),
+            'updated_at': conv.updated_at.isoformat(),
+        })
+    
+    total_unread = sum(c['unread_count'] for c in conversations_data)
+    
+    return JsonResponse({
+        'success': True,
+        'conversations': conversations_data,
+        'total_unread': total_unread,
+    })
+
+
+@csrf_exempt
+def api_chat_messages(request, conversation_id):
+    """API: Get messages for a specific conversation"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'message': 'Authentication required'}, status=401)
+    
+    try:
+        merchant = request.user.merchant_profile
+    except Merchant.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Merchant account not found'}, status=404)
+    
+    try:
+        conversation = MerchantChatConversation.objects.get(id=conversation_id, merchant=merchant)
+    except MerchantChatConversation.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Conversation not found'}, status=404)
+    
+    # Mark admin messages as read
+    conversation.messages.filter(is_from_merchant=False, is_read=False).update(is_read=True)
+    
+    messages_list = conversation.messages.all()
+    messages_data = [{
+        'id': m.id,
+        'uuid': str(m.uuid),
+        'content': m.content,
+        'is_from_merchant': m.is_from_merchant,
+        'is_read': m.is_read,
+        'created_at': m.created_at.isoformat(),
+    } for m in messages_list]
+    
+    return JsonResponse({
+        'success': True,
+        'conversation': {
+            'id': conversation.id,
+            'uuid': str(conversation.uuid),
+            'subject': conversation.subject,
+            'status': conversation.status,
+        },
+        'messages': messages_data,
+    })
+
+
+@csrf_exempt
+@require_POST
+def api_chat_send_message(request):
+    """API: Send a message in a conversation"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'message': 'Authentication required'}, status=401)
+    
+    try:
+        merchant = request.user.merchant_profile
+    except Merchant.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Merchant account not found'}, status=404)
+    
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON'}, status=400)
+    
+    conversation_id = data.get('conversation_id')
+    content = data.get('content', '').strip()
+    
+    if not content:
+        return JsonResponse({'success': False, 'message': 'Message content is required'}, status=400)
+    
+    try:
+        conversation = MerchantChatConversation.objects.get(id=conversation_id, merchant=merchant)
+    except MerchantChatConversation.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Conversation not found'}, status=404)
+    
+    if conversation.status == 'closed':
+        return JsonResponse({'success': False, 'message': 'This conversation is closed'}, status=400)
+    
+    message = MerchantChatMessage.objects.create(
+        conversation=conversation,
+        content=content,
+        is_from_merchant=True,
+    )
+    
+    # Update conversation timestamp
+    conversation.save()
+    
+    return JsonResponse({
+        'success': True,
+        'message': {
+            'id': message.id,
+            'uuid': str(message.uuid),
+            'content': message.content,
+            'is_from_merchant': message.is_from_merchant,
+            'created_at': message.created_at.isoformat(),
+        }
+    })
+
+
+@csrf_exempt
+@require_POST
+def api_chat_create_conversation(request):
+    """API: Create a new conversation"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'message': 'Authentication required'}, status=401)
+    
+    try:
+        merchant = request.user.merchant_profile
+    except Merchant.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Merchant account not found'}, status=404)
+    
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON'}, status=400)
+    
+    subject = data.get('subject', '').strip()
+    initial_message = data.get('message', '').strip()
+    
+    if not subject:
+        return JsonResponse({'success': False, 'message': 'Subject is required'}, status=400)
+    
+    if not initial_message:
+        return JsonResponse({'success': False, 'message': 'Initial message is required'}, status=400)
+    
+    conversation = MerchantChatConversation.objects.create(
+        merchant=merchant,
+        subject=subject,
+    )
+    
+    MerchantChatMessage.objects.create(
+        conversation=conversation,
+        content=initial_message,
+        is_from_merchant=True,
+    )
+    
+    return JsonResponse({
+        'success': True,
+        'conversation': {
+            'id': conversation.id,
+            'uuid': str(conversation.uuid),
+            'subject': conversation.subject,
+            'status': conversation.status,
+            'created_at': conversation.created_at.isoformat(),
+        }
+    })
+
+
+# ==============================================================================
+# CHAT MANAGEMENT (ADMIN)
+# ==============================================================================
+
+@login_required
+def chat_list(request):
+    """List all merchant chat conversations for admin"""
+    status_filter = request.GET.get('status', '')
+    
+    conversations = MerchantChatConversation.objects.filter(
+        merchant__branch=request.user.branch
+    )
+    
+    if status_filter:
+        conversations = conversations.filter(status=status_filter)
+    
+    conversations = conversations.order_by('-updated_at')
+    
+    paginator = Paginator(conversations, 20)
+    page = request.GET.get('page', 1)
+    conversations = paginator.get_page(page)
+    
+    return render(request, 'merchant/admin/chat_list.html', {
+        'conversations': conversations,
+        'status_filter': status_filter,
+    })
+
+
+@login_required
+def chat_detail(request, conversation_id):
+    """View and reply to a specific conversation"""
+    conversation = get_object_or_404(
+        MerchantChatConversation,
+        id=conversation_id,
+        merchant__branch=request.user.branch
+    )
+    
+    # Mark merchant messages as read
+    conversation.messages.filter(is_from_merchant=True, is_read=False).update(is_read=True)
+    
+    if request.method == 'POST':
+        content = request.POST.get('content', '').strip()
+        action = request.POST.get('action', '')
+        
+        if action == 'close':
+            conversation.status = 'closed'
+            conversation.save()
+            messages.success(request, 'Conversation closed')
+        elif action == 'reopen':
+            conversation.status = 'open'
+            conversation.save()
+            messages.success(request, 'Conversation reopened')
+        elif content:
+            MerchantChatMessage.objects.create(
+                conversation=conversation,
+                content=content,
+                is_from_merchant=False,
+                admin_user=request.user,
+            )
+            conversation.save()
+            messages.success(request, 'Reply sent')
+        
+        return redirect('merchant:chat_detail', conversation_id=conversation.id)
+    
+    return render(request, 'merchant/admin/chat_detail.html', {
+        'conversation': conversation,
+        'messages_list': conversation.messages.all(),
+    })

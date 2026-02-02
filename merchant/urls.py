@@ -28,6 +28,14 @@ urlpatterns = [
     path('reports/', views.merchant_reports_admin, name='reports_admin'),
     path('service-config/', views.merchant_service_config, name='service_config'),
     
+    # Notifications Management
+    path('notifications/', views.notification_list, name='notification_list'),
+    path('notifications/create/', views.notification_create, name='notification_create'),
+    
+    # Chat Management
+    path('chats/', views.chat_list, name='chat_list'),
+    path('chats/<int:conversation_id>/', views.chat_detail, name='chat_detail'),
+    
     # ==============================================================================
     # MERCHANT PORTAL URLS - For merchant's own interface
     # ==============================================================================
@@ -81,4 +89,15 @@ urlpatterns = [
     path('api/profile/', views.api_profile, name='api_profile'),
     path('api/change-pin/', views.api_change_pin, name='api_change_pin'),
     path('api/change-password/', views.api_change_password, name='api_change_password'),
+    
+    # Notifications API
+    path('api/notifications/', views.api_notifications, name='api_notifications'),
+    path('api/notifications/read/', views.api_notification_read, name='api_notification_read'),
+    path('api/notifications/mark-all-read/', views.api_notifications_mark_all_read, name='api_notifications_mark_all_read'),
+    
+    # Chat API
+    path('api/chat/conversations/', views.api_chat_conversations, name='api_chat_conversations'),
+    path('api/chat/conversations/<int:conversation_id>/messages/', views.api_chat_messages, name='api_chat_messages'),
+    path('api/chat/send/', views.api_chat_send_message, name='api_chat_send_message'),
+    path('api/chat/create/', views.api_chat_create_conversation, name='api_chat_create_conversation'),
 ]

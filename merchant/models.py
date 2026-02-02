@@ -636,3 +636,127 @@ class MerchantWithdrawalOTP(models.Model):
         """Generate a 6-digit OTP"""
         import random
         return ''.join([str(random.randint(0, 9)) for _ in range(6)])
+
+
+class MerchantNotification(models.Model):
+    """
+    Notifications sent to merchants from admin
+    """
+    NOTIFICATION_TYPES = (
+        ('info', 'Information'),
+        ('alert', 'Alert'),
+        ('promo', 'Promotion'),
+        ('update', 'System Update'),
+    )
+    
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    title = models.CharField(max_length=200)
+    message = models.TextField()
+    notification_type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES, default='info')
+    
+    # Target: specific merchant or all merchants (null = broadcast to all)
+    merchant = models.ForeignKey(
+        Merchant, on_delete=models.CASCADE, related_name='notifications',
+        null=True, blank=True, help_text="Leave empty to send to all merchants"
+    )
+    branch = models.ForeignKey(
+        'company.Branch', on_delete=models.CASCADE, related_name='merchant_notifications',
+        null=True, blank=True
+    )
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(
+        'accounts.User', on_delete=models.SET_NULL, null=True, blank=True
+    )
+    
+    objects = models.Manager()
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "Merchant Notification"
+        verbose_name_plural = "Merchant Notifications"
+    
+    def __str__(self):
+        return f"{self.title} - {self.get_notification_type_display()}"
+
+
+class MerchantNotificationRead(models.Model):
+    """
+    Tracks which notifications have been read by which merchant
+    """
+    notification = models.ForeignKey(
+        MerchantNotification, on_delete=models.CASCADE, related_name='reads'
+    )
+    merchant = models.ForeignKey(
+        Merchant, on_delete=models.CASCADE, related_name='notification_reads'
+    )
+    read_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        unique_together = ('notification', 'merchant')
+        ordering = ['-read_at']
+
+
+class MerchantChatConversation(models.Model):
+    """
+    Chat conversation between merchant and admin support
+    """
+    STATUS_CHOICES = (
+        ('open', 'Open'),
+        ('closed', 'Closed'),
+    )
+    
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    merchant = models.ForeignKey(
+        Merchant, on_delete=models.CASCADE, related_name='chat_conversations'
+    )
+    subject = models.CharField(max_length=200)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='open')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    objects = models.Manager()
+    
+    class Meta:
+        ordering = ['-updated_at']
+        verbose_name = "Merchant Chat Conversation"
+        verbose_name_plural = "Merchant Chat Conversations"
+    
+    def __str__(self):
+        return f"{self.merchant.merchant_name} - {self.subject}"
+    
+    def get_last_message(self):
+        return self.messages.order_by('-created_at').first()
+    
+    def unread_count_for_merchant(self):
+        return self.messages.filter(is_from_merchant=False, is_read=False).count()
+    
+    def unread_count_for_admin(self):
+        return self.messages.filter(is_from_merchant=True, is_read=False).count()
+
+
+class MerchantChatMessage(models.Model):
+    """
+    Individual chat message in a conversation
+    """
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    conversation = models.ForeignKey(
+        MerchantChatConversation, on_delete=models.CASCADE, related_name='messages'
+    )
+    content = models.TextField()
+    is_from_merchant = models.BooleanField(default=True)
+    admin_user = models.ForeignKey(
+        'accounts.User', on_delete=models.SET_NULL, null=True, blank=True,
+        help_text="Admin who sent this message (if not from merchant)"
+    )
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['created_at']
+        verbose_name = "Chat Message"
+        verbose_name_plural = "Chat Messages"
+    
+    def __str__(self):
+        sender = "Merchant" if self.is_from_merchant else "Admin"
+        return f"{sender}: {self.content[:50]}"
