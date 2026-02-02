@@ -499,25 +499,64 @@ class DataForm(forms.Form):
 
 class NINVerificationForm(forms.Form):
     """Form for NIN verification"""
+    SEARCH_TYPE_CHOICES = [
+        ('nin', 'NIN Number'),
+        ('phone', 'Phone Number'),
+    ]
+    
+    search_type = forms.ChoiceField(
+        choices=SEARCH_TYPE_CHOICES,
+        initial='nin',
+        widget=forms.RadioSelect(attrs={'class': 'form-check-input'}),
+        label="Search By"
+    )
+    
     nin = forms.CharField(
         max_length=11,
         min_length=11,
+        required=False,
         widget=forms.TextInput(attrs={
             'class': 'form-control',
             'placeholder': 'Enter 11-digit NIN',
             'maxlength': '11',
-            'pattern': '[0-9]{11}'
         }),
         help_text="Enter the 11-digit National Identification Number"
     )
     
-    def clean_nin(self):
-        nin = self.cleaned_data['nin']
-        if not nin.isdigit():
-            raise forms.ValidationError("NIN must contain only digits")
-        if len(nin) != 11:
-            raise forms.ValidationError("NIN must be exactly 11 digits")
-        return nin
+    phone = forms.CharField(
+        max_length=11,
+        min_length=11,
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter 11-digit phone number (e.g., 08012345678)',
+            'maxlength': '11',
+        }),
+        help_text="Enter the 11-digit phone number"
+    )
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        search_type = cleaned_data.get('search_type')
+        nin = cleaned_data.get('nin')
+        phone = cleaned_data.get('phone')
+        
+        if search_type == 'nin':
+            if not nin:
+                raise forms.ValidationError("Please enter a NIN number")
+            if not nin.isdigit():
+                raise forms.ValidationError("NIN must contain only digits")
+            if len(nin) != 11:
+                raise forms.ValidationError("NIN must be exactly 11 digits")
+        elif search_type == 'phone':
+            if not phone:
+                raise forms.ValidationError("Please enter a phone number")
+            if not phone.isdigit():
+                raise forms.ValidationError("Phone number must contain only digits")
+            if len(phone) != 11:
+                raise forms.ValidationError("Phone number must be exactly 11 digits")
+        
+        return cleaned_data
 
 
 class MerchantServiceConfigForm(forms.ModelForm):

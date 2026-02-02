@@ -2448,7 +2448,9 @@ def portal_nin_verification(request):
         from .forms import NINVerificationForm
         form = NINVerificationForm(request.POST)
         if form.is_valid():
-            nin = form.cleaned_data['nin']
+            search_type = form.cleaned_data['search_type']
+            nin = form.cleaned_data.get('nin')
+            phone = form.cleaned_data.get('phone')
             
             # Check API key first
             api_key = getattr(settings, 'CHECKMYNINBVN_API_KEY', None)
@@ -2468,11 +2470,18 @@ def portal_nin_verification(request):
                     if not success:
                         error_message = charge_message
                     else:
-                        # Call CheckMyNINBVN API
+                        # Call CheckMyNINBVN API based on search type
                         try:
+                            if search_type == 'nin':
+                                api_url = 'https://checkmyninbvn.com.ng/api/nin-verification'
+                                payload = {'nin': nin, 'consent': True}
+                            else:  # phone
+                                api_url = 'https://checkmyninbvn.com.ng/api/nin-phone'
+                                payload = {'phone': phone, 'consent': True}
+                            
                             response = requests.post(
-                                'https://checkmyninbvn.com.ng/api/nin-verification',
-                                json={'nin': nin, 'consent': True},
+                                api_url,
+                                json=payload,
                                 headers={
                                     'Content-Type': 'application/json',
                                     'x-api-key': api_key

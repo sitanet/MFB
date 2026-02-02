@@ -126,7 +126,22 @@
                     
                     <form method="post">
                         {% csrf_token %}
+                        
                         <div class="mb-3">
+                            <label class="form-label">Search By</label>
+                            <div class="d-flex gap-4">
+                                {% for radio in form.search_type %}
+                                <div class="form-check">
+                                    {{ radio.tag }}
+                                    <label class="form-check-label" for="{{ radio.id_for_label }}">
+                                        {{ radio.choice_label }}
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3" id="nin-field">
                             <label for="id_nin" class="form-label">National Identification Number (NIN)</label>
                             {{ form.nin }}
                             {% if form.nin.errors %}
@@ -134,10 +149,49 @@
                             {% endif %}
                             <small class="text-muted">{{ form.nin.help_text }}</small>
                         </div>
+                        
+                        <div class="mb-3" id="phone-field" style="display:none;">
+                            <label for="id_phone" class="form-label">Phone Number</label>
+                            {{ form.phone }}
+                            {% if form.phone.errors %}
+                            <div class="text-danger small mt-1">{{ form.phone.errors.0 }}</div>
+                            {% endif %}
+                            <small class="text-muted">{{ form.phone.help_text }}</small>
+                        </div>
+                        
+                        {% if form.non_field_errors %}
+                        <div class="alert alert-danger">{{ form.non_field_errors.0 }}</div>
+                        {% endif %}
+                        
                         <button type="submit" class="btn btn-primary" {% if not merchant_charge %}disabled{% endif %}>
                             <i class="fas fa-check-circle me-1"></i> Verify NIN {% if merchant_charge %}(₦{{ merchant_charge }}){% endif %}
                         </button>
                     </form>
+                    
+                    <script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        const searchTypeRadios = document.querySelectorAll('input[name="search_type"]');
+                        const ninField = document.getElementById('nin-field');
+                        const phoneField = document.getElementById('phone-field');
+                        
+                        function toggleFields() {
+                            const selectedType = document.querySelector('input[name="search_type"]:checked').value;
+                            if (selectedType === 'nin') {
+                                ninField.style.display = 'block';
+                                phoneField.style.display = 'none';
+                            } else {
+                                ninField.style.display = 'none';
+                                phoneField.style.display = 'block';
+                            }
+                        }
+                        
+                        searchTypeRadios.forEach(radio => {
+                            radio.addEventListener('change', toggleFields);
+                        });
+                        
+                        toggleFields();
+                    });
+                    </script>
                     
                     {% if error_message %}
                     <div class="alert alert-danger mt-3">
