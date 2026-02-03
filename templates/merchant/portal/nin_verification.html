@@ -1,98 +1,119 @@
 {% extends 'merchant/portal/base.html' %}
-{% load humanize %}
+{% load humanize static %}
 
 {% block title %}NIN Verification - Print Slip{% endblock %}
 
 {% block extra_css %}
 <style>
     .nin-slip {
-        background: #fff;
-        border: 2px solid #000;
-        max-width: 800px;
+        max-width: 750px;
         margin: 0 auto;
+        background: white;
+        border: 1px solid #000;
         font-family: Arial, sans-serif;
     }
     .nin-slip-header {
-        background: #f0f0f0;
-        padding: 15px;
-        border-bottom: 2px solid #000;
         display: flex;
         align-items: center;
         justify-content: space-between;
+        padding: 8px 15px;
+        border-bottom: 1px solid #000;
     }
     .nin-slip-header img {
-        height: 60px;
+        height: 55px;
     }
-    .nin-slip-header .title {
+    .nin-slip-header .header-text {
         text-align: center;
         flex: 1;
     }
-    .nin-slip-header .title h4 {
-        margin: 0;
+    .nin-slip-header .header-text h1 {
+        color: #020218;
+        font-size: 24px;
         font-weight: bold;
-        color: #006400;
-    }
-    .nin-slip-header .title p {
+        font-family: "Times New Roman", Times, serif;
         margin: 0;
+    }
+    .nin-slip-header .header-text h2 {
+        color: #020218;
+        font-size: 15px;
+        font-weight: bold;
+        font-family: "Times New Roman", Times, serif;
+        margin: 0;
+    }
+    .nin-slip-header .header-text h3 {
+        color: #020218;
+        font-weight: bold;
         font-size: 12px;
+        margin-top: 5px;
+        margin-bottom: 0;
     }
-    .nin-slip-body {
-        padding: 0;
-    }
-    .nin-slip-body table {
+    .nin-slip table {
         width: 100%;
         border-collapse: collapse;
     }
-    .nin-slip-body td {
+    .nin-slip td {
         border: 1px solid #000;
-        padding: 10px;
-        vertical-align: top;
-    }
-    .nin-slip-body .label {
-        font-weight: bold;
+        padding: 5px 8px;
         font-size: 12px;
-        color: #333;
+        height: 37px;
     }
-    .nin-slip-body .value {
-        font-size: 14px;
-        min-height: 20px;
+    .nin-slip .label {
+        font-weight: bold;
+        background: white;
+    }
+    .nin-slip .value {
+        background: #fff;
+    }
+    .nin-slip-note {
+        padding: 8px 10px;
+        font-size: 11px;
+        border-top: 1px solid #000;
+        background: #fffffa;
+        line-height: 1.4;
     }
     .nin-slip-footer {
-        background: #f0f0f0;
-        padding: 10px;
-        border-top: 2px solid #000;
-        font-size: 11px;
-    }
-    .nin-slip-footer .note {
-        color: #c00;
-    }
-    .nin-slip-contact {
-        background: #006400;
-        color: #fff;
-        padding: 8px;
         display: flex;
-        justify-content: space-around;
-        font-size: 11px;
+        background: white;
+        color: black;
+        border-top: 1px solid #000;
     }
-    .nin-slip-contact a {
-        color: #fff;
-        text-decoration: none;
-    }
-    .photo-cell {
-        width: 120px;
+    .nin-slip-footer .footer-item {
+        flex: 1;
+        padding: 4px 5px;
         text-align: center;
+        border-right: 1px solid #000;
+        font-size: 11px;
+        font-weight: bold;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
     }
-    .photo-cell img {
-        max-width: 100px;
-        max-height: 120px;
-        border: 1px solid #ccc;
+    .nin-slip-footer .footer-item:last-child {
+        border-right: none;
+        flex: 2.5;
+        flex-direction: column;
+    }
+    .nin-slip-footer .footer-item img {
+        height: 32px;
+    }
+    .nin-slip-footer .footer-item a {
+        color: black;
+        text-decoration: none;
+        font-weight: bold;
+    }
+    .nin-slip-footer .footer-item small {
+        font-size: 8px;
+        line-height: 1.2;
+        font-weight: normal;
     }
     @media print {
         .no-print {
             display: none !important;
         }
         .nin-slip {
-            border: 2px solid #000 !important;
+            border: 1px solid #000 !important;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
@@ -204,6 +225,7 @@
     </div>
 
     {% if nin_data %}
+    <!-- DEBUG: {{ nin_data }} -->
     <!-- NIN Data Display -->
     <div class="row mb-4 no-print">
         <div class="col-12">
@@ -275,80 +297,70 @@
         <div class="nin-slip">
             <!-- Header -->
             <div class="nin-slip-header">
-                <img src="https://upload.wikimedia.org/wikipedia/commons/7/79/Coat_of_arms_of_Nigeria.svg" alt="Coat of Arms" style="height:50px;">
-                <div class="title">
-                    <h4>National Identity Management System</h4>
-                    <p><strong>Federal Republic of Nigeria</strong></p>
-                    <p>National Identification Number Slip (NINS)</p>
+                <img src="{% static 'images/arm.png' %}" alt="Coat of Arms">
+                <div class="header-text">
+                    <h1>National Identity Management System</h1>
+                    <h2>Federal Republic of Nigeria</h2>
+                    <h3>National Identification Number Slip (NINS)</h3>
                 </div>
-                <img src="https://nimc.gov.ng/wp-content/uploads/2020/10/nimc-logo.png" alt="NIMC" style="height:50px;" onerror="this.style.display='none'">
+                <img src="{% static 'images/nimc.png' %}" alt="NIMC Logo">
             </div>
 
             <!-- Body -->
-            <div class="nin-slip-body">
-                <table>
-                    <tr>
-                        <td style="width:25%">
-                            <div class="label">Tracking ID:</div>
-                            <div class="value">{{ nin_data.tracking_id|default:"-" }}</div>
-                        </td>
-                        <td style="width:25%">
-                            <div class="label">Surname:</div>
-                            <div class="value">{{ nin_data.surname }}</div>
-                        </td>
-                        <td rowspan="3" class="photo-cell">
-                            {% if nin_data.photo %}
-                            <img src="{{ nin_data.photo }}" alt="Photo">
-                            {% else %}
-                            <div style="width:100px;height:120px;background:#eee;display:flex;align-items:center;justify-content:center;">
-                                <span style="color:#999;">No Photo</span>
-                            </div>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <div class="label">NIN:</div>
-                            <div class="value"><strong>{{ nin_data.nin }}</strong></div>
-                        </td>
-                        <td>
-                            <div class="label">First Name:</div>
-                            <div class="value">{{ nin_data.firstname }}</div>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <div class="label">Address:</div>
-                            <div class="value">{{ nin_data.residence_address|default:"-" }}, {{ nin_data.residence_town|default:"" }}, {{ nin_data.residence_state|default:"" }}</div>
-                        </td>
-                        <td>
-                            <div class="label">Middle Name:</div>
-                            <div class="value">{{ nin_data.middlename|default:"-" }}</div>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td colspan="2">
-                            <div class="label">Gender:</div>
-                            <div class="value">{{ nin_data.gender }}</div>
-                        </td>
-                        <td>
-                            <div class="label">Date of Birth:</div>
-                            <div class="value">{{ nin_data.birthdate }}</div>
-                        </td>
-                    </tr>
-                </table>
+            <table>
+                <tr>
+                    <td class="label" style="width:11%">Tracking ID:</td>
+                    <td class="value" style="width:8%">{{ nin_data.tracking_id|default:"" }}</td>
+                    <td class="label" style="width:8%">Surname:</td>
+                    <td class="value" style="width:14%">{{ nin_data.surname }}</td>
+                    <td class="label" rowspan="2" style="width:9%; vertical-align:top;">Address:</td>
+                    <td class="value" rowspan="4" style="width:12%; vertical-align:top;">{{ nin_data.residence_address|default:"" }}{% if nin_data.residence_town %}, {{ nin_data.residence_town }}{% endif %}{% if nin_data.residence_state %}, {{ nin_data.residence_state }}{% endif %}</td>
+                </tr>
+                <tr>
+                    <td class="label">NIN:</td>
+                    <td class="value"><strong>{{ nin_data.nin }}</strong></td>
+                    <td class="label">First Name:</td>
+                    <td class="value">{{ nin_data.firstname }}</td>
+                </tr>
+                <tr>
+                    <td class="value" colspan="2">{{ nin_data.birthdate }}</td>
+                    <td class="label">Middle Name:</td>
+                    <td class="value">{{ nin_data.middlename|default:"" }}</td>
+                    <td class="value"></td>
+                </tr>
+                <tr>
+                    <td class="value" colspan="2"></td>
+                    <td class="label">Gender:</td>
+                    <td class="value">{{ nin_data.gender }}</td>
+                    <td class="value"></td>
+                </tr>
+            </table>
+
+            <!-- Note -->
+            <div class="nin-slip-note">
+                <strong>Note:</strong> The <strong>National Identification Number (NIN) is your identity</strong>. It is confidential and may only be released for legitimate transactions.<br>
+                You will be notified when your National Identity Card is ready (For any enquiries, please contact)
             </div>
 
             <!-- Footer -->
             <div class="nin-slip-footer">
-                <p class="note"><strong>Note:</strong> The National Identification Number (NIN) is your identity. It is confidential and may only be released for legitimate transactions. You will be notified when your National Identity Card is ready (For any enquiries, please contact)</p>
-            </div>
-
-            <div class="nin-slip-contact">
-                <span><i class="fas fa-envelope"></i> helpdesk@nimc.gov.ng</span>
-                <span><i class="fas fa-globe"></i> www.nimc.gov.ng</span>
-                <span><i class="fas fa-phone"></i> 0700-CALL-NIMC</span>
-                <span>National Identity Management Commission<br>11 Sokode Crescent, Off Dalaba Street Zone 5, Wuse 900248, Abuja Nigeria</span>
+                <div class="footer-item">
+                    <img src="{% static 'images/cloud.png' %}" alt="Email">
+                    <a href="mailto:helpdesk@nimc.gov.ng">helpdesk@nimc.gov.ng</a>
+                </div>
+                <div class="footer-item">
+                    <img src="{% static 'images/explore.png' %}" alt="Website">
+                    <a href="http://www.nimc.gov.ng">www.nimc.gov.ng</a>
+                </div>
+                <div class="footer-item">
+                    <img src="{% static 'images/call.png' %}" alt="Phone">
+                    0700-CALL-NIMC
+                </div>
+                <div class="footer-item">
+                    <img src="{% static 'images/floppy.png' %}" alt="Address">
+                    <strong>National Identity Management Commission</strong>
+                    <small>11 Sokode Crescent, Off Dalaba Street Zone 5, Wuse 900248,<br>Abuja Nigeria</small>
+                </div>
             </div>
         </div>
     </div>

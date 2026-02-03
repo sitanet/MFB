@@ -2489,9 +2489,13 @@ def portal_nin_verification(request):
                                 timeout=30
                             )
                             result = response.json()
+                            import logging
+                            logger = logging.getLogger(__name__)
+                            logger.info(f"NIN API Response: {result}")
                             
                             if result.get('status') == 'success':
                                 nin_data = result.get('data', {})
+                                logger.info(f"NIN Data: {nin_data}")
                                 messages.success(request, f'NIN verified successfully. Charged: ₦{merchant_charge}')
                             else:
                                 error_message = result.get('message', 'NIN verification failed')
