@@ -51,4 +51,7 @@ urlpatterns = [
     # Role Permission Management
     path('manage_permissions/', views.manage_role_permissions, name='manage_role_permissions'),
     path('view_role_permissions/', views.view_role_permissions, name='view_role_permissions'),
+    
+    # Transaction PIN
+    path('set-pin/', views.set_transaction_pin, name='set_transaction_pin'),
 ]
