@@ -309,18 +309,11 @@
             <table>
                 <tr>
                     <td class="label" style="width:11%">Tracking ID:</td>
-                    <td class="value" style="width:12%">{{ nin_data.data.trackingId|default:"" }}</td>
+                    <td class="value" style="width:8%">{{ nin_data.data.trackingId|default:"" }}</td>
                     <td class="label" style="width:8%">Surname:</td>
-                    <td class="value" style="width:18%">{{ nin_data.data.surname }}</td>
-                    <td rowspan="4" style="width:18%; text-align:center; vertical-align:middle;">
-                        {% if nin_data.data.photo %}
-                        <img src="data:image/jpeg;base64,{{ nin_data.data.photo }}" alt="Photo" style="max-width:100px; max-height:120px; border:1px solid #ccc;">
-                        {% else %}
-                        <div style="width:100px; height:120px; background:#eee; display:inline-flex; align-items:center; justify-content:center;">
-                            <span style="color:#999; font-size:11px;">No Photo</span>
-                        </div>
-                        {% endif %}
-                    </td>
+                    <td class="value" style="width:14%">{{ nin_data.data.surname }}</td>
+                    <td class="label" rowspan="2" style="width:9%; vertical-align:top;">Address:</td>
+                    <td class="value" rowspan="4" style="width:12%; vertical-align:top;">{{ nin_data.data.residence_address|default:"" }}{% if nin_data.data.residence_town %}, {{ nin_data.data.residence_town }}{% endif %}{% if nin_data.data.residence_state %}, {{ nin_data.data.residence_state }}{% endif %}</td>
                 </tr>
                 <tr>
                     <td class="label">NIN:</td>
@@ -329,16 +322,16 @@
                     <td class="value">{{ nin_data.data.firstname }}</td>
                 </tr>
                 <tr>
-                    <td class="label">Address:</td>
-                    <td class="value" colspan="1">{{ nin_data.data.residence_address|default:"" }}{% if nin_data.data.residence_town %}, {{ nin_data.data.residence_town }}{% endif %}{% if nin_data.data.residence_state %}, {{ nin_data.data.residence_state }}{% endif %}</td>
+                    <td class="value" colspan="2"></td>
                     <td class="label">Middle Name:</td>
                     <td class="value">{{ nin_data.data.middlename|default:"" }}</td>
+                    <td class="value"></td>
                 </tr>
                 <tr>
-                    <td class="label">Date of Birth:</td>
-                    <td class="value">{{ nin_data.data.birthdate }}</td>
+                    <td class="value" colspan="2"></td>
                     <td class="label">Gender:</td>
                     <td class="value">{{ nin_data.data.gender }}</td>
+                    <td class="value"></td>
                 </tr>
             </table>
 
