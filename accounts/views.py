@@ -1810,34 +1810,35 @@ def branches_view(request):
 @login_required(login_url='login')
 def set_transaction_pin(request):
     """Set or update user transaction PIN"""
+    user = request.user
+    has_pin = bool(user.transaction_pin)
+    
     if request.method == 'POST':
         current_pin = request.POST.get('current_pin')
         new_pin = request.POST.get('new_pin')
         confirm_pin = request.POST.get('confirm_pin')
         
-        user = request.user
-        
         # Validate current PIN if user has one
-        if user.transaction_pin:
+        if has_pin:
             if not current_pin:
                 messages.error(request, 'Current PIN is required.')
-                return redirect('myAccount')
+                return redirect('set_transaction_pin')
             if not user.check_transaction_pin(current_pin):
                 messages.error(request, 'Current PIN is incorrect.')
-                return redirect('myAccount')
+                return redirect('set_transaction_pin')
         
         # Validate new PIN
         if not new_pin or not new_pin.isdigit():
             messages.error(request, 'PIN must contain only numbers.')
-            return redirect('myAccount')
+            return redirect('set_transaction_pin')
         
         if len(new_pin) < 4 or len(new_pin) > 6:
             messages.error(request, 'PIN must be between 4 and 6 digits.')
-            return redirect('myAccount')
+            return redirect('set_transaction_pin')
         
         if new_pin != confirm_pin:
             messages.error(request, 'PIN confirmation does not match.')
-            return redirect('myAccount')
+            return redirect('set_transaction_pin')
         
         # Set new PIN
         user.set_transaction_pin(new_pin)
@@ -1846,7 +1847,10 @@ def set_transaction_pin(request):
         messages.success(request, 'Transaction PIN updated successfully.')
         return redirect('myAccount')
     
-    return redirect('myAccount')
+    context = {
+        'has_pin': has_pin,
+    }
+    return render(request, 'accounts/set_transaction_pin.html', context)
 
 
 # ==================== USER SEARCH FUNCTIONALITY ====================
