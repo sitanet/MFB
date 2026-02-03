@@ -224,11 +224,8 @@
         </div>
     </div>
 
-    {% if nin_data %}
+    {% if nin_data.data %}
     <!-- NIN Data Display -->
-    <div class="alert alert-warning no-print">
-        <strong>DEBUG:</strong> {{ nin_data }}
-    </div>
     <div class="row mb-4 no-print">
         <div class="col-12">
             <div class="card">
@@ -238,8 +235,8 @@
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-3 text-center mb-3">
-                            {% if nin_data.photo %}
-                            <img src="{{ nin_data.photo }}" alt="Photo" class="img-fluid rounded" style="max-width: 150px;">
+                            {% if nin_data.data.photo %}
+                            <img src="data:image/jpeg;base64,{{ nin_data.data.photo }}" alt="Photo" class="img-fluid rounded" style="max-width: 150px;">
                             {% else %}
                             <div class="bg-light p-4 rounded">
                                 <i class="fas fa-user fa-4x text-muted"></i>
@@ -249,28 +246,28 @@
                         <div class="col-md-9">
                             <div class="row">
                                 <div class="col-md-4 mb-2">
-                                    <strong>NIN:</strong><br>{{ nin_data.nin }}
+                                    <strong>NIN:</strong><br>{{ nin_data.data.nin }}
                                 </div>
                                 <div class="col-md-4 mb-2">
-                                    <strong>First Name:</strong><br>{{ nin_data.firstname }}
+                                    <strong>First Name:</strong><br>{{ nin_data.data.firstname }}
                                 </div>
                                 <div class="col-md-4 mb-2">
-                                    <strong>Middle Name:</strong><br>{{ nin_data.middlename|default:"-" }}
+                                    <strong>Middle Name:</strong><br>{{ nin_data.data.middlename|default:"-" }}
                                 </div>
                                 <div class="col-md-4 mb-2">
-                                    <strong>Surname:</strong><br>{{ nin_data.surname }}
+                                    <strong>Surname:</strong><br>{{ nin_data.data.surname }}
                                 </div>
                                 <div class="col-md-4 mb-2">
-                                    <strong>Gender:</strong><br>{{ nin_data.gender }}
+                                    <strong>Gender:</strong><br>{{ nin_data.data.gender }}
                                 </div>
                                 <div class="col-md-4 mb-2">
-                                    <strong>Date of Birth:</strong><br>{{ nin_data.birthdate }}
+                                    <strong>Date of Birth:</strong><br>{{ nin_data.data.birthdate }}
                                 </div>
                                 <div class="col-md-4 mb-2">
-                                    <strong>Phone:</strong><br>{{ nin_data.telephoneno|default:"-" }}
+                                    <strong>Phone:</strong><br>{{ nin_data.data.telephoneno|default:"-" }}
                                 </div>
                                 <div class="col-md-8 mb-2">
-                                    <strong>Address:</strong><br>{{ nin_data.residence_address|default:"-" }}
+                                    <strong>Address:</strong><br>{{ nin_data.data.residence_address|default:"-" }}
                                 </div>
                             </div>
                         </div>
@@ -312,28 +309,28 @@
             <table>
                 <tr>
                     <td class="label" style="width:11%">Tracking ID:</td>
-                    <td class="value" style="width:8%">{{ nin_data.tracking_id|default:"" }}</td>
+                    <td class="value" style="width:8%">{{ nin_data.data.trackingId|default:"" }}</td>
                     <td class="label" style="width:8%">Surname:</td>
-                    <td class="value" style="width:14%">{{ nin_data.surname }}</td>
+                    <td class="value" style="width:14%">{{ nin_data.data.surname }}</td>
                     <td class="label" rowspan="2" style="width:9%; vertical-align:top;">Address:</td>
-                    <td class="value" rowspan="4" style="width:12%; vertical-align:top;">{{ nin_data.residence_address|default:"" }}{% if nin_data.residence_town %}, {{ nin_data.residence_town }}{% endif %}{% if nin_data.residence_state %}, {{ nin_data.residence_state }}{% endif %}</td>
+                    <td class="value" rowspan="4" style="width:12%; vertical-align:top;">{{ nin_data.data.residence_address|default:"" }}{% if nin_data.data.residence_town %}, {{ nin_data.data.residence_town }}{% endif %}{% if nin_data.data.residence_state %}, {{ nin_data.data.residence_state }}{% endif %}</td>
                 </tr>
                 <tr>
                     <td class="label">NIN:</td>
-                    <td class="value"><strong>{{ nin_data.nin }}</strong></td>
+                    <td class="value"><strong>{{ nin_data.data.nin }}</strong></td>
                     <td class="label">First Name:</td>
-                    <td class="value">{{ nin_data.firstname }}</td>
+                    <td class="value">{{ nin_data.data.firstname }}</td>
                 </tr>
                 <tr>
-                    <td class="value" colspan="2">{{ nin_data.birthdate }}</td>
+                    <td class="value" colspan="2">{{ nin_data.data.birthdate }}</td>
                     <td class="label">Middle Name:</td>
-                    <td class="value">{{ nin_data.middlename|default:"" }}</td>
+                    <td class="value">{{ nin_data.data.middlename|default:"" }}</td>
                     <td class="value"></td>
                 </tr>
                 <tr>
                     <td class="value" colspan="2"></td>
                     <td class="label">Gender:</td>
-                    <td class="value">{{ nin_data.gender }}</td>
+                    <td class="value">{{ nin_data.data.gender }}</td>
                     <td class="value"></td>
                 </tr>
             </table>
